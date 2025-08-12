@@ -10,6 +10,7 @@ import androidx.viewpager2.adapter.FragmentStateAdapter
 import com.google.android.material.tabs.TabLayoutMediator
 import com.jingtian.demoapp.databinding.ActivityMainBinding
 import com.jingtian.demoapp.main.fragments.BaseFragment
+import com.jingtian.demoapp.main.fragments.NBPlusTextFragment
 import com.jingtian.demoapp.main.fragments.OverDrawFragment
 import com.jingtian.demoapp.main.fragments.RxMergeFragment
 import com.jingtian.demoapp.main.fragments.RxJavaFragment
@@ -27,6 +28,7 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(LayoutInflater.from(this))
         setContentView(binding.root)
         val fragmentList: List<Lazy<BaseFragment>> = listOf(
+            NBPlusTextFragment().lazy(),
             RxJavaFragment().lazy(),
             RxMergeFragment().lazy(),
             RxZipFragment().lazy(),
