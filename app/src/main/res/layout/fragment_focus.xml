@@ -1,0 +1,284 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="输入框位置"
+                android:textColor="@color/black"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <RadioGroup
+                android:id="@+id/gravity_gp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <RadioButton
+                    android:id="@+id/gravity_top"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="上方" />
+
+                <RadioButton
+                    android:id="@+id/gravity_bottom"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="下方" />
+            </RadioGroup>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="windowSoftInputMode"
+                android:textColor="@color/black"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="state"
+                        android:textColor="@color/black"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <RadioGroup
+                        android:id="@+id/state_gp"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <RadioButton
+                            android:id="@+id/stateUnspecified"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="stateUnspecified" />
+
+                        <RadioButton
+                            android:id="@+id/stateUnchanged"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="stateUnchanged" />
+
+                        <RadioButton
+                            android:id="@+id/stateHidden"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="stateHidden" />
+
+                        <RadioButton
+                            android:id="@+id/stateAlwaysHidden"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="stateAlwaysHidden" />
+
+                        <RadioButton
+                            android:id="@+id/stateVisible"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="stateVisible" />
+
+                        <RadioButton
+                            android:id="@+id/stateAlwaysVisible"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="stateAlwaysVisible" />
+                    </RadioGroup>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="adjust"
+                        android:textColor="@color/black"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <RadioGroup
+                        android:id="@+id/adjust_gp"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <RadioButton
+                            android:id="@+id/adjust_unspecified"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="adjustUnspecified" />
+
+                        <RadioButton
+                            android:id="@+id/adjust_resize"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="adjustResize" />
+
+                        <RadioButton
+                            android:id="@+id/adjust_pan"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="adjustPan" />
+
+                        <RadioButton
+                            android:id="@+id/adjust_nothing"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="adjustNothing" />
+                    </RadioGroup>
+                </LinearLayout>
+            </LinearLayout>
+
+        </LinearLayout>
+
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="RequestFocus"
+                android:textColor="@color/black"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <RadioGroup
+                android:id="@+id/request_focus_gp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <RadioButton
+                    android:id="@+id/request_focus_yes"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="YES" />
+
+                <RadioButton
+                    android:id="@+id/request_focus_no"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="NO" />
+            </RadioGroup>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="FocusableET"
+                android:textColor="@color/black"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:id="@+id/et_focus_gp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <CheckBox
+                    android:id="@+id/et_focusable"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="FOCUSABLE" />
+
+                <CheckBox
+                    android:id="@+id/et_focusable_auto"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="FOCUSABLE_AUTO" />
+
+                <CheckBox
+                    android:id="@+id/et_not_focusable"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="NOT_FOCUSABLE" />
+            </LinearLayout>
+        </LinearLayout>
+
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="FocusableInTouchModeET"
+                android:textColor="@color/black"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <RadioGroup
+                android:id="@+id/touch_mode_focus_gp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <RadioButton
+                    android:id="@+id/touch_mode_focus_yes"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="YES" />
+
+                <RadioButton
+                    android:id="@+id/touch_mode_focus_no"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="NO" />
+            </RadioGroup>
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/start"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="启动" />
+    </LinearLayout>
+</ScrollView>
