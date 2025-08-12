@@ -11,7 +11,9 @@ import com.google.android.material.tabs.TabLayoutMediator
 import com.jingtian.demoapp.databinding.ActivityMainBinding
 import com.jingtian.demoapp.main.fragments.BaseFragment
 import com.jingtian.demoapp.main.fragments.OverDrawFragment
+import com.jingtian.demoapp.main.fragments.RxMergeFragment
 import com.jingtian.demoapp.main.fragments.RxJavaFragment
+import com.jingtian.demoapp.main.fragments.RxZipFragment
 import com.jingtian.demoapp.main.fragments.WidthAnimFragment
 
 class MainActivity : AppCompatActivity() {
@@ -24,14 +26,15 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(LayoutInflater.from(this))
         setContentView(binding.root)
-        val fragmentList: List<Lazy<out BaseFragment>> = listOf(
+        val fragmentList: List<Lazy<BaseFragment>> = listOf(
             RxJavaFragment().lazy(),
+            RxMergeFragment().lazy(),
+            RxZipFragment().lazy(),
             OverDrawFragment().lazy(),
             WidthAnimFragment().lazy()
         )
         viewPager2.adapter = ReflectAdapter(this, fragmentList)
         viewPager2.visibility = View.VISIBLE
-
         TabLayoutMediator(tabs, viewPager2) { tab, position ->
             tab.text = fragmentList[position].value.getName()
         }.attach()

@@ -1,4 +1,5 @@
 <resources>
     <string name="app_name">DemoApp</string>
     <string name="r_u_ok">R U OK ?</string>
+    <string name="string_clear">清空</string>
 </resources>

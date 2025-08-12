@@ -10,10 +10,11 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.jingtian.demoapp.databinding.FragmentLogBinding
 import com.jingtian.demoapp.databinding.ItemLogBinding
+import java.util.Collections
 import java.util.Date
 
 open class LogFragment(private val title: String): BaseFragment() {
-    private lateinit var binding: FragmentLogBinding
+    protected lateinit var binding: FragmentLogBinding
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -35,6 +36,10 @@ open class LogFragment(private val title: String): BaseFragment() {
             }
         }
         binding.titleText.text = title
+        binding.fab.setOnClickListener {
+            binding.titleText.text = title
+            clearLog()
+        }
     }
 
     class LogViewHolder private constructor(private val binding: ItemLogBinding): RecyclerView.ViewHolder(binding.root) {
@@ -64,12 +69,16 @@ open class LogFragment(private val title: String): BaseFragment() {
         adapter.add(log)
     }
 
+    fun asyncAddLog(log: String) {
+        adapter.asyncAdd(log)
+    }
+
     fun clearLog() {
         adapter.clear()
     }
 
-    class LogAdapter : RecyclerView.Adapter<LogViewHolder>() {
-        private val dataList = ArrayList<Pair<String, Date>>()
+    inner class LogAdapter : RecyclerView.Adapter<LogViewHolder>() {
+        private val dataList = Collections.synchronizedList(ArrayList<Pair<String, Date>>())
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): LogViewHolder {
             return LogViewHolder.newInstance(parent)
         }
@@ -83,6 +92,16 @@ open class LogFragment(private val title: String): BaseFragment() {
             dataList.add(log to Date())
             notifyItemInserted(size)
             notifyItemRangeChanged(size, 1)
+        }
+
+        fun asyncAdd(log: String) {
+            val oldSize = dataList.size
+            dataList.add(log to Date())
+            binding.recyclerView.post {
+                val size = dataList.size
+                notifyItemInserted(size)
+                notifyItemRangeChanged(oldSize, size - oldSize)
+            }
         }
 
         fun clear() {

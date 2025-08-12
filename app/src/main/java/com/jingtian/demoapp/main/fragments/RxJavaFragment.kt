@@ -42,6 +42,7 @@ class RxJavaFragment : LogFragment("RxJava-GroupBy-Throttle") {
     override fun onPause() {
         super.onPause()
         disposable?.dispose()
+        disposable = null
         clearLog()
     }
 }
