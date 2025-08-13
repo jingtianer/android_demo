@@ -3,6 +3,7 @@ package com.jingtian.demoapp.main
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -62,7 +63,11 @@ class MainActivity : AppCompatActivity() {
 
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
-        val targetTab = intent?.getSerializableExtra(TAB_INDEX, Class::class.java)
+        val targetTab = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            intent?.getSerializableExtra(TAB_INDEX, Class::class.java)
+        } else {
+            intent?.getSerializableExtra(TAB_INDEX) as? Class<BaseFragment>
+        }
         if (targetTab != null) {
             for ((index, fragment) in fragmentList.withIndex()) {
                 if (targetTab.isInstance(fragment)) {
