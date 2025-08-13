@@ -5,7 +5,7 @@ import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.Disposable
 import io.reactivex.schedulers.Schedulers
 
-class RxMergeFragment : LogFragment("RxJava\nText Merge") {
+class RxMergeFragment : LogFragment("RxJava\nTest Merge") {
     private var disposable: Disposable? = null
     override fun onResume() {
         super.onResume()

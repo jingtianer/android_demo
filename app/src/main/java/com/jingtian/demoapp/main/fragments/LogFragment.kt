@@ -5,7 +5,6 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.jingtian.demoapp.databinding.FragmentLogBinding
@@ -13,7 +12,12 @@ import com.jingtian.demoapp.databinding.ItemLogBinding
 import java.util.Collections
 import java.util.Date
 
-open class LogFragment(private val title: String): BaseFragment() {
+open class LogFragment(
+    private val title: String,
+    private val disableClearButton: Boolean = false,
+    private val stackFromEnd: Boolean = true,
+    private val reverse: Boolean = true,
+): BaseFragment() {
     protected lateinit var binding: FragmentLogBinding
 
     override fun onCreateView(
@@ -31,14 +35,18 @@ open class LogFragment(private val title: String): BaseFragment() {
         super.onViewCreated(view, savedInstanceState)
         with(binding.recyclerView) {
             adapter = this@LogFragment.adapter
-            layoutManager = LinearLayoutManager(context, LinearLayoutManager.VERTICAL, true).also {
-                it.setStackFromEnd(true)
+            layoutManager = LinearLayoutManager(context, LinearLayoutManager.VERTICAL, reverse).also {
+                it.setStackFromEnd(stackFromEnd)
             }
         }
         binding.titleText.text = title
-        binding.fab.setOnClickListener {
-            binding.titleText.text = title
-            clearLog()
+        if (disableClearButton) {
+            binding.fab.visibility = View.GONE
+        } else {
+            binding.fab.setOnClickListener {
+                binding.titleText.text = title
+                clearLog()
+            }
         }
     }
 
@@ -112,6 +120,5 @@ open class LogFragment(private val title: String): BaseFragment() {
         override fun onBindViewHolder(holder: LogViewHolder, position: Int) {
             holder.bindData(dataList[position], position)
         }
-
     }
 }

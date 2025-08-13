@@ -8,7 +8,7 @@ import io.reactivex.disposables.Disposable
 import io.reactivex.schedulers.Schedulers
 import java.util.Arrays
 
-class RxZipFragment : LogFragment("RxJava\nText Merge") {
+class RxZipFragment : LogFragment("RxJava\nTest Zip") {
     private var disposable: Disposable? = null
 
     override fun onResume() {

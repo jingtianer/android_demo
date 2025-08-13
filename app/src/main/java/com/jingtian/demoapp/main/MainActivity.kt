@@ -14,6 +14,7 @@ import androidx.viewpager2.adapter.FragmentStateAdapter
 import com.google.android.material.tabs.TabLayoutMediator
 import com.jingtian.demoapp.databinding.ActivityMainBinding
 import com.jingtian.demoapp.main.fragments.BaseFragment
+import com.jingtian.demoapp.main.fragments.BrandInfoFragment
 import com.jingtian.demoapp.main.fragments.FocusFragment
 import com.jingtian.demoapp.main.fragments.NBPlusTextFragment
 import com.jingtian.demoapp.main.fragments.OverDrawFragment
@@ -42,10 +43,11 @@ class MainActivity : AppCompatActivity() {
 
     private val fragmentList: List<Lazy<BaseFragment>> = listOf(
         NBPlusTextFragment().lazy(),
+        FocusFragment().lazy(),
         RxJavaFragment().lazy(),
         RxMergeFragment().lazy(),
         RxZipFragment().lazy(),
-        FocusFragment().lazy(),
+        BrandInfoFragment().lazy(),
         OverDrawFragment().lazy(),
         WidthAnimFragment().lazy()
     )
