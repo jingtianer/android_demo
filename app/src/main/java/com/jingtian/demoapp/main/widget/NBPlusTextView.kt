@@ -11,6 +11,7 @@ import android.graphics.PorterDuffXfermode
 import android.graphics.Region
 import android.text.TextPaint
 import android.util.AttributeSet
+import android.util.Property
 import android.view.View
 import androidx.annotation.ColorInt
 import androidx.annotation.Keep
@@ -68,6 +69,10 @@ class NBPlusTextView @JvmOverloads constructor(
         repeatMode = ObjectAnimator.REVERSE
         repeatCount = ObjectAnimator.INFINITE
         duration = 300L
+    }
+
+    fun setDuration(duration: Long) {
+        animator.duration = duration
     }
 
     fun setText(text: String) {

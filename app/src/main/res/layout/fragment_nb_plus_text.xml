@@ -5,15 +5,23 @@
     android:orientation="vertical">
     <com.jingtian.demoapp.main.widget.NBPlusTextView
         android:id="@+id/nb_text"
-        android:layout_width="match_parent"
+        android:layout_gravity="center"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"/>
     <com.jingtian.demoapp.main.widget.NBPlusTextView
         android:id="@+id/nb_text1"
-        android:layout_width="match_parent"
+        android:layout_gravity="center"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"/>
     <com.jingtian.demoapp.main.widget.NBPlusTextView
         android:id="@+id/nb_text2"
-        android:layout_width="match_parent"
+        android:layout_gravity="center"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"/>
+    <com.jingtian.demoapp.main.widget.NBPlusTextView
+        android:id="@+id/nb_text3"
+        android:layout_gravity="center"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"/>
 
 </LinearLayout>
