@@ -90,7 +90,7 @@ class ReflectObject : Reflect{
     override fun field(name: String): ReflectField {
         try {
             return ReflectField(obj, clazz.getField(name))
-        } catch (ignore : NoSuchMethodException) {
+        } catch (ignore : NoSuchFieldException) {
 
         } catch (e : SecurityException) {
             throw SecurityException(name, e)
