@@ -1,16 +1,21 @@
 package com.jingtian.demoapp.main.fragments
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Color
 import android.os.Bundle
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
+import android.view.View.OnTouchListener
+import android.view.ViewConfiguration
 import android.view.ViewGroup
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.jingtian.demoapp.databinding.FragmentNestedScrollBinding
 import com.jingtian.demoapp.main.ScreenUtils.screenHeight
 import com.jingtian.demoapp.main.dp
+import kotlin.math.abs
 import kotlin.random.Random
 
 object NestedScrollFragment : BaseFragment() {
@@ -34,6 +39,29 @@ object NestedScrollFragment : BaseFragment() {
             isNestedScrollingEnabled = true
             layoutParams?.height = context.screenHeight
             binding.nestedScrollView.setInnerRecyclerView(this)
+            setOnTouchListener(object : View.OnTouchListener {
+                private var lastX = 0f
+                private var lastY = 0f
+                private val mTouchSlop = ViewConfiguration.get(context).scaledTouchSlop
+                @SuppressLint("ClickableViewAccessibility")
+                override fun onTouch(v: View, event: MotionEvent): Boolean {
+                    when(event.actionMasked) {
+                        MotionEvent.ACTION_DOWN -> {
+                            lastX = event.x
+                            lastY = event.y
+                            stopScroll()
+                        }
+                        MotionEvent.ACTION_MOVE -> {
+                            val dx = abs(event.x - lastX)
+                            val dy = abs(event.y - lastY)
+                            if (dx > dy && dx > mTouchSlop) {
+                                parent.requestDisallowInterceptTouchEvent(false)
+                            }
+                        }
+                    }
+                    return false
+                }
+            })
         }
         for (i in 0 until 200) {
             adapter.addData()
