@@ -280,10 +280,9 @@ object ReflectToStringUtil {
                     sb.append(item)
                 }
             }
-            sb.append(", ")
+            sb.append(",")
         }
-        sb[sb.length - 2] = ']'
-        sb.deleteAt(sb.length - 1)
+        sb[sb.length - 1] = ']'
         return sb.toString()
     }
 }
