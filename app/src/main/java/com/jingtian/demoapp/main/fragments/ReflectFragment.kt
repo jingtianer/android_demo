@@ -18,6 +18,9 @@ open class ReflectFragment(private val obj: Any, title: String) : LogFragment(
             is Class<*> -> {
                 addLog(Reflect.create(obj).toString())
             }
+            is String -> {
+                addLog(Reflect.create(obj).toString())
+            }
             else -> {
                 addLog(Reflect.create(obj).toString())
             }

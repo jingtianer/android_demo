@@ -58,12 +58,16 @@ class ReflectConstructor constructor(private val constructor: Constructor<*>) {
 
 abstract class Reflect {
     companion object {
-        fun create(clazz: Class<*>) : Reflect {
+        fun create(clazz: Class<*>) : ReflectClass {
             return ReflectClass(clazz)
         }
 
         fun create(obj: Any) : Reflect {
             return ReflectObject(obj)
+        }
+
+        fun create(clazzName: String) : ReflectClass {
+            return ReflectClass(Class.forName(clazzName))
         }
     }
     abstract fun field(name: String): ReflectField
