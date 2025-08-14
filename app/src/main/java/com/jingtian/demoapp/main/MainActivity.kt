@@ -42,16 +42,18 @@ class MainActivity : AppCompatActivity() {
     private val tabs by lazy { binding.tabs }
 
     private val fragmentList: List<Lazy<BaseFragment>> = listOf(
-        NBPlusTextFragment().lazy(),
-        FocusFragment().lazy(),
-        RxJavaFragment().lazy(),
-        RxMergeFragment().lazy(),
-        RxZipFragment().lazy(),
-        BuildInfoFragment().lazy(),
-        FragmentInfoFragment().lazy(),
-        OverDrawFragment().lazy(),
-        WidthAnimFragment().lazy()
-    )
+        NBPlusTextFragment::class.java to arrayOf<Any>(),
+        FocusFragment::class.java to arrayOf<Any>(),
+        RxJavaFragment::class.java to arrayOf<Any>(),
+        RxMergeFragment::class.java to arrayOf<Any>(),
+        RxZipFragment::class.java to arrayOf<Any>(),
+        BuildInfoFragment::class.java to arrayOf<Any>(),
+        FragmentInfoFragment::class.java to arrayOf<Any>(),
+        OverDrawFragment::class.java to arrayOf<Any>(),
+        WidthAnimFragment::class.java to arrayOf<Any>(),
+    ).map { (clazz, args)->
+        BaseFragment.lazy(clazz, args)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

@@ -3,6 +3,7 @@ package com.jingtian.demoapp.main
 import android.app.Application
 import android.util.TypedValue
 import com.jingtian.demoapp.main.ReflectToStringUtil.reflectToString
+import java.lang.reflect.Constructor
 import java.lang.reflect.Field
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
@@ -32,12 +33,26 @@ class ReflectMethod constructor(private val obj: Any, private val method: Method
         method.isAccessible = true
     }
 
-    fun <R> call(args : Array<Any>): R? {
+    fun <R> call(args : Array<out Any>): R? {
         return method.invoke(obj, *args) as? R
     }
 
     override fun toString(): String {
         return method.toString()
+    }
+}
+
+class ReflectConstructor constructor(private val constructor: Constructor<*>) {
+    init {
+        constructor.isAccessible = true
+    }
+
+    fun <R> call(args : Array<out Any>): R? {
+        return constructor.newInstance(*args) as? R
+    }
+
+    override fun toString(): String {
+        return constructor.toString()
     }
 }
 
@@ -53,6 +68,10 @@ abstract class Reflect {
     }
     abstract fun field(name: String): ReflectField
     abstract fun method(name: String, args: Array<Class<out Any>>): ReflectMethod
+
+    fun <R> call(name: String, args: Array<out Any>): R? {
+        return method(name, args.map { it.javaClass }.toTypedArray()).call(args)
+    }
 }
 
 class ReflectObject : Reflect{
@@ -165,6 +184,14 @@ class ReflectClass : Reflect {
             }
         }
         throw NoSuchMethodException("name=$name, args=${args.contentDeepToString()}")
+    }
+
+    fun constructor(args: Array<Class<out Any>>): ReflectConstructor {
+        return ReflectConstructor(clazz.getDeclaredConstructor(*args))
+    }
+
+    fun <R> newInstance(args: Array<out Any>): R? {
+        return constructor(args.map { it.javaClass }.toTypedArray()).call(args)
     }
 
     override fun toString(): String {
