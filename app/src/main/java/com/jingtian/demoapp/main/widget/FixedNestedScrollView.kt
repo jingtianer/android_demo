@@ -2,6 +2,7 @@ package com.jingtian.demoapp.main.widget
 
 import android.content.Context
 import android.util.AttributeSet
+import android.util.Log
 import android.view.MotionEvent
 import android.view.View
 import androidx.core.widget.NestedScrollView
@@ -24,6 +25,9 @@ class FixedNestedScrollView @JvmOverloads constructor(
     }
 
     private fun shouldConsumeVerticalScroll(target: View, dy: Int): Boolean {
+        if (target != recyclerView) {
+            return false
+        }
         return dy < 0 && !target.canScrollVertically(-1)
                 || dy > 0 && canScrollVertically(1)
     }
@@ -39,8 +43,27 @@ class FixedNestedScrollView @JvmOverloads constructor(
         }
     }
 
+    private fun MotionEvent.insideOf(view: View?): Boolean {
+        view ?: return false
+        val location = IntArray(2)
+        view.getLocationOnScreen(location)
+        val x = location[0]
+        val y = location[1]
+        val w = view.width
+        val h = view.height
+        return this.rawX >= x && this.rawX <= x + w && this.rawY >= y && this.rawY <= y + h
+    }
+
     override fun onInterceptTouchEvent(ev: MotionEvent): Boolean {
-        return false
+        if (ev.insideOf(recyclerView)) {
+            return false
+        }
+        return super.onInterceptTouchEvent(ev)
+    }
+
+    override fun onTouchEvent(motionEvent: MotionEvent): Boolean {
+        Log.d("FixedNestedScrollView", "onTouchEvent: $motionEvent")
+        return super.onTouchEvent(motionEvent)
     }
 
 }
