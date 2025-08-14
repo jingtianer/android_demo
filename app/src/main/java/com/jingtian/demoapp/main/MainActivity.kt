@@ -84,15 +84,16 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    class ReflectAdapter(
+    inner class ReflectAdapter(
         activity: FragmentActivity,
-        private val dataList: List<Lazy<out Fragment>>
+        private val dataList: List<Lazy<BaseFragment>>
     ) : FragmentStateAdapter(activity) {
         override fun getItemCount(): Int {
             return dataList.size
         }
 
         override fun createFragment(position: Int): Fragment {
+            dataList[position].value.setTabView(tabs.getTabAt(position)?.view)
             return dataList[position].value
         }
     }

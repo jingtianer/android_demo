@@ -2,10 +2,19 @@ package com.jingtian.demoapp.main
 
 import android.app.Application
 import android.content.Context
+import android.graphics.Color
+import android.os.SystemClock
+import android.text.TextPaint
 import android.util.DisplayMetrics
 import android.util.TypedValue
+import android.view.View
 import android.view.WindowManager
+import androidx.annotation.ColorInt
 import com.jingtian.demoapp.main.ReflectToStringUtil.reflectToString
+import io.reactivex.Observable
+import io.reactivex.ObservableEmitter
+import io.reactivex.ObservableOnSubscribe
+import io.reactivex.Observer
 import java.lang.reflect.Constructor
 import java.lang.reflect.Field
 import java.lang.reflect.Method
@@ -16,6 +25,12 @@ lateinit var app: Application
 val Float.dp: Float
     get() = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, this, app.resources.displayMetrics)
 
+val Float.px2Dp: Float
+    get() {
+        val scale = app.resources.displayMetrics.density
+        // 四舍五入避免小数导致的精度问题
+        return (this / scale + 0.5f);
+    }
 
 class ReflectField constructor(private val obj: Any, private val field: Field) {
     init {
@@ -304,5 +319,54 @@ object ScreenUtils {
             val outMetrics = DisplayMetrics()
             getSystemService(WindowManager::class.java).defaultDisplay.getMetrics(outMetrics)
             return outMetrics.heightPixels
+        }
+}
+
+object RxEvents {
+
+    class DoubleClickListener(private val view: View, private val interval: Long): ObservableOnSubscribe<Unit> {
+        private var lastTime = -1L
+        override fun subscribe(emitter: ObservableEmitter<Unit>) {
+            view.setOnClickListener {
+                val currentTime = SystemClock.elapsedRealtime()
+                if (lastTime == -1L) {
+                    lastTime = currentTime
+                } else if ((currentTime - lastTime) < interval){
+                    emitter.onNext(Unit)
+                    lastTime = -1L
+                }
+            }
+        }
+    }
+
+    fun View.setDoubleClickListener(interval: Long, onClick: () -> Unit) {
+        val ignore = Observable.create(DoubleClickListener(this, interval))
+            .subscribe {
+                onClick()
+            }
+    }
+}
+
+object TextUtils {
+    fun TextPaint.measure(text: String, outArray: FloatArray) {
+        val textWidth = measureText(text)
+        val textHeight = (fontMetrics.bottom - fontMetrics.top)
+        if (outArray.size >= 2) {
+            outArray[0] = textWidth
+            outArray[1] = textHeight
+        }
+    }
+}
+
+object ColorUtils {
+    @get:ColorInt
+    val Int.revers: Int
+        get() {
+            return Color.argb(
+                Color.alpha(this),
+                255 - Color.red(this),
+                255 - Color.green(this),
+                255 - Color.blue(this),
+            )
         }
 }
