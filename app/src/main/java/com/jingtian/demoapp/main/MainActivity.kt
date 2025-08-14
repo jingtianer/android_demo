@@ -17,6 +17,7 @@ import com.jingtian.demoapp.main.fragments.BuildInfoFragment
 import com.jingtian.demoapp.main.fragments.FocusFragment
 import com.jingtian.demoapp.main.fragments.FragmentInfoFragment
 import com.jingtian.demoapp.main.fragments.NBPlusTextFragment
+import com.jingtian.demoapp.main.fragments.NestedScrollFragment
 import com.jingtian.demoapp.main.fragments.OverDrawFragment
 import com.jingtian.demoapp.main.fragments.RxJavaFragment
 import com.jingtian.demoapp.main.fragments.RxMergeFragment
@@ -44,6 +45,7 @@ class MainActivity : AppCompatActivity() {
     private val fragmentList: List<Lazy<BaseFragment>> = listOf(
         NBPlusTextFragment::class.java to arrayOf<Any>(),
         FocusFragment::class.java to arrayOf<Any>(),
+        NestedScrollFragment::class.java to arrayOf<Any>(),
         RxJavaFragment::class.java to arrayOf<Any>(),
         RxMergeFragment::class.java to arrayOf<Any>(),
         RxZipFragment::class.java to arrayOf<Any>(),
