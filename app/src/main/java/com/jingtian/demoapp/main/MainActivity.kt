@@ -1,7 +1,6 @@
 package com.jingtian.demoapp.main
 
 import android.app.Activity
-import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
@@ -14,8 +13,9 @@ import androidx.viewpager2.adapter.FragmentStateAdapter
 import com.google.android.material.tabs.TabLayoutMediator
 import com.jingtian.demoapp.databinding.ActivityMainBinding
 import com.jingtian.demoapp.main.fragments.BaseFragment
-import com.jingtian.demoapp.main.fragments.BrandInfoFragment
+import com.jingtian.demoapp.main.fragments.BuildInfoFragment
 import com.jingtian.demoapp.main.fragments.FocusFragment
+import com.jingtian.demoapp.main.fragments.FragmentInfoFragment
 import com.jingtian.demoapp.main.fragments.NBPlusTextFragment
 import com.jingtian.demoapp.main.fragments.OverDrawFragment
 import com.jingtian.demoapp.main.fragments.RxJavaFragment
@@ -47,7 +47,8 @@ class MainActivity : AppCompatActivity() {
         RxJavaFragment().lazy(),
         RxMergeFragment().lazy(),
         RxZipFragment().lazy(),
-        BrandInfoFragment().lazy(),
+        BuildInfoFragment().lazy(),
+        FragmentInfoFragment().lazy(),
         OverDrawFragment().lazy(),
         WidthAnimFragment().lazy()
     )
