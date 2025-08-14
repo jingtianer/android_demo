@@ -1,7 +1,10 @@
 package com.jingtian.demoapp.main
 
 import android.app.Application
+import android.content.Context
+import android.util.DisplayMetrics
 import android.util.TypedValue
+import android.view.WindowManager
 import com.jingtian.demoapp.main.ReflectToStringUtil.reflectToString
 import java.lang.reflect.Constructor
 import java.lang.reflect.Field
@@ -285,4 +288,21 @@ object ReflectToStringUtil {
         sb[sb.length - 1] = ']'
         return sb.toString()
     }
+}
+
+object ScreenUtils {
+    val Context.screenWidth: Int
+        get() {
+            val outMetrics = DisplayMetrics()
+            getSystemService(WindowManager::class.java).defaultDisplay.getMetrics(outMetrics)
+            return outMetrics.widthPixels
+        }
+
+
+    val Context.screenHeight: Int
+        get() {
+            val outMetrics = DisplayMetrics()
+            getSystemService(WindowManager::class.java).defaultDisplay.getMetrics(outMetrics)
+            return outMetrics.heightPixels
+        }
 }
