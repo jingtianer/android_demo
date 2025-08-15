@@ -13,6 +13,7 @@ import androidx.viewpager2.adapter.FragmentStateAdapter
 import com.google.android.material.tabs.TabLayoutMediator
 import com.jingtian.demoapp.databinding.ActivityMainBinding
 import com.jingtian.demoapp.main.fragments.BaseFragment
+import com.jingtian.demoapp.main.fragments.BaseFragment.Companion.getFragmentName
 import com.jingtian.demoapp.main.fragments.BuildInfoFragment
 import com.jingtian.demoapp.main.fragments.FocusFragment
 import com.jingtian.demoapp.main.fragments.FragmentInfoFragment
@@ -42,7 +43,7 @@ class MainActivity : AppCompatActivity() {
     private val viewPager2 by lazy { binding.viewpager2 }
     private val tabs by lazy { binding.tabs }
 
-    private val fragmentList: List<Lazy<BaseFragment>> = listOf(
+    private val fragmentList = listOf(
         NBPlusTextFragment::class.java to arrayOf<Any>(),
         FocusFragment::class.java to arrayOf<Any>(),
         NestedScrollFragment::class.java to arrayOf<Any>(),
@@ -53,18 +54,20 @@ class MainActivity : AppCompatActivity() {
         FragmentInfoFragment::class.java to arrayOf<Any>(),
         OverDrawFragment::class.java to arrayOf<Any>(),
         WidthAnimFragment::class.java to arrayOf<Any>(),
-    ).map { (clazz, args)->
-        BaseFragment.lazy(clazz, args)
+    )
+
+    private val fragmentCreator = fragmentList.map { (clazz, args)->
+        BaseFragment.creator(clazz, args)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(LayoutInflater.from(this))
         setContentView(binding.root)
-        viewPager2.adapter = ReflectAdapter(this, fragmentList)
+        viewPager2.adapter = ReflectAdapter(this, fragmentCreator)
         viewPager2.visibility = View.VISIBLE
         TabLayoutMediator(tabs, viewPager2) { tab, position ->
-            tab.text = fragmentList[position].value.getName()
+            tab.text = fragmentList[position].first.getFragmentName()
         }.attach()
     }
 
@@ -86,15 +89,16 @@ class MainActivity : AppCompatActivity() {
 
     inner class ReflectAdapter(
         activity: FragmentActivity,
-        private val dataList: List<Lazy<BaseFragment>>
+        private val dataList: List<() -> BaseFragment>
     ) : FragmentStateAdapter(activity) {
         override fun getItemCount(): Int {
             return dataList.size
         }
 
         override fun createFragment(position: Int): Fragment {
-            dataList[position].value.setTabView(tabs.getTabAt(position)?.view)
-            return dataList[position].value
+            val fragment = dataList[position].invoke()
+            fragment.setTabView(tabs.getTabAt(position)?.view)
+            return fragment
         }
     }
 }

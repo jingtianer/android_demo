@@ -3,12 +3,16 @@ package com.jingtian.demoapp.main.fragments
 import android.view.View
 import androidx.fragment.app.Fragment
 import com.jingtian.demoapp.main.ReflectClass
-import com.jingtian.demoapp.main.ReflectObject
 
+@BaseFragment.FragmentInfo
 abstract class BaseFragment: Fragment() {
     companion object {
-        fun <T : BaseFragment> lazy(clazz: Class<T>, args: Array<out Any>): Lazy<T> = lazy {
+        fun <T : BaseFragment> creator(clazz: Class<T>, args: Array<out Any>): () -> T = {
             ReflectClass(clazz).newInstance(args)!!
+        }
+
+        fun <T : BaseFragment> Class<T>.getFragmentName(): String {
+            return getAnnotation(FragmentInfo::class.java)?.name ?: simpleName.removeSuffix("Fragment")
         }
     }
 
@@ -22,7 +26,8 @@ abstract class BaseFragment: Fragment() {
         return tabView
     }
 
-    fun getName(): String {
-        return this.javaClass.simpleName.removeSuffix("Fragment") + "\nFragment"
-    }
+    @Retention(AnnotationRetention.RUNTIME)
+    @Target(AnnotationTarget.CLASS)
+    annotation class FragmentInfo(val name: String = "")
+
 }
