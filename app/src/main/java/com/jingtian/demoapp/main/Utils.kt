@@ -334,6 +334,8 @@ object RxEvents {
                 } else if ((currentTime - lastTime) < interval){
                     emitter.onNext(Unit)
                     lastTime = -1L
+                } else {
+                    lastTime = -1L
                 }
             }
         }
