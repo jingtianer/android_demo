@@ -33,16 +33,14 @@ class TextOnFingerView @JvmOverloads constructor(
         initTextWidth()
     }
 
-    private var mLastX = 0f
-    private var mLastY = 0f
     private var x = 0f
     private var y = 0f
     private var drawInfo = DrawInfo()
 
-    private val bitMap by lazy {
+    private val bitMap by lazy(LazyThreadSafetyMode.NONE) {
         Bitmap.createBitmap(measuredWidth, measuredHeight, Bitmap.Config.ARGB_8888)
     }
-    private val cacheCanvas by lazy {
+    private val cacheCanvas by lazy(LazyThreadSafetyMode.NONE) {
         Canvas(bitMap)
     }
 
@@ -59,7 +57,7 @@ class TextOnFingerView @JvmOverloads constructor(
             MotionEvent.ACTION_DOWN -> {
                 path.reset()
                 path.moveTo(event.x, event.y)
-                drawInfo = DrawInfo()
+                drawInfo.reset()
             }
             MotionEvent.ACTION_MOVE -> {
                 path.lineTo(x, y)
@@ -70,13 +68,11 @@ class TextOnFingerView @JvmOverloads constructor(
                 cacheCanvas.drawCurrentData()
             }
         }
-        mLastX = x
-        mLastY = y
         super.onTouchEvent(event)
         return true
     }
 
-    fun initTextWidth() {
+    private fun initTextWidth() {
         textWidth.clear()
         for (i in text.indices) {
             textWidth.add(lazy(LazyThreadSafetyMode.NONE) {
@@ -116,12 +112,13 @@ class TextOnFingerView @JvmOverloads constructor(
         return substring(N, length) + substring(0, N)
     }
 
-    inner class DrawInfo(private val offset: Int = 0) {
+    inner class DrawInfo(private var offset: Int = 0) {
         private var repeatedString = ""
         private var currentRepeatCnt = 0
         private var remainText = 0
-        private val rotatedText = text.rotate(offset)
+        private var rotatedText = text.rotate(offset)
         private var doubleText = rotatedText + rotatedText
+        private val pathMeasure = PathMeasure(path, false)
         val drawText: String
             get() {
                 if (offset > repeatedString.length) {
@@ -130,12 +127,21 @@ class TextOnFingerView @JvmOverloads constructor(
                 return repeatedString + doubleText.substring(0, remainText)
             }
 
+        fun reset(offset: Int = 0) {
+            this.offset = offset
+            rotatedText = text.rotate(offset)
+            doubleText = rotatedText + rotatedText
+            repeatedString = ""
+            currentRepeatCnt = 0
+            remainText = 0
+        }
+
         fun cal() {
             if (rotatedText.isEmpty()) {
                 return
             }
-            val pathMeasure = PathMeasure(path, false)
-            val pathLength = pathMeasure.measure()
+            pathMeasure.setPath(path, false)
+            val pathLength = pathMeasure.length
             val repeatCnt = (pathLength / textWidth.last().value).toInt()
             repeatedString += rotatedText.repeat(repeatCnt - currentRepeatCnt)
             currentRepeatCnt = repeatCnt
@@ -152,26 +158,24 @@ class TextOnFingerView @JvmOverloads constructor(
             if (remainText < 0) {
                 remainText = -remainText - 1
             } else if (remainText < text.length){
-                remainText + 1
+                remainText += 1
             }
-            if (repeatCnt >= 10) {
+            if (repeatCnt >= 1) {
+                remainText = 0
+                val (x, y) = pathMeasure.moveBackward(remainedLength)
+
                 cacheCanvas.drawCurrentData()
                 path.reset()
                 path.moveTo(x, y)
-                drawInfo = DrawInfo((remainText + offset) % text.length)
+                drawInfo.reset((remainText + offset) % text.length)
             }
         }
     }
 
-
-    private fun PathMeasure.measure(): Float {
-        var totalLength = 0f
-        do {
-            val segmentLength = length
-            totalLength += segmentLength
-        } while (nextContour())
-
-        return totalLength
+    private fun PathMeasure.moveBackward(dis: Float): FloatArray {
+        val pos = FloatArray(2)
+        getPosTan(length - dis, pos, null)
+        return pos
     }
 
     private fun Canvas.drawCurrentData() {
