@@ -14,6 +14,7 @@ import android.view.View
 import androidx.annotation.ColorInt
 import com.jingtian.demoapp.main.MutableLazy
 import com.jingtian.demoapp.main.dp
+import kotlin.math.max
 
 class TextOnFingerView @JvmOverloads constructor(
     context: Context,
@@ -47,7 +48,10 @@ class TextOnFingerView @JvmOverloads constructor(
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
-        val oldBitMap = bitMap // 检查是否已初始化
+        if (!(w > oldw && h > oldh)) {
+            return
+        }
+        val oldBitMap = bitMap
         val newBitMap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         val newCanvas = Canvas(newBitMap)
         newCanvas.drawBitmap(oldBitMap, 0f, 0f, null)
