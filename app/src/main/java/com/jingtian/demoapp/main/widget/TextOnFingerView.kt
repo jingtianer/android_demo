@@ -120,6 +120,14 @@ class TextOnFingerView @JvmOverloads constructor(
         drawInfo.cal()
     }
 
+    fun clearCanvas() {
+        path.reset()
+        drawInfo = DrawInfo()
+        bitMap = Bitmap.createBitmap(measuredWidth, measuredHeight, Bitmap.Config.ARGB_8888)
+        cacheCanvas = Canvas(bitMap)
+        invalidate()
+    }
+
     private fun String.rotate(N: Int): String {
         return substring(N, length) + substring(0, N)
     }

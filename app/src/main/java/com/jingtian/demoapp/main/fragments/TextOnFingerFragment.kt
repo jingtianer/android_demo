@@ -9,6 +9,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.core.graphics.toColorInt
 import com.jingtian.demoapp.databinding.FragmentTextOnFingerBinding
+import com.jingtian.demoapp.main.RxEvents.setDoubleClickListener
 
 class TextOnFingerFragment : BaseFragment() {
 
@@ -24,6 +25,9 @@ class TextOnFingerFragment : BaseFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        getTabView()?.setDoubleClickListener(300L) {
+            binding.canvas.clearCanvas()
+        }
         binding.et.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
 
