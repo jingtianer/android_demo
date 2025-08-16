@@ -12,6 +12,7 @@ import android.util.Log
 import android.view.MotionEvent
 import android.view.View
 import androidx.annotation.ColorInt
+import com.jingtian.demoapp.main.MutableLazy
 import com.jingtian.demoapp.main.dp
 
 class TextOnFingerView @JvmOverloads constructor(
@@ -37,16 +38,23 @@ class TextOnFingerView @JvmOverloads constructor(
     private var y = 0f
     private var drawInfo = DrawInfo()
 
-    private val bitMap by lazy(LazyThreadSafetyMode.NONE) {
+    private var bitMap by MutableLazy {
         Bitmap.createBitmap(measuredWidth, measuredHeight, Bitmap.Config.ARGB_8888)
     }
-    private val cacheCanvas by lazy(LazyThreadSafetyMode.NONE) {
+    private var cacheCanvas by MutableLazy {
         Canvas(bitMap)
     }
 
-    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        super.onMeasure(widthMeasureSpec, heightMeasureSpec)
-        bitMap.reconfigure(measuredWidth, measuredHeight, Bitmap.Config.ARGB_8888)
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        val oldBitMap = bitMap // 检查是否已初始化
+        val newBitMap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        val newCanvas = Canvas(newBitMap)
+        newCanvas.drawBitmap(oldBitMap, 0f, 0f, null)
+        bitMap = newBitMap
+        cacheCanvas = newCanvas
+        oldBitMap.recycle()
+        invalidate()
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {

@@ -19,6 +19,8 @@ import java.lang.reflect.Constructor
 import java.lang.reflect.Field
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
+import kotlin.properties.ReadWriteProperty
+import kotlin.reflect.KProperty
 
 lateinit var app: Application
 
@@ -371,4 +373,22 @@ object ColorUtils {
                 255 - Color.blue(this),
             )
         }
+}
+
+class MutableLazy<T : Any>(private val initializer: () -> T) : ReadWriteProperty<Any, T> {
+    private lateinit var value: T
+    private var initialized = false
+    override fun getValue(thisRef: Any, property: KProperty<*>): T {
+        if (!initialized) {
+            initialized = true
+            value = initializer()
+        }
+        return value
+    }
+
+    override fun setValue(thisRef: Any, property: KProperty<*>, value: T) {
+        initialized = true
+        this.value = value
+    }
+
 }

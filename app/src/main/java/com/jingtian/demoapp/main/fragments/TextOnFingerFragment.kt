@@ -33,8 +33,10 @@ class TextOnFingerFragment : BaseFragment() {
             }
 
             override fun afterTextChanged(s: Editable?) {
-                val text = s?.toString() ?: ""
-                binding.canvas.setDrawText(text)
+                val text = s.toString() ?: null
+                if (!text.isNullOrEmpty()) {
+                    binding.canvas.setDrawText(text)
+                }
             }
 
         })
