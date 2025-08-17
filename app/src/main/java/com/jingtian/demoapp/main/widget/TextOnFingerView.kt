@@ -79,16 +79,10 @@ class TextOnFingerView @JvmOverloads constructor(
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
-        if (!(w >= oldw && h >= oldh)) {
+        if (!(w >= oldw || h >= oldh)) {
             return
         }
-        val oldBitMap = bitMap
-        val newBitMap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-        val newCanvas = Canvas(newBitMap)
-        newCanvas.drawBitmap(oldBitMap, 0f, 0f, null)
-        bitMap = newBitMap
-        cacheCanvas = newCanvas
-        oldBitMap.recycle()
+        clearCanvas(w, h)
         invalidate()
     }
 
@@ -153,12 +147,13 @@ class TextOnFingerView @JvmOverloads constructor(
         drawInfo.cal()
     }
 
-    fun clearCanvas() {
+    fun clearCanvas(width: Int = bitMap.width, height:Int = bitMap.height) {
         path.reset()
         drawInfo = DrawInfo()
-        val oldBitmap = bitMap
-        bitMap = Bitmap.createBitmap(oldBitmap.width, oldBitmap.height, Bitmap.Config.ARGB_8888)
+        val oldBitMap = bitMap
+        bitMap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         cacheCanvas = Canvas(bitMap)
+        oldBitMap.recycle()
         invalidate()
     }
 
