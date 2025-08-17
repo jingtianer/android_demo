@@ -337,7 +337,7 @@ object RxEvents {
                     emitter.onNext(Unit)
                     lastTime = -1L
                 } else {
-                    lastTime = -1L
+                    lastTime = currentTime
                 }
             }
         }
