@@ -8,13 +8,11 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.PathMeasure
 import android.util.AttributeSet
-import android.util.Log
 import android.view.MotionEvent
 import android.view.View
 import androidx.annotation.ColorInt
 import com.jingtian.demoapp.main.MutableLazy
 import com.jingtian.demoapp.main.dp
-import kotlin.math.max
 
 class TextOnFingerView @JvmOverloads constructor(
     context: Context,
@@ -34,6 +32,32 @@ class TextOnFingerView @JvmOverloads constructor(
         paint.color = textColor
         initTextWidth()
     }
+
+    private val rotate = run {
+        val rotateMap = HashMap<Int, String>()
+        val rotate: String.(Int) -> String = { N: Int ->
+            rotateMap.getOrPut(N) {
+                substring(N, length) + substring(0, N)
+            }
+        }
+        rotate
+    }
+
+    private val repeatTextFunctions = run {
+        val rotateMap = HashMap<Int, String>()
+        val repeat: String.(Int) -> String = { N: Int ->
+            rotateMap.getOrPut(N) {
+                this.repeat(N)
+            }
+        }
+        val resetRepeat: () -> Unit = {
+            rotateMap.clear()
+        }
+        repeat to resetRepeat
+    }
+
+    private val repeatDrawText = repeatTextFunctions.first
+    private val resetRepeatCache = repeatTextFunctions.second
 
     private var x = 0f
     private var y = 0f
@@ -110,6 +134,7 @@ class TextOnFingerView @JvmOverloads constructor(
 
     fun setDrawText(text: String) {
         this.text = text
+        resetRepeatCache()
         resetState()
         invalidate()
     }
@@ -129,29 +154,23 @@ class TextOnFingerView @JvmOverloads constructor(
         invalidate()
     }
 
-    private fun String.rotate(N: Int): String {
-        return substring(N, length) + substring(0, N)
-    }
-
     inner class DrawInfo(private var offset: Int = 0) {
         private var repeatedString = ""
         private var currentRepeatCnt = 0
         private var remainText = 0
         private var rotatedText = text.rotate(offset)
-        private var doubleText = rotatedText + rotatedText
         private val pathMeasure = PathMeasure(path, false)
         val drawText: String
             get() {
                 if (offset > repeatedString.length) {
-                    return doubleText.substring(0, remainText)
+                    return rotatedText.substring(0, remainText)
                 }
-                return repeatedString + doubleText.substring(0, remainText)
+                return repeatedString + rotatedText.substring(0, remainText)
             }
 
         fun reset(offset: Int = 0) {
             this.offset = offset
             rotatedText = text.rotate(offset)
-            doubleText = rotatedText + rotatedText
             repeatedString = ""
             currentRepeatCnt = 0
             remainText = 0
@@ -164,7 +183,7 @@ class TextOnFingerView @JvmOverloads constructor(
             pathMeasure.setPath(path, false)
             val pathLength = pathMeasure.length
             val repeatCnt = (pathLength / textWidth.last().value).toInt()
-            repeatedString += rotatedText.repeat(repeatCnt - currentRepeatCnt)
+            repeatedString += text.repeatDrawText(repeatCnt - currentRepeatCnt)
             currentRepeatCnt = repeatCnt
             val remainedLength = pathLength - repeatCnt * textWidth.last().value
             remainText = textWidth.binarySearch {
@@ -193,10 +212,13 @@ class TextOnFingerView @JvmOverloads constructor(
         }
     }
 
-    private fun PathMeasure.moveBackward(dis: Float): FloatArray {
+    private val moveBackward =  run {
         val pos = FloatArray(2)
-        getPosTan(length - dis, pos, null)
-        return pos
+        val inner: PathMeasure.(Float) -> FloatArray = { dis: Float ->
+            getPosTan(length - dis, pos, null)
+            pos
+        }
+        inner
     }
 
     private fun Canvas.drawCurrentData() {
