@@ -33,15 +33,22 @@ class TextOnFingerView @JvmOverloads constructor(
         initTextWidth()
     }
 
-    private val rotate = run {
+    private val rotateFunctions = run {
         val rotateMap = HashMap<Int, String>()
         val rotate: String.(Int) -> String = { N: Int ->
             rotateMap.getOrPut(N) {
                 substring(N, length) + substring(0, N)
             }
         }
-        rotate
+        val clearRotate = {
+            rotateMap.clear()
+        }
+        rotate to clearRotate
     }
+
+    private val rotate = rotateFunctions.first
+    private val clearRotate = rotateFunctions.second
+
 
     private val repeatTextFunctions = run {
         val rotateMap = HashMap<Int, String>()
@@ -135,6 +142,7 @@ class TextOnFingerView @JvmOverloads constructor(
     fun setDrawText(text: String) {
         this.text = text
         resetRepeatCache()
+        clearRotate()
         resetState()
         invalidate()
     }
