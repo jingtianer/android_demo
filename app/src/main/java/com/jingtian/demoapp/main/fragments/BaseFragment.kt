@@ -14,16 +14,17 @@ abstract class BaseFragment: Fragment() {
         fun <T : BaseFragment> Class<T>.getFragmentName(): String {
             return getAnnotation(FragmentInfo::class.java)?.name ?: simpleName.removeSuffix("Fragment")
         }
-    }
 
-    private var tabView: View? = null
+        interface BaseFragmentCallback {
+            fun getTab(index: Int) : View?
+        }
 
-    fun setTabView(view: View?) {
-        this.tabView = view
+        const val KEY_TAB_INDEX = "KEY_TAB_INDEX"
     }
 
     fun getTabView(): View? {
-        return tabView
+        val index = arguments?.getInt(KEY_TAB_INDEX) ?: return null
+        return (activity as? BaseFragmentCallback)?.getTab(index)
     }
 
     @Retention(AnnotationRetention.RUNTIME)
