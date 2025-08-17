@@ -123,7 +123,8 @@ class TextOnFingerView @JvmOverloads constructor(
     fun clearCanvas() {
         path.reset()
         drawInfo = DrawInfo()
-        bitMap = Bitmap.createBitmap(measuredWidth, measuredHeight, Bitmap.Config.ARGB_8888)
+        val oldBitmap = bitMap
+        bitMap = Bitmap.createBitmap(oldBitmap.width, oldBitmap.height, Bitmap.Config.ARGB_8888)
         cacheCanvas = Canvas(bitMap)
         invalidate()
     }
