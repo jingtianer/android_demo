@@ -375,20 +375,31 @@ object ColorUtils {
         }
 }
 
-class MutableLazy<T : Any>(private val initializer: () -> T) : ReadWriteProperty<Any, T> {
-    private lateinit var value: T
-    private var initialized = false
-    override fun getValue(thisRef: Any, property: KProperty<*>): T {
-        if (!initialized) {
-            initialized = true
-            value = initializer()
+class MutableLazy<T>(private val initializer: () -> T) : ReadWriteProperty<Any, T>, Lazy<T> {
+    private var _value: T? = null
+
+    override val value: T
+        get() {
+            var _value = _value
+            return if (_value == null) {
+                _value = initializer()
+                this._value = _value
+                _value
+            } else {
+                _value
+            }
         }
+
+    override fun getValue(thisRef: Any, property: KProperty<*>): T {
         return value
     }
 
     override fun setValue(thisRef: Any, property: KProperty<*>, value: T) {
-        initialized = true
-        this.value = value
+        this._value = value
+    }
+
+    override fun isInitialized(): Boolean {
+        return _value != null
     }
 
 }
