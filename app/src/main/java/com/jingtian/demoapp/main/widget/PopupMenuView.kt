@@ -7,6 +7,7 @@ import android.util.AttributeSet
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewStub
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -25,28 +26,39 @@ class PopupMenuView @JvmOverloads constructor(
         private const val TAG = "PopupMenuView"
     }
 
-    val bottomView: View
+
+    private val bottomView: FrameLayout = FrameLayout(context)
     val topView: View = LayoutInflater.from(context).inflate(R.layout.popup_menu_top_view, this, false)
     val icon: ImageView = topView.findViewById(R.id.icon)
     val title: TextView = topView.findViewById(R.id.title)
     val animator = ObjectAnimator.ofFloat(AnimationExecutor(), "progress", 0f, 1f)
     var expand = true
         private set
+
+    val bottomContentView: View
+
     init {
         this.orientation = LinearLayout.VERTICAL
         addView(topView)
         val typedArray = context.obtainStyledAttributes(attributeSet, R.styleable.PopupMenuView)
-        bottomView = if (typedArray.hasValue(R.styleable.PopupMenuView_popUpMenuBottomView)) {
+        bottomContentView = if (typedArray.hasValue(R.styleable.PopupMenuView_popUpMenuBottomView)) {
             val resId = typedArray.getResourceId(R.styleable.PopupMenuView_popUpMenuBottomView, 0)
-            LayoutInflater.from(context).inflate(resId, this, false)
+            LayoutInflater.from(context).inflate(resId, bottomView, false)
         } else {
-            FrameLayout(context)
+            ViewStub(context)
         }
+        bottomView.addView(bottomContentView, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT))
+        bottomContentView.translationY = 0f
+        bottomContentView.alpha = 0f
         addView(bottomView, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
-        bottomView.translationY = 0f
-        bottomView.alpha = 0f
         typedArray.recycle()
-        icon.setOnClickListener {
+        animator.addListener(AnimationObserver())
+    }
+
+    private var progress: Float = 0f
+
+    fun bind(view: View) {
+        view.setOnClickListener {
             if (animator.isStarted) {
                 expand = !expand
                 animator.reverse()
@@ -58,10 +70,7 @@ class PopupMenuView @JvmOverloads constructor(
                 }
             }
         }
-        animator.addListener(AnimationObserver())
     }
-
-    private var progress: Float = 0f
 
     open inner class AnimationExecutor {
 
@@ -69,8 +78,8 @@ class PopupMenuView @JvmOverloads constructor(
         fun setProgress(progress: Float) {
 //            Log.d(TAG, "setProgress: $progress")
             this@PopupMenuView.progress = progress
-            bottomView.alpha = progress
-            bottomView.translationY = bottomView.height * (progress - 1)
+            bottomContentView.alpha = progress
+            bottomContentView.translationY = bottomView.height * (progress - 1)
             icon.rotation = 180 * progress
         }
 
@@ -85,18 +94,18 @@ class PopupMenuView @JvmOverloads constructor(
         }
 
         private fun startShow() {
-            bottomView.visibility = View.VISIBLE
+            bottomContentView.visibility = View.VISIBLE
         }
 
         private fun hide() {
-            bottomView.visibility = View.GONE
-            bottomView.alpha = 0f
-            bottomView.translationY = -1f * bottomView.height
+            bottomContentView.visibility = View.GONE
+            bottomContentView.alpha = 0f
+            bottomContentView.translationY = -1f * bottomView.height
         }
 
         private fun show() {
-            bottomView.alpha = 1f
-            bottomView.translationY = 0f
+            bottomContentView.alpha = 1f
+            bottomContentView.translationY = 0f
         }
 
         override fun onAnimationStart(animation: Animator) {
@@ -110,7 +119,6 @@ class PopupMenuView @JvmOverloads constructor(
 
         override fun onAnimationEnd(animation: Animator) {
             Log.d(TAG, "onAnimationEnd: $progress")
-            animator.animatedValue
             if (!expand) {
                 hide()
             } else {

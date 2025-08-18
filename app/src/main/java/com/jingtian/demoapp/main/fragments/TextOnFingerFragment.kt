@@ -29,16 +29,16 @@ class TextOnFingerFragment : BaseFragment() {
         savedInstanceState: Bundle?
     ): View {
         binding = FragmentTextOnFingerBinding.inflate(inflater, container, false)
-        settingsBinding = SettingsTextOnFingerBinding.bind(binding.popUpMenu.bottomView)
+        settingsBinding = SettingsTextOnFingerBinding.bind(binding.popUpMenu.bottomContentView)
         return binding.root
     }
 
     private fun initSettingsMenu() {
         val popUpMenu = binding.popUpMenu
         val title = popUpMenu.title
-        val bottomView = popUpMenu.bottomView
+        val bottomView = popUpMenu.bottomContentView
         val icon = popUpMenu.icon
-        popUpMenu.animator.duration = 1000
+        popUpMenu.animator.duration = 300
         with(title) {
             text = "画布设置"
             setTextColor(Color.BLACK)
@@ -58,6 +58,7 @@ class TextOnFingerFragment : BaseFragment() {
                 layoutParams = lp
             }
         }
+        popUpMenu.bind(popUpMenu)
         popUpMenu.animator.addListener(object : Animator.AnimatorListener {
             override fun onAnimationStart(animation: Animator) {
                 bottomView.clearFocus()
@@ -94,7 +95,7 @@ class TextOnFingerFragment : BaseFragment() {
                     topView
                 }
                 if (event.insideOfView(view)) {
-                    view.dispatchTouchEvent(event)
+                    popUpMenu.dispatchTouchEvent(event)
                     val cancelEvent = MotionEvent.obtain(event)
                     if (!needDown && event.actionMasked != MotionEvent.ACTION_DOWN) {
                         cancelEvent.action = MotionEvent.ACTION_CANCEL
@@ -133,7 +134,7 @@ class TextOnFingerFragment : BaseFragment() {
             }
 
             override fun afterTextChanged(s: Editable?) {
-                val text = s.toString() ?: null
+                val text = s?.toString()
                 if (!text.isNullOrEmpty()) {
                     binding.canvas.setDrawText(text)
                 }
@@ -175,21 +176,25 @@ class TextOnFingerFragment : BaseFragment() {
                         val colors = s.toString().split(",").map {
                             it.trim().toInt()
                         }
-                        val (a, r, g, b) = if (colors.size == 4) {
-                            colors
-                        } else if (colors.size == 3) {
-                            val (r,g,b) = colors
-                            listOf(255, r ,g , b)
-                        } else {
-                            val color = binding.canvas.getColor()
-                            val alpha = ((color shr 24) and 0xFF)
-                            // Red通道：取次高8位，右移16位后与0xFF
-                            val red = ((color shr 16) and 0xFF)
-                            // Green通道：取中8位，右移8位后与0xFF
-                            val green = ((color shr 8) and 0xFF)
-                            // Blue通道：取低8位，直接与0xFF
-                            val blue = (color and 0xFF)
-                            listOf(alpha, red, green, blue)
+                        val (a, r, g, b) = when (colors.size) {
+                            4 -> {
+                                colors
+                            }
+                            3 -> {
+                                val (r,g,b) = colors
+                                listOf(255, r ,g , b)
+                            }
+                            else -> {
+                                val color = binding.canvas.getColor()
+                                val alpha = ((color shr 24) and 0xFF)
+                                // Red通道：取次高8位，右移16位后与0xFF
+                                val red = ((color shr 16) and 0xFF)
+                                // Green通道：取中8位，右移8位后与0xFF
+                                val green = ((color shr 8) and 0xFF)
+                                // Blue通道：取低8位，直接与0xFF
+                                val blue = (color and 0xFF)
+                                listOf(alpha, red, green, blue)
+                            }
                         }
                         binding.canvas.setColor(Color.argb(a, r, g, b))
                     }
