@@ -1,34 +1,109 @@
 package com.jingtian.demoapp.main.fragments
 
+import android.annotation.SuppressLint
 import android.graphics.Color
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
-import androidx.core.graphics.toColorInt
+import android.widget.ImageView
+import androidx.appcompat.content.res.AppCompatResources
+import com.jingtian.demoapp.R
 import com.jingtian.demoapp.databinding.FragmentTextOnFingerBinding
+import com.jingtian.demoapp.databinding.SettingsTextOnFingerBinding
 import com.jingtian.demoapp.main.RxEvents.setDoubleClickListener
+import com.jingtian.demoapp.main.app
+import com.jingtian.demoapp.main.insideOfView
 
 class TextOnFingerFragment : BaseFragment() {
 
-    lateinit var binding: FragmentTextOnFingerBinding
+    private lateinit var binding: FragmentTextOnFingerBinding
+    private lateinit var settingsBinding: SettingsTextOnFingerBinding
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
         binding = FragmentTextOnFingerBinding.inflate(inflater, container, false)
+        settingsBinding = SettingsTextOnFingerBinding.bind(binding.popUpMenu.bottomView)
         return binding.root
+    }
+
+    private fun initSettingsMenu() {
+        val popUpMenu = binding.popUpMenu
+        val title = popUpMenu.title
+        val icon = popUpMenu.icon
+        popUpMenu.animator.duration = 1000
+        with(title) {
+            text = "画布设置"
+            setTextColor(Color.BLACK)
+            textSize = 24f
+        }
+        val drawable = AppCompatResources.getDrawable(app, R.drawable.arrow_down)
+        with(icon) {
+            setImageDrawable(drawable)
+            scaleType = ImageView.ScaleType.CENTER_INSIDE
+            post {
+                val aspectRation = drawable?.let {
+                    it.intrinsicWidth / it.intrinsicHeight.toFloat()
+                } ?: 0f
+
+                val lp = layoutParams
+                lp.width = (aspectRation * height).toInt()
+                layoutParams = lp
+            }
+        }
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    fun initRootViewTouchListener() {
+        val popUpMenu = binding.popUpMenu
+        val topView = popUpMenu.topView
+        val root = binding.root
+        val canvas = binding.canvas
+        root.setOnTouchListener(object : View.OnTouchListener {
+            private var needDown = false
+            override fun onTouch(v: View, event: MotionEvent): Boolean {
+                val view = if (!popUpMenu.expand) {
+                    popUpMenu
+                } else {
+                    topView
+                }
+                if (event.insideOfView(view)) {
+                    view.dispatchTouchEvent(event)
+                    val cancelEvent = MotionEvent.obtain(event)
+                    if (!needDown && event.actionMasked != MotionEvent.ACTION_DOWN) {
+                        cancelEvent.action = MotionEvent.ACTION_CANCEL
+                        canvas.dispatchTouchEvent(cancelEvent)
+                        cancelEvent.recycle()
+                        needDown = true
+                    }
+                } else {
+                    if (needDown && event.actionMasked != MotionEvent.ACTION_DOWN) {
+                        val downEvent = MotionEvent.obtain(event)
+                        downEvent.action = MotionEvent.ACTION_DOWN
+                        canvas.dispatchTouchEvent(downEvent)
+                        downEvent.recycle()
+                        needDown = false
+                    }
+                    canvas.dispatchTouchEvent(event)
+                }
+                return true
+            }
+        })
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        initSettingsMenu()
+        initRootViewTouchListener()
         getTabView()?.setDoubleClickListener(300L) {
             binding.canvas.clearCanvas()
         }
-        binding.et.addTextChangedListener(object : TextWatcher {
+        settingsBinding.et.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
 
             }
@@ -45,7 +120,7 @@ class TextOnFingerFragment : BaseFragment() {
 
         })
 
-        binding.textSize.addTextChangedListener(object : TextWatcher {
+        settingsBinding.textSize.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
 
             }
@@ -65,7 +140,7 @@ class TextOnFingerFragment : BaseFragment() {
         })
 
 
-        binding.textColor.addTextChangedListener(object : TextWatcher {
+        settingsBinding.textColor.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
 
             }

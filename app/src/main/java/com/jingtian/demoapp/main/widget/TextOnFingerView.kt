@@ -13,6 +13,7 @@ import android.view.View
 import androidx.annotation.ColorInt
 import com.jingtian.demoapp.main.MutableLazy
 import com.jingtian.demoapp.main.dp
+import kotlin.math.max
 
 class TextOnFingerView @JvmOverloads constructor(
     context: Context,
@@ -79,17 +80,19 @@ class TextOnFingerView @JvmOverloads constructor(
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
-        if (!(w >= oldw || h >= oldh)) {
+        if (!(w >= bitMap.width || h >= bitMap.height)) {
             return
         }
-        clearCanvas(w, h)
+        val oldBitmap = bitMap
+        createNewCanvas(max(w, bitMap.width), max(h, bitMap.height))
+        cacheCanvas.drawBitmap(oldBitmap, 0f, 0f, null)
+        oldBitmap.recycle()
         invalidate()
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
         x = event.x
         y = event.y
-        parent?.requestDisallowInterceptTouchEvent(true)
         when(event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 path.reset()
@@ -105,8 +108,7 @@ class TextOnFingerView @JvmOverloads constructor(
                 cacheCanvas.drawCurrentData()
             }
         }
-        super.onTouchEvent(event)
-        return true
+        return super.onTouchEvent(event)
     }
 
     private fun initTextWidth() {
@@ -147,13 +149,17 @@ class TextOnFingerView @JvmOverloads constructor(
         drawInfo.cal()
     }
 
-    fun clearCanvas(width: Int = bitMap.width, height:Int = bitMap.height) {
+    private fun createNewCanvas(width: Int = bitMap.width, height:Int = bitMap.height) {
         path.reset()
         drawInfo = DrawInfo()
-        val oldBitMap = bitMap
         bitMap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         cacheCanvas = Canvas(bitMap)
-        oldBitMap.recycle()
+    }
+
+    fun clearCanvas(width: Int = bitMap.width, height:Int = bitMap.height) {
+        val oldBitmap = bitMap
+        createNewCanvas(width, height)
+        oldBitmap.recycle()
         invalidate()
     }
 

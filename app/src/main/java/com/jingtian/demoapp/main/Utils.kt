@@ -7,6 +7,7 @@ import android.os.SystemClock
 import android.text.TextPaint
 import android.util.DisplayMetrics
 import android.util.TypedValue
+import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
 import androidx.annotation.ColorInt
@@ -14,7 +15,6 @@ import com.jingtian.demoapp.main.ReflectToStringUtil.reflectToString
 import io.reactivex.Observable
 import io.reactivex.ObservableEmitter
 import io.reactivex.ObservableOnSubscribe
-import io.reactivex.Observer
 import java.lang.reflect.Constructor
 import java.lang.reflect.Field
 import java.lang.reflect.Method
@@ -402,4 +402,14 @@ class MutableLazy<T>(private val initializer: () -> T) : ReadWriteProperty<Any, 
         return _value != null
     }
 
+}
+
+fun MotionEvent.insideOfView(view: View): Boolean {
+    val location = IntArray(2)
+    view.getLocationOnScreen(location)
+    val x = location[0]
+    val y = location[1]
+    val w = view.width
+    val h = view.height
+    return this.rawX >= x && this.rawX <= x + w && this.rawY >= y && this.rawY <= y + h
 }
