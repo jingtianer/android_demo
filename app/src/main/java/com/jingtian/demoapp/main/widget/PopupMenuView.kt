@@ -48,6 +48,7 @@ class PopupMenuView @JvmOverloads constructor(
         typedArray.recycle()
         icon.setOnClickListener {
             if (animator.isStarted) {
+                expand = !expand
                 animator.reverse()
             } else {
                 if (expand) {
@@ -66,7 +67,7 @@ class PopupMenuView @JvmOverloads constructor(
 
         @Keep
         fun setProgress(progress: Float) {
-            Log.d(TAG, "setProgress: $progress")
+//            Log.d(TAG, "setProgress: $progress")
             this@PopupMenuView.progress = progress
             bottomView.alpha = progress
             bottomView.translationY = bottomView.height * (progress - 1)
@@ -81,20 +82,13 @@ class PopupMenuView @JvmOverloads constructor(
 
     inner class AnimationObserver : Animator.AnimatorListener {
         private fun startHide() {
-            bottomView.isFocusableInTouchMode = false
-            bottomView.isFocusable = false
-            bottomView.clearFocus()
         }
 
         private fun startShow() {
             bottomView.visibility = View.VISIBLE
-            bottomView.isFocusableInTouchMode = false
-            bottomView.isFocusable = false
         }
 
         private fun hide() {
-            bottomView.isFocusableInTouchMode = false
-            bottomView.isFocusable = false
             bottomView.visibility = View.GONE
             bottomView.alpha = 0f
             bottomView.translationY = -1f * bottomView.height
@@ -103,12 +97,10 @@ class PopupMenuView @JvmOverloads constructor(
         private fun show() {
             bottomView.alpha = 1f
             bottomView.translationY = 0f
-            bottomView.isFocusableInTouchMode = true
-            bottomView.isFocusable = true
         }
 
         override fun onAnimationStart(animation: Animator) {
-            Log.d(TAG, "onAnimationEnd: $progress")
+            Log.d(TAG, "onAnimationStart: $progress")
             if (expand) {
                 startShow()
             } else {
@@ -118,6 +110,7 @@ class PopupMenuView @JvmOverloads constructor(
 
         override fun onAnimationEnd(animation: Animator) {
             Log.d(TAG, "onAnimationEnd: $progress")
+            animator.animatedValue
             if (!expand) {
                 hide()
             } else {

@@ -1,5 +1,6 @@
 package com.jingtian.demoapp.main.fragments
 
+import android.animation.Animator
 import android.annotation.SuppressLint
 import android.graphics.Color
 import android.os.Bundle
@@ -35,6 +36,7 @@ class TextOnFingerFragment : BaseFragment() {
     private fun initSettingsMenu() {
         val popUpMenu = binding.popUpMenu
         val title = popUpMenu.title
+        val bottomView = popUpMenu.bottomView
         val icon = popUpMenu.icon
         popUpMenu.animator.duration = 1000
         with(title) {
@@ -56,6 +58,25 @@ class TextOnFingerFragment : BaseFragment() {
                 layoutParams = lp
             }
         }
+        popUpMenu.animator.addListener(object : Animator.AnimatorListener {
+            override fun onAnimationStart(animation: Animator) {
+                bottomView.clearFocus()
+                for(view in arrayOf(bottomView, settingsBinding.et, settingsBinding.textColor, settingsBinding.textSize)) {
+                    view.isFocusable = false
+                    view.isFocusableInTouchMode = false
+                }
+            }
+
+            override fun onAnimationEnd(animation: Animator) {
+                for(view in arrayOf(bottomView, settingsBinding.et, settingsBinding.textColor, settingsBinding.textSize)) {
+                    view.isFocusable = true
+                    view.isFocusableInTouchMode = true
+                }
+            }
+            override fun onAnimationCancel(animation: Animator) = Unit
+
+            override fun onAnimationRepeat(animation: Animator) = Unit
+        })
     }
 
     @SuppressLint("ClickableViewAccessibility")
