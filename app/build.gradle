@@ -49,7 +49,7 @@ def androidJar = localProperties.get("android.jar")
 print(sdkPath)
 
 AsmPlugin {
-    extraJars = [sdkPath + androidJar]
+//    extraJars = [sdkPath + androidJar] // 可惜，没用
 }
 
 dependencies {
