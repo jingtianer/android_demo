@@ -18,6 +18,7 @@ import com.jingtian.demoapp.main.fragments.BaseFragment.Companion.BaseFragmentCa
 import com.jingtian.demoapp.main.fragments.BuildInfoFragment
 import com.jingtian.demoapp.main.fragments.CanvasFragment
 import com.jingtian.demoapp.main.fragments.FocusFragment
+import com.jingtian.demoapp.main.fragments.FollowLeftFragment
 import com.jingtian.demoapp.main.fragments.FragmentInfoFragment
 import com.jingtian.demoapp.main.fragments.NBPlusTextFragment
 import com.jingtian.demoapp.main.fragments.NestedScrollFragment
@@ -33,6 +34,7 @@ class MainActivity : AppCompatActivity(), BaseFragmentCallback {
     companion object {
 
         private val fragmentList = listOf(
+            FollowLeftFragment::class.java to arrayOf<Any>(),
             NBPlusTextFragment::class.java to arrayOf<Any>(),
             TextOnFingerFragment::class.java to arrayOf<Any>(),
             FocusFragment::class.java to arrayOf<Any>(),
