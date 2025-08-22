@@ -1,0 +1,63 @@
+plugins {
+    id 'java-gradle-plugin'
+    id 'maven-publish'
+}
+
+dependencies {
+    //gradle sdk
+    implementation gradleApi()
+    //groovy sdk
+    implementation localGroovy()
+    //引入asm框架内容
+    implementation 'org.ow2.asm:asm:7.2'
+    implementation 'org.ow2.asm:asm-commons:7.2'
+    implementation 'org.ow2.asm:asm-analysis:7.2'
+    implementation 'org.ow2.asm:asm-util:7.2'
+    implementation 'org.ow2.asm:asm-tree:7.2'
+    implementation 'com.android.tools.build:gradle:4.1.2', {
+        exclude group: 'org.ow2.asm'
+    }
+}
+
+gradlePlugin {
+    plugins {
+        create('AsmPlugin') {
+            //插件id
+            id = 'com.jingtian.asmplugin.AsmPlugin'
+            //插件的包名+类名
+            implementationClass = 'com.jingtian.asmplugin.AppScaleAsmPlugin'
+
+            version = '1.0.0'
+        }
+    }
+}
+
+// 配置发布内容（以 Android 库为例）
+publishing {
+//    publications {
+//        maven(MavenPublication) {
+//            groupId = 'com.jingtian.asmplugin'
+//            artifactId = 'asmplugin'
+//            version = '1.0.0'
+//
+//            from components.java
+//        }
+//    }
+
+    // 配置仓库（如本地仓库、远程 Maven 仓库）
+    repositories {
+//        maven {
+//            // 本地仓库路径（示例）
+//            url = uri("$rootDir/repo")
+////            print(url)
+//
+//            // 远程仓库配置（示例）
+//            // url = uri("https://maven.example.com/repository")
+//            // credentials {
+//            //     username = "yourUsername"
+//            //     password = "yourPassword"
+//            // }
+//        }
+        mavenLocal()
+    }
+}

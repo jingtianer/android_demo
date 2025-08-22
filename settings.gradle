@@ -9,16 +9,18 @@ pluginManagement {
         }
         mavenCentral()
         gradlePluginPortal()
+        mavenLocal()
 //        maven {
 //            url 'https://maven.byted.org/repository/android_public/'
 //        }
     }
 }
 dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
     repositories {
         google()
         mavenCentral()
+        mavenLocal()
 //        maven {
 //            url 'https://maven.byted.org/repository/android_public/'
 //        }
@@ -27,3 +29,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "DemoApp"
 include ':app'
+include ':AsmPlugin'
