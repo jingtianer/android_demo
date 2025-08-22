@@ -34,12 +34,12 @@ class MainActivity : AppCompatActivity(), BaseFragmentCallback {
     companion object {
 
         private val fragmentList = listOf(
-            FollowLeftFragment::class.java to arrayOf<Any>(),
             NBPlusTextFragment::class.java to arrayOf<Any>(),
             TextOnFingerFragment::class.java to arrayOf<Any>(),
             FocusFragment::class.java to arrayOf<Any>(),
             NestedScrollFragment::class.java to arrayOf<Any>(),
             CanvasFragment::class.java to arrayOf<Any>(),
+            FollowLeftFragment::class.java to arrayOf<Any>(),
             RxJavaFragment::class.java to arrayOf<Any>(),
             RxMergeFragment::class.java to arrayOf<Any>(),
             RxZipFragment::class.java to arrayOf<Any>(),
