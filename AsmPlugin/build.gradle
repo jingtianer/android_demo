@@ -21,7 +21,7 @@ dependencies {
 
 gradlePlugin {
     plugins {
-        create('AsmPlugin') {
+        create("AsmPlugin") {
             //插件id
             id = 'com.jingtian.asmplugin.AsmPlugin'
             //插件的包名+类名
