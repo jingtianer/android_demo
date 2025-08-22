@@ -1,5 +1,6 @@
 package com.jingtian.demoapp.main.fragments
 
+import android.graphics.Canvas
 import android.os.Build
 import android.os.Bundle
 import android.view.View
@@ -31,3 +32,5 @@ open class ReflectFragment(private val obj: Any, title: String) : LogFragment(
 class BuildInfoFragment : ReflectFragment(Build::class.java, Build::class.java.name)
 
 class FragmentInfoFragment : ReflectFragment(Fragment(), Fragment::class.java.name)
+
+class CanvasFragment : ReflectFragment(Canvas(), "Canvas")

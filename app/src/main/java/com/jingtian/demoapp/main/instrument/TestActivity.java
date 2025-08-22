@@ -1,4 +1,4 @@
-package com.jingtian.demoapp.main.widget;
+package com.jingtian.demoapp.main.instrument;
 
 import android.app.Activity;
 import android.os.Bundle;

@@ -48,7 +48,7 @@ class ReflectField constructor(private val obj: Any, private val field: Field) {
     }
 }
 
-class ReflectMethod constructor(private val obj: Any, private val method: Method) {
+class ReflectMethod constructor(var obj: Any, private val method: Method) {
     init {
         method.isAccessible = true
     }

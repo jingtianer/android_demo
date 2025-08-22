@@ -9,6 +9,7 @@ import android.graphics.Rect
 import android.util.AttributeSet
 import android.view.View
 import android.view.ViewOutlineProvider
+import com.jingtian.demoapp.main.ReflectClass
 import com.jingtian.demoapp.main.dp
 
 class OverDrawView @JvmOverloads constructor(
@@ -66,10 +67,31 @@ class OverDrawView @JvmOverloads constructor(
         strokeWidth = this@OverDrawView.strokeWidth
     }
 
+    private val instrumentedClipRect : Canvas.(Float, Float, Float, Float, Int) -> Boolean = run {
+        val method = try {
+            ReflectClass(Canvas::class.java).method("clipRect", arrayOf(
+                Float::class.javaPrimitiveType!!,
+                Float::class.javaPrimitiveType!!,
+                Float::class.javaPrimitiveType!!,
+                Float::class.javaPrimitiveType!!,
+                Int::class.javaPrimitiveType!!,
+            ))
+        } catch (ignore : Exception) {
+            null
+        }
+        val returnFunction : Canvas.(Float, Float, Float, Float, Int) -> Boolean = { l, t, r, b, op ->
+            method?.obj = this
+            method?.call<Boolean>(arrayOf(
+                l, t, r, b, op
+            )) ?: false
+        }
+        returnFunction
+    }
+
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         val savedCount = canvas.save()
-        canvas.clipRect(-offset, -offset, width + offset, height + offset)
+        canvas.instrumentedClipRect(-offset, -offset, width + offset, height + offset, 5)
         val bounds = 0f
         canvas.drawRoundRect(
             bounds,

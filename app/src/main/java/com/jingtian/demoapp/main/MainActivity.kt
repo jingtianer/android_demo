@@ -16,6 +16,7 @@ import com.jingtian.demoapp.main.fragments.BaseFragment.Companion.KEY_TAB_INDEX
 import com.jingtian.demoapp.main.fragments.BaseFragment.Companion.getFragmentName
 import com.jingtian.demoapp.main.fragments.BaseFragment.Companion.BaseFragmentCallback
 import com.jingtian.demoapp.main.fragments.BuildInfoFragment
+import com.jingtian.demoapp.main.fragments.CanvasFragment
 import com.jingtian.demoapp.main.fragments.FocusFragment
 import com.jingtian.demoapp.main.fragments.FragmentInfoFragment
 import com.jingtian.demoapp.main.fragments.NBPlusTextFragment
@@ -36,6 +37,7 @@ class MainActivity : AppCompatActivity(), BaseFragmentCallback {
             TextOnFingerFragment::class.java to arrayOf<Any>(),
             FocusFragment::class.java to arrayOf<Any>(),
             NestedScrollFragment::class.java to arrayOf<Any>(),
+            CanvasFragment::class.java to arrayOf<Any>(),
             RxJavaFragment::class.java to arrayOf<Any>(),
             RxMergeFragment::class.java to arrayOf<Any>(),
             RxZipFragment::class.java to arrayOf<Any>(),

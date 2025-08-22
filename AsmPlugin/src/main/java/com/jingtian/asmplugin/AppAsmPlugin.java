@@ -38,6 +38,7 @@ import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.jar.JarOutputStream;
@@ -144,7 +145,12 @@ public class AppAsmPlugin extends Transform implements Plugin<Project> {
                         jarInput.getScopes(),
                         Format.JAR
                 );
-                transformJar(srcJar, destJar);
+                transformJar(srcJar, destJar, new Function<ClassWriter, ClassVisitor>() {
+                    @Override
+                    public ClassVisitor apply(ClassWriter classWriter) {
+                        return new AppClassVisitor(classWriter);
+                    }
+                });
 //                FileUtils.copyFile(srcJar, destJar);
             }
         }
@@ -161,11 +167,20 @@ public class AppAsmPlugin extends Transform implements Plugin<Project> {
                     Format.JAR
             );
             printLog("srcJar = " + srcJar.getName() + ", destJar = " + destJar.getName());
-            transformJar(srcJar, destJar);
+            transformJar(srcJar, destJar, new Function<ClassWriter, ClassVisitor>() {
+                @Override
+                public ClassVisitor apply(ClassWriter classWriter) {
+                    return createExtraJarVisitor(classWriter);
+                }
+            });
         }
     }
 
-    private void transformJar(File srcJar, File destJar) throws IOException {
+    private static ClassVisitor createExtraJarVisitor(ClassWriter classWriter) {
+        return new CanvasVisitor(classWriter);
+    }
+
+    private void transformJar(File srcJar, File destJar, Function<ClassWriter, ClassVisitor> classVisitorCreator) throws IOException {
         try (JarFile srcJarFile = new JarFile(srcJar); JarOutputStream destJarFileOs = new JarOutputStream(new FileOutputStream(destJar))) {
             Enumeration<JarEntry> enumeration = srcJarFile.entries();
             //遍历srcJar中的每一条条目
@@ -178,7 +193,7 @@ public class AppAsmPlugin extends Transform implements Plugin<Project> {
                             //通过asm修改源class文件
                             ClassReader classReader = new ClassReader(entryIs);
                             ClassWriter classWriter = new ClassWriter(classReader, 0);
-                            AppClassVisitor appClassVisitor = new AppClassVisitor(classWriter);
+                            ClassVisitor appClassVisitor = classVisitorCreator.apply(classWriter);
                             try {
                                 try {
                                     CheckClassAdapter checkAdapter = new CheckClassAdapter(appClassVisitor);
