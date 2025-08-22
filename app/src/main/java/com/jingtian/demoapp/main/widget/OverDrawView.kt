@@ -6,10 +6,12 @@ import android.graphics.Color
 import android.graphics.Outline
 import android.graphics.Paint
 import android.graphics.Rect
+import android.graphics.Region
 import android.util.AttributeSet
 import android.view.View
 import android.view.ViewOutlineProvider
 import com.jingtian.demoapp.main.ReflectClass
+import com.jingtian.demoapp.main.ReflectObject
 import com.jingtian.demoapp.main.dp
 
 class OverDrawView @JvmOverloads constructor(
@@ -18,9 +20,9 @@ class OverDrawView @JvmOverloads constructor(
     defStyleAttr: Int = 0,
     defStyleRes: Int = 0,
 ): View(context, attributeSet, defStyleAttr, defStyleRes) {
-    private val offset = 10f.dp
+    private val offset = 100f.dp
     private val radius = 10f.dp
-    private val correctShadowRadius = 8f.dp
+    private val correctShadowRadius = 800f.dp
     private val realDx = 1f.dp
     private val realDy = 4f.dp
     private val shadowColor = Color.GREEN
@@ -108,6 +110,39 @@ class OverDrawView @JvmOverloads constructor(
             val canvasId = getNativeCanvasWrapper.call<Long>(arrayOf())!!
             method?.call<Boolean>(arrayOf(
                 canvasId, l, t, r, b, op
+            )) ?: false
+        }
+        returnFunction
+    }
+
+    private val instrumentedViewClipRect : Canvas.(Float, Float, Float, Float, Int) -> Boolean = run {
+        val method = try {
+            ReflectObject(this).method("clipRect", arrayOf(
+                Canvas::class.java,
+                Float::class.javaPrimitiveType!!,
+                Float::class.javaPrimitiveType!!,
+                Float::class.javaPrimitiveType!!,
+                Float::class.javaPrimitiveType!!,
+                Int::class.javaPrimitiveType!!,
+            ))
+        } catch (ignore : Exception) {
+            throw ignore
+        }
+        try {
+            ReflectClass(Canvas::class.java).method("nClipRect", arrayOf(
+                Long::class.javaPrimitiveType!!,
+                Float::class.javaPrimitiveType!!,
+                Float::class.javaPrimitiveType!!,
+                Float::class.javaPrimitiveType!!,
+                Float::class.javaPrimitiveType!!,
+                Int::class.javaPrimitiveType!!,
+            ))
+        } catch (ignore : Exception) {
+            throw ignore
+        }
+        val returnFunction : Canvas.(Float, Float, Float, Float, Int) -> Boolean = { l, t, r, b, op ->
+            method?.call<Boolean>(arrayOf(
+                this, l, t, r, b, op
             )) ?: false
         }
         returnFunction

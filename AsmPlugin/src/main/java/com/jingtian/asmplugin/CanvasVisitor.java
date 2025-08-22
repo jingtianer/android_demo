@@ -4,11 +4,10 @@ package com.jingtian.asmplugin;
 import static org.objectweb.asm.Opcodes.ACC_PUBLIC;
 import static org.objectweb.asm.Opcodes.ALOAD;
 import static org.objectweb.asm.Opcodes.FLOAD;
-import static org.objectweb.asm.Opcodes.GETFIELD;
 import static org.objectweb.asm.Opcodes.ILOAD;
 import static org.objectweb.asm.Opcodes.INVOKESTATIC;
-import static org.objectweb.asm.Opcodes.POP;
-import static org.objectweb.asm.Opcodes.RETURN;
+import static org.objectweb.asm.Opcodes.INVOKEVIRTUAL;
+import static org.objectweb.asm.Opcodes.IRETURN;
 
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
@@ -25,6 +24,10 @@ public class CanvasVisitor extends ClassVisitor {
 
     String clazzName = null;
     String superClazzName = null;
+
+    private static final String CANVAS_CLASS_NAME = "android/graphics/Canvas";
+    private static final String CANVAS_CLASS_LABEL = "Landroid/graphics/Canvas;";
+    private static final String VIEW_CLASS_NAME = "android/view/View";
 
     protected CanvasVisitor(ClassWriter classWriter) {
         super(Opcodes.ASM7, classWriter);
@@ -50,15 +53,14 @@ public class CanvasVisitor extends ClassVisitor {
 
     @Override
     public void visitEnd() {
-        if ("android/graphics/Canvas".equals(clazzName)) {
-
-            Method method = Method.getMethod("boolean clipRect(float left, float top, float right, float bottom, int nativeOp)");
+        if (VIEW_CLASS_NAME.equals(superClazzName)) {
+            Method method = Method.getMethod("boolean clipRect(android.graphics.Canvas,float,float,float,float,int)");
             GeneratorAdapter generatorAdapter = new GeneratorAdapter(
                     ACC_PUBLIC, method, null, null, this
             );
             try {
-                printLog("api = " + this.api + ", visitor = " + this + ", method = " + method);
-                addClipRect(generatorAdapter);
+                printLog("api = " + this.api + ", clazzName = " + clazzName + ", superClazzName = " + superClazzName + ", visitor = " + this + ", method = " + method);
+                addClipRect(generatorAdapter, clazzName);
             } catch (Exception e) {
                 printError(e, "at CanvasVisitor");
                 throw e;
@@ -67,31 +69,27 @@ public class CanvasVisitor extends ClassVisitor {
         super.visitEnd();
     }
 
-    private void addClipRect(MethodVisitor methodVisitor) {
+    private void addClipRect(MethodVisitor methodVisitor, String clazzName) {
         Label label0 = new Label();
         methodVisitor.visitLabel(label0);
-        methodVisitor.visitLineNumber(13, label0);
-        methodVisitor.visitVarInsn(ALOAD, 0);
-        methodVisitor.visitFieldInsn(GETFIELD, "android/graphics/Canvas", "mNativeCanvasWrapper", "J");
-        methodVisitor.visitVarInsn(FLOAD, 1);
+        methodVisitor.visitVarInsn(ALOAD, 1);
+        methodVisitor.visitMethodInsn(INVOKEVIRTUAL, CANVAS_CLASS_NAME, "getNativeCanvasWrapper", "()J", false);
         methodVisitor.visitVarInsn(FLOAD, 2);
         methodVisitor.visitVarInsn(FLOAD, 3);
         methodVisitor.visitVarInsn(FLOAD, 4);
-        methodVisitor.visitVarInsn(ILOAD, 5);
-        methodVisitor.visitMethodInsn(INVOKESTATIC, "android/graphics/Canvas", "nClipRect", "(JFFFFI)Z", false);
-        methodVisitor.visitInsn(POP);
+        methodVisitor.visitVarInsn(FLOAD, 5);
+        methodVisitor.visitVarInsn(ILOAD, 6);
+        methodVisitor.visitMethodInsn(INVOKESTATIC, CANVAS_CLASS_NAME, "nClipRect", "(JFFFFI)Z", false);
+        methodVisitor.visitInsn(IRETURN);
         Label label1 = new Label();
         methodVisitor.visitLabel(label1);
-        methodVisitor.visitLineNumber(14, label1);
-        methodVisitor.visitInsn(RETURN);
-        Label label2 = new Label();
-        methodVisitor.visitLabel(label2);
-        methodVisitor.visitLocalVariable("this", "Landroid/graphics/Canvas;", null, label0, label2, 0);
-        methodVisitor.visitLocalVariable("left", "F", null, label0, label2, 1);
-        methodVisitor.visitLocalVariable("top", "F", null, label0, label2, 2);
-        methodVisitor.visitLocalVariable("right", "F", null, label0, label2, 3);
-        methodVisitor.visitLocalVariable("bottom", "F", null, label0, label2, 4);
-        methodVisitor.visitLocalVariable("regionOp", "I", null, label0, label2, 5);
-        methodVisitor.visitMaxs(7, 6);
+        methodVisitor.visitLocalVariable("this", "L" + clazzName + ";", null, label0, label1, 0);
+        methodVisitor.visitLocalVariable("canvas", CANVAS_CLASS_LABEL, null, label0, label1, 1);
+        methodVisitor.visitLocalVariable("left", "F", null, label0, label1, 2);
+        methodVisitor.visitLocalVariable("top", "F", null, label0, label1, 3);
+        methodVisitor.visitLocalVariable("right", "F", null, label0, label1, 4);
+        methodVisitor.visitLocalVariable("bottom", "F", null, label0, label1, 5);
+        methodVisitor.visitLocalVariable("regionOp", "I", null, label0, label1, 6);
+        methodVisitor.visitMaxs(7, 7);
     }
 }

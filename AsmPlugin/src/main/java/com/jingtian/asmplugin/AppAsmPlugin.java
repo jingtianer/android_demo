@@ -105,7 +105,8 @@ public class AppAsmPlugin extends Transform implements Plugin<Project> {
                         try (FileInputStream fis = new FileInputStream(file)) {
                             ClassReader classReader = new ClassReader(fis.readAllBytes());
                             ClassWriter classWriter = new ClassWriter(classReader, ClassWriter.COMPUTE_MAXS);
-                            ClassVisitor classVisitor = new AppClassVisitor(classWriter);
+                            CanvasVisitor canvasVisitor = new CanvasVisitor(classWriter);
+                            ClassVisitor classVisitor = new AppClassVisitor(canvasVisitor);
                             try {
 //                                classReader.accept(classVisitor, ClassReader.EXPAND_FRAMES);
                                 try {
@@ -148,7 +149,8 @@ public class AppAsmPlugin extends Transform implements Plugin<Project> {
                 transformJar(srcJar, destJar, new Function<ClassWriter, ClassVisitor>() {
                     @Override
                     public ClassVisitor apply(ClassWriter classWriter) {
-                        return new AppClassVisitor(classWriter);
+                        CanvasVisitor canvasVisitor = new CanvasVisitor(classWriter);
+                        return new AppClassVisitor(canvasVisitor);
                     }
                 });
 //                FileUtils.copyFile(srcJar, destJar);

@@ -4,14 +4,12 @@ import android.graphics.Canvas;
 
 public class TestCanvas extends Canvas {
 
-    private static native boolean nClipRect(long nativeCanvas,
-                                            float left, float top, float right, float bottom, int regionOp);
+    public long mNativeCanvasWrapper;
 
-    public void clipRect(long mNativeCanvasWrapper, float left, float top, float right, float bottom, int regionOp) {
-        nClipRect(mNativeCanvasWrapper, left, top, right, bottom, regionOp);
+    public long getNativeCanvasWrapper() {
+        return mNativeCanvasWrapper;
     }
 
-    public void initReflect() {
-
-    }
+    static native boolean nClipRect(long nativeCanvas,
+                                    float left, float top, float right, float bottom, int regionOp);
 }

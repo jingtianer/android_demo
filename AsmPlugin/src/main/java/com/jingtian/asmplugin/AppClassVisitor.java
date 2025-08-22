@@ -14,7 +14,7 @@ public class AppClassVisitor extends ClassVisitor {
     String clazzName = null;
     String superClazzName = null;
 
-    protected AppClassVisitor(ClassWriter classWriter) {
+    protected AppClassVisitor(ClassVisitor classWriter) {
         super(Opcodes.ASM7, classWriter);
     }
 

@@ -10,6 +10,7 @@ pluginManagement {
         mavenCentral()
         gradlePluginPortal()
         mavenLocal()
+        maven { url "https://jitpack.io" }
 //        maven {
 //            url 'https://maven.byted.org/repository/android_public/'
 //        }
@@ -21,12 +22,12 @@ dependencyResolutionManagement {
         google()
         mavenCentral()
         mavenLocal()
+        maven { url "https://jitpack.io" }
 //        maven {
 //            url 'https://maven.byted.org/repository/android_public/'
 //        }
     }
 }
-
 rootProject.name = "DemoApp"
 include ':app'
 include ':AsmPlugin'
