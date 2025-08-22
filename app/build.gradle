@@ -38,6 +38,20 @@ android {
     }
 }
 
+def localProperties = new Properties()
+localProperties.load(project.rootProject.file('local.properties').newDataInputStream())
+
+def asmProperties = new Properties()
+localProperties.load(project.rootProject.file('asm-plugin.properties').newDataInputStream())
+
+def sdkPath = localProperties.get("sdk.dir")
+def androidJar = localProperties.get("android.jar")
+print(sdkPath)
+
+AsmPlugin {
+    extraJars = [sdkPath + androidJar]
+}
+
 dependencies {
     implementation "androidx.core:core-ktx:1.8.0"
     implementation "androidx.appcompat:appcompat:1.4.1"

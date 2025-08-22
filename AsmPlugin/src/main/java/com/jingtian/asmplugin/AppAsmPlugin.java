@@ -1,5 +1,6 @@
 package com.jingtian.asmplugin;
 
+import com.android.annotations.NonNull;
 import com.android.build.api.transform.DirectoryInput;
 import com.android.build.api.transform.Format;
 import com.android.build.api.transform.JarInput;
@@ -12,6 +13,7 @@ import com.android.build.gradle.AppExtension;
 import com.android.build.gradle.internal.pipeline.TransformManager;
 import com.android.utils.FileUtils;
 import com.google.common.collect.FluentIterable;
+import com.google.common.collect.ImmutableList;
 
 import org.gradle.api.Action;
 import org.gradle.api.Plugin;
@@ -28,14 +30,22 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Enumeration;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.jar.JarOutputStream;
 
+import kotlin.StandardKt;
+
 public class AppAsmPlugin extends Transform implements Plugin<Project> {
+    private AsmPluginArgs args = new AsmPluginArgs();
     @Override
     public String getName() {
         return "AppAsmPlugin";
@@ -80,7 +90,7 @@ public class AppAsmPlugin extends Transform implements Plugin<Project> {
             Collection<DirectoryInput> directoryInputs = input.getDirectoryInputs();
             for (DirectoryInput directoryInput : directoryInputs) {
                 File dir = directoryInput.getFile();
-                printLog("read dir " + dir.getAbsolutePath());
+//                printLog("read dir " + dir.getAbsolutePath());
                 if (!dir.isDirectory()) {
                     continue;
                 }
@@ -88,7 +98,7 @@ public class AppAsmPlugin extends Transform implements Plugin<Project> {
                 for (File file : allFiles) {
                     String fileName = file.getName();
                     if (fileName.endsWith(".class")) {
-                        printLog("file = " + fileName);
+//                        printLog("file = " + fileName);
                         String clazzPath = file.getAbsolutePath();
                         byte[] transformedClass = null;
                         try (FileInputStream fis = new FileInputStream(file)) {
@@ -134,45 +144,64 @@ public class AppAsmPlugin extends Transform implements Plugin<Project> {
                         jarInput.getScopes(),
                         Format.JAR
                 );
+                transformJar(srcJar, destJar);
 //                FileUtils.copyFile(srcJar, destJar);
-                try (JarFile srcJarFile = new JarFile(srcJar); JarOutputStream destJarFileOs = new JarOutputStream(new FileOutputStream(destJar))) {
-                    Enumeration<JarEntry> enumeration = srcJarFile.entries();
-                    //遍历srcJar中的每一条条目
-                    while (enumeration.hasMoreElements()) {
-                        JarEntry entry = enumeration.nextElement();
-                        try (InputStream entryIs = srcJarFile.getInputStream(entry)) {
-                            byte[] bytes = null;
-                            if (entry.getName().endsWith(".class")) {//如果是class文件
+            }
+        }
+        for (String extraJar : args.extraJars) {
+            Set<QualifiedContent.ContentType> types = new HashSet<>();
+            Set<? super QualifiedContent.Scope> scopes = new HashSet<>();
+            types.add(QualifiedContent.DefaultContentType.CLASSES);
+            scopes.add(QualifiedContent.Scope.PROJECT);
+            File srcJar = new File(extraJar);
+            File destJar = transformOutputProvider.getContentLocation(
+                    extraJar,
+                    types,
+                    scopes,
+                    Format.JAR
+            );
+            printLog("srcJar = " + srcJar.getName() + ", destJar = " + destJar.getName());
+            transformJar(srcJar, destJar);
+        }
+    }
+
+    private void transformJar(File srcJar, File destJar) throws IOException {
+        try (JarFile srcJarFile = new JarFile(srcJar); JarOutputStream destJarFileOs = new JarOutputStream(new FileOutputStream(destJar))) {
+            Enumeration<JarEntry> enumeration = srcJarFile.entries();
+            //遍历srcJar中的每一条条目
+            while (enumeration.hasMoreElements()) {
+                JarEntry entry = enumeration.nextElement();
+                try (InputStream entryIs = srcJarFile.getInputStream(entry)) {
+                    byte[] bytes = null;
+                    if (entry.getName().endsWith(".class")) {//如果是class文件
+                        try {
+                            //通过asm修改源class文件
+                            ClassReader classReader = new ClassReader(entryIs);
+                            ClassWriter classWriter = new ClassWriter(classReader, 0);
+                            AppClassVisitor appClassVisitor = new AppClassVisitor(classWriter);
+                            try {
                                 try {
-                                    //通过asm修改源class文件
-                                    ClassReader classReader = new ClassReader(entryIs);
-                                    ClassWriter classWriter = new ClassWriter(classReader, 0);
-                                    AppClassVisitor appClassVisitor = new AppClassVisitor(classWriter);
-                                    try {
-                                        try {
-                                            CheckClassAdapter checkAdapter = new CheckClassAdapter(appClassVisitor);
-                                            classReader.accept(checkAdapter, 0);
-                                            bytes = classWriter.toByteArray();
-                                        } catch (Exception e) {
-                                            printError(e, "invalid bytecode, " + "jar = " + srcJarFile.getName() + ", entry = " + entry.getName());
-                                        }
-                                    } catch (Exception e) {
-                                        printError(e, "at AppScaleVisitor.accept, " + "jar = " + srcJarFile.getName() + ", entry = " + entry.getName());
-                                    }
+                                    CheckClassAdapter checkAdapter = new CheckClassAdapter(appClassVisitor);
+                                    classReader.accept(checkAdapter, 0);
+                                    bytes = classWriter.toByteArray();
                                 } catch (Exception e) {
-                                    printError(e);
+                                    printError(e, "invalid bytecode, " + "jar = " + srcJarFile.getName() + ", entry = " + entry.getName());
                                 }
-                            }
-                            if (bytes != null) {
-                                destJarFileOs.putNextEntry(new JarEntry(entry.getName()));
-                                destJarFileOs.write(bytes);
+                            } catch (Exception e) {
+                                printError(e, "at AppScaleVisitor.accept, " + "jar = " + srcJarFile.getName() + ", entry = " + entry.getName());
                             }
                         } catch (Exception e) {
                             printError(e);
-                        } finally {
-                            destJarFileOs.closeEntry();
                         }
                     }
+                    if (bytes != null) {
+                        destJarFileOs.putNextEntry(new JarEntry(entry.getName()));
+                        destJarFileOs.write(bytes);
+                    }
+                } catch (Exception e) {
+                    printError(e);
+                } finally {
+                    destJarFileOs.closeEntry();
                 }
             }
         }
@@ -181,13 +210,42 @@ public class AppAsmPlugin extends Transform implements Plugin<Project> {
     @Override
     public void apply(Project target) {
         printLog("registerTransform");
+        AppAsmPlugin.this.args = target.getExtensions().create("AsmPlugin", AsmPluginArgs.class);
         target.afterEvaluate(new Action<Project>() {
             @Override
             public void execute(Project project) {
                 printLog("afterEvaluate");
+                AppAsmPlugin.this.args = (AsmPluginArgs) target.property("AsmPlugin");
+                printLog("args = " + args);
                 AppExtension appExtension = project.getExtensions().getByType(AppExtension.class);
                 appExtension.registerTransform(AppAsmPlugin.this);
             }
         });
+    }
+
+
+    public static class AsmPluginArgs {
+        List<String> extraJars;
+        public AsmPluginArgs() {
+            this.extraJars = ImmutableList.copyOf(new ArrayList<>());
+        }
+
+        public static AsmPluginArgs getInstance(Project project) {
+            AsmPluginArgs args = project.getExtensions().findByType(AsmPluginArgs.class);
+            if (args == null) {
+                args = new AsmPluginArgs();
+            }
+            return args;
+        }
+
+        @Override
+        public String toString() {
+            StringBuilder sb = new StringBuilder();
+            sb.append("AsmPluginArgs: {\n");
+            sb.append("\textraJars: ");
+            sb.append(Arrays.deepToString(extraJars.toArray()));
+            sb.append("\n}");
+            return sb.toString();
+        }
     }
 }
