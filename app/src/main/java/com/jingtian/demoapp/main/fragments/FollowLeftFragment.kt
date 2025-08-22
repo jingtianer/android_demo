@@ -4,7 +4,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import com.jingtian.demoapp.databinding.AbcBinding
+import com.jingtian.demoapp.databinding.FragmentFollowLeftBinding
 
 class FollowLeftFragment : BaseFragment() {
     override fun onCreateView(
@@ -12,7 +12,7 @@ class FollowLeftFragment : BaseFragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        return AbcBinding.inflate(inflater).root
+        return FragmentFollowLeftBinding.inflate(inflater).root
     }
 
 }

@@ -88,10 +88,35 @@ class OverDrawView @JvmOverloads constructor(
         returnFunction
     }
 
+    private val nClipRect : Canvas.(Float, Float, Float, Float, Int) -> Boolean = run {
+        val method = try {
+            ReflectClass(Canvas::class.java).method("nClipRect", arrayOf(
+                Long::class.javaPrimitiveType!!,
+                Float::class.javaPrimitiveType!!,
+                Float::class.javaPrimitiveType!!,
+                Float::class.javaPrimitiveType!!,
+                Float::class.javaPrimitiveType!!,
+                Int::class.javaPrimitiveType!!,
+            ))
+        } catch (ignore : Exception) {
+            null
+        }
+        val getNativeCanvasWrapper = ReflectClass(Canvas::class.java).method("getNativeCanvasWrapper", arrayOf())
+        val returnFunction : Canvas.(Float, Float, Float, Float, Int) -> Boolean = { l, t, r, b, op ->
+            method?.obj = this
+            getNativeCanvasWrapper.obj = this
+            val canvasId = getNativeCanvasWrapper.call<Long>(arrayOf())!!
+            method?.call<Boolean>(arrayOf(
+                canvasId, l, t, r, b, op
+            )) ?: false
+        }
+        returnFunction
+    }
+
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         val savedCount = canvas.save()
-        canvas.instrumentedClipRect(-offset, -offset, width + offset, height + offset, 5)
+        canvas.nClipRect(-offset, -offset, width + offset, height + offset, 5)
         val bounds = 0f
         canvas.drawRoundRect(
             bounds,
