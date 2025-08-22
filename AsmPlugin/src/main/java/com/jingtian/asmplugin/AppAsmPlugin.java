@@ -13,8 +13,6 @@ import com.android.build.gradle.internal.pipeline.TransformManager;
 import com.android.utils.FileUtils;
 import com.google.common.collect.FluentIterable;
 
-import org.apache.commons.compress.utils.IOUtils;
-import org.apache.tools.ant.filters.StringInputStream;
 import org.gradle.api.Action;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
@@ -30,7 +28,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.util.Collection;
 import java.util.Enumeration;
 import java.util.Set;
@@ -38,10 +35,10 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.jar.JarOutputStream;
 
-public class AppScaleAsmPlugin extends Transform implements Plugin<Project> {
+public class AppAsmPlugin extends Transform implements Plugin<Project> {
     @Override
     public String getName() {
-        return "AppScaleAsmPlugin";
+        return "AppAsmPlugin";
     }
 
     @Override
@@ -97,7 +94,7 @@ public class AppScaleAsmPlugin extends Transform implements Plugin<Project> {
                         try (FileInputStream fis = new FileInputStream(file)) {
                             ClassReader classReader = new ClassReader(fis.readAllBytes());
                             ClassWriter classWriter = new ClassWriter(classReader, ClassWriter.COMPUTE_MAXS);
-                            ClassVisitor classVisitor = new AppScaleVisitor(classWriter);
+                            ClassVisitor classVisitor = new AppClassVisitor(classWriter);
                             try {
 //                                classReader.accept(classVisitor, ClassReader.EXPAND_FRAMES);
                                 try {
@@ -150,10 +147,10 @@ public class AppScaleAsmPlugin extends Transform implements Plugin<Project> {
                                     //通过asm修改源class文件
                                     ClassReader classReader = new ClassReader(entryIs);
                                     ClassWriter classWriter = new ClassWriter(classReader, 0);
-                                    AppScaleVisitor appScaleVisitor = new AppScaleVisitor(classWriter);
+                                    AppClassVisitor appClassVisitor = new AppClassVisitor(classWriter);
                                     try {
                                         try {
-                                            CheckClassAdapter checkAdapter = new CheckClassAdapter(appScaleVisitor);
+                                            CheckClassAdapter checkAdapter = new CheckClassAdapter(appClassVisitor);
                                             classReader.accept(checkAdapter, 0);
                                             bytes = classWriter.toByteArray();
                                         } catch (Exception e) {
@@ -189,7 +186,7 @@ public class AppScaleAsmPlugin extends Transform implements Plugin<Project> {
             public void execute(Project project) {
                 printLog("afterEvaluate");
                 AppExtension appExtension = project.getExtensions().getByType(AppExtension.class);
-                appExtension.registerTransform(AppScaleAsmPlugin.this);
+                appExtension.registerTransform(AppAsmPlugin.this);
             }
         });
     }

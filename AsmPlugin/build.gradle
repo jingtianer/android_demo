@@ -25,7 +25,7 @@ gradlePlugin {
             //插件id
             id = 'com.jingtian.asmplugin.AsmPlugin'
             //插件的包名+类名
-            implementationClass = 'com.jingtian.asmplugin.AppScaleAsmPlugin'
+            implementationClass = 'com.jingtian.asmplugin.AppAsmPlugin'
 
             version = '1.0.0'
         }

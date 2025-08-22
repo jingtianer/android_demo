@@ -9,12 +9,12 @@ import org.objectweb.asm.Opcodes;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintWriter;
 
-public class AppScaleVisitor extends ClassVisitor {
+public class AppClassVisitor extends ClassVisitor {
 
     String clazzName = null;
     String superClazzName = null;
 
-    protected AppScaleVisitor(ClassWriter classWriter) {
+    protected AppClassVisitor(ClassWriter classWriter) {
         super(Opcodes.ASM7, classWriter);
     }
 
