@@ -2,6 +2,7 @@ package com.jingtian.demoapp.main
 
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.view.Gravity
 import android.view.LayoutInflater
@@ -112,7 +113,9 @@ class FocusActivity : AppCompatActivity() {
             window.setSoftInputMode(softInputMode)
             if (intent.hasExtra(Params.ET_FLAG_FOCUSABLE.name)) {
                 val focusable = intent.getIntExtra(Params.ET_FLAG_FOCUSABLE.name, 0)
-                et.focusable = focusable
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    et.focusable = focusable
+                }
             }
             if (intent.hasExtra(Params.ET_FLAG_FOCUSABLE_ON_TOUCH_MODE.name)) {
                 val focusableOnTouchMode = intent.getBooleanExtra(Params.ET_FLAG_FOCUSABLE_ON_TOUCH_MODE.name, false)

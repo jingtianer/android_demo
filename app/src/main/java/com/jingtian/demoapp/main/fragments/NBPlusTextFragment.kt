@@ -2,6 +2,7 @@ package com.jingtian.demoapp.main.fragments
 
 import android.animation.ObjectAnimator
 import android.graphics.Color
+import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -25,7 +26,11 @@ class NBPlusTextFragment : BaseFragment() {
         with(binding.nbText) {
             setTextSize(32f.dp)
             setText("周末精神状态")
-            setTextColor(Color.argb(1f, 0.2f, 0.65f, 0.3f))
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                setTextColor(Color.argb(1f, 0.2f, 0.65f, 0.3f))
+            } else {
+                setTextColor(Color.argb((255 * 1f).toInt(), (255 * 0.2f).toInt(), (255 * 0.65f).toInt(), (255 * 0.3f).toInt()))
+            }
             setDuration(10000)
             start()
         }
