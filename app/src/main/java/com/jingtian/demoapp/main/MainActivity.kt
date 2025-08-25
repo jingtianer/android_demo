@@ -28,6 +28,7 @@ import com.jingtian.demoapp.main.fragments.RxMergeFragment
 import com.jingtian.demoapp.main.fragments.RxZipFragment
 import com.jingtian.demoapp.main.fragments.TextOnFingerFragment
 import com.jingtian.demoapp.main.fragments.WidthAnimFragment
+import com.jingtian.demoapp.main.rank.fragment.RankFragment
 
 class MainActivity : AppCompatActivity(), BaseFragmentCallback {
 
@@ -36,6 +37,7 @@ class MainActivity : AppCompatActivity(), BaseFragmentCallback {
         private val fragmentList = listOf(
             NBPlusTextFragment::class.java to arrayOf<Any>(),
             TextOnFingerFragment::class.java to arrayOf<Any>(),
+            RankFragment::class.java to arrayOf<Any>(),
             FocusFragment::class.java to arrayOf<Any>(),
             NestedScrollFragment::class.java to arrayOf<Any>(),
             CanvasFragment::class.java to arrayOf<Any>(),
