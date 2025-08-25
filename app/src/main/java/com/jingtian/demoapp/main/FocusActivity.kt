@@ -9,13 +9,13 @@ import android.view.LayoutInflater
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import androidx.activity.OnBackPressedCallback
-import androidx.appcompat.app.AppCompatActivity
 import com.jingtian.demoapp.R
 import com.jingtian.demoapp.databinding.ActivityFocusBinding
 import com.jingtian.demoapp.main.MainActivity.Companion.backToMain
+import com.jingtian.demoapp.main.base.BaseActivity
 import com.jingtian.demoapp.main.fragments.FocusFragment
 
-class FocusActivity : AppCompatActivity() {
+class FocusActivity : BaseActivity() {
 
     companion object {
         fun startActivity(

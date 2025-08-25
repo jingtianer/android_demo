@@ -1,16 +1,16 @@
 package com.jingtian.demoapp.main.rank
 
-import android.content.Context
-import android.net.Uri
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
-import android.view.ViewGroup
+import androidx.core.content.res.ResourcesCompat
 import androidx.recyclerview.widget.RecyclerView
+import com.jingtian.demoapp.R
+import com.jingtian.demoapp.main.dp
 import com.jingtian.demoapp.main.rank.model.ModelRank
 import com.jingtian.demoapp.main.rank.model.ModelRankItem
+import com.jingtian.demoapp.main.widget.StarRateView
 import kotlin.math.abs
-import kotlin.math.sign
 
 object Utils {
     object DataHolder {
@@ -65,13 +65,13 @@ object Utils {
 
     object RecyclerViewUtils {
         class FixNestedScroll(
-            private val recyclerView: RecyclerView,
+            private val view: View,
             private val orientation: Int
         ) : View.OnTouchListener {
             private var initX = 0f
             private var initY = 0f
             private var scrolled = false
-            private var touchSlop = ViewConfiguration.get(recyclerView.context).scaledTouchSlop
+            private var touchSlop = ViewConfiguration.get(view.context).scaledTouchSlop
 
             private val Float.intSign: Int
                 get() = when {
@@ -103,12 +103,12 @@ object Utils {
                             val dy = initY - event.y
                             val absDx = abs(dx)
                             val absDy = abs(dy)
-                            if (orientation == RecyclerView.HORIZONTAL && absDx > absDy && recyclerView.canScrollHorizontally(
+                            if (orientation == RecyclerView.HORIZONTAL && absDx > absDy && view.canScrollHorizontally(
                                     dx.intSign
                                 )
                             ) {
                                 scrolled = true
-                            } else if (orientation == RecyclerView.VERTICAL && absDy > absDx && recyclerView.canScrollVertically(
+                            } else if (orientation == RecyclerView.VERTICAL && absDy > absDx && view.canScrollVertically(
                                     dy.intSign
                                 )
                             ) {
@@ -123,5 +123,25 @@ object Utils {
             }
 
         }
+    }
+
+    fun StarRateView.commonConfig() {
+        updateStarConfig(
+            false,
+            5,
+            3f.dp,
+            ResourcesCompat.getDrawable(resources, R.drawable.star_high_lighted, null),
+            ResourcesCompat.getDrawable(resources, R.drawable.star, null),
+        )
+    }
+
+    fun StarRateView.commonScrollableConfig() {
+        updateStarConfig(
+            true,
+            5,
+            3f.dp,
+            ResourcesCompat.getDrawable(resources, R.drawable.star_high_lighted, null),
+            ResourcesCompat.getDrawable(resources, R.drawable.star, null),
+        )
     }
 }

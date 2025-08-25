@@ -11,6 +11,7 @@ import androidx.fragment.app.FragmentActivity
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import com.google.android.material.tabs.TabLayoutMediator
 import com.jingtian.demoapp.databinding.ActivityMainBinding
+import com.jingtian.demoapp.main.base.BaseActivity
 import com.jingtian.demoapp.main.fragments.BaseFragment
 import com.jingtian.demoapp.main.fragments.BaseFragment.Companion.KEY_TAB_INDEX
 import com.jingtian.demoapp.main.fragments.BaseFragment.Companion.getFragmentName
@@ -30,7 +31,7 @@ import com.jingtian.demoapp.main.fragments.TextOnFingerFragment
 import com.jingtian.demoapp.main.fragments.WidthAnimFragment
 import com.jingtian.demoapp.main.rank.fragment.RankFragment
 
-class MainActivity : AppCompatActivity(), BaseFragmentCallback {
+class MainActivity : BaseActivity(), BaseFragmentCallback {
 
     companion object {
 
@@ -84,9 +85,9 @@ class MainActivity : AppCompatActivity(), BaseFragmentCallback {
         }.attach()
     }
 
-    override fun onNewIntent(intent: Intent?) {
+    override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        val targetTab = intent?.getIntExtra(KEY_TAB_INDEX, 0) ?: 0
+        val targetTab = intent.getIntExtra(KEY_TAB_INDEX, 0) ?: 0
         viewPager2.setCurrentItem(targetTab, false)
     }
 

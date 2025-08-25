@@ -29,6 +29,12 @@ abstract class BaseAdapter<T> : RecyclerView.Adapter<BaseViewHolder<T>>() {
         notifyDataSetChanged()
     }
 
+    open fun append(data : T) {
+        val insertedPosition = this.dataList.size
+        this.dataList.add(data)
+        notifyItemInserted(insertedPosition)
+    }
+
     open fun getDataList(): List<T> {
         return dataList
     }

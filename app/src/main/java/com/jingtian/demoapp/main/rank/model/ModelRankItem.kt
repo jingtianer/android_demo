@@ -8,4 +8,10 @@ data class ModelRankItem(
     var desc: String,
     var comments: List<ModelItemComment>,
     var image: Uri = Uri.EMPTY,
-)
+) {
+    companion object {
+        fun ModelRankItem.isValid(): Boolean {
+            return name.isNotEmpty()
+        }
+    }
+}

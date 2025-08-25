@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace 'com.jingtian.demoapp'
-    compileSdk 31
+    compileSdk 34
     lintOptions {
         abortOnError false
     }
@@ -64,6 +64,9 @@ dependencies {
     implementation "io.reactivex.rxjava2:rxkotlin:2.2.0"
 
     implementation 'com.github.ChickenHook:RestrictionBypass:2.2'
+
+    implementation "androidx.recyclerview:recyclerview:1.2.0"
+    implementation "androidx.activity:activity:1.7.1"
 
 //    implementation "com.jingtian.asmplugin:AsmPlugin:1.0.0"
 
