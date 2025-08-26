@@ -8,6 +8,7 @@ import com.jingtian.demoapp.main.rank.model.ModelItemComment
 import com.jingtian.demoapp.main.rank.model.ModelRank
 import com.jingtian.demoapp.main.rank.model.ModelRankItem
 import com.jingtian.demoapp.main.rank.model.RankItemImageTypeConverter
+import com.jingtian.demoapp.main.rank.model.RankItemRankTypeConverter
 
 @Database(
     entities = [
@@ -16,7 +17,7 @@ import com.jingtian.demoapp.main.rank.model.RankItemImageTypeConverter
         ModelItemComment::class
     ], version = 1
 )
-@TypeConverters(DateTypeConverter::class, RankItemImageTypeConverter::class)
+@TypeConverters(DateTypeConverter::class, RankItemImageTypeConverter::class, RankItemRankTypeConverter::class)
 abstract class RankDatabase : RoomDatabase() {
     abstract fun rankListDao(): RankModelDao
     abstract fun rankItemDao(): RankModelItemDao

@@ -40,6 +40,7 @@ import com.jingtian.demoapp.main.rank.model.ModelRank
 import com.jingtian.demoapp.main.rank.model.ModelRankItem
 import com.jingtian.demoapp.main.rank.model.RankItemImage
 import com.jingtian.demoapp.main.rank.model.RankItemImageTypeConverter
+import com.jingtian.demoapp.main.rank.model.RankItemRankTypeConverter
 import com.jingtian.demoapp.main.widget.StarRateView
 import io.reactivex.Observable
 import io.reactivex.android.schedulers.AndroidSchedulers
@@ -93,6 +94,7 @@ object Utils {
         val rankDB = Room.databaseBuilder(app, RankDatabase::class.java, "rank_db")
             .addTypeConverter(DateTypeConverter())
             .addTypeConverter(RankItemImageTypeConverter())
+            .addTypeConverter(RankItemRankTypeConverter())
             .allowMainThreadQueries()
             .build()
 

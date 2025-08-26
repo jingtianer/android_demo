@@ -52,6 +52,7 @@ class AddRankItemDialog(context: Context, private val rankName: String, private 
                     rankName,
                     binding.starRate.getScore(),
                     binding.etDesc.text.toString(),
+                    binding.rankType.getRankType(),
                     RankItemImage(id, imageUri)
                 ))
             }

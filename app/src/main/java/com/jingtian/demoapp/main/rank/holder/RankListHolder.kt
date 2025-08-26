@@ -64,6 +64,11 @@ class RankListHolder private constructor(private val binding: ItemRankListBindin
                 (context as? BaseActivity)?.pickFile?.launch(arrayOf("*/*"))
             }
         }
+        with(binding.more) {
+            setOnClickListener {
+                
+            }
+        }
         with(addMore.layoutExport) {
             setOnClickListener {
                 val ignore = Utils.Share.startShare(
