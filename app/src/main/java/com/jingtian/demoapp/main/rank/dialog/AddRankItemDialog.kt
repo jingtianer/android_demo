@@ -25,7 +25,7 @@ import com.jingtian.demoapp.main.rank.model.ModelRankItem
 import com.jingtian.demoapp.main.rank.model.RankItemImage
 import com.jingtian.demoapp.main.widget.StarRateView
 
-class AddRankItemDialog(context: Context, private val callback : Callback) : Dialog(context), StarRateView.Companion.OnScoreChange, BaseActivity.Companion.MediaPickerCallback {
+class AddRankItemDialog(context: Context, private val rankName: String, private val callback : Callback) : Dialog(context), StarRateView.Companion.OnScoreChange, BaseActivity.Companion.MediaPickerCallback {
 
     companion object {
         interface Callback {
@@ -49,9 +49,9 @@ class AddRankItemDialog(context: Context, private val callback : Callback) : Dia
                 val id = Utils.DataHolder.ImageStorage.storeImage(imageUri)
                 callback.onPositiveClick(this@AddRankItemDialog, ModelRankItem(
                     binding.etRankName.text.toString(),
+                    rankName,
                     binding.starRate.getScore(),
                     binding.etDesc.text.toString(),
-                    listOf(),
                     RankItemImage(id, imageUri)
                 ))
             }

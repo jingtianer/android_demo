@@ -9,6 +9,9 @@ open class BaseActivity : AppCompatActivity() {
         interface MediaPickerCallback {
             fun onMediaCallback(uri: Uri)
         }
+        interface DocumentPickerCallback {
+            fun onDocumentCallback(uri: Uri)
+        }
     }
     val pickMedia = registerForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         if (uri != null) {
@@ -22,6 +25,15 @@ open class BaseActivity : AppCompatActivity() {
         }
     }
     private val mediaPickerCallbacks = mutableListOf<MediaPickerCallback>()
+    private val documentPickerCallbacks = mutableListOf<DocumentPickerCallback>()
+
+    val pickFile = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            documentPickerCallbacks.forEach {
+                it.onDocumentCallback(uri)
+            }
+        }
+    }
 
     fun addMediaPickerCallbacks(mediaPickerCallback: MediaPickerCallback) {
         if (mediaPickerCallback !in mediaPickerCallbacks) {
@@ -32,6 +44,18 @@ open class BaseActivity : AppCompatActivity() {
     fun removeMediaPickerCallbacks(mediaPickerCallback: MediaPickerCallback) {
         if (mediaPickerCallback in mediaPickerCallbacks) {
             mediaPickerCallbacks.add(mediaPickerCallback)
+        }
+    }
+
+    fun addDocumentPickerCallbacks(documentPickerCallback: DocumentPickerCallback) {
+        if (documentPickerCallback !in documentPickerCallbacks) {
+            documentPickerCallbacks.add(documentPickerCallback)
+        }
+    }
+
+    fun removeDocumentPickerCallbacks(documentPickerCallback: DocumentPickerCallback) {
+        if (documentPickerCallback in documentPickerCallbacks) {
+            documentPickerCallbacks.add(documentPickerCallback)
         }
     }
 }

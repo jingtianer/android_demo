@@ -1,8 +1,5 @@
 package com.jingtian.demoapp.main.rank.holder
 
-import android.animation.ObjectAnimator
-import android.graphics.Color
-import android.graphics.drawable.ColorDrawable
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.core.content.res.ResourcesCompat
@@ -31,7 +28,7 @@ class RankItemHolder private constructor(private val binding: ItemRankItemBindin
             setScore(data.score)
         }
         with(binding.title) {
-            text = data.name
+            text = data.itemName
         }
         with(binding.image) {
             setImageURI(data.image.image)

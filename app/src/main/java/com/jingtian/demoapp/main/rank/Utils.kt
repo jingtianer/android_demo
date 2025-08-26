@@ -3,12 +3,24 @@ package com.jingtian.demoapp.main.rank
 import android.content.Context
 import android.net.Uri
 import android.os.FileUtils
+import android.util.Base64
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
+import androidx.core.content.FileProvider
 import androidx.core.content.res.ResourcesCompat
+import androidx.core.net.toFile
 import androidx.core.net.toUri
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.PagingSource
 import androidx.recyclerview.widget.RecyclerView
+import androidx.room.Database
+import androidx.room.DatabaseConfiguration
+import androidx.room.InvalidationTracker
+import androidx.room.Room
+import androidx.room.RoomDatabase
+import androidx.sqlite.db.SupportSQLiteOpenHelper
 import com.google.gson.GsonBuilder
 import com.google.gson.TypeAdapter
 import com.google.gson.reflect.TypeToken
@@ -18,15 +30,71 @@ import com.jingtian.demoapp.R
 import com.jingtian.demoapp.main.StorageUtil
 import com.jingtian.demoapp.main.app
 import com.jingtian.demoapp.main.dp
+import com.jingtian.demoapp.main.rank.dao.RankDatabase
+import com.jingtian.demoapp.main.rank.dao.RankModelDao
+import com.jingtian.demoapp.main.rank.dao.RankModelItemCommentDao
+import com.jingtian.demoapp.main.rank.dao.RankModelItemDao
+import com.jingtian.demoapp.main.rank.model.DateTypeConverter
+import com.jingtian.demoapp.main.rank.model.ModelItemComment
 import com.jingtian.demoapp.main.rank.model.ModelRank
 import com.jingtian.demoapp.main.rank.model.ModelRankItem
 import com.jingtian.demoapp.main.rank.model.RankItemImage
+import com.jingtian.demoapp.main.rank.model.RankItemImageTypeConverter
 import com.jingtian.demoapp.main.widget.StarRateView
+import io.reactivex.Observable
+import io.reactivex.android.schedulers.AndroidSchedulers
+import io.reactivex.disposables.Disposable
+import io.reactivex.schedulers.Schedulers
+import java.io.ByteArrayInputStream
 import java.io.File
 import kotlin.math.abs
+import kotlin.properties.ReadWriteProperty
+import kotlin.reflect.KProperty
 
 object Utils {
+    object Share {
+        fun readShareRankItemList(uri: Uri) : Observable<List<ModelRankItem>> {
+            return Observable.create<List<ModelRankItem>> { emitter ->
+                app.contentResolver.openInputStream(uri)?.use {
+                    val json = it.readBytes().decodeToString()
+                    Utils.DataHolder.toModelRankItemList(json)?.let {
+                        emitter.onNext(it)
+                    }
+                }
+                emitter.onComplete()
+            }.subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread())
+        }
+
+        fun startShare(rankName: String, data: Any) : Observable<Uri> {
+            return Observable.create<Uri> {
+                val shareDir = File(app.filesDir, "share")
+                if (!shareDir.exists()) {
+                    shareDir.mkdir()
+                } else if (shareDir.exists() && shareDir.isFile) {
+                    shareDir.delete()
+                    shareDir.mkdir()
+                }
+                val file = File.createTempFile("share-${rankName}", "", shareDir)
+                file.outputStream().use {
+                    it.write(Utils.DataHolder.toJson(data).encodeToByteArray())
+                }
+                it.onNext(
+                    FileProvider.getUriForFile(
+                        app,
+                        app.packageName + ".fileprovider",
+                        file
+                    )
+                )
+            }.subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread())
+        }
+    }
     object DataHolder {
+
+        val rankDB = Room.databaseBuilder(app, RankDatabase::class.java, "rank_db")
+            .addTypeConverter(DateTypeConverter())
+            .addTypeConverter(RankItemImageTypeConverter())
+            .allowMainThreadQueries()
+            .build()
 
         object ImageStorage {
 
@@ -39,7 +107,7 @@ object Utils {
 
             fun getImage(id: Long): Uri? {
                 if (imageCache.containsKey(id)) {
-                    return imageCache[id]
+                    return imageCache[id] ?: Uri.EMPTY
                 }
                 val storeDir = File(app.filesDir, RANK_IMAGE_STORE_DIR)
                 val storageFile = File(storeDir, RANK_IMAGE_PREFIX + id)
@@ -67,24 +135,52 @@ object Utils {
                 if (storageFile.exists()) {
                     storageFile.delete()
                 }
-                app.contentResolver.openInputStream(uri)?.use { input->
-                    storageFile.outputStream().use { output->
+                app.contentResolver.openInputStream(uri)?.use { input ->
+                    storageFile.outputStream().use { output ->
                         FileUtils.copy(input, output)
                     }
                 }
                 return id
             }
+
+            fun storeImage(byteArray: ByteArray): RankItemImage {
+                val id = this.id++
+                val storeDir = File(app.filesDir, RANK_IMAGE_STORE_DIR)
+                if (!storeDir.exists()) {
+                    storeDir.mkdirs()
+                } else if (storeDir.isFile) {
+                    storeDir.delete()
+                    storeDir.mkdirs()
+                }
+                val storageFile = File(storeDir, RANK_IMAGE_PREFIX + id)
+                if (storageFile.exists()) {
+                    storageFile.delete()
+                }
+                ByteArrayInputStream(byteArray).use { input ->
+                    storageFile.outputStream().use { output ->
+                        FileUtils.copy(input, output)
+                    }
+                }
+                val uri = storageFile.toUri()
+                imageCache[id] = uri
+                return RankItemImage(id, uri)
+            }
         }
 
         object UriConverter : TypeAdapter<RankItemImage>() {
             override fun write(out: JsonWriter, value: RankItemImage) {
-                out.value(value.id)
+                app.contentResolver.openInputStream(value.image)?.use { input ->
+                    val image = input.readBytes()
+                    val base64 = Base64.encodeToString(image, Base64.DEFAULT)
+                    out.value(base64)
+                }
             }
 
             override fun read(`in`: JsonReader?): RankItemImage {
-                val id = `in`?.nextLong()
-                if (id != null) {
-                    return RankItemImage(id, ImageStorage.getImage(id) ?: Uri.EMPTY)
+                val base64 = `in`?.nextString()
+                if (base64 != null) {
+                    val image = Base64.decode(base64, Base64.DEFAULT)
+                    return ImageStorage.storeImage(image)
                 }
                 return RankItemImage()
             }
@@ -94,36 +190,30 @@ object Utils {
             .registerTypeAdapter(RankItemImage::class.java, UriConverter)
             .create()
 
-        private val modelRankListType = object : TypeToken<List<ModelRank>>(){}
-        private val modelRankItemListType = object : TypeToken<List<ModelRankItem>>(){}
+        private val modelRankListType = object : TypeToken<List<ModelRank>>() {}
+        private val modelRankItemListType = object : TypeToken<List<ModelRankItem>>() {}
 
-        fun toJson(any: Any) : String {
+        fun toJson(any: Any): String {
             return rankItemGson.toJson(any)
         }
 
-        fun toModelRankList(json: String) : List<ModelRank>? {
+        fun toModelRankList(json: String): List<ModelRank>? {
             return try {
                 rankItemGson.fromJson(json, modelRankListType.type) as List<ModelRank>
-            } catch (ignore : Exception) {
+            } catch (ignore: Exception) {
                 null
             }
         }
 
-        fun toModelRankItemList(json: String) : List<ModelRankItem>? {
+        fun toModelRankItemList(json: String): List<ModelRankItem>? {
             return try {
                 rankItemGson.fromJson(json, modelRankItemListType.type) as List<ModelRankItem>
-            } catch (ignore : Exception) {
+            } catch (ignore: Exception) {
                 null
             }
         }
 
-        var rankDataStore by StorageUtil.StorageJson<Any, MutableList<ModelRank>>(
-            app.getSharedPreferences("rank-list", Context.MODE_PRIVATE),
-            "rank-list",
-            mutableListOf(),
-            rankItemGson,
-            object : TypeToken<MutableList<ModelRank>>() {}
-        )
+        var rankDataStore = rankDB.rankListDao().getAllRankModel()
     }
 
     object RecyclerViewUtils {

@@ -81,7 +81,7 @@ class RankFragment : BaseFragment(), AddRankDialog.Companion.Callback, JsonDialo
         dialog.dismiss()
         if (modelRank.isValid()) {
             rankListAdapter.append(modelRank)
-            Utils.DataHolder.rankDataStore = rankListAdapter.getDataList().toMutableList()
+            Utils.DataHolder.rankDB.rankListDao().insert(modelRank)
         } else {
             Toast.makeText(context, "添加失败", Toast.LENGTH_SHORT).show()
         }
@@ -92,7 +92,7 @@ class RankFragment : BaseFragment(), AddRankDialog.Companion.Callback, JsonDialo
         if (import) {
             Utils.DataHolder.toModelRankList(json)?.let {
                 rankListAdapter.appendAll(it)
-                Utils.DataHolder.rankDataStore = rankListAdapter.getDataList().toMutableList()
+                Utils.DataHolder.rankDB.rankListDao().insertAll(it)
             }
         }
     }
