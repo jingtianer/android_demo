@@ -25,7 +25,7 @@ class AddRankDialog(context: Context, private val callback : Callback) : Dialog(
             setOnClickListener {
                 callback.onPositiveClick(this@AddRankDialog, ModelRank(
                     binding.etRankName.text.toString(),
-                    listOf()
+                    mutableListOf()
                 ))
             }
         }

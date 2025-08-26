@@ -34,7 +34,7 @@ class RankItemHolder private constructor(private val binding: ItemRankItemBindin
             text = data.name
         }
         with(binding.image) {
-            setImageURI(data.image)
+            setImageURI(data.image.image)
         }
     }
 }

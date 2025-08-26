@@ -17,10 +17,12 @@ import com.jingtian.demoapp.databinding.DialogAddRankBinding
 import com.jingtian.demoapp.databinding.DialogAddRankItemBinding
 import com.jingtian.demoapp.main.base.BaseActivity
 import com.jingtian.demoapp.main.dp
+import com.jingtian.demoapp.main.rank.Utils
 import com.jingtian.demoapp.main.rank.Utils.commonConfig
 import com.jingtian.demoapp.main.rank.Utils.commonScrollableConfig
 import com.jingtian.demoapp.main.rank.model.ModelRank
 import com.jingtian.demoapp.main.rank.model.ModelRankItem
+import com.jingtian.demoapp.main.rank.model.RankItemImage
 import com.jingtian.demoapp.main.widget.StarRateView
 
 class AddRankItemDialog(context: Context, private val callback : Callback) : Dialog(context), StarRateView.Companion.OnScoreChange, BaseActivity.Companion.MediaPickerCallback {
@@ -44,12 +46,13 @@ class AddRankItemDialog(context: Context, private val callback : Callback) : Dia
         setContentView(binding.root)
         with(binding.positive) {
             setOnClickListener {
+                val id = Utils.DataHolder.ImageStorage.storeImage(imageUri)
                 callback.onPositiveClick(this@AddRankItemDialog, ModelRankItem(
                     binding.etRankName.text.toString(),
                     binding.starRate.getScore(),
                     binding.etDesc.text.toString(),
                     listOf(),
-                    imageUri
+                    RankItemImage(id, imageUri)
                 ))
             }
         }

@@ -2,6 +2,7 @@ package com.jingtian.demoapp.main
 
 import android.app.Application
 import android.content.Context
+import android.content.SharedPreferences
 import android.graphics.Color
 import android.os.SystemClock
 import android.text.TextPaint
@@ -11,6 +12,8 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
 import androidx.annotation.ColorInt
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import com.jingtian.demoapp.main.ReflectToStringUtil.reflectToString
 import io.reactivex.Observable
 import io.reactivex.ObservableEmitter
@@ -25,7 +28,11 @@ import kotlin.reflect.KProperty
 lateinit var app: Application
 
 val Float.dp: Float
-    get() = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, this, app.resources.displayMetrics)
+    get() = TypedValue.applyDimension(
+        TypedValue.COMPLEX_UNIT_DIP,
+        this,
+        app.resources.displayMetrics
+    )
 
 val Float.px2Dp: Float
     get() {
@@ -39,11 +46,11 @@ class ReflectField constructor(private val obj: Any, private val field: Field) {
         field.isAccessible = true
     }
 
-    fun <T> get() : T? {
+    fun <T> get(): T? {
         return field.get(obj) as? T
     }
 
-    override fun toString() : String {
+    override fun toString(): String {
         return "$field = ${get<Any>().reflectToString()}"
     }
 }
@@ -53,7 +60,7 @@ class ReflectMethod constructor(var obj: Any, private val method: Method) {
         method.isAccessible = true
     }
 
-    fun <R> call(args : Array<out Any>): R? {
+    fun <R> call(args: Array<out Any>): R? {
         return method.invoke(obj, *args) as? R
     }
 
@@ -67,7 +74,7 @@ class ReflectConstructor constructor(private val constructor: Constructor<*>) {
         constructor.isAccessible = true
     }
 
-    fun <R> call(args : Array<out Any>): R? {
+    fun <R> call(args: Array<out Any>): R? {
         return constructor.newInstance(*args) as? R
     }
 
@@ -78,18 +85,19 @@ class ReflectConstructor constructor(private val constructor: Constructor<*>) {
 
 abstract class Reflect {
     companion object {
-        fun create(clazz: Class<*>) : ReflectClass {
+        fun create(clazz: Class<*>): ReflectClass {
             return ReflectClass(clazz)
         }
 
-        fun create(obj: Any) : Reflect {
+        fun create(obj: Any): Reflect {
             return ReflectObject(obj)
         }
 
-        fun create(clazzName: String) : ReflectClass {
+        fun create(clazzName: String): ReflectClass {
             return ReflectClass(Class.forName(clazzName))
         }
     }
+
     abstract fun field(name: String): ReflectField
     abstract fun method(name: String, args: Array<Class<out Any>>): ReflectMethod
 
@@ -98,7 +106,7 @@ abstract class Reflect {
     }
 }
 
-class ReflectObject : Reflect{
+class ReflectObject : Reflect {
     private val clazz: Class<*>
     private val obj: Any
 
@@ -110,9 +118,9 @@ class ReflectObject : Reflect{
     override fun field(name: String): ReflectField {
         try {
             return ReflectField(obj, clazz.getField(name))
-        } catch (ignore : NoSuchFieldException) {
+        } catch (ignore: NoSuchFieldException) {
 
-        } catch (e : SecurityException) {
+        } catch (e: SecurityException) {
             throw SecurityException(name, e)
         }
         var clazz: Class<*>? = this.clazz
@@ -120,7 +128,7 @@ class ReflectObject : Reflect{
             try {
                 val field = clazz.getDeclaredField(name)
                 return ReflectField(obj, field)
-            } catch (e : NoSuchFieldException) {
+            } catch (e: NoSuchFieldException) {
                 clazz = clazz.superclass
             }
         }
@@ -130,18 +138,18 @@ class ReflectObject : Reflect{
     override fun method(name: String, args: Array<Class<out Any>>): ReflectMethod {
         try {
             return ReflectMethod(obj, clazz.getMethod(name, *args))
-        } catch (ignore : NoSuchMethodException) {
+        } catch (ignore: NoSuchMethodException) {
 
-        } catch (e : SecurityException) {
+        } catch (e: SecurityException) {
             throw SecurityException(name, e)
         }
         var clazz: Class<*>? = this.clazz
         while (clazz != null) {
             try {
                 return ReflectMethod(obj, clazz.getDeclaredMethod(name, *args))
-            } catch (e : NoSuchMethodException) {
+            } catch (e: NoSuchMethodException) {
                 clazz = clazz.superclass
-            } catch (e : SecurityException) {
+            } catch (e: SecurityException) {
                 throw SecurityException(name, e)
             }
         }
@@ -150,7 +158,7 @@ class ReflectObject : Reflect{
 
     override fun toString(): String {
         val sb = StringBuilder()
-        var clazz: Class<*>?= clazz
+        var clazz: Class<*>? = clazz
         while (clazz != null) {
             sb.append("class = " + clazz.name + "\n")
             sb.append("Fields:\n")
@@ -189,7 +197,7 @@ class ReflectClass : Reflect {
         while (clazz != null) {
             try {
                 return ReflectField(clazz, clazz.getDeclaredField(name))
-            } catch (e : NoSuchFieldException) {
+            } catch (e: NoSuchFieldException) {
                 clazz = clazz.superclass
             }
         }
@@ -201,9 +209,9 @@ class ReflectClass : Reflect {
         while (clazz != null) {
             try {
                 return ReflectMethod(clazz, clazz.getDeclaredMethod(name, *args))
-            } catch (e : NoSuchMethodException) {
+            } catch (e: NoSuchMethodException) {
                 clazz = clazz.superclass
-            } catch (e : SecurityException) {
+            } catch (e: SecurityException) {
                 throw SecurityException(name, e)
             }
         }
@@ -220,7 +228,7 @@ class ReflectClass : Reflect {
 
     override fun toString(): String {
         val sb = StringBuilder()
-        var clazz: Class<*>?= clazz
+        var clazz: Class<*>? = clazz
         while (clazz != null) {
             sb.append("class = " + clazz.name + "\n")
             sb.append("Fields:\n")
@@ -254,28 +262,35 @@ fun <T> Field.getStaticValueString(cl: Class<out Any>, clazz: Class<T>): String?
 
 object ReflectToStringUtil {
     fun Any?.reflectToString(): String {
-        return when(this) {
+        return when (this) {
             is Array<*> -> {
                 reflectToString()
             }
+
             is String -> {
                 reflectToString()
             }
+
             is Collection<*> -> {
                 this.toTypedArray().reflectToString()
             }
+
             is Long -> {
                 return "${this}L"
             }
+
             is Float -> {
                 return "${this}f"
             }
+
             is Char -> {
                 return "'$this'"
             }
+
             null -> {
                 "null"
             }
+
             else -> {
                 toString()
             }
@@ -289,13 +304,15 @@ object ReflectToStringUtil {
     fun <T> Array<T>.reflectToString(): String {
         val sb = StringBuilder("[")
         for (item in this) {
-            when(item) {
+            when (item) {
                 is Array<*> -> {
                     sb.append(item.reflectToString())
                 }
+
                 is String -> {
                     sb.append(item.reflectToString())
                 }
+
                 else -> {
                     sb.append(item)
                 }
@@ -326,14 +343,15 @@ object ScreenUtils {
 
 object RxEvents {
 
-    class DoubleClickListener(private val view: View, private val interval: Long): ObservableOnSubscribe<Unit> {
+    class DoubleClickListener(private val view: View, private val interval: Long) :
+        ObservableOnSubscribe<Unit> {
         private var lastTime = -1L
         override fun subscribe(emitter: ObservableEmitter<Unit>) {
             view.setOnClickListener {
                 val currentTime = SystemClock.elapsedRealtime()
                 if (lastTime == -1L) {
                     lastTime = currentTime
-                } else if ((currentTime - lastTime) < interval){
+                } else if ((currentTime - lastTime) < interval) {
                     emitter.onNext(Unit)
                     lastTime = -1L
                 } else {
@@ -412,4 +430,75 @@ fun MotionEvent.insideOfView(view: View): Boolean {
     val w = view.width
     val h = view.height
     return this.rawX >= x && this.rawX <= x + w && this.rawY >= y && this.rawY <= y + h
+}
+
+object StorageUtil {
+    open class StorageVariable<V, T>(
+        private val sp: SharedPreferences,
+        private val key: String,
+        defaultValue: T,
+        getValue: SharedPreferences.(String, T) -> T,
+        private val putValue: SharedPreferences.Editor.(String, T) -> SharedPreferences.Editor,
+    ) : ReadWriteProperty<V, T> {
+        private var value = sp.getValue(key, defaultValue)
+
+        override fun getValue(thisRef: V, property: KProperty<*>): T {
+            return value
+        }
+
+        override fun setValue(thisRef: V, property: KProperty<*>, value: T) {
+            this.value = value
+            sp.edit().putValue(key, value).apply()
+        }
+    }
+
+    class StorageBoolean<T>(
+        sp: SharedPreferences,
+        key: String,
+        defaultValue: Boolean
+    ) : StorageVariable<T, Boolean>(
+        sp, key, defaultValue,
+        SharedPreferences::getBoolean,
+        SharedPreferences.Editor::putBoolean
+    )
+
+    class StorageLong<T>(
+        sp: SharedPreferences,
+        key: String,
+        defaultValue: Long
+    ) : StorageVariable<T, Long>(
+        sp, key, defaultValue,
+        SharedPreferences::getLong,
+        SharedPreferences.Editor::putLong
+    )
+
+    class StorageString<T>(
+        sp: SharedPreferences,
+        key: String,
+        defaultValue: String
+    ) : StorageVariable<T, String>(
+        sp, key, defaultValue,
+        { k, v -> getString(k, v) ?: v },
+        SharedPreferences.Editor::putString
+    )
+
+    class StorageJson<T, V>(
+        sp: SharedPreferences,
+        key: String,
+        defaultValue: V,
+        private val gson: Gson,
+        typeToken: TypeToken<V>
+    ) : ReadWriteProperty<T, V> {
+        private var json by StorageString(sp, key, gson.toJson(defaultValue))
+        private var value = gson.fromJson(json, typeToken.type) as V
+        override fun getValue(thisRef: T, property: KProperty<*>): V {
+            return value
+        }
+
+        override fun setValue(thisRef: T, property: KProperty<*>, value: V) {
+            this.value = value
+            json = gson.toJson(value)
+        }
+
+    }
 }

@@ -11,7 +11,9 @@ abstract class BaseAdapter<T> : RecyclerView.Adapter<BaseViewHolder<T>>() {
     abstract override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): BaseViewHolder<T>
 
     override fun onBindViewHolder(holder: BaseViewHolder<T>, position: Int) {
-        holder.onBind(dataList[position], position)
+        val data = dataList[position]
+        holder.currentData = data
+        holder.onBind(data, position)
     }
 
     override fun onViewAttachedToWindow(holder: BaseViewHolder<T>) {
@@ -33,6 +35,14 @@ abstract class BaseAdapter<T> : RecyclerView.Adapter<BaseViewHolder<T>>() {
         val insertedPosition = this.dataList.size
         this.dataList.add(data)
         notifyItemInserted(insertedPosition)
+    }
+
+    open fun appendAll(data : List<T>) {
+        val insertedPosition = this.dataList.size
+        val insertedSize = data.size
+        this.dataList.addAll(data)
+        notifyItemRangeInserted(insertedPosition, insertedSize)
+        notifyItemRangeChanged(insertedPosition, insertedSize)
     }
 
     open fun getDataList(): List<T> {

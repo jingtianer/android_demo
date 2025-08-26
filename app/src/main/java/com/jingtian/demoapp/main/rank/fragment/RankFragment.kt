@@ -13,14 +13,13 @@ import com.jingtian.demoapp.databinding.ItemAddMoreBinding
 import com.jingtian.demoapp.main.base.BaseHeaderFooterAdapter
 import com.jingtian.demoapp.main.fragments.BaseFragment
 import com.jingtian.demoapp.main.rank.Utils
-import com.jingtian.demoapp.main.rank.adapter.RankItemAdapter
 import com.jingtian.demoapp.main.rank.adapter.RankListAdapter
 import com.jingtian.demoapp.main.rank.dialog.AddRankDialog
+import com.jingtian.demoapp.main.rank.dialog.JsonDialog
 import com.jingtian.demoapp.main.rank.model.ModelRank
 import com.jingtian.demoapp.main.rank.model.ModelRank.Companion.isValid
-import com.jingtian.demoapp.main.rank.model.ModelRankItem
 
-class RankFragment : BaseFragment(), AddRankDialog.Companion.Callback {
+class RankFragment : BaseFragment(), AddRankDialog.Companion.Callback, JsonDialog.Companion.Callback {
 
     private lateinit var binding: FragmentRankBinding
     private val rankListAdapter = RankListAdapter()
@@ -54,9 +53,22 @@ class RankFragment : BaseFragment(), AddRankDialog.Companion.Callback {
         with(addMore.text) {
             text = "添加更多排行榜"
         }
-        with(addMore.root) {
+        with(addMore.layoutAdd) {
             setOnClickListener {
                 AddRankDialog(context, this@RankFragment).show()
+            }
+        }
+        with(addMore.layoutImport) {
+            setOnClickListener {
+                JsonDialog(context, this@RankFragment, true).show()
+            }
+        }
+        with(addMore.layoutExport) {
+            setOnClickListener {
+                JsonDialog(context, this@RankFragment).apply {
+                    setJson(Utils.DataHolder.toJson(rankListAdapter.getDataList()))
+                    show()
+                }
             }
         }
     }
@@ -66,6 +78,15 @@ class RankFragment : BaseFragment(), AddRankDialog.Companion.Callback {
             rankListAdapter.append(modelRank)
         } else {
             Toast.makeText(context, "添加失败", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    override fun onPositiveClick(dialog: Dialog, json: String, import: Boolean) {
+        dialog.dismiss()
+        if (import) {
+            Utils.DataHolder.toModelRankList(json)?.let {
+                rankListAdapter.appendAll(it)
+            }
         }
     }
 

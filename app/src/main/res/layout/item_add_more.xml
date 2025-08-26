@@ -3,17 +3,61 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical">
-    <ImageView
-        android:layout_weight="1"
+    <LinearLayout
+        android:id="@+id/layout_add"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:src="@drawable/add"/>
-    <TextView
-        android:id="@+id/text"
-        android:layout_weight="0"
-        android:gravity="center"
+        android:layout_weight="1"
+        android:orientation="vertical">
+        <ImageView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:src="@drawable/add"/>
+        <TextView
+            android:id="@+id/text"
+            android:gravity="center"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="添加更多"/>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/layout_export"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="添加更多"/>
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:orientation="vertical">
+        <ImageView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:src="@drawable/export"/>
+        <TextView
+            android:id="@+id/text_export"
+            android:gravity="center"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="导出"/>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/layout_import"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:orientation="vertical">
+        <ImageView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:src="@drawable/icon_import"/>
+        <TextView
+            android:id="@+id/text_import"
+            android:gravity="center"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="导入"/>
+    </LinearLayout>
 
 </LinearLayout>

@@ -4,7 +4,7 @@ import android.view.View
 import androidx.recyclerview.widget.RecyclerView
 
 abstract class BaseViewHolder<T>(itemView : View) : RecyclerView.ViewHolder(itemView) {
-
+    var currentData: T? = null
     abstract fun onBind(data: T, position: Int)
 
     open fun onAttach() {}
