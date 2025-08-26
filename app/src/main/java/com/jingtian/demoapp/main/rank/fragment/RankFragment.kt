@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -28,7 +29,7 @@ class RankFragment : BaseFragment(), AddRankDialog.Companion.Callback, JsonDialo
 
 
     init {
-        rankListAdapter.setDataList(Utils.DataHolder.fakeData)
+        rankListAdapter.setDataList(Utils.DataHolder.rankDataStore)
     }
 
     override fun onCreateView(
@@ -49,6 +50,10 @@ class RankFragment : BaseFragment(), AddRankDialog.Companion.Callback, JsonDialo
         with(binding.recyclerView) {
             headerFooterAdapter.addFooter(addMore.root)
             headerFooterAdapter.bindRecyclerView(this, rankListAdapter)
+        }
+        with(addMore.root) {
+            orientation = LinearLayout.HORIZONTAL
+            layoutParams?.height = ViewGroup.LayoutParams.WRAP_CONTENT
         }
         with(addMore.text) {
             text = "添加更多排行榜"
@@ -76,6 +81,7 @@ class RankFragment : BaseFragment(), AddRankDialog.Companion.Callback, JsonDialo
         dialog.dismiss()
         if (modelRank.isValid()) {
             rankListAdapter.append(modelRank)
+            Utils.DataHolder.rankDataStore = rankListAdapter.getDataList().toMutableList()
         } else {
             Toast.makeText(context, "添加失败", Toast.LENGTH_SHORT).show()
         }
@@ -86,6 +92,7 @@ class RankFragment : BaseFragment(), AddRankDialog.Companion.Callback, JsonDialo
         if (import) {
             Utils.DataHolder.toModelRankList(json)?.let {
                 rankListAdapter.appendAll(it)
+                Utils.DataHolder.rankDataStore = rankListAdapter.getDataList().toMutableList()
             }
         }
     }

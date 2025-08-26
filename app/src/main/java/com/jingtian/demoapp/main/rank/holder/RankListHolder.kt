@@ -55,6 +55,9 @@ class RankListHolder private constructor(private val binding: ItemRankListBindin
                 }
             }
         }
+        with(addMore.root) {
+            layoutParams?.width = ViewGroup.LayoutParams.WRAP_CONTENT
+        }
     }
 
     override fun onBind(data: ModelRank, position: Int) {
@@ -72,6 +75,7 @@ class RankListHolder private constructor(private val binding: ItemRankListBindin
         if (modelRank.isValid()) {
             rankItemAdapter.append(modelRank)
             currentData?.list?.add(modelRank)
+            Utils.DataHolder.rankDataStore = Utils.DataHolder.rankDataStore
         } else {
             Toast.makeText(context, "添加失败", Toast.LENGTH_SHORT).show()
         }
@@ -83,6 +87,7 @@ class RankListHolder private constructor(private val binding: ItemRankListBindin
             Utils.DataHolder.toModelRankItemList(json)?.let {
                 rankItemAdapter.appendAll(it)
                 currentData?.list?.addAll(it)
+                Utils.DataHolder.rankDataStore = Utils.DataHolder.rankDataStore
             }
         }
     }

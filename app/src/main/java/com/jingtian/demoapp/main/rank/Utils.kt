@@ -23,9 +23,6 @@ import com.jingtian.demoapp.main.rank.model.ModelRankItem
 import com.jingtian.demoapp.main.rank.model.RankItemImage
 import com.jingtian.demoapp.main.widget.StarRateView
 import java.io.File
-import java.io.InputStream
-import kotlin.io.path.Path
-import kotlin.io.path.createDirectory
 import kotlin.math.abs
 
 object Utils {
@@ -120,7 +117,7 @@ object Utils {
             }
         }
 
-        val fakeData by StorageUtil.StorageJson<Any, MutableList<ModelRank>>(
+        var rankDataStore by StorageUtil.StorageJson<Any, MutableList<ModelRank>>(
             app.getSharedPreferences("rank-list", Context.MODE_PRIVATE),
             "rank-list",
             mutableListOf(),
