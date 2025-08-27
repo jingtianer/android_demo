@@ -17,7 +17,10 @@ import kotlin.math.min
 class StrokeTextDrawable @JvmOverloads constructor(color: Int = 0) : ColorDrawable(color) {
     companion object {
         fun Paint.getBaseline(): Float {
-            return (fontMetrics.descent - fontMetrics.ascent) / 2 - fontMetrics.descent
+            return (-fontMetrics.descent - fontMetrics.ascent)
+        }
+        fun TextPaint.fontHeight(): Float {
+            return fontMetrics.bottom - fontMetrics.top
         }
     }
 
@@ -110,9 +113,9 @@ class StrokeTextDrawable @JvmOverloads constructor(color: Int = 0) : ColorDrawab
             mTextStrokePaint.textSize = textSize
             measure()
         }
-        val textBaseLine = bounds.height() - mPaint.getBaseline()
+        val textBaseLine = -mTextStrokePaint.fontMetrics.descent + bounds.height() - (bounds.height() - measuredHeight) / 2
         val xOffset = (bounds.width() - measuredWidth) / 2f
-        val yOffset = (bounds.height() - measuredHeight) / 2
+        val yOffset = 0 // (bounds.height() - measuredHeight) / 2f
         canvas.drawText(text, xOffset, textBaseLine - yOffset, mTextStrokePaint)
         canvas.drawText(text, xOffset, textBaseLine - yOffset, mPaint)
     }
