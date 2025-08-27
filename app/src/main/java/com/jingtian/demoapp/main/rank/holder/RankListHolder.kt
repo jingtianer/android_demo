@@ -2,16 +2,20 @@ package com.jingtian.demoapp.main.rank.holder
 
 import android.app.Dialog
 import android.content.Intent
+import android.graphics.Rect
 import android.net.Uri
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.jingtian.demoapp.databinding.ItemAddMoreBinding
 import com.jingtian.demoapp.databinding.ItemRankListBinding
 import com.jingtian.demoapp.main.base.BaseActivity
 import com.jingtian.demoapp.main.base.BaseHeaderFooterAdapter
 import com.jingtian.demoapp.main.base.BaseViewHolder
+import com.jingtian.demoapp.main.dp
 import com.jingtian.demoapp.main.rank.Utils
 import com.jingtian.demoapp.main.rank.activity.RankActivity
 import com.jingtian.demoapp.main.rank.adapter.RankItemAdapter
@@ -82,6 +86,23 @@ class RankListHolder private constructor(private val binding: ItemRankListBindin
             layoutParams?.width = ViewGroup.LayoutParams.WRAP_CONTENT
         }
         (context as? BaseActivity)?.addDocumentPickerCallbacks(documentCallback)
+        with(binding.recyclerView) {
+            addItemDecoration(object : RecyclerView.ItemDecoration() {
+                override fun getItemOffsets(
+                    outRect: Rect,
+                    view: View,
+                    parent: RecyclerView,
+                    state: RecyclerView.State
+                ) {
+                    outRect.set(
+                        6f.dp.toInt(),
+                        0,
+                        6f.dp.toInt(),
+                        0,
+                    )
+                }
+            })
+        }
     }
 
     override fun onBind(data: ModelRank, position: Int) {
