@@ -523,3 +523,39 @@ object StorageUtil {
 
     }
 }
+
+fun <T, R : Comparable<R>> mergeSortedListsByDescending(list1: List<T>, list2: List<T>, selector: (T) -> R): List<T> {
+    val result = mutableListOf<T>()
+    var i = 0
+    var j = 0
+
+    while (i < list1.size && j < list2.size) {
+        val item1 = list1[i]
+        val item2 = list2[j]
+
+        val selectedItem1 = selector(item1)
+        val selectedItem2 = selector(item2)
+
+        when {
+            selectedItem1 >= selectedItem2 -> {
+                result.add(item1)
+                i++
+            }
+            else -> {
+                result.add(item2)
+                j++
+            }
+        }
+    }
+
+    while (i < list1.size) {
+        result.add(list1[i])
+        i++
+    }
+    while (j < list2.size) {
+        result.add(list2[j])
+        j++
+    }
+
+    return result
+}

@@ -18,7 +18,9 @@ import com.jingtian.demoapp.main.base.BaseHeaderFooterAdapter
 import com.jingtian.demoapp.main.base.BaseViewHolder
 import com.jingtian.demoapp.main.dp
 import com.jingtian.demoapp.main.getBaseActivity
+import com.jingtian.demoapp.main.mergeSortedListsByDescending
 import com.jingtian.demoapp.main.rank.Utils
+import com.jingtian.demoapp.main.rank.Utils.CoroutineUtils.activityLifecycleLaunch
 import com.jingtian.demoapp.main.rank.activity.RankActivity
 import com.jingtian.demoapp.main.rank.adapter.RankItemAdapter
 import com.jingtian.demoapp.main.rank.dialog.AddRankItemDialog
@@ -56,10 +58,12 @@ class RankListHolder private constructor(private val binding: ItemRankListBindin
                 val success = Utils.DataHolder.rankDB.rankItemDao().insertAll(list).map { it != -1L }
                 list.filterIndexed { index, _ ->
                     success[index]
-                }
+                }.sortedByDescending  { it.score }
             }) { list->
                 lifecycleScope.launch {
-                    rankItemAdapter.appendAll(list)
+                    rankItemAdapter.setDataList(mergeSortedListsByDescending(list, rankItemAdapter.getDataList()) {
+                        it.score
+                    })
                 }
             }
 
@@ -133,7 +137,8 @@ class RankListHolder private constructor(private val binding: ItemRankListBindin
                 Utils.CoroutineUtils.runIOTask({
                     Utils.DataHolder.rankDB.deleteRank(it)
                 }) {
-                    lifecycleScope.launch {
+                    context.activityLifecycleLaunch {
+                        // 不能用自己的lifecycle，因为自己要被删除
                         currentAdapter?.remove(currentPosition)
                     }
                 }

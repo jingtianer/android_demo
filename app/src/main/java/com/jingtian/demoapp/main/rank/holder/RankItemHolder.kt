@@ -79,21 +79,19 @@ class RankItemHolder private constructor(private val binding: ItemRankItemBindin
         lifecycleScope.launch {
             val currentAdapter = currentAdapter ?: return@launch
             currentAdapter.remove(currentPosition)
-            val insertPos = withContext(Dispatchers.Default) {
-                val insertPos = currentAdapter.getDataList().binarySearch {
-                    if (it.score > modelRank.score) {
-                        -1
-                    } else if (it.score < modelRank.score) {
-                        1
-                    } else {
-                        0
-                    }
-                }
-                if (insertPos < 0) {
-                    - insertPos - 1
+            val searchPos = currentAdapter.getDataList().binarySearch {
+                if (it.score > modelRank.score) {
+                    -1
+                } else if (it.score < modelRank.score) {
+                    1
                 } else {
-                    insertPos
+                    0
                 }
+            }
+            val insertPos = if (searchPos < 0) {
+                - searchPos - 1
+            } else {
+                searchPos
             }
             currentAdapter.insert(insertPos, modelRank)
         }
@@ -105,9 +103,7 @@ class RankItemHolder private constructor(private val binding: ItemRankItemBindin
 
     override fun onDeleteClick(dialog: Dialog) {
         dialog.dismiss()
-        currentAdapter?.let { adapter->
-            adapter.remove(currentPosition)
-        }
+        currentAdapter?.remove(currentPosition)
         currentData?.let {
             Utils.CoroutineUtils.runIOTask({
                 Utils.DataHolder.ImageStorage.delete(it.image.id)
