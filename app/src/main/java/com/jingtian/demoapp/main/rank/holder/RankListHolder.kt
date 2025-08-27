@@ -160,10 +160,29 @@ class RankListHolder private constructor(private val binding: ItemRankListBindin
     override fun onPositiveClick(dialog: Dialog, modelRank: ModelRankItem) {
         dialog.dismiss()
         if (modelRank.isValid()) {
-            rankItemAdapter.append(modelRank)
             Utils.CoroutineUtils.runIOTask({
                 Utils.DataHolder.rankDB.rankItemDao().insert(modelRank)
             }) {}
+            context.lifecycleLaunch {
+                val insertPos = withContext(Dispatchers.Default) {
+                    val insertPos = rankItemAdapter.getDataList().binarySearch {
+                        if (it.score > modelRank.score) {
+                            -1
+                        } else if (it.score < modelRank.score) {
+                            1
+                        } else {
+                            0
+                        }
+                    }
+                    if (insertPos < 0) {
+                        - insertPos - 1
+                    } else {
+                        insertPos
+                    }
+                }
+
+                rankItemAdapter.insert(insertPos, modelRank)
+            }
         } else {
             Toast.makeText(context, "添加失败", Toast.LENGTH_SHORT).show()
         }

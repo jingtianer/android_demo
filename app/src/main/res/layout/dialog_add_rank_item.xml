@@ -37,8 +37,7 @@
             android:id="@+id/et_desc"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="评价一下~"
-            android:inputType="numberSigned" />
+            android:hint="评价一下~"/>
 
 
         <ImageView

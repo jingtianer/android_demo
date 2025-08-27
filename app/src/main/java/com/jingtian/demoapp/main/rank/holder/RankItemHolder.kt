@@ -9,10 +9,13 @@ import com.jingtian.demoapp.databinding.ItemRankItemBinding
 import com.jingtian.demoapp.main.base.BaseViewHolder
 import com.jingtian.demoapp.main.dp
 import com.jingtian.demoapp.main.rank.Utils
+import com.jingtian.demoapp.main.rank.Utils.CoroutineUtils.lifecycleLaunch
 import com.jingtian.demoapp.main.rank.activity.RankItemActivity
 import com.jingtian.demoapp.main.rank.dialog.AddRankItemDialog
 import com.jingtian.demoapp.main.rank.model.ModelRankItem
 import com.jingtian.demoapp.main.widget.RankTypeChooser
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class RankItemHolder private constructor(private val binding: ItemRankItemBinding) :
     BaseViewHolder<ModelRankItem>(binding.root), AddRankItemDialog.Companion.Callback {
@@ -71,10 +74,27 @@ class RankItemHolder private constructor(private val binding: ItemRankItemBindin
         currentData = modelRank
         Utils.CoroutineUtils.runIOTask({
             Utils.DataHolder.rankDB.rankItemDao().update(modelRank)
-        }) {
-            currentAdapter?.let { adapter->
-                adapter.setData(modelRank, currentPosition)
+        }) {}
+        binding.root.context.lifecycleLaunch {
+            val currentAdapter = currentAdapter ?: return@lifecycleLaunch
+            val insertPos = withContext(Dispatchers.Default) {
+                val insertPos = currentAdapter.getDataList().binarySearch {
+                    if (it.score > modelRank.score) {
+                        -1
+                    } else if (it.score < modelRank.score) {
+                        1
+                    } else {
+                        0
+                    }
+                }
+                if (insertPos < 0) {
+                    - insertPos - 1
+                } else {
+                    insertPos
+                }
             }
+            currentAdapter.remove(currentPosition)
+            currentAdapter.insert(insertPos, modelRank)
         }
     }
 

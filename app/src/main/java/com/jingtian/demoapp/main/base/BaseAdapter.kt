@@ -62,7 +62,15 @@ abstract class BaseAdapter<T> : RecyclerView.Adapter<BaseViewHolder<T>>() {
         if (pos >= 0 && pos < dataList.size) {
             dataList.removeAt(pos)
             notifyItemRemoved(pos)
-            notifyItemRangeChanged(pos, dataList.size)
+            notifyItemRangeChanged(pos, dataList.size - pos)
+        }
+    }
+
+    open fun insert(pos: Int, data: T) {
+        if (pos >= 0 && pos <= dataList.size) {
+            dataList.add(pos, data)
+            notifyItemInserted(pos)
+            notifyItemRangeChanged(pos, dataList.size - pos)
         }
     }
 }
