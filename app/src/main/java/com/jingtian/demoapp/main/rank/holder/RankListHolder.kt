@@ -6,9 +6,6 @@ import android.net.Uri
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import android.widget.Toast
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.content.FileProvider
-import androidx.core.net.toUri
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.jingtian.demoapp.databinding.ItemAddMoreBinding
 import com.jingtian.demoapp.databinding.ItemRankListBinding
@@ -16,16 +13,13 @@ import com.jingtian.demoapp.main.base.BaseActivity
 import com.jingtian.demoapp.main.base.BaseHeaderFooterAdapter
 import com.jingtian.demoapp.main.base.BaseViewHolder
 import com.jingtian.demoapp.main.rank.Utils
+import com.jingtian.demoapp.main.rank.activity.RankActivity
 import com.jingtian.demoapp.main.rank.adapter.RankItemAdapter
 import com.jingtian.demoapp.main.rank.dialog.AddRankItemDialog
 import com.jingtian.demoapp.main.rank.dialog.JsonDialog
 import com.jingtian.demoapp.main.rank.model.ModelRank
 import com.jingtian.demoapp.main.rank.model.ModelRankItem
 import com.jingtian.demoapp.main.rank.model.ModelRankItem.Companion.isValid
-import io.reactivex.Observable
-import io.reactivex.android.schedulers.AndroidSchedulers
-import io.reactivex.schedulers.Schedulers
-import java.io.File
 
 class RankListHolder private constructor(private val binding: ItemRankListBinding) :
     BaseViewHolder<ModelRank>(binding.root), AddRankItemDialog.Companion.Callback,
@@ -66,7 +60,7 @@ class RankListHolder private constructor(private val binding: ItemRankListBindin
         }
         with(binding.more) {
             setOnClickListener {
-                
+                RankActivity.startActivity(context, currentData?.rankName ?: "")
             }
         }
         with(addMore.layoutExport) {
@@ -96,7 +90,7 @@ class RankListHolder private constructor(private val binding: ItemRankListBindin
         }
         with(binding.recyclerView) {
             rankItemAdapter.setDataList(
-                Utils.DataHolder.rankDB.rankItemDao().getAllRankModel(data.rankName)
+                Utils.DataHolder.rankDB.rankItemDao().getAllRankItemByRankName(data.rankName)
             )
             rankItemHeaderFooterAdapter.bindRecyclerView(this, rankItemAdapter)
         }
