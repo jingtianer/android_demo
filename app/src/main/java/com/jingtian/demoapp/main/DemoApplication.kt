@@ -5,11 +5,13 @@ import android.app.Application
 import android.content.Context
 import android.os.Bundle
 import com.jingtian.demoapp.main.base.BaseActivity
+import com.jingtian.demoapp.main.rank.Utils
 
 class DemoApplication : Application() {
     var activityStack = HashMap<Context, BaseActivity>()
     init {
         app = this
+        Utils.Share.asyncClearShareDir()
     }
 
     override fun onCreate() {

@@ -60,6 +60,22 @@ object Utils {
             }.subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread())
         }
 
+        fun asyncClearShareDir() {
+            Utils.CoroutineUtils.runIOTask({
+                val shareDir = File(app.filesDir, "share")
+                if (!shareDir.exists()) {
+                    return@runIOTask
+                }
+                if (shareDir.isFile) {
+                    shareDir.delete()
+                    return@runIOTask
+                }
+                shareDir.listFiles()?.forEach {
+                    it.delete()
+                }
+            }){}
+        }
+
         fun startShare(rankName: String, data: Any) : Observable<Uri> {
             return Observable.create<Uri> {
                 val shareDir = File(app.filesDir, "share")
