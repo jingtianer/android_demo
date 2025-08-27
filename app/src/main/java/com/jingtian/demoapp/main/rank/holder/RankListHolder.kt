@@ -66,11 +66,6 @@ class RankListHolder private constructor(private val binding: ItemRankListBindin
                 (context as? BaseActivity)?.pickFile?.launch(arrayOf("*/*"))
             }
         }
-        with(binding.more) {
-            setOnClickListener {
-                RankActivity.startActivity(context, currentData?.rankName ?: "")
-            }
-        }
         with(addMore.layoutExport) {
             setOnClickListener {
                 val ignore = Utils.Share.startShare(
@@ -149,6 +144,17 @@ class RankListHolder private constructor(private val binding: ItemRankListBindin
         with(addMore.layoutDelete) {
             setOnClickListener {
                 AlertDialog(context, deleteDialogCallback, "确认删除排行榜：${data.rankName}").show()
+            }
+        }
+        with(binding.more) {
+            setOnClickListener {
+                RankActivity.startActivity(context, data.rankName)
+            }
+        }
+
+        with(binding.moreIcon) {
+            setOnClickListener {
+                RankActivity.startActivity(context, data.rankName)
             }
         }
     }

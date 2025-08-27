@@ -46,7 +46,10 @@ class LinkedListAdapter(private val context: Context) : BaseAdapter<ModelRankIte
             data ?: return
             data.image.loadImage(image, maxWidth = ITEM_SIZE.dp.toInt())
             parent.post {
-                itemView.layoutParams.height = parent.height / typeNum
+//                itemView.layoutParams.height = parent.height / typeNum
+//                image.layoutParams.height = parent.height / typeNum
+//                itemView.layoutParams = itemView.layoutParams
+//                image.layoutParams = image.layoutParams
             }
             itemView.setOnClickListener {
                 RankItemActivity.startActivity(
