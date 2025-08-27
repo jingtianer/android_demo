@@ -9,6 +9,7 @@ import android.os.Bundle
 import android.provider.MediaStore
 import android.provider.MediaStore.Images.Media
 import android.view.LayoutInflater
+import android.view.View
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -25,12 +26,13 @@ import com.jingtian.demoapp.main.rank.model.ModelRankItem
 import com.jingtian.demoapp.main.rank.model.RankItemImage
 import com.jingtian.demoapp.main.widget.StarRateView
 
-class AddRankItemDialog(context: Context, private val rankName: String, private val callback : Callback) : Dialog(context), StarRateView.Companion.OnScoreChange, BaseActivity.Companion.MediaPickerCallback {
+class AddRankItemDialog(context: Context, private val rankName: String, private val callback : Callback, private val modelRank: ModelRankItem? = null) : Dialog(context), StarRateView.Companion.OnScoreChange, BaseActivity.Companion.MediaPickerCallback {
 
     companion object {
         interface Callback {
             fun onPositiveClick(dialog: Dialog, modelRank: ModelRankItem)
             fun onNegativeClick(dialog: Dialog)
+            fun onDeleteClick(dialog: Dialog)
         }
     }
 
@@ -46,7 +48,12 @@ class AddRankItemDialog(context: Context, private val rankName: String, private 
         setContentView(binding.root)
         with(binding.positive) {
             setOnClickListener {
-                val id = Utils.DataHolder.ImageStorage.storeImage(imageUri)
+                val oldId = modelRank?.image?.id
+                val id = if (oldId != null) {
+                    Utils.DataHolder.ImageStorage.storeImage(oldId, imageUri)
+                } else {
+                    Utils.DataHolder.ImageStorage.storeImage(imageUri)
+                }
                 callback.onPositiveClick(this@AddRankItemDialog, ModelRankItem(
                     binding.etRankName.text.toString(),
                     rankName,
@@ -65,11 +72,43 @@ class AddRankItemDialog(context: Context, private val rankName: String, private 
         with(binding.starRate) {
             commonScrollableConfig()
             onScoreChange = this@AddRankItemDialog
+            modelRank?.let {
+                setScore(it.score)
+            }
+        }
+        with(binding.delete) {
+            setOnClickListener {
+                callback.onDeleteClick(this@AddRankItemDialog)
+            }
+            if (modelRank != null) {
+                binding.delete.visibility = View.VISIBLE
+            }
         }
         onScoreChange(binding.starRate.getScore())
         with(binding.image) {
             setOnClickListener {
                 baseActivity.pickMedia.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+            }
+            modelRank?.let {
+                if (it.image.image != Uri.EMPTY) {
+                    setImageURI(it.image.image)
+                    this@AddRankItemDialog.imageUri = it.image.image
+                }
+            }
+        }
+        with(binding.etRankName) {
+            modelRank?.let {
+                setText(it.itemName)
+            }
+        }
+        with(binding.etDesc) {
+            modelRank?.let {
+                setText(it.desc)
+            }
+        }
+        with(binding.rankType) {
+            modelRank?.let {
+                setRankType(it.rankType)
             }
         }
     }

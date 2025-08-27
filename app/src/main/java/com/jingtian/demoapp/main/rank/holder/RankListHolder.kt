@@ -20,6 +20,7 @@ import com.jingtian.demoapp.main.rank.Utils
 import com.jingtian.demoapp.main.rank.activity.RankActivity
 import com.jingtian.demoapp.main.rank.adapter.RankItemAdapter
 import com.jingtian.demoapp.main.rank.dialog.AddRankItemDialog
+import com.jingtian.demoapp.main.rank.dialog.AlertDialog
 import com.jingtian.demoapp.main.rank.dialog.JsonDialog
 import com.jingtian.demoapp.main.rank.model.ModelRank
 import com.jingtian.demoapp.main.rank.model.ModelRankItem
@@ -83,7 +84,8 @@ class RankListHolder private constructor(private val binding: ItemRankListBindin
             }
         }
         with(addMore.root) {
-            layoutParams?.width = ViewGroup.LayoutParams.WRAP_CONTENT
+            layoutParams.height = 300f.dp.toInt()
+            layoutParams.width = RecyclerView.LayoutParams.WRAP_CONTENT
         }
         (context as? BaseActivity)?.addDocumentPickerCallbacks(documentCallback)
         with(binding.recyclerView) {
@@ -105,6 +107,24 @@ class RankListHolder private constructor(private val binding: ItemRankListBindin
         }
     }
 
+    private val deleteDialogCallback = object : AlertDialog.Companion.Callback {
+        override fun onPositiveClick(dialog: Dialog) {
+            dialog.dismiss()
+            currentData?.let {
+                Utils.CoroutineUtils.run({
+                    Utils.DataHolder.rankDB.rankListDao().delete(it)
+                }){
+                    currentAdapter?.remove(currentPosition)
+                }
+            }
+        }
+
+        override fun onNegativeClick(dialog: Dialog) {
+            dialog.dismiss()
+        }
+
+    }
+
     override fun onBind(data: ModelRank, position: Int) {
         with(binding.title) {
             text = data.rankName
@@ -118,6 +138,11 @@ class RankListHolder private constructor(private val binding: ItemRankListBindin
         with(addMore.layoutAdd) {
             setOnClickListener {
                 AddRankItemDialog(context, data.rankName, this@RankListHolder).show()
+            }
+        }
+        with(addMore.layoutDelete) {
+            setOnClickListener {
+                AlertDialog(context, deleteDialogCallback, "确认删除排行榜：${data.rankName}？").show()
             }
         }
     }
@@ -147,6 +172,10 @@ class RankListHolder private constructor(private val binding: ItemRankListBindin
     }
 
     override fun onNegativeClick(dialog: Dialog) {
+        dialog.dismiss()
+    }
+
+    override fun onDeleteClick(dialog: Dialog) {
         dialog.dismiss()
     }
 }

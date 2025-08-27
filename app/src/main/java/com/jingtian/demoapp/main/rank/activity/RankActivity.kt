@@ -53,7 +53,9 @@ class RankActivity : BaseActivity() {
                 val result = withContext(Dispatchers.IO) {
                     Utils.DataHolder.rankDB.rankItemDao().getAllRankItemByRankName(rankName)
                 }
-                rankAdapter.setDataList(result)
+                withContext(Dispatchers.Main) {
+                    rankAdapter.setDataList(result)
+                }
             }
             addItemDecoration(object: RecyclerView.ItemDecoration() {
                 override fun getItemOffsets(

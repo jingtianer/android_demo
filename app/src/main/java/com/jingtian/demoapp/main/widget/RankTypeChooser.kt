@@ -88,4 +88,27 @@ class RankTypeChooser @JvmOverloads constructor(
             }
         }
     }
+
+    fun setRankType(rankType: RankItemRankType) {
+        when(rankType) {
+            RankItemRankType.NONE -> {
+                binding.root.clearCheck()
+            }
+            RankItemRankType.夯 -> {
+                binding.root.check(binding.rank1.id)
+            }
+            RankItemRankType.顶尖 -> {
+                binding.root.check(binding.rank2.id)
+            }
+            RankItemRankType.人上人 -> {
+                binding.root.check(binding.rank3.id)
+            }
+            RankItemRankType.NPC -> {
+                binding.root.check(binding.rank4.id)
+            }
+            RankItemRankType.史 -> {
+                binding.root.check(binding.rank5.id)
+            }
+        }
+    }
 }

@@ -29,6 +29,10 @@ interface RankModelItemDao {
     fun getAllRankItemByRankName(rankName : String) : List<ModelRankItem>
 
 
+    @Query("SELECT * FROM ${RankModelItemDao.TABLE_NAME} WHERE (rankName = :rankName AND itemName = :itemName)")
+    fun getRankItem(rankName : String, itemName: String) : List<ModelRankItem>
+
+
     @Query("SELECT * FROM ${RankModelItemDao.TABLE_NAME}")
     fun getAllRankItem() : List<ModelRankItem>
 }

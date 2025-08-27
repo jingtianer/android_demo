@@ -35,6 +35,7 @@
                 android:resource="@xml/file_paths" />
         </provider>
         <activity android:name=".main.rank.activity.RankActivity"/>
+        <activity android:name=".main.rank.activity.RankItemActivity"/>
     </application>
 
 </manifest>

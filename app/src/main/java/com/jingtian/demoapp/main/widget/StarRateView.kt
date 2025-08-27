@@ -53,6 +53,7 @@ class StarRateView @JvmOverloads constructor(
         this.starDrawable = starDrawable
         this.starGreyDrawable = starGreyDrawable
         invalidate()
+        requestLayout()
     }
 
     private fun getStarSize(): Float {
@@ -70,6 +71,9 @@ class StarRateView @JvmOverloads constructor(
         starTotalWidth = starSize * starCnt + (starCnt - 1) * starPadding
         if (!scoreInvalid) {
             progress = scoreToProgress(score)
+        }
+        if (MeasureSpec.getMode(widthMeasureSpec) != MeasureSpec.EXACTLY) {
+            super.onMeasure(MeasureSpec.makeMeasureSpec(starTotalWidth.toInt(), MeasureSpec.EXACTLY), heightMeasureSpec)
         }
     }
 

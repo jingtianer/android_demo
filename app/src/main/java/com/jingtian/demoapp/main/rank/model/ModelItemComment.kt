@@ -24,8 +24,8 @@ import java.util.Date
 
 data class ModelItemComment(
     val itemName: String,
-    @PrimaryKey
-    var id: Long = -1,
+    @PrimaryKey(autoGenerate = true)
+    var id: Long = 0,
     var comment: String = "",
     var creationDate: Date = Date(),
     var lastModifyDate: Date = Date(),

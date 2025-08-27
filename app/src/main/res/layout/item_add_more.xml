@@ -60,4 +60,23 @@
             android:text="导入"/>
     </LinearLayout>
 
+    <LinearLayout
+        android:id="@+id/layout_delete"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:orientation="vertical">
+        <ImageView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:src="@drawable/full_trash"/>
+        <TextView
+            android:id="@+id/text_delte"
+            android:gravity="center"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="删除"/>
+    </LinearLayout>
+
 </LinearLayout>

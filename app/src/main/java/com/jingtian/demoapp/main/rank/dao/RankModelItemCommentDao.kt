@@ -30,5 +30,5 @@ interface RankModelItemCommentDao {
     fun delete(modelRank: ModelItemComment)
 
     @Query("SELECT * FROM $TABLE_NAME WHERE itemName = :itemName")
-    fun getAllItem(itemName : String) : List<ModelItemComment>
+    fun getAllComment(itemName : String) : List<ModelItemComment>
 }

@@ -46,8 +46,14 @@ import io.reactivex.Observable
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.Disposable
 import io.reactivex.schedulers.Schedulers
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.ByteArrayInputStream
 import java.io.File
+import java.util.concurrent.Callable
 import kotlin.math.abs
 import kotlin.properties.ReadWriteProperty
 import kotlin.reflect.KProperty
@@ -118,6 +124,35 @@ object Utils {
                 } else {
                     null
                 }
+            }
+
+            fun storeImage(oldId: Long, uri: Uri): Long {
+                if (uri == Uri.EMPTY) {
+                    return -1
+                }
+                val id  = if (oldId >= this.id || oldId < 0) {
+                    this.id++
+                } else {
+                    oldId
+                }
+                imageCache[id] = uri
+                val storeDir = File(app.filesDir, RANK_IMAGE_STORE_DIR)
+                if (!storeDir.exists()) {
+                    storeDir.mkdirs()
+                } else if (storeDir.isFile) {
+                    storeDir.delete()
+                    storeDir.mkdirs()
+                }
+                val storageFile = File(storeDir, RANK_IMAGE_PREFIX + id)
+                if (storageFile.exists()) {
+                    storageFile.delete()
+                }
+                app.contentResolver.openInputStream(uri)?.use { input ->
+                    storageFile.outputStream().use { output ->
+                        FileUtils.copy(input, output)
+                    }
+                }
+                return id
             }
 
             fun storeImage(uri: Uri): Long {
@@ -298,5 +333,20 @@ object Utils {
             ResourcesCompat.getDrawable(resources, R.drawable.star_high_lighted, null),
             ResourcesCompat.getDrawable(resources, R.drawable.star, null),
         )
+    }
+
+    object CoroutineUtils {
+        private val ioScope = CoroutineScope(Dispatchers.Main + Job())
+
+        fun <T> run(block: Callable<T>, callback: (T)-> Unit) {
+            ioScope.launch {
+                val ret = withContext(Dispatchers.IO) {
+                    block.call()
+                }
+                withContext(Dispatchers.Main) {
+                    callback.invoke(ret)
+                }
+            }
+        }
     }
 }

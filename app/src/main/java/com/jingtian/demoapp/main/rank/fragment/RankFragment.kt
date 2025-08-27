@@ -12,6 +12,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.jingtian.demoapp.databinding.FragmentRankBinding
 import com.jingtian.demoapp.databinding.ItemAddMoreBinding
 import com.jingtian.demoapp.main.base.BaseHeaderFooterAdapter
+import com.jingtian.demoapp.main.dp
 import com.jingtian.demoapp.main.fragments.BaseFragment
 import com.jingtian.demoapp.main.rank.Utils
 import com.jingtian.demoapp.main.rank.adapter.RankListAdapter
@@ -67,6 +68,9 @@ class RankFragment : BaseFragment(), AddRankDialog.Companion.Callback, JsonDialo
             setOnClickListener {
                 JsonDialog(context, this@RankFragment, true).show()
             }
+        }
+        with(addMore.layoutDelete) {
+            visibility = View.GONE
         }
         with(addMore.layoutExport) {
             setOnClickListener {

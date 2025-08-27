@@ -13,6 +13,8 @@ abstract class BaseAdapter<T> : RecyclerView.Adapter<BaseViewHolder<T>>() {
     override fun onBindViewHolder(holder: BaseViewHolder<T>, position: Int) {
         val data = dataList[position]
         holder.currentData = data
+        holder.currentAdapter = this
+        holder.currentPosition = position
         holder.onBind(data, position)
     }
 
@@ -31,6 +33,13 @@ abstract class BaseAdapter<T> : RecyclerView.Adapter<BaseViewHolder<T>>() {
         notifyDataSetChanged()
     }
 
+    open fun setData(data: T, pos: Int) {
+        if (pos >= 0 && pos < dataList.size) {
+            dataList.set(pos, data)
+            notifyItemChanged(pos)
+        }
+    }
+
     open fun append(data : T) {
         val insertedPosition = this.dataList.size
         this.dataList.add(data)
@@ -47,5 +56,13 @@ abstract class BaseAdapter<T> : RecyclerView.Adapter<BaseViewHolder<T>>() {
 
     open fun getDataList(): List<T> {
         return dataList
+    }
+
+    open fun remove(pos: Int) {
+        if (pos >= 0 && pos < dataList.size) {
+            dataList.removeAt(pos)
+            notifyItemRemoved(pos)
+            notifyItemRangeChanged(pos, dataList.size)
+        }
     }
 }
