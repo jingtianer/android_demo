@@ -130,17 +130,16 @@ class RankItemActivity : BaseActivity(), AddCommentDialog.Companion.Callback {
 
     override fun onPositiveClick(dialog: Dialog, comment: String) {
         dialog.dismiss()
+        val model = ModelItemComment(
+            itemName = rankItemName,
+            comment = comment,
+            creationDate = Date(),
+            lastModifyDate = Date()
+        )
+        Utils.CoroutineUtils.runIOTask({
+            Utils.DataHolder.rankDB.rankCommentDao().insert(model)
+        }) { }
         lifecycleScope.launch {
-            val model = withContext(Dispatchers.IO) {
-                val model = ModelItemComment(
-                    itemName = rankItemName,
-                    comment = comment,
-                    creationDate = Date(),
-                    lastModifyDate = Date()
-                )
-                Utils.DataHolder.rankDB.rankCommentDao().insert(model)
-                model
-            }
             withContext(Dispatchers.Main) {
                 commentAdapter.append(model)
             }

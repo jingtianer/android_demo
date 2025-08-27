@@ -4,17 +4,18 @@ import android.app.Dialog
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.core.content.res.ResourcesCompat
+import androidx.lifecycle.lifecycleScope
 import com.jingtian.demoapp.R
 import com.jingtian.demoapp.databinding.ItemRankItemBinding
 import com.jingtian.demoapp.main.base.BaseViewHolder
 import com.jingtian.demoapp.main.dp
 import com.jingtian.demoapp.main.rank.Utils
-import com.jingtian.demoapp.main.rank.Utils.CoroutineUtils.lifecycleLaunch
 import com.jingtian.demoapp.main.rank.activity.RankItemActivity
 import com.jingtian.demoapp.main.rank.dialog.AddRankItemDialog
 import com.jingtian.demoapp.main.rank.model.ModelRankItem
 import com.jingtian.demoapp.main.widget.RankTypeChooser
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class RankItemHolder private constructor(private val binding: ItemRankItemBinding) :
@@ -75,8 +76,8 @@ class RankItemHolder private constructor(private val binding: ItemRankItemBindin
         Utils.CoroutineUtils.runIOTask({
             Utils.DataHolder.rankDB.rankItemDao().update(modelRank)
         }) {}
-        binding.root.context.lifecycleLaunch {
-            val currentAdapter = currentAdapter ?: return@lifecycleLaunch
+        lifecycleScope.launch {
+            val currentAdapter = currentAdapter ?: return@launch
             currentAdapter.remove(currentPosition)
             val insertPos = withContext(Dispatchers.Default) {
                 val insertPos = currentAdapter.getDataList().binarySearch {

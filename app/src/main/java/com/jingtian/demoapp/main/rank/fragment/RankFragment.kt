@@ -7,6 +7,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.Toast
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.jingtian.demoapp.databinding.FragmentRankBinding
@@ -16,7 +17,6 @@ import com.jingtian.demoapp.main.base.BaseHeaderFooterAdapter
 import com.jingtian.demoapp.main.dp
 import com.jingtian.demoapp.main.fragments.BaseFragment
 import com.jingtian.demoapp.main.rank.Utils
-import com.jingtian.demoapp.main.rank.Utils.CoroutineUtils.lifecycleLaunch
 import com.jingtian.demoapp.main.rank.Utils.DataHolder.rankDB
 import com.jingtian.demoapp.main.rank.adapter.RankListAdapter
 import com.jingtian.demoapp.main.rank.dialog.AddRankDialog
@@ -24,6 +24,7 @@ import com.jingtian.demoapp.main.rank.dialog.JsonDialog
 import com.jingtian.demoapp.main.rank.model.ModelRank
 import com.jingtian.demoapp.main.rank.model.ModelRank.Companion.isValid
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class RankFragment : BaseFragment(), AddRankDialog.Companion.Callback, JsonDialog.Companion.Callback {
@@ -48,7 +49,7 @@ class RankFragment : BaseFragment(), AddRankDialog.Companion.Callback, JsonDialo
             layoutManager = LinearLayoutManager(context, RecyclerView.VERTICAL, false)
             addMore = ItemAddMoreBinding.inflate(LayoutInflater.from(context), binding.recyclerView, false)
         }
-        (context ?: app).lifecycleLaunch {
+        lifecycleScope.launch {
             val list = withContext(Dispatchers.IO) {
                 rankDB.rankListDao().getAllRankModel()
             }
@@ -86,7 +87,7 @@ class RankFragment : BaseFragment(), AddRankDialog.Companion.Callback, JsonDialo
         with(addMore.layoutExport) {
             setOnClickListener {
                 JsonDialog(context, this@RankFragment).apply {
-                    context.lifecycleLaunch {
+                    lifecycleScope.launch {
                         val json = withContext(Dispatchers.IO) {
                             Utils.DataHolder.toJson(rankListAdapter.getDataList())
                         }
@@ -104,7 +105,9 @@ class RankFragment : BaseFragment(), AddRankDialog.Companion.Callback, JsonDialo
                 Utils.DataHolder.rankDB.rankListDao().insert(modelRank) != -1L
             }) { success->
                 if (success) {
-                    rankListAdapter.append(modelRank)
+                    lifecycleScope.launch {
+                        rankListAdapter.append(modelRank)
+                    }
                 } else {
                     Toast.makeText(context, "添加失败，${modelRank.rankName}已存在", Toast.LENGTH_SHORT).show()
                 }
@@ -124,9 +127,11 @@ class RankFragment : BaseFragment(), AddRankDialog.Companion.Callback, JsonDialo
                     Utils.CoroutineUtils.runIOTask({
                         Utils.DataHolder.rankDB.rankListDao().insertAll(it).map { it != -1L }
                     }) { success->
-                        rankListAdapter.appendAll(it.filterIndexed { index, _ ->
-                            success[index]
-                        })
+                        lifecycleScope.launch {
+                            rankListAdapter.appendAll(it.filterIndexed { index, _ ->
+                                success[index]
+                            })
+                        }
                     }
                 }
             }

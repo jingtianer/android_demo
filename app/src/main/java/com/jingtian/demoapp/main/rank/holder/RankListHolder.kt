@@ -8,6 +8,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.jingtian.demoapp.databinding.ItemAddMoreBinding
@@ -18,7 +19,6 @@ import com.jingtian.demoapp.main.base.BaseViewHolder
 import com.jingtian.demoapp.main.dp
 import com.jingtian.demoapp.main.getBaseActivity
 import com.jingtian.demoapp.main.rank.Utils
-import com.jingtian.demoapp.main.rank.Utils.CoroutineUtils.lifecycleLaunch
 import com.jingtian.demoapp.main.rank.activity.RankActivity
 import com.jingtian.demoapp.main.rank.adapter.RankItemAdapter
 import com.jingtian.demoapp.main.rank.dialog.AddRankItemDialog
@@ -28,6 +28,7 @@ import com.jingtian.demoapp.main.rank.model.ModelRank
 import com.jingtian.demoapp.main.rank.model.ModelRankItem
 import com.jingtian.demoapp.main.rank.model.ModelRankItem.Companion.isValid
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class RankListHolder private constructor(private val binding: ItemRankListBinding) :
@@ -50,16 +51,18 @@ class RankListHolder private constructor(private val binding: ItemRankListBindin
     private val rankItemHeaderFooterAdapter = BaseHeaderFooterAdapter<ModelRankItem>()
     private val documentCallback = object : BaseActivity.Companion.DocumentPickerCallback {
         override fun onDocumentCallback(uri: Uri) {
-            context.lifecycleLaunch{
-                val list = withContext(Dispatchers.IO) {
-                    val list = Utils.Share.readShareRankItemList(uri)
-                    val success = Utils.DataHolder.rankDB.rankItemDao().insertAll(list).map { it != -1L }
-                    list.filterIndexed { index, _ ->
-                        success[index]
-                    }
+            Utils.CoroutineUtils.runIOTask({
+                val list = Utils.Share.readShareRankItemList(uri)
+                val success = Utils.DataHolder.rankDB.rankItemDao().insertAll(list).map { it != -1L }
+                list.filterIndexed { index, _ ->
+                    success[index]
                 }
-                rankItemAdapter.appendAll(list)
+            }) { list->
+                lifecycleScope.launch {
+                    rankItemAdapter.appendAll(list)
+                }
             }
+
         }
     }
     
@@ -83,7 +86,7 @@ class RankListHolder private constructor(private val binding: ItemRankListBindin
                     return@setOnClickListener
                 }
                 exportingData = true
-                context.lifecycleLaunch {
+                lifecycleScope.launch {
                     val uri = withContext(Dispatchers.IO) {
                         Utils.Share.startShare(
                             currentData?.rankName ?: "",
@@ -130,7 +133,9 @@ class RankListHolder private constructor(private val binding: ItemRankListBindin
                 Utils.CoroutineUtils.runIOTask({
                     Utils.DataHolder.rankDB.deleteRank(it)
                 }) {
-                    currentAdapter?.remove(currentPosition)
+                    lifecycleScope.launch {
+                        currentAdapter?.remove(currentPosition)
+                    }
                 }
             }
         }
@@ -145,8 +150,9 @@ class RankListHolder private constructor(private val binding: ItemRankListBindin
         with(binding.title) {
             text = data.rankName
         }
+        rankItemAdapter.setDataList(listOf())
         with(binding.recyclerView) {
-            context.lifecycleLaunch {
+            lifecycleScope.launch {
                 val list = withContext(Dispatchers.IO) {
                     Utils.DataHolder.rankDB.rankItemDao().getAllRankItemByRankName(data.rankName)
                 }
@@ -184,7 +190,7 @@ class RankListHolder private constructor(private val binding: ItemRankListBindin
                 Utils.DataHolder.rankDB.rankItemDao().insert(modelRank) != -1L
             }) { success->
                 if (success) {
-                    context.lifecycleLaunch {
+                    lifecycleScope.launch {
                         val insertPos = withContext(Dispatchers.Default) {
                             val insertPos = rankItemAdapter.getDataList().binarySearch {
                                 if (it.score > modelRank.score) {
@@ -222,9 +228,11 @@ class RankListHolder private constructor(private val binding: ItemRankListBindin
                     Utils.CoroutineUtils.runIOTask({
                         Utils.DataHolder.rankDB.rankItemDao().insertAll(list).map { it != -1L }
                     }) { success->
-                        rankItemAdapter.appendAll(list.filterIndexed { index, _ ->
-                            success[index]
-                        })
+                        lifecycleScope.launch {
+                            rankItemAdapter.appendAll(list.filterIndexed { index, _ ->
+                                success[index]
+                            })
+                        }
                     }
                 }
             }

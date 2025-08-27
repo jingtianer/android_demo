@@ -368,7 +368,7 @@ object Utils {
             }
         }
 
-        fun Context.lifecycleLaunch(
+        fun Context.activityLifecycleLaunch(
             context: CoroutineContext = globalScope.coroutineContext,
             start: CoroutineStart = CoroutineStart.DEFAULT,
             block: suspend CoroutineScope.() -> Unit

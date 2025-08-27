@@ -15,17 +15,17 @@ abstract class BaseAdapter<T> : RecyclerView.Adapter<BaseViewHolder<T>>() {
         holder.currentData = data
         holder.currentAdapter = this
         holder.currentPosition = position
-        holder.onBind(data, position)
+        holder.realOnBind(data, position)
     }
 
     override fun onViewAttachedToWindow(holder: BaseViewHolder<T>) {
         super.onViewAttachedToWindow(holder)
-        holder.onAttach()
+        holder.realOnAttach()
     }
 
     override fun onViewDetachedFromWindow(holder: BaseViewHolder<T>) {
         super.onViewDetachedFromWindow(holder)
-        holder.onDetach()
+        holder.realOnDetach()
     }
 
     open fun setDataList(list: List<T>) {
