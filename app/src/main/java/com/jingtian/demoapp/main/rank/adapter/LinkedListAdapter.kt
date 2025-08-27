@@ -29,7 +29,6 @@ class LinkedListAdapter(private val context: Context) : BaseAdapter<ModelRankIte
     inner class EmptyHolder : BaseViewHolder<ModelRankItem?>(View(context)) {
         init {
             itemView.layoutParams = GridLayoutManager.LayoutParams(ITEM_SIZE.dp.toInt(), GridLayoutManager.LayoutParams.MATCH_PARENT)
-            itemView.setBackgroundColor(Color.parseColor("#aaa6a5"))
         }
         override fun onBind(data: ModelRankItem?, position: Int) {
 
