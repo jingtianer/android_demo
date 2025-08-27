@@ -28,7 +28,11 @@ abstract class RankDatabase : RoomDatabase() {
         runInTransaction {
             val rankItems = rankItemDao().getAllRankItemByRankName(modelRank.rankName)
             for (rankItem in rankItems) {
-                Utils.DataHolder.ImageStorage.delete(rankItem.image.id)
+                try {
+                    Utils.DataHolder.ImageStorage.delete(rankItem.image.id)
+                } catch (ignore : Exception) {
+
+                }
             }
             rankListDao().delete(modelRank)
         }
