@@ -10,6 +10,7 @@ import androidx.recyclerview.widget.GridLayoutManager
 import com.jingtian.demoapp.main.base.BaseAdapter
 import com.jingtian.demoapp.main.base.BaseViewHolder
 import com.jingtian.demoapp.main.dp
+import com.jingtian.demoapp.main.rank.activity.RankItemActivity
 import com.jingtian.demoapp.main.rank.model.ModelRankItem
 import com.jingtian.demoapp.main.rank.model.RankItemRankType
 import kotlin.math.max
@@ -42,9 +43,17 @@ class LinkedListAdapter(private val context: Context) : BaseAdapter<ModelRankIte
             image.scaleType = ImageView.ScaleType.CENTER_CROP
         }
         override fun onBind(data: ModelRankItem?, position: Int) {
-            data?.image?.loadImage(image, maxWidth = ITEM_SIZE.dp.toInt())
+            data ?: return
+            data.image.loadImage(image, maxWidth = ITEM_SIZE.dp.toInt())
             parent.post {
                 itemView.layoutParams.height = parent.height / typeNum
+            }
+            itemView.setOnClickListener {
+                RankItemActivity.startActivity(
+                    context,
+                    rankName = data.rankName,
+                    rankItemName = data.itemName,
+                )
             }
         }
     }

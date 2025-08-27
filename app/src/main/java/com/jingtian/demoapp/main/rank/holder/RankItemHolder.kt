@@ -52,7 +52,7 @@ class RankItemHolder private constructor(private val binding: ItemRankItemBindin
         with(binding.rankType) {
             val bg = RankTypeChooser.createBg(data.rankType)
             binding.rankType.layoutParams.apply {
-                width = bg.getWidth().toInt()
+                width = bg.getWidth().toInt() + 4f.dp.toInt()
                 height = bg.getHeight().toInt()
             }
             background = bg

@@ -4,6 +4,7 @@ import android.app.Dialog
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.view.View
 import androidx.core.content.res.ResourcesCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -75,8 +76,9 @@ class RankItemActivity : BaseActivity(), AddCommentDialog.Companion.Callback {
                     }
                     with(binding.rankType) {
                         val bg = RankTypeChooser.createBg(data.rankType)
+                        bg.setTextSize(32f.dp)
                         binding.rankType.layoutParams.apply {
-                            width = bg.getWidth().toInt()
+                            width = bg.getWidth().toInt() + 8f.dp.toInt()
                             height = bg.getHeight().toInt()
                         }
                         background = bg
@@ -89,6 +91,13 @@ class RankItemActivity : BaseActivity(), AddCommentDialog.Companion.Callback {
                     }
                     with(binding.score) {
                         text = String.format("%.2f分", binding.starRate.getScore())
+                    }
+                    if (data.desc.isNotEmpty()) {
+                        with(binding.desc) {
+                            text = data.desc
+                        }
+                    } else {
+                        binding.descLayout.visibility = View.GONE
                     }
                 }
             }
