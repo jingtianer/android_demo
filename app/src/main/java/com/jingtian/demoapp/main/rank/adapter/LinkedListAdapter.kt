@@ -42,7 +42,7 @@ class LinkedListAdapter(private val context: Context) : BaseAdapter<ModelRankIte
             image.scaleType = ImageView.ScaleType.CENTER_CROP
         }
         override fun onBind(data: ModelRankItem?, position: Int) {
-            image.setImageURI(data?.image?.image)
+            data?.image?.loadImage(image, maxWidth = ITEM_SIZE.dp.toInt())
             parent.post {
                 itemView.layoutParams.height = parent.height / typeNum
             }

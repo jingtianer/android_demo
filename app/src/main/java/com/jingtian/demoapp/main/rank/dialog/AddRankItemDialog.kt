@@ -16,6 +16,7 @@ import androidx.appcompat.app.AppCompatActivity
 import com.jingtian.demoapp.R
 import com.jingtian.demoapp.databinding.DialogAddRankBinding
 import com.jingtian.demoapp.databinding.DialogAddRankItemBinding
+import com.jingtian.demoapp.main.ScreenUtils.screenWidth
 import com.jingtian.demoapp.main.base.BaseActivity
 import com.jingtian.demoapp.main.dp
 import com.jingtian.demoapp.main.rank.Utils
@@ -49,19 +50,22 @@ class AddRankItemDialog(context: Context, private val rankName: String, private 
         with(binding.positive) {
             setOnClickListener {
                 val oldId = modelRank?.image?.id
-                val id = if (oldId != null) {
-                    Utils.DataHolder.ImageStorage.storeImage(oldId, imageUri)
-                } else {
-                    Utils.DataHolder.ImageStorage.storeImage(imageUri)
+                Utils.CoroutineUtils.runIOTask({
+                    if (oldId != null) {
+                        Utils.DataHolder.ImageStorage.storeImage(oldId, imageUri)
+                    } else {
+                        Utils.DataHolder.ImageStorage.storeImage(imageUri)
+                    }
+                }) { id->
+                    callback.onPositiveClick(this@AddRankItemDialog, ModelRankItem(
+                        binding.etRankName.text.toString(),
+                        rankName,
+                        binding.starRate.getScore(),
+                        binding.etDesc.text.toString(),
+                        binding.rankType.getRankType(),
+                        RankItemImage(id, imageUri)
+                    ))
                 }
-                callback.onPositiveClick(this@AddRankItemDialog, ModelRankItem(
-                    binding.etRankName.text.toString(),
-                    rankName,
-                    binding.starRate.getScore(),
-                    binding.etDesc.text.toString(),
-                    binding.rankType.getRankType(),
-                    RankItemImage(id, imageUri)
-                ))
             }
         }
         with(binding.negative) {
@@ -91,7 +95,7 @@ class AddRankItemDialog(context: Context, private val rankName: String, private 
             }
             modelRank?.let {
                 if (it.image.image != Uri.EMPTY) {
-                    setImageURI(it.image.image)
+                    it.image.loadImage(this, maxWidth = context.screenWidth)
                     this@AddRankItemDialog.imageUri = it.image.image
                 }
             }
@@ -119,7 +123,7 @@ class AddRankItemDialog(context: Context, private val rankName: String, private 
 
     override fun onMediaCallback(uri: Uri) {
         if (uri != Uri.EMPTY) {
-            binding.image.setImageURI(uri)
+            RankItemImage(image = uri).loadImage(binding.image, maxWidth = context.screenWidth)
             this.imageUri = uri
         }
     }

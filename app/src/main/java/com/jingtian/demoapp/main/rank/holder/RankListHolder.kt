@@ -17,6 +17,7 @@ import com.jingtian.demoapp.main.base.BaseHeaderFooterAdapter
 import com.jingtian.demoapp.main.base.BaseViewHolder
 import com.jingtian.demoapp.main.dp
 import com.jingtian.demoapp.main.rank.Utils
+import com.jingtian.demoapp.main.rank.Utils.CoroutineUtils.lifecycleLaunch
 import com.jingtian.demoapp.main.rank.activity.RankActivity
 import com.jingtian.demoapp.main.rank.adapter.RankItemAdapter
 import com.jingtian.demoapp.main.rank.dialog.AddRankItemDialog
@@ -25,6 +26,8 @@ import com.jingtian.demoapp.main.rank.dialog.JsonDialog
 import com.jingtian.demoapp.main.rank.model.ModelRank
 import com.jingtian.demoapp.main.rank.model.ModelRankItem
 import com.jingtian.demoapp.main.rank.model.ModelRankItem.Companion.isValid
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class RankListHolder private constructor(private val binding: ItemRankListBinding) :
     BaseViewHolder<ModelRank>(binding.root), AddRankItemDialog.Companion.Callback,
@@ -111,7 +114,7 @@ class RankListHolder private constructor(private val binding: ItemRankListBindin
         override fun onPositiveClick(dialog: Dialog) {
             dialog.dismiss()
             currentData?.let {
-                Utils.CoroutineUtils.run({
+                Utils.CoroutineUtils.runIOTask({
                     Utils.DataHolder.rankDB.deleteRank(it)
                 }) {
                     currentAdapter?.remove(currentPosition)
@@ -130,9 +133,12 @@ class RankListHolder private constructor(private val binding: ItemRankListBindin
             text = data.rankName
         }
         with(binding.recyclerView) {
-            rankItemAdapter.setDataList(
-                Utils.DataHolder.rankDB.rankItemDao().getAllRankItemByRankName(data.rankName)
-            )
+            context.lifecycleLaunch {
+                val list = withContext(Dispatchers.IO) {
+                    Utils.DataHolder.rankDB.rankItemDao().getAllRankItemByRankName(data.rankName)
+                }
+                rankItemAdapter.setDataList(list)
+            }
             rankItemHeaderFooterAdapter.bindRecyclerView(this, rankItemAdapter)
         }
         with(addMore.layoutAdd) {
@@ -155,7 +161,9 @@ class RankListHolder private constructor(private val binding: ItemRankListBindin
         dialog.dismiss()
         if (modelRank.isValid()) {
             rankItemAdapter.append(modelRank)
-            Utils.DataHolder.rankDB.rankItemDao().insert(modelRank)
+            Utils.CoroutineUtils.runIOTask({
+                Utils.DataHolder.rankDB.rankItemDao().insert(modelRank)
+            }) {}
         } else {
             Toast.makeText(context, "添加失败", Toast.LENGTH_SHORT).show()
         }
@@ -164,9 +172,15 @@ class RankListHolder private constructor(private val binding: ItemRankListBindin
     override fun onPositiveClick(dialog: Dialog, json: String, import: Boolean) {
         dialog.dismiss()
         if (import) {
-            Utils.DataHolder.toModelRankItemList(json)?.let {
-                rankItemAdapter.appendAll(it)
-                Utils.DataHolder.rankDB.rankItemDao().insertAll(it)
+            Utils.CoroutineUtils.runIOTask({
+                Utils.DataHolder.toModelRankItemList(json)
+            }) { list->
+                list?.let {
+                    rankItemAdapter.appendAll(it)
+                    Utils.CoroutineUtils.runIOTask({
+                        Utils.DataHolder.rankDB.rankItemDao().insertAll(it)
+                    }) {}
+                }
             }
         }
     }

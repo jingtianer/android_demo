@@ -8,11 +8,7 @@ import com.jingtian.demoapp.main.base.BaseViewHolder
 import com.jingtian.demoapp.main.rank.Utils
 import com.jingtian.demoapp.main.rank.dialog.AddCommentDialog
 import com.jingtian.demoapp.main.rank.model.ModelItemComment
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
-import java.time.format.DateTimeFormatter
 import java.util.Date
 
 class CommentHolder private constructor(private val binding: ItemRankItemCommentBinding):
@@ -56,7 +52,7 @@ class CommentHolder private constructor(private val binding: ItemRankItemComment
             this.lastModifyDate = Date()
         } ?: return
         currentAdapter?.notifyItemChanged(currentPosition)
-        Utils.CoroutineUtils.run({
+        Utils.CoroutineUtils.runIOTask({
             Utils.DataHolder.rankDB.rankCommentDao().update(currentData)
         }) {}
     }

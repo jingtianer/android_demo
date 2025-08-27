@@ -26,6 +26,7 @@ class RankItemHolder private constructor(private val binding: ItemRankItemBindin
                 )
             )
         }
+        private const val IMAGE_WIDTH = 200f
     }
 
     override fun onBind(data: ModelRankItem, position: Int) {
@@ -60,7 +61,7 @@ class RankItemHolder private constructor(private val binding: ItemRankItemBindin
             text = data.itemName
         }
         with(binding.image) {
-            setImageURI(data.image.image)
+            data.image.loadImage(this, maxWidth = IMAGE_WIDTH.dp.toInt(), maxHeight = -1)
         }
     }
 
@@ -68,7 +69,7 @@ class RankItemHolder private constructor(private val binding: ItemRankItemBindin
         dialog.dismiss()
 //        val oldImageId = currentData?.image?.id ?: -1
         currentData = modelRank
-        Utils.CoroutineUtils.run({
+        Utils.CoroutineUtils.runIOTask({
             Utils.DataHolder.rankDB.rankItemDao().update(modelRank)
         }) {
             currentAdapter?.let { adapter->
@@ -87,7 +88,7 @@ class RankItemHolder private constructor(private val binding: ItemRankItemBindin
             adapter.remove(currentPosition)
         }
         currentData?.let {
-            Utils.CoroutineUtils.run({
+            Utils.CoroutineUtils.runIOTask({
                 Utils.DataHolder.ImageStorage.delete(it.image.id)
                 Utils.DataHolder.rankDB.rankItemDao().delete(it)
             }) { }

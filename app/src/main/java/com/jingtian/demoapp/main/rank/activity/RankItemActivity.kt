@@ -11,6 +11,8 @@ import androidx.recyclerview.widget.RecyclerView
 import com.jingtian.demoapp.R
 import com.jingtian.demoapp.databinding.ActivityRankItemBinding
 import com.jingtian.demoapp.databinding.ItemAddCommentBinding
+import com.jingtian.demoapp.main.ScreenUtils.screenWidth
+import com.jingtian.demoapp.main.app
 import com.jingtian.demoapp.main.base.BaseActivity
 import com.jingtian.demoapp.main.base.BaseHeaderFooterAdapter
 import com.jingtian.demoapp.main.dp
@@ -36,6 +38,7 @@ class RankItemActivity : BaseActivity(), AddCommentDialog.Companion.Callback {
 
         private const val KEY_RANK_NAME = "RANK_NAME"
         private const val KEY_RANK_ITEM_NAME = "RANK_ITEM_NAME"
+        private val IMAGE_WIDTH = app.screenWidth - 24f.dp
     }
 
     private lateinit var binding: ActivityRankItemBinding
@@ -82,7 +85,7 @@ class RankItemActivity : BaseActivity(), AddCommentDialog.Companion.Callback {
                         text = data.itemName
                     }
                     with(binding.image) {
-                        setImageURI(data.image.image)
+                        data.image.loadImage(this, maxWidth = IMAGE_WIDTH.toInt())
                     }
                     with(binding.score) {
                         text = String.format("%.2f分", binding.starRate.getScore())

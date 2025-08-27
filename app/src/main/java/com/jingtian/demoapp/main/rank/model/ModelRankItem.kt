@@ -1,7 +1,11 @@
 package com.jingtian.demoapp.main.rank.model
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.net.Uri
+import android.view.ViewGroup
+import android.widget.ImageView
 import androidx.annotation.ColorInt
 import androidx.room.Embedded
 import androidx.room.Entity
@@ -13,12 +17,66 @@ import androidx.room.ProvidedTypeConverter
 import androidx.room.Relation
 import androidx.room.TypeConverter
 import androidx.room.TypeConverters
+import com.jingtian.demoapp.main.app
 import com.jingtian.demoapp.main.rank.Utils
 import com.jingtian.demoapp.main.rank.dao.RankModelItemDao
+import kotlin.math.max
+import kotlin.math.min
 
 data class RankItemImage(
     var id: Long = -1, var image: Uri = Uri.EMPTY
-)
+) {
+    fun loadImage(imageView: ImageView, maxWidth: Int = -1, maxHeight: Int = -1) {
+        if (image == Uri.EMPTY) {
+            return
+        }
+        Utils.CoroutineUtils.runIOTask({
+            app.contentResolver.openInputStream(image)?.use {
+                val byteArray = it.readBytes()
+                // 第一步：仅解码边界，获取图片原始宽高
+                val options = BitmapFactory.Options().apply {
+                    inJustDecodeBounds = true // 只获取尺寸，不加载像素
+                }
+                BitmapFactory.decodeByteArray(byteArray, 0, byteArray.size, options)
+                // 第二步：计算缩放比例（避免图片过大导致 OOM）
+                val scaleFactor = calculateScaleFactor(options.outWidth, options.outHeight, maxWidth, maxHeight)
+
+                // 第三步：按缩放比例解码图片
+                options.apply {
+                    inJustDecodeBounds = false // 实际加载像素
+                    inSampleSize = scaleFactor // 缩放比例（2的倍数，如 2=1/2 大小，4=1/4 大小）
+                    inPreferredConfig = Bitmap.Config.RGB_565 // 可选：使用 RGB_565 节省内存（比 ARGB_8888 节省一半）
+                    inPurgeable = true // 允许系统在内存不足时回收像素
+                }
+
+                BitmapFactory.decodeByteArray(byteArray, 0, byteArray.size, options)
+            }
+        }) { bitMap->
+            imageView.setImageBitmap(bitMap)
+        }
+    }
+
+    private fun calculateScaleFactor(
+        originalWidth: Int,
+        originalHeight: Int,
+        maxWidth: Int,
+        maxHeight: Int
+    ): Int {
+        var widthScaleFactor = 1
+        var heightScaleFactor = 1
+        if (maxWidth > 0) {
+            while (originalWidth / widthScaleFactor > maxWidth) {
+                widthScaleFactor *= 2 // 每次翻倍缩放
+            }
+        }
+        if (maxHeight > 0) {
+            while (originalHeight / heightScaleFactor > maxHeight) {
+                heightScaleFactor *= 2 // 每次翻倍缩放
+            }
+        }
+        return max(1,  max(widthScaleFactor,heightScaleFactor) / 2)
+    }
+}
 
 @ProvidedTypeConverter
 class RankItemImageTypeConverter {

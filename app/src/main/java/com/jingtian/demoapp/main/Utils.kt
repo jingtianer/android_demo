@@ -25,7 +25,7 @@ import java.lang.reflect.Modifier
 import kotlin.properties.ReadWriteProperty
 import kotlin.reflect.KProperty
 
-lateinit var app: Application
+lateinit var app: DemoApplication
 
 val Float.dp: Float
     get() = TypedValue.applyDimension(

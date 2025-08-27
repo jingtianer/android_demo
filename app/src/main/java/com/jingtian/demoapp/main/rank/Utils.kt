@@ -9,18 +9,10 @@ import android.view.View
 import android.view.ViewConfiguration
 import androidx.core.content.FileProvider
 import androidx.core.content.res.ResourcesCompat
-import androidx.core.net.toFile
 import androidx.core.net.toUri
-import androidx.paging.Pager
-import androidx.paging.PagingConfig
-import androidx.paging.PagingSource
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
-import androidx.room.Database
-import androidx.room.DatabaseConfiguration
-import androidx.room.InvalidationTracker
 import androidx.room.Room
-import androidx.room.RoomDatabase
-import androidx.sqlite.db.SupportSQLiteOpenHelper
 import com.google.gson.GsonBuilder
 import com.google.gson.TypeAdapter
 import com.google.gson.reflect.TypeToken
@@ -31,11 +23,7 @@ import com.jingtian.demoapp.main.StorageUtil
 import com.jingtian.demoapp.main.app
 import com.jingtian.demoapp.main.dp
 import com.jingtian.demoapp.main.rank.dao.RankDatabase
-import com.jingtian.demoapp.main.rank.dao.RankModelDao
-import com.jingtian.demoapp.main.rank.dao.RankModelItemCommentDao
-import com.jingtian.demoapp.main.rank.dao.RankModelItemDao
 import com.jingtian.demoapp.main.rank.model.DateTypeConverter
-import com.jingtian.demoapp.main.rank.model.ModelItemComment
 import com.jingtian.demoapp.main.rank.model.ModelRank
 import com.jingtian.demoapp.main.rank.model.ModelRankItem
 import com.jingtian.demoapp.main.rank.model.RankItemImage
@@ -44,9 +32,9 @@ import com.jingtian.demoapp.main.rank.model.RankItemRankTypeConverter
 import com.jingtian.demoapp.main.widget.StarRateView
 import io.reactivex.Observable
 import io.reactivex.android.schedulers.AndroidSchedulers
-import io.reactivex.disposables.Disposable
 import io.reactivex.schedulers.Schedulers
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -54,9 +42,9 @@ import kotlinx.coroutines.withContext
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.util.concurrent.Callable
+import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.math.abs
-import kotlin.properties.ReadWriteProperty
-import kotlin.reflect.KProperty
 
 object Utils {
     object Share {
@@ -272,8 +260,6 @@ object Utils {
                 null
             }
         }
-
-        var rankDataStore = rankDB.rankListDao().getAllRankModel()
     }
 
     object RecyclerViewUtils {
@@ -359,16 +345,29 @@ object Utils {
     }
 
     object CoroutineUtils {
-        private val ioScope = CoroutineScope(Dispatchers.Main + Job())
+        private val globalScope = CoroutineScope(Dispatchers.Main + Job())
 
-        fun <T> run(block: Callable<T>, callback: (T)-> Unit) {
-            ioScope.launch {
+        fun <T> runIOTask(block: Callable<T>, callback: (T)-> Unit) {
+            globalScope.launch {
                 val ret = withContext(Dispatchers.IO) {
                     block.call()
                 }
                 withContext(Dispatchers.Main) {
                     callback.invoke(ret)
                 }
+            }
+        }
+
+        fun Context.lifecycleLaunch(
+            context: CoroutineContext = globalScope.coroutineContext,
+            start: CoroutineStart = CoroutineStart.DEFAULT,
+            block: suspend CoroutineScope.() -> Unit
+        ) {
+            val baseActivity = app.activityStack[this]
+            if (baseActivity != null) {
+                baseActivity.lifecycleScope.launch(context, start, block)
+            } else {
+                globalScope.launch(context, start, block)
             }
         }
     }
