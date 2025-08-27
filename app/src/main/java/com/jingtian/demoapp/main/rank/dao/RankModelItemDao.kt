@@ -25,7 +25,7 @@ interface RankModelItemDao {
     @Delete
     fun delete(modelRank: ModelRankItem)
 
-    @Query("SELECT * FROM ${RankModelItemDao.TABLE_NAME} WHERE rankName = :rankName")
+    @Query("SELECT * FROM ${RankModelItemDao.TABLE_NAME} WHERE rankName = :rankName ORDER BY score DESC")
     fun getAllRankItemByRankName(rankName : String) : List<ModelRankItem>
 
 

@@ -6,6 +6,7 @@ import androidx.annotation.ColorInt
 import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.ForeignKey
+import androidx.room.Index
 import androidx.room.Junction
 import androidx.room.PrimaryKey
 import androidx.room.ProvidedTypeConverter
@@ -77,7 +78,7 @@ class RankItemRankTypeConverter {
         parentColumns = arrayOf("rankName"),
         childColumns = arrayOf("rankName"),
         onDelete = ForeignKey.CASCADE
-    )], indices = [androidx.room.Index("rankName")]
+    )], indices = [Index("rankName"), Index("score")]
 )
 data class ModelRankItem(
     @PrimaryKey var itemName: String = "",

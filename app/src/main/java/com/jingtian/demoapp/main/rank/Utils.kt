@@ -139,6 +139,14 @@ object Utils {
                 }
             }
 
+            private fun Uri.safeToFile(): File? {
+                return if ("file".equals(scheme, ignoreCase = true)) {
+                    path?.let { File(it) }
+                } else {
+                    null
+                }
+            }
+
             fun storeImage(oldId: Long, uri: Uri): Long {
                 if (uri == Uri.EMPTY) {
                     return -1
@@ -157,12 +165,14 @@ object Utils {
                     storeDir.mkdirs()
                 }
                 val storageFile = File(storeDir, RANK_IMAGE_PREFIX + id)
-                if (storageFile.exists()) {
-                    storageFile.delete()
-                }
-                app.contentResolver.openInputStream(uri)?.use { input ->
-                    storageFile.outputStream().use { output ->
-                        FileUtils.copy(input, output)
+                if (uri.safeToFile()?.absolutePath?.equals(storageFile.absolutePath) != true) {
+                    if (storageFile.exists()) {
+                        storageFile.delete()
+                    }
+                    app.contentResolver.openInputStream(uri)?.use { input ->
+                        storageFile.outputStream().use { output ->
+                            FileUtils.copy(input, output)
+                        }
                     }
                 }
                 return id
