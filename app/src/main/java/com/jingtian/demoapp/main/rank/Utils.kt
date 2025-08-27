@@ -109,7 +109,9 @@ object Utils {
             private val sp = app.getSharedPreferences("rank-image-store", Context.MODE_PRIVATE)
             private const val RANK_IMAGE_PREFIX = "rank_image_"
             private const val RANK_IMAGE_STORE_DIR = "rank_image"
-            private var id by StorageUtil.StorageLong(sp, "image-id", 0L)
+            private var id by StorageUtil.SynchronizedProperty(
+                StorageUtil.StorageLong(sp, "image-id", 0L)
+            )
 
             private val imageCache = HashMap<Long, Uri>()
 
@@ -123,6 +125,17 @@ object Utils {
                     storageFile.toUri()
                 } else {
                     null
+                }
+            }
+
+            fun delete(id: Long) {
+                if (imageCache.containsKey(id)) {
+                    imageCache.remove(id)
+                }
+                val storeDir = File(app.filesDir, RANK_IMAGE_STORE_DIR)
+                val storageFile = File(storeDir, RANK_IMAGE_PREFIX + id)
+                if (storageFile.exists()) {
+                    storageFile.delete()
                 }
             }
 

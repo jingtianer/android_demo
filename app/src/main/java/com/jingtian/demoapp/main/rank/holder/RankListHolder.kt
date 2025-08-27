@@ -112,8 +112,8 @@ class RankListHolder private constructor(private val binding: ItemRankListBindin
             dialog.dismiss()
             currentData?.let {
                 Utils.CoroutineUtils.run({
-                    Utils.DataHolder.rankDB.rankListDao().delete(it)
-                }){
+                    Utils.DataHolder.rankDB.deleteRank(it)
+                }) {
                     currentAdapter?.remove(currentPosition)
                 }
             }
@@ -142,7 +142,7 @@ class RankListHolder private constructor(private val binding: ItemRankListBindin
         }
         with(addMore.layoutDelete) {
             setOnClickListener {
-                AlertDialog(context, deleteDialogCallback, "确认删除排行榜：${data.rankName}？").show()
+                AlertDialog(context, deleteDialogCallback, "确认删除排行榜：${data.rankName}").show()
             }
         }
     }

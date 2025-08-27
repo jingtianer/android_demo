@@ -19,12 +19,14 @@
             android:layout_weight="1"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginHorizontal="4dp"
             android:text="取消"/>
         <Button
             android:id="@+id/positive"
             android:layout_weight="1"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginHorizontal="4dp"
             android:text="确认"/>
     </LinearLayout>
 

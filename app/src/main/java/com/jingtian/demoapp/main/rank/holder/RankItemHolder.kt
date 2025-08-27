@@ -88,6 +88,7 @@ class RankItemHolder private constructor(private val binding: ItemRankItemBindin
         }
         currentData?.let {
             Utils.CoroutineUtils.run({
+                Utils.DataHolder.ImageStorage.delete(it.image.id)
                 Utils.DataHolder.rankDB.rankItemDao().delete(it)
             }) { }
         }

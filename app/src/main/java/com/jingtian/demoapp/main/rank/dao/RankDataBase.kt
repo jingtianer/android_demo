@@ -3,6 +3,7 @@ package com.jingtian.demoapp.main.rank.dao
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import com.jingtian.demoapp.main.rank.Utils
 import com.jingtian.demoapp.main.rank.model.DateTypeConverter
 import com.jingtian.demoapp.main.rank.model.ModelItemComment
 import com.jingtian.demoapp.main.rank.model.ModelRank
@@ -22,4 +23,14 @@ abstract class RankDatabase : RoomDatabase() {
     abstract fun rankListDao(): RankModelDao
     abstract fun rankItemDao(): RankModelItemDao
     abstract fun rankCommentDao(): RankModelItemCommentDao
+
+    fun deleteRank(modelRank: ModelRank) {
+        runInTransaction {
+            val rankItems = rankItemDao().getAllRankItemByRankName(modelRank.rankName)
+            for (rankItem in rankItems) {
+                Utils.DataHolder.ImageStorage.delete(rankItem.image.id)
+            }
+            rankListDao().delete(modelRank)
+        }
+    }
 }
