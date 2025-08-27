@@ -19,6 +19,7 @@ import com.jingtian.demoapp.databinding.DialogAddRankItemBinding
 import com.jingtian.demoapp.main.ScreenUtils.screenWidth
 import com.jingtian.demoapp.main.base.BaseActivity
 import com.jingtian.demoapp.main.dp
+import com.jingtian.demoapp.main.getBaseActivity
 import com.jingtian.demoapp.main.rank.Utils
 import com.jingtian.demoapp.main.rank.Utils.commonConfig
 import com.jingtian.demoapp.main.rank.Utils.commonScrollableConfig
@@ -41,11 +42,10 @@ class AddRankItemDialog(context: Context, private val rankName: String, private 
 
     private var imageUri = Uri.EMPTY
 
-    private val baseActivity = (context as BaseActivity)
+    private val baseActivity = context.getBaseActivity()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        baseActivity.addMediaPickerCallbacks(this)
         setContentView(binding.root)
         with(binding.positive) {
             setOnClickListener {
@@ -91,7 +91,7 @@ class AddRankItemDialog(context: Context, private val rankName: String, private 
         onScoreChange(binding.starRate.getScore())
         with(binding.image) {
             setOnClickListener {
-                baseActivity.pickMedia.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                baseActivity?.pickMedia(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly), null, this@AddRankItemDialog)
             }
             modelRank?.let {
                 if (it.image.image != Uri.EMPTY) {
@@ -130,6 +130,5 @@ class AddRankItemDialog(context: Context, private val rankName: String, private 
 
     override fun dismiss() {
         super.dismiss()
-        baseActivity.removeMediaPickerCallbacks(this)
     }
 }

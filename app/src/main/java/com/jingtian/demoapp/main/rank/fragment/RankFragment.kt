@@ -100,10 +100,15 @@ class RankFragment : BaseFragment(), AddRankDialog.Companion.Callback, JsonDialo
     override fun onPositiveClick(dialog: Dialog, modelRank: ModelRank) {
         dialog.dismiss()
         if (modelRank.isValid()) {
-            rankListAdapter.append(modelRank)
             Utils.CoroutineUtils.runIOTask({
-                Utils.DataHolder.rankDB.rankListDao().insert(modelRank)
-            }) {}
+                Utils.DataHolder.rankDB.rankListDao().insert(modelRank) != -1L
+            }) { success->
+                if (success) {
+                    rankListAdapter.append(modelRank)
+                } else {
+                    Toast.makeText(context, "添加失败，${modelRank.rankName}已存在", Toast.LENGTH_SHORT).show()
+                }
+            }
         } else {
             Toast.makeText(context, "添加失败", Toast.LENGTH_SHORT).show()
         }
@@ -117,9 +122,12 @@ class RankFragment : BaseFragment(), AddRankDialog.Companion.Callback, JsonDialo
             }) { list->
                 list?.let {
                     Utils.CoroutineUtils.runIOTask({
-                        Utils.DataHolder.rankDB.rankListDao().insertAll(it)
-                    }) {}
-                    rankListAdapter.appendAll(it)
+                        Utils.DataHolder.rankDB.rankListDao().insertAll(it).map { it != -1L }
+                    }) { success->
+                        rankListAdapter.appendAll(it.filterIndexed { index, _ ->
+                            success[index]
+                        })
+                    }
                 }
             }
         }

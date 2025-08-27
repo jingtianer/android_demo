@@ -4,6 +4,7 @@ import androidx.paging.PagingSource
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 import com.jingtian.demoapp.main.rank.model.ModelItemComment
@@ -16,11 +17,11 @@ interface RankModelItemCommentDao {
     companion object {
         const val TABLE_NAME = "rank_model_item_comment_table"
     }
-    @Insert
-    fun insert(modelRank: ModelItemComment)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    fun insert(modelRank: ModelItemComment): Long
 
-    @Insert
-    fun insertAll(modelRank: List<ModelItemComment>)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    fun insertAll(modelRank: List<ModelItemComment>): List<Long>
 
     @Update
     fun update(modelRank: ModelItemComment)

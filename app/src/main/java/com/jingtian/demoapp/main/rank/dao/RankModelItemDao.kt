@@ -3,6 +3,7 @@ package com.jingtian.demoapp.main.rank.dao
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 import com.jingtian.demoapp.main.rank.model.ModelRankItem
@@ -12,11 +13,11 @@ interface RankModelItemDao {
     companion object {
         const val TABLE_NAME = "rank_model_item_table"
     }
-    @Insert
-    fun insert(modelRank: ModelRankItem)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    fun insert(modelRank: ModelRankItem): Long
 
-    @Insert
-    fun insertAll(modelRank: List<ModelRankItem>)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    fun insertAll(modelRank: List<ModelRankItem>): List<Long>
 
     @Update
     fun update(modelRank: ModelRankItem)

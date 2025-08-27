@@ -15,6 +15,7 @@ import androidx.annotation.ColorInt
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.jingtian.demoapp.main.ReflectToStringUtil.reflectToString
+import com.jingtian.demoapp.main.base.BaseActivity
 import io.reactivex.Observable
 import io.reactivex.ObservableEmitter
 import io.reactivex.ObservableOnSubscribe
@@ -26,6 +27,10 @@ import kotlin.properties.ReadWriteProperty
 import kotlin.reflect.KProperty
 
 lateinit var app: DemoApplication
+
+fun Context.getBaseActivity(): BaseActivity? {
+    return app.activityStack[this]
+}
 
 val Float.dp: Float
     get() = TypedValue.applyDimension(

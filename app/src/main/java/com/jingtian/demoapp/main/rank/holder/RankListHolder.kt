@@ -16,6 +16,7 @@ import com.jingtian.demoapp.main.base.BaseActivity
 import com.jingtian.demoapp.main.base.BaseHeaderFooterAdapter
 import com.jingtian.demoapp.main.base.BaseViewHolder
 import com.jingtian.demoapp.main.dp
+import com.jingtian.demoapp.main.getBaseActivity
 import com.jingtian.demoapp.main.rank.Utils
 import com.jingtian.demoapp.main.rank.Utils.CoroutineUtils.lifecycleLaunch
 import com.jingtian.demoapp.main.rank.activity.RankActivity
@@ -49,11 +50,15 @@ class RankListHolder private constructor(private val binding: ItemRankListBindin
     private val rankItemHeaderFooterAdapter = BaseHeaderFooterAdapter<ModelRankItem>()
     private val documentCallback = object : BaseActivity.Companion.DocumentPickerCallback {
         override fun onDocumentCallback(uri: Uri) {
-            val ignore = Utils.Share.readShareRankItemList(uri).subscribe {
-                rankItemAdapter.appendAll(it)
-                Utils.CoroutineUtils.runIOTask({
-                    Utils.DataHolder.rankDB.rankItemDao().insertAll(it)
-                }) {}
+            context.lifecycleLaunch{
+                val list = withContext(Dispatchers.IO) {
+                    val list = Utils.Share.readShareRankItemList(uri)
+                    val success = Utils.DataHolder.rankDB.rankItemDao().insertAll(list).map { it != -1L }
+                    list.filterIndexed { index, _ ->
+                        success[index]
+                    }
+                }
+                rankItemAdapter.appendAll(list)
             }
         }
     }
@@ -68,7 +73,7 @@ class RankListHolder private constructor(private val binding: ItemRankListBindin
         rankItemHeaderFooterAdapter.addFooter(addMore.root)
         with(addMore.layoutImport) {
             setOnClickListener {
-                (context as? BaseActivity)?.pickFile?.launch(arrayOf("*/*"))
+                context.getBaseActivity()?.pickFile(arrayOf("*/*"), null, documentCallback)
             }
         }
         with(addMore.layoutExport) {
@@ -78,13 +83,16 @@ class RankListHolder private constructor(private val binding: ItemRankListBindin
                     return@setOnClickListener
                 }
                 exportingData = true
-                val ignore = Utils.Share.startShare(
-                    currentData?.rankName ?: "",
-                    rankItemAdapter.getDataList()
-                ).subscribe {
+                context.lifecycleLaunch {
+                    val uri = withContext(Dispatchers.IO) {
+                        Utils.Share.startShare(
+                            currentData?.rankName ?: "",
+                            rankItemAdapter.getDataList()
+                        )
+                    }
                     val shareIntent: Intent = Intent().apply {
                         action = Intent.ACTION_SEND
-                        putExtra(Intent.EXTRA_STREAM, it)
+                        putExtra(Intent.EXTRA_STREAM, uri)
                         type = "*/*"
                     }
                     context.startActivity(Intent.createChooser(shareIntent, ""))
@@ -96,7 +104,6 @@ class RankListHolder private constructor(private val binding: ItemRankListBindin
             layoutParams.height = 300f.dp.toInt()
             layoutParams.width = RecyclerView.LayoutParams.WRAP_CONTENT
         }
-        (context as? BaseActivity)?.addDocumentPickerCallbacks(documentCallback)
         with(binding.recyclerView) {
             addItemDecoration(object : RecyclerView.ItemDecoration() {
                 override fun getItemOffsets(
@@ -170,35 +177,35 @@ class RankListHolder private constructor(private val binding: ItemRankListBindin
         }
     }
 
-    override fun onDetach() {
-        (context as? BaseActivity)?.removeDocumentPickerCallbacks(documentCallback)
-    }
-
     override fun onPositiveClick(dialog: Dialog, modelRank: ModelRankItem) {
         dialog.dismiss()
         if (modelRank.isValid()) {
             Utils.CoroutineUtils.runIOTask({
-                Utils.DataHolder.rankDB.rankItemDao().insert(modelRank)
-            }) {}
-            context.lifecycleLaunch {
-                val insertPos = withContext(Dispatchers.Default) {
-                    val insertPos = rankItemAdapter.getDataList().binarySearch {
-                        if (it.score > modelRank.score) {
-                            -1
-                        } else if (it.score < modelRank.score) {
-                            1
-                        } else {
-                            0
+                Utils.DataHolder.rankDB.rankItemDao().insert(modelRank) != -1L
+            }) { success->
+                if (success) {
+                    context.lifecycleLaunch {
+                        val insertPos = withContext(Dispatchers.Default) {
+                            val insertPos = rankItemAdapter.getDataList().binarySearch {
+                                if (it.score > modelRank.score) {
+                                    -1
+                                } else if (it.score < modelRank.score) {
+                                    1
+                                } else {
+                                    0
+                                }
+                            }
+                            if (insertPos < 0) {
+                                - insertPos - 1
+                            } else {
+                                insertPos
+                            }
                         }
+                        rankItemAdapter.insert(insertPos, modelRank)
                     }
-                    if (insertPos < 0) {
-                        - insertPos - 1
-                    } else {
-                        insertPos
-                    }
+                } else {
+                    Toast.makeText(context, "添加失败，${modelRank.itemName}已存在", Toast.LENGTH_SHORT).show()
                 }
-
-                rankItemAdapter.insert(insertPos, modelRank)
             }
         } else {
             Toast.makeText(context, "添加失败", Toast.LENGTH_SHORT).show()
@@ -211,11 +218,14 @@ class RankListHolder private constructor(private val binding: ItemRankListBindin
             Utils.CoroutineUtils.runIOTask({
                 Utils.DataHolder.toModelRankItemList(json)
             }) { list->
-                list?.let {
-                    rankItemAdapter.appendAll(it)
+                list?.let { list ->
                     Utils.CoroutineUtils.runIOTask({
-                        Utils.DataHolder.rankDB.rankItemDao().insertAll(it)
-                    }) {}
+                        Utils.DataHolder.rankDB.rankItemDao().insertAll(list).map { it != -1L }
+                    }) { success->
+                        rankItemAdapter.appendAll(list.filterIndexed { index, _ ->
+                            success[index]
+                        })
+                    }
                 }
             }
         }

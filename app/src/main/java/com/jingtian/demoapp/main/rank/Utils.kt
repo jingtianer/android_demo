@@ -48,16 +48,14 @@ import kotlin.math.abs
 
 object Utils {
     object Share {
-        fun readShareRankItemList(uri: Uri) : Observable<List<ModelRankItem>> {
-            return Observable.create<List<ModelRankItem>> { emitter ->
-                app.contentResolver.openInputStream(uri)?.use {
-                    val json = it.readBytes().decodeToString()
-                    Utils.DataHolder.toModelRankItemList(json)?.let {
-                        emitter.onNext(it)
-                    }
+        fun readShareRankItemList(uri: Uri) : List<ModelRankItem> {
+            app.contentResolver.openInputStream(uri)?.use {
+                val json = it.readBytes().decodeToString()
+                Utils.DataHolder.toModelRankItemList(json)?.let {
+                    return it
                 }
-                emitter.onComplete()
-            }.subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread())
+            }
+            return listOf()
         }
 
         fun asyncClearShareDir() {
@@ -76,27 +74,23 @@ object Utils {
             }){}
         }
 
-        fun startShare(rankName: String, data: Any) : Observable<Uri> {
-            return Observable.create<Uri> {
-                val shareDir = File(app.filesDir, "share")
-                if (!shareDir.exists()) {
-                    shareDir.mkdir()
-                } else if (shareDir.exists() && shareDir.isFile) {
-                    shareDir.delete()
-                    shareDir.mkdir()
-                }
-                val file = File.createTempFile("share-${rankName}", "", shareDir)
-                file.outputStream().use {
-                    it.write(Utils.DataHolder.toJson(data).encodeToByteArray())
-                }
-                it.onNext(
-                    FileProvider.getUriForFile(
-                        app,
-                        app.packageName + ".fileprovider",
-                        file
-                    )
-                )
-            }.subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread())
+        fun startShare(rankName: String, data: Any) : Uri {
+            val shareDir = File(app.filesDir, "share")
+            if (!shareDir.exists()) {
+                shareDir.mkdir()
+            } else if (shareDir.exists() && shareDir.isFile) {
+                shareDir.delete()
+                shareDir.mkdir()
+            }
+            val file = File.createTempFile("share-${rankName}", "", shareDir)
+            file.outputStream().use {
+                it.write(Utils.DataHolder.toJson(data).encodeToByteArray())
+            }
+            return FileProvider.getUriForFile(
+                app,
+                app.packageName + ".fileprovider",
+                file
+            )
         }
     }
     object DataHolder {
