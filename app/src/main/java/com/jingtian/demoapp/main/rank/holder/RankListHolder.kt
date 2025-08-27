@@ -51,9 +51,14 @@ class RankListHolder private constructor(private val binding: ItemRankListBindin
         override fun onDocumentCallback(uri: Uri) {
             val ignore = Utils.Share.readShareRankItemList(uri).subscribe {
                 rankItemAdapter.appendAll(it)
+                Utils.CoroutineUtils.runIOTask({
+                    Utils.DataHolder.rankDB.rankItemDao().insertAll(it)
+                }) {}
             }
         }
     }
+    
+    private var exportingData = false
 
     init {
         binding.recyclerView.layoutManager =
@@ -68,6 +73,11 @@ class RankListHolder private constructor(private val binding: ItemRankListBindin
         }
         with(addMore.layoutExport) {
             setOnClickListener {
+                if (exportingData) {
+                    Toast.makeText(context, "别催啦，正在努力导出啦！~~", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+                exportingData = true
                 val ignore = Utils.Share.startShare(
                     currentData?.rankName ?: "",
                     rankItemAdapter.getDataList()
@@ -77,7 +87,8 @@ class RankListHolder private constructor(private val binding: ItemRankListBindin
                         putExtra(Intent.EXTRA_STREAM, it)
                         type = "*/*"
                     }
-                    context.startActivity(Intent.createChooser(shareIntent, null))
+                    context.startActivity(Intent.createChooser(shareIntent, ""))
+                    exportingData = false
                 }
             }
         }

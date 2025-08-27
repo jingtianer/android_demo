@@ -77,6 +77,7 @@ class RankItemHolder private constructor(private val binding: ItemRankItemBindin
         }) {}
         binding.root.context.lifecycleLaunch {
             val currentAdapter = currentAdapter ?: return@lifecycleLaunch
+            currentAdapter.remove(currentPosition)
             val insertPos = withContext(Dispatchers.Default) {
                 val insertPos = currentAdapter.getDataList().binarySearch {
                     if (it.score > modelRank.score) {
@@ -93,7 +94,6 @@ class RankItemHolder private constructor(private val binding: ItemRankItemBindin
                     insertPos
                 }
             }
-            currentAdapter.remove(currentPosition)
             currentAdapter.insert(insertPos, modelRank)
         }
     }
