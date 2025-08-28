@@ -44,7 +44,9 @@ abstract class BaseViewHolder<T>(itemView : View) : RecyclerView.ViewHolder(item
     }
 
     fun realOnRecycled() {
-        lifecycleRegistry.currentState = State.DESTROYED
+        if (lifecycleRegistry.currentState.isAtLeast(State.CREATED)) {
+            lifecycleRegistry.currentState = State.DESTROYED
+        }
         onRecycled()
     }
 
