@@ -44,6 +44,7 @@ import java.io.InputStream
 import java.nio.file.Path
 import java.util.Date
 import java.util.concurrent.Callable
+import java.util.stream.Stream
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
@@ -89,7 +90,7 @@ object Utils {
                             )
                         } else {
                             val id = nextEntry.name.toLong()
-                            images[id] = Utils.DataHolder.ImageStorage.storeImage(bytes.merge())
+                            images[id] = Utils.DataHolder.ImageStorage.storeImage(bytes)
                         }
                         zis.closeEntry()
                         nextEntry = zis.nextEntry
@@ -285,7 +286,7 @@ object Utils {
                 return id
             }
 
-            fun storeImage(byteArray: ByteArray): RankItemImage {
+            fun storeImage(input: Sequence<ByteArray>): RankItemImage {
                 val id = this.id++
                 val storeDir = File(app.filesDir, RANK_IMAGE_STORE_DIR)
                 if (!storeDir.exists()) {
@@ -298,11 +299,13 @@ object Utils {
                 if (storageFile.exists()) {
                     storageFile.delete()
                 }
-                ByteArrayInputStream(byteArray).use { input ->
-                    storageFile.outputStream().use { output ->
-                        FileUtils.copy(input, output)
+
+                storageFile.outputStream().use { output ->
+                    input.forEach {
+                        output.write(it)
                     }
                 }
+
                 val uri = storageFile.toUri()
                 imageCache[id] = uri
                 return RankItemImage(id, uri)
