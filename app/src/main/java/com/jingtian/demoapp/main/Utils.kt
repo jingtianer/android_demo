@@ -493,6 +493,16 @@ object StorageUtil {
 
     }
 
+    class StorageNullableString<T>(
+        sp: SharedPreferences,
+        key: String,
+        defaultValue: String?
+    ) : StorageVariable<T, String?>(
+        sp, key, defaultValue,
+        { k, v -> getString(k, v) ?: v },
+        SharedPreferences.Editor::putString
+    )
+
     class StorageString<T>(
         sp: SharedPreferences,
         key: String,

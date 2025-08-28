@@ -26,6 +26,7 @@ import com.jingtian.demoapp.main.rank.model.DateTypeConverter
 import com.jingtian.demoapp.main.rank.model.ModelItemComment
 import com.jingtian.demoapp.main.rank.model.ModelRank
 import com.jingtian.demoapp.main.rank.model.ModelRankItem
+import com.jingtian.demoapp.main.rank.model.ModelRankUser
 import com.jingtian.demoapp.main.rank.model.RankItemImage
 import com.jingtian.demoapp.main.rank.model.RankItemImageTypeConverter
 import com.jingtian.demoapp.main.rank.model.RankItemRankTypeConverter
@@ -75,18 +76,19 @@ object Utils {
             app.contentResolver.openInputStream(uri)?.use { `is`->
                 var json: String = ""
                 val images: HashMap<Long, RankItemImage> = HashMap()
-                val comments = mutableListOf<List<ModelItemComment>>()
+                val comments = mutableListOf<String>()
+                val users = mutableListOf<String>()
                 ZipInputStream(`is`).use { zis->
                     var nextEntry = zis.nextEntry
                     while (nextEntry != null) {
                         val bytes = zis.readAllSequence()
                         if (nextEntry.name.endsWith(".json")) {
                             json = bytes.merge().decodeToString()
+                        } else if (nextEntry.name.endsWith(".user")) {
+                            users.add(bytes.merge().decodeToString())
                         } else if (nextEntry.name.endsWith(".comment")) {
                             comments.add(
-                                Utils.DataHolder.toModelItemCommentList(
-                                    bytes.merge().decodeToString()
-                                )
+                                bytes.merge().decodeToString()
                             )
                         } else {
                             val id = nextEntry.name.toLong()
@@ -102,11 +104,13 @@ object Utils {
                         success[index]
                     }.sortedByDescending  { it.score }
                     Utils.CoroutineUtils.runIOTask({
-                        comments.forEach { comment->
-                            comment.forEach {
-                                it.id = 0
-                            }
-                            Utils.DataHolder.rankDB.rankCommentDao().insertAll(comment)
+                        users.forEach { userJson->
+                            val userList = Utils.DataHolder.toModelUserList(userJson, images)
+                            Utils.DataHolder.rankDB.rankUserDao().insertAll(userList)
+                        }
+                        comments.forEach { commentJson->
+                            val commentList = Utils.DataHolder.toModelItemCommentList(commentJson, images)
+                            Utils.DataHolder.rankDB.rankCommentDao().insertAll(commentList)
                         }
                     }) {}
                     return filteredList
@@ -141,17 +145,22 @@ object Utils {
             }
             val file = File.createTempFile("share-${rankName}", ".zip", shareDir)
             val json = Utils.DataHolder.modelRankItem2Json(data)
+            val filter: (RankItemImage)->Boolean = {
+                it.id != -1L && it.image != Uri.EMPTY
+            }
             FileOutputStream(file).use { fos->
                 ZipOutputStream(fos).use { zos->
                     data.forEach {
-                        val id = it.image.id
-                        val uri = it.image.image
-                        app.contentResolver.openInputStream(uri)?.use {
-                            val zipEntry = ZipEntry("$id")
-                            zipEntry.comment = "$id"
-                            zos.putNextEntry(zipEntry)
-                            zos.write(it.readBytes())
-                            zos.closeEntry()
+                        if (filter(it.image)) {
+                            val id = it.image.id
+                            val uri = it.image.image
+                            app.contentResolver.openInputStream(uri)?.use {
+                                val zipEntry = ZipEntry("$id")
+                                zipEntry.comment = "$id"
+                                zos.putNextEntry(zipEntry)
+                                zos.write(it.readBytes())
+                                zos.closeEntry()
+                            }
                         }
                         val commentList = Utils.DataHolder.rankDB.rankCommentDao().getAllComment(it.itemName)
                         val commentJson = Utils.DataHolder.modelItemCommentJson(commentList)
@@ -162,6 +171,23 @@ object Utils {
                         zos.write(commentJson.encodeToByteArray())
                         zos.closeEntry()
                     }
+                    val userList = Utils.DataHolder.rankDB.rankUserDao().getAllUser()
+                    userList.filter { filter(it.image) }.forEach { user->
+                        val id = user.image.id
+                        val uri = user.image.image
+                        app.contentResolver.openInputStream(uri)?.use {
+                            val zipEntry = ZipEntry("$id")
+                            zipEntry.comment = "$id"
+                            zos.putNextEntry(zipEntry)
+                            zos.write(it.readBytes())
+                            zos.closeEntry()
+                        }
+                    }
+
+                    zos.putNextEntry(ZipEntry("$rankName.user"))
+                    zos.write(Utils.DataHolder.modelUser2Json(userList).encodeToByteArray())
+                    zos.closeEntry()
+
                     zos.putNextEntry(ZipEntry("$rankName.json"))
                     zos.write(json.encodeToByteArray())
                     zos.closeEntry()
@@ -175,6 +201,12 @@ object Utils {
         }
     }
     object DataHolder {
+
+        var userName by StorageUtil.StorageNullableString(
+            app.getSharedPreferences("rank_user_info", Context.MODE_PRIVATE),
+            "user_name",
+            null
+        )
 
         val rankDB = Room.databaseBuilder(app, RankDatabase::class.java, "rank_db")
             .addTypeConverter(DateTypeConverter())
@@ -194,11 +226,10 @@ object Utils {
 
             private val imageCache = HashMap<Long, Uri>()
 
-            fun storagePath(id: Long) : Path {
-                return Path.of(".", RANK_IMAGE_STORE_DIR, RANK_IMAGE_PREFIX + id)
-            }
-
             fun getImage(id: Long): Uri? {
+                if (id == -1L) {
+                    Uri.EMPTY
+                }
                 if (imageCache.containsKey(id)) {
                     return imageCache[id] ?: Uri.EMPTY
                 }
@@ -332,20 +363,37 @@ object Utils {
         private val modelRankListType = object : TypeToken<List<ModelRank>>() {}
         private val modelRankItemListType = object : TypeToken<List<ModelRankItem>>() {}
         private val modelRankItemCommentListType = object : TypeToken<List<ModelItemComment>>() {}
+        private val modelRankUserListType = object : TypeToken<List<ModelRankUser>>() {}
 
         fun modelRank2Json(any: List<ModelRank>): String {
             return rankItemGson.toJson(any)
         }
 
-        fun modelItemCommentJson(any: List<ModelItemComment>): String {
+        fun modelUser2Json(any: List<ModelRankUser>): String {
             return GsonBuilder()
                 .registerTypeAdapter(Date::class.java, DateTypeConverter())
+                .registerTypeAdapter(RankItemImage::class.java, UriConverter(hashMapOf()))
                 .create().toJson(any)
         }
 
-        fun toModelItemCommentList(any: String): List<ModelItemComment> {
+        fun toModelUserList(any: String, images: HashMap<Long, RankItemImage>): List<ModelRankUser> {
             return GsonBuilder()
                 .registerTypeAdapter(Date::class.java, DateTypeConverter())
+                .registerTypeAdapter(RankItemImage::class.java, UriConverter(images))
+                .create().fromJson(any, modelRankUserListType.type)
+        }
+
+        fun modelItemCommentJson(any: List<ModelItemComment>): String {
+            return GsonBuilder()
+                .registerTypeAdapter(Date::class.java, DateTypeConverter())
+                .registerTypeAdapter(RankItemImage::class.java, UriConverter(hashMapOf()))
+                .create().toJson(any)
+        }
+
+        fun toModelItemCommentList(any: String, images: HashMap<Long, RankItemImage>): List<ModelItemComment> {
+            return GsonBuilder()
+                .registerTypeAdapter(Date::class.java, DateTypeConverter())
+                .registerTypeAdapter(RankItemImage::class.java, UriConverter(images))
                 .create().fromJson(any, modelRankItemCommentListType.type)
         }
 

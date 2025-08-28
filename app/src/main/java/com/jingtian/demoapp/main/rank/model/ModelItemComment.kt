@@ -13,6 +13,7 @@ import com.google.gson.stream.JsonReader
 import com.google.gson.stream.JsonWriter
 import com.jingtian.demoapp.main.rank.Utils
 import com.jingtian.demoapp.main.rank.dao.RankModelItemCommentDao
+import com.jingtian.demoapp.main.rank.model.ModelRankUser.Companion.getCurrentUserName
 import java.util.Date
 
 @Entity(
@@ -22,6 +23,12 @@ import java.util.Date
         parentColumns = arrayOf("itemName"),
         childColumns = arrayOf("itemName"),
         onDelete = ForeignKey.CASCADE
+    ),
+    ForeignKey(
+        entity = ModelRankUser::class,
+        parentColumns = arrayOf("userName"),
+        childColumns = arrayOf("userName"),
+        onDelete = ForeignKey.RESTRICT
     )],
     indices = [Index("itemName")]
 )
@@ -30,6 +37,7 @@ data class ModelItemComment(
     val itemName: String,
     @PrimaryKey(autoGenerate = true)
     var id: Long = 0,
+    var userName: String = getCurrentUserName(),
     var comment: String = "",
     var creationDate: Date = Date(),
     var lastModifyDate: Date = Date(),

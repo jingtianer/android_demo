@@ -13,14 +13,19 @@ import androidx.recyclerview.widget.RecyclerView
 import com.jingtian.demoapp.databinding.FragmentRankBinding
 import com.jingtian.demoapp.databinding.ItemAddMoreBinding
 import com.jingtian.demoapp.main.base.BaseHeaderFooterAdapter
+import com.jingtian.demoapp.main.dp
 import com.jingtian.demoapp.main.fragments.BaseFragment
 import com.jingtian.demoapp.main.rank.Utils
 import com.jingtian.demoapp.main.rank.Utils.DataHolder.rankDB
 import com.jingtian.demoapp.main.rank.adapter.RankListAdapter
 import com.jingtian.demoapp.main.rank.dialog.AddRankDialog
+import com.jingtian.demoapp.main.rank.dialog.AddUserDialog
 import com.jingtian.demoapp.main.rank.dialog.JsonDialog
 import com.jingtian.demoapp.main.rank.model.ModelRank
 import com.jingtian.demoapp.main.rank.model.ModelRank.Companion.isValid
+import com.jingtian.demoapp.main.rank.model.ModelRankUser
+import com.jingtian.demoapp.main.rank.model.ModelRankUser.Companion.getUserNameOrDefault
+import com.jingtian.demoapp.main.rank.model.ModelRankUser.Companion.loadUserImage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -33,8 +38,25 @@ class RankFragment : BaseFragment(), AddRankDialog.Companion.Callback, JsonDialo
     private lateinit var addMore:ItemAddMoreBinding
 
 
-    init {
+    private var user: ModelRankUser? = null
 
+    private val addUserCallback = object :AddUserDialog.Companion.Callback {
+        override fun onPositiveClick(dialog: Dialog, modelRankUser: ModelRankUser) {
+            modelRankUser.let {
+                user = it
+                it.loadUserImage(binding.avatar, 30f.dp.toInt(), 30f.dp.toInt())
+                binding.userName.text = it.userName
+            }
+        }
+
+        override fun onNegativeClick(dialog: Dialog) {
+        }
+
+        override fun onDeleteClick(dialog: Dialog) {
+            user = null
+            user.loadUserImage(binding.avatar, 30f.dp.toInt(), 30f.dp.toInt())
+            binding.userName.text = user.getUserNameOrDefault()
+        }
     }
 
     override fun onCreateView(
@@ -58,6 +80,21 @@ class RankFragment : BaseFragment(), AddRankDialog.Companion.Callback, JsonDialo
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        lifecycleScope.launch {
+            user = withContext(Dispatchers.IO) {
+                ModelRankUser.getUserInfo()
+            }
+            user.loadUserImage(binding.avatar, 30f.dp.toInt(), 30f.dp.toInt())
+            binding.userName.text = user.getUserNameOrDefault()
+            with(binding.root) {
+                binding.avatar.setOnClickListener {
+                    AddUserDialog(context, addUserCallback, user).show()
+                }
+                binding.userName.setOnClickListener {
+                    AddUserDialog(context, addUserCallback, user).show()
+                }
+            }
+        }
         with(binding.recyclerView) {
             headerFooterAdapter.addFooter(addMore.root)
             headerFooterAdapter.bindRecyclerView(this, rankListAdapter)

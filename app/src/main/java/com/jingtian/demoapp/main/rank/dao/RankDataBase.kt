@@ -8,6 +8,7 @@ import com.jingtian.demoapp.main.rank.model.DateTypeConverter
 import com.jingtian.demoapp.main.rank.model.ModelItemComment
 import com.jingtian.demoapp.main.rank.model.ModelRank
 import com.jingtian.demoapp.main.rank.model.ModelRankItem
+import com.jingtian.demoapp.main.rank.model.ModelRankUser
 import com.jingtian.demoapp.main.rank.model.RankItemImageTypeConverter
 import com.jingtian.demoapp.main.rank.model.RankItemRankTypeConverter
 
@@ -15,7 +16,8 @@ import com.jingtian.demoapp.main.rank.model.RankItemRankTypeConverter
     entities = [
         ModelRank::class,
         ModelRankItem::class,
-        ModelItemComment::class
+        ModelItemComment::class,
+        ModelRankUser::class,
     ], version = 1
 )
 @TypeConverters(DateTypeConverter::class, RankItemImageTypeConverter::class, RankItemRankTypeConverter::class)
@@ -23,6 +25,7 @@ abstract class RankDatabase : RoomDatabase() {
     abstract fun rankListDao(): RankModelDao
     abstract fun rankItemDao(): RankModelItemDao
     abstract fun rankCommentDao(): RankModelItemCommentDao
+    abstract fun rankUserDao(): RankUserModelDao
 
     fun deleteRank(modelRank: ModelRank) {
         runInTransaction {

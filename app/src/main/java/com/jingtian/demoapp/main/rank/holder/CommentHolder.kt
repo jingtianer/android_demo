@@ -3,11 +3,19 @@ package com.jingtian.demoapp.main.rank.holder
 import android.app.Dialog
 import android.view.LayoutInflater
 import android.view.ViewGroup
+import androidx.lifecycle.lifecycleScope
 import com.jingtian.demoapp.databinding.ItemRankItemCommentBinding
 import com.jingtian.demoapp.main.base.BaseViewHolder
+import com.jingtian.demoapp.main.dp
 import com.jingtian.demoapp.main.rank.Utils
 import com.jingtian.demoapp.main.rank.dialog.AddCommentDialog
 import com.jingtian.demoapp.main.rank.model.ModelItemComment
+import com.jingtian.demoapp.main.rank.model.ModelRankUser
+import com.jingtian.demoapp.main.rank.model.ModelRankUser.Companion.getUserNameOrDefault
+import com.jingtian.demoapp.main.rank.model.ModelRankUser.Companion.loadUserImage
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 
@@ -28,8 +36,12 @@ class CommentHolder private constructor(private val binding: ItemRankItemComment
     }
 
     override fun onBind(data: ModelItemComment, position: Int) {
-        with(binding.index) {
-            text = "$position"
+        lifecycleScope.launch {
+            val user = withContext(Dispatchers.IO) {
+                ModelRankUser.getUserInfo(data.userName)
+            }
+            user.loadUserImage(binding.avatar, 30f.dp.toInt(), 30f.dp.toInt())
+            binding.userName.text = user.getUserNameOrDefault()
         }
         with(binding.logTime) {
             text = dataTimeFormat.format(data.lastModifyDate)

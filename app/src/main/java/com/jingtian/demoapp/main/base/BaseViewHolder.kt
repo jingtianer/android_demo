@@ -28,24 +28,27 @@ abstract class BaseViewHolder<T>(itemView : View) : RecyclerView.ViewHolder(item
     abstract fun onBind(data: T, position: Int)
 
     fun realOnAttach() {
-//        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
-//        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_START)
-        lifecycleRegistry.currentState = State.RESUMED
         onAttach()
     }
 
-    fun onAttach() {
+    open fun onAttach() {
 
     }
 
     fun realOnDetach() {
-//        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE)
-//        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
-        lifecycleRegistry.currentState = State.DESTROYED
         onDetach()
     }
 
-    fun onDetach() {
+    open fun onDetach() {
+
+    }
+
+    fun realOnRecycled() {
+        lifecycleRegistry.currentState = State.DESTROYED
+        onRecycled()
+    }
+
+    open fun onRecycled() {
 
     }
 }

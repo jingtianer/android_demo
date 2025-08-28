@@ -73,4 +73,9 @@ abstract class BaseAdapter<T> : RecyclerView.Adapter<BaseViewHolder<T>>() {
             notifyItemRangeChanged(pos, dataList.size - pos)
         }
     }
+
+    override fun onViewRecycled(holder: BaseViewHolder<T>) {
+        super.onViewRecycled(holder)
+        holder.realOnRecycled()
+    }
 }

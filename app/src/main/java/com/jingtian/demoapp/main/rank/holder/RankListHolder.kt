@@ -4,6 +4,7 @@ import android.app.Dialog
 import android.content.Intent
 import android.graphics.Rect
 import android.net.Uri
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -42,6 +43,7 @@ class RankListHolder private constructor(private val binding: ItemRankListBindin
                 )
             )
         }
+        private const val TAG = "RankListHolder"
     }
 
     private val context = binding.root.context
@@ -146,6 +148,7 @@ class RankListHolder private constructor(private val binding: ItemRankListBindin
     }
 
     override fun onBind(data: ModelRank, position: Int) {
+        Log.d(TAG, "onBind: ${currentData?.rankName}")
         with(binding.title) {
             text = data.rankName
         }
@@ -223,5 +226,20 @@ class RankListHolder private constructor(private val binding: ItemRankListBindin
 
     override fun onDeleteClick(dialog: Dialog) {
         dialog.dismiss()
+    }
+
+    override fun onAttach() {
+        Log.d(TAG, "onAttach: ${currentData?.rankName}")
+        super.onAttach()
+    }
+
+    override fun onDetach() {
+        Log.d(TAG, "onDetach: ${currentData?.rankName}")
+        super.onDetach()
+    }
+
+    override fun onRecycled() {
+        super.onRecycled()
+        Log.d(TAG, "onRecycled: ${currentData?.rankName}")
     }
 }
