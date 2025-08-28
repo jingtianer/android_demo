@@ -72,10 +72,15 @@ class RankItemHolder private constructor(private val binding: ItemRankItemBindin
     override fun onPositiveClick(dialog: Dialog, modelRank: ModelRankItem) {
         dialog.dismiss()
 //        val oldImageId = currentData?.image?.id ?: -1
-        currentData = modelRank
+        val currentData = currentData
         Utils.CoroutineUtils.runIOTask({
-            Utils.DataHolder.rankDB.rankItemDao().update(modelRank)
+            if (currentData != null) {
+                Utils.DataHolder.rankDB.updateRankItem(currentData, modelRank)
+            } else {
+                Utils.DataHolder.rankDB.rankItemDao().insert(modelRank)
+            }
         }) {}
+        this.currentData = modelRank
         lifecycleScope.launch {
             val currentAdapter = currentAdapter ?: return@launch
             currentAdapter.remove(currentPosition)
@@ -106,8 +111,7 @@ class RankItemHolder private constructor(private val binding: ItemRankItemBindin
         currentAdapter?.remove(currentPosition)
         currentData?.let {
             Utils.CoroutineUtils.runIOTask({
-                Utils.DataHolder.ImageStorage.delete(it.image.id)
-                Utils.DataHolder.rankDB.rankItemDao().delete(it)
+                Utils.DataHolder.rankDB.deleteRankItem(it)
             }) { }
         }
     }

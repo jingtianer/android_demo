@@ -22,13 +22,15 @@ import java.util.Date
         entity = ModelRankItem::class,
         parentColumns = arrayOf("itemName"),
         childColumns = arrayOf("itemName"),
-        onDelete = ForeignKey.CASCADE
+        onDelete = ForeignKey.CASCADE,
+        onUpdate = ForeignKey.CASCADE,
     ),
     ForeignKey(
         entity = ModelRankUser::class,
         parentColumns = arrayOf("userName"),
         childColumns = arrayOf("userName"),
-        onDelete = ForeignKey.RESTRICT
+        onDelete = ForeignKey.CASCADE,
+        onUpdate = ForeignKey.CASCADE,
     )],
     indices = [Index("itemName")]
 )

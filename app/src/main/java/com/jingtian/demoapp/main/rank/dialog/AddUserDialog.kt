@@ -50,10 +50,10 @@ class AddUserDialog(context: Context, private val callback : Callback, private v
                 }
                 dismiss()
                 val modelRankUser= modelRankUser
-                val oldId = modelRankUser?.image?.id
+                val oldImage = modelRankUser?.image
                 Utils.CoroutineUtils.runIOTask({
-                    val id = if (oldId != null) {
-                        Utils.DataHolder.ImageStorage.storeImage(oldId, imageUri)
+                    val id = if (oldImage != null && oldImage.id != -1L && oldImage.image != Uri.EMPTY) {
+                        Utils.DataHolder.ImageStorage.storeImage(oldImage.id, imageUri)
                     } else {
                         Utils.DataHolder.ImageStorage.storeImage(imageUri)
                     }
@@ -63,10 +63,7 @@ class AddUserDialog(context: Context, private val callback : Callback, private v
                     )
                     Utils.CoroutineUtils.runIOTask({
                         if (modelRankUser != null) {
-                            Utils.DataHolder.rankDB.runInTransaction {
-                                Utils.DataHolder.rankDB.rankUserDao().delete(modelRankUser)
-                                Utils.DataHolder.rankDB.rankUserDao().insert(user)
-                            }
+                            Utils.DataHolder.rankDB.updateUser(modelRankUser, user)
                         } else {
                             Utils.DataHolder.rankDB.rankUserDao().insert(user)
                         }
@@ -90,7 +87,7 @@ class AddUserDialog(context: Context, private val callback : Callback, private v
                 val modelRankUser = modelRankUser
                 if (modelRankUser != null) {
                     Utils.CoroutineUtils.runIOTask({
-                        Utils.DataHolder.rankDB.rankUserDao().delete(modelRankUser) > 0
+                        Utils.DataHolder.rankDB.tryDeleteUser(modelRankUser) > 0
                     }) { success ->
                         if (!success) {
                             Toast.makeText(context, "用户${modelRankUser.userName}删除失败", Toast.LENGTH_SHORT).show()

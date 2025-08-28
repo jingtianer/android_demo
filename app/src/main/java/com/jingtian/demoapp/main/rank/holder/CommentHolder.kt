@@ -63,7 +63,7 @@ class CommentHolder private constructor(private val binding: ItemRankItemComment
             this.comment = comment
             this.lastModifyDate = Date()
         } ?: return
-        currentAdapter?.notifyItemChanged(currentPosition)
+        currentAdapter?.setData(currentData, currentPosition)
         Utils.CoroutineUtils.runIOTask({
             Utils.DataHolder.rankDB.rankCommentDao().update(currentData)
         }) {}

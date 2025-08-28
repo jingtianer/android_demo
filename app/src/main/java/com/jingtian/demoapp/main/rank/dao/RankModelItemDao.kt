@@ -22,6 +22,8 @@ interface RankModelItemDao {
     @Update
     fun update(modelRank: ModelRankItem)
 
+    @Query("UPDATE $TABLE_NAME SET itemName = :newName WHERE itemName == :oldName")
+    fun updateItemName(oldName: String, newName: String)
 
     @Delete
     fun delete(modelRank: ModelRankItem)
@@ -32,7 +34,6 @@ interface RankModelItemDao {
 
     @Query("SELECT * FROM ${RankModelItemDao.TABLE_NAME} WHERE (rankName = :rankName AND itemName = :itemName)")
     fun getRankItem(rankName : String, itemName: String) : List<ModelRankItem>
-
 
     @Query("SELECT * FROM ${RankModelItemDao.TABLE_NAME}")
     fun getAllRankItem() : List<ModelRankItem>

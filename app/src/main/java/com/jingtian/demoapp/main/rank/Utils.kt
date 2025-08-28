@@ -2,7 +2,6 @@ package com.jingtian.demoapp.main.rank
 
 import android.content.Context
 import android.net.Uri
-import android.os.FileUtils
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
@@ -12,6 +11,7 @@ import androidx.core.net.toUri
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
 import androidx.room.Room
+import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.TypeAdapter
 import com.google.gson.reflect.TypeToken
@@ -37,15 +37,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
-import java.nio.file.Path
 import java.util.Date
 import java.util.concurrent.Callable
-import java.util.stream.Stream
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
@@ -53,23 +50,6 @@ import kotlin.coroutines.CoroutineContext
 import kotlin.math.abs
 
 object Utils {
-
-    fun InputStream.readAllSequence(size: Int = DEFAULT_BUFFER_SIZE) = sequence<ByteArray> {
-        var byteArray = readNBytes(size)
-        while (byteArray.isNotEmpty()) {
-            yield(byteArray)
-            byteArray = readNBytes(size)
-        }
-    }
-
-    fun Sequence<ByteArray>.merge(): ByteArray {
-        ByteArrayOutputStream().use { bos->
-            for (bytes in this) {
-                bos.write(bytes)
-            }
-            return bos.toByteArray()
-        }
-    }
 
     object Share {
         fun readShareRankItemList(uri: Uri) : List<ModelRankItem> {
@@ -81,18 +61,15 @@ object Utils {
                 ZipInputStream(`is`).use { zis->
                     var nextEntry = zis.nextEntry
                     while (nextEntry != null) {
-                        val bytes = zis.readAllSequence()
                         if (nextEntry.name.endsWith(".json")) {
-                            json = bytes.merge().decodeToString()
+                            json = zis.readBytes().decodeToString()
                         } else if (nextEntry.name.endsWith(".user")) {
-                            users.add(bytes.merge().decodeToString())
+                            users.add(zis.readBytes().decodeToString())
                         } else if (nextEntry.name.endsWith(".comment")) {
-                            comments.add(
-                                bytes.merge().decodeToString()
-                            )
+                            comments.add(zis.readBytes().decodeToString())
                         } else {
                             val id = nextEntry.name.toLong()
-                            images[id] = Utils.DataHolder.ImageStorage.storeImage(bytes)
+                            images[id] = Utils.DataHolder.ImageStorage.storeImage(zis)
                         }
                         zis.closeEntry()
                         nextEntry = zis.nextEntry
@@ -270,23 +247,13 @@ object Utils {
                 } else {
                     oldId
                 }
-                imageCache[id] = uri
-                val storeDir = File(app.filesDir, RANK_IMAGE_STORE_DIR)
-                if (!storeDir.exists()) {
-                    storeDir.mkdirs()
-                } else if (storeDir.isFile) {
-                    storeDir.delete()
-                    storeDir.mkdirs()
-                }
-                val storageFile = File(storeDir, RANK_IMAGE_PREFIX + id)
+                val storageFile = getStoreFile(id)
                 if (uri.safeToFile()?.absolutePath?.equals(storageFile.absolutePath) != true) {
                     if (storageFile.exists()) {
                         storageFile.delete()
                     }
                     app.contentResolver.openInputStream(uri)?.use { input ->
-                        storageFile.outputStream().use { output ->
-                            FileUtils.copy(input, output)
-                        }
+                        innerStoreImage(id, input, storageFile)
                     }
                 }
                 return id
@@ -297,28 +264,22 @@ object Utils {
                     return -1
                 }
                 val id = this.id++
-                imageCache[id] = uri
-                val storeDir = File(app.filesDir, RANK_IMAGE_STORE_DIR)
-                if (!storeDir.exists()) {
-                    storeDir.mkdirs()
-                } else if (storeDir.isFile) {
-                    storeDir.delete()
-                    storeDir.mkdirs()
-                }
-                val storageFile = File(storeDir, RANK_IMAGE_PREFIX + id)
-                if (storageFile.exists()) {
-                    storageFile.delete()
-                }
+                val storageFile = getStoreFile(id)
+                storageFile.delete()
                 app.contentResolver.openInputStream(uri)?.use { input ->
-                    storageFile.outputStream().use { output ->
-                        FileUtils.copy(input, output)
-                    }
+                    innerStoreImage(id, input, storageFile)
                 }
                 return id
             }
 
-            fun storeImage(input: Sequence<ByteArray>): RankItemImage {
+            fun storeImage(input: InputStream): RankItemImage {
                 val id = this.id++
+                val storageFile = getStoreFile(id)
+                storageFile.delete()
+                return innerStoreImage(id, input, storageFile)
+            }
+
+            private fun getStoreFile(id: Long): File {
                 val storeDir = File(app.filesDir, RANK_IMAGE_STORE_DIR)
                 if (!storeDir.exists()) {
                     storeDir.mkdirs()
@@ -326,17 +287,13 @@ object Utils {
                     storeDir.delete()
                     storeDir.mkdirs()
                 }
-                val storageFile = File(storeDir, RANK_IMAGE_PREFIX + id)
-                if (storageFile.exists()) {
-                    storageFile.delete()
-                }
+                return File(storeDir, RANK_IMAGE_PREFIX + id)
+            }
 
+            private fun innerStoreImage(id: Long, input: InputStream, storageFile: File): RankItemImage {
                 storageFile.outputStream().use { output ->
-                    input.forEach {
-                        output.write(it)
-                    }
+                    input.copyTo(output)
                 }
-
                 val uri = storageFile.toUri()
                 imageCache[id] = uri
                 return RankItemImage(id, uri)
@@ -358,64 +315,53 @@ object Utils {
             }
         }
 
-        private val rankItemGson = GsonBuilder().create()
+        private val rankItemGson: (HashMap<Long, RankItemImage>) -> Gson = { images->
+            GsonBuilder()
+                .registerTypeAdapter(Date::class.java, DateTypeConverter())
+                .registerTypeAdapter(RankItemImage::class.java, UriConverter(images))
+                .create()
+        }
 
         private val modelRankListType = object : TypeToken<List<ModelRank>>() {}
         private val modelRankItemListType = object : TypeToken<List<ModelRankItem>>() {}
         private val modelRankItemCommentListType = object : TypeToken<List<ModelItemComment>>() {}
         private val modelRankUserListType = object : TypeToken<List<ModelRankUser>>() {}
 
-        fun modelRank2Json(any: List<ModelRank>): String {
-            return rankItemGson.toJson(any)
-        }
-
         fun modelUser2Json(any: List<ModelRankUser>): String {
-            return GsonBuilder()
-                .registerTypeAdapter(Date::class.java, DateTypeConverter())
-                .registerTypeAdapter(RankItemImage::class.java, UriConverter(hashMapOf()))
-                .create().toJson(any)
+            return rankItemGson(hashMapOf()).toJson(any)
         }
 
         fun toModelUserList(any: String, images: HashMap<Long, RankItemImage>): List<ModelRankUser> {
-            return GsonBuilder()
-                .registerTypeAdapter(Date::class.java, DateTypeConverter())
-                .registerTypeAdapter(RankItemImage::class.java, UriConverter(images))
-                .create().fromJson(any, modelRankUserListType.type)
+            return rankItemGson(images).fromJson(any, modelRankUserListType.type)
         }
 
         fun modelItemCommentJson(any: List<ModelItemComment>): String {
-            return GsonBuilder()
-                .registerTypeAdapter(Date::class.java, DateTypeConverter())
-                .registerTypeAdapter(RankItemImage::class.java, UriConverter(hashMapOf()))
-                .create().toJson(any)
+            return rankItemGson(hashMapOf()).toJson(any)
         }
 
         fun toModelItemCommentList(any: String, images: HashMap<Long, RankItemImage>): List<ModelItemComment> {
-            return GsonBuilder()
-                .registerTypeAdapter(Date::class.java, DateTypeConverter())
-                .registerTypeAdapter(RankItemImage::class.java, UriConverter(images))
-                .create().fromJson(any, modelRankItemCommentListType.type)
+            return rankItemGson(images).fromJson(any, modelRankItemCommentListType.type)
         }
 
         fun modelRankItem2Json(any: List<ModelRankItem>): String {
-            return GsonBuilder()
-                .registerTypeAdapter(RankItemImage::class.java, UriConverter(hashMapOf()))
-                .create().toJson(any)
+            return rankItemGson(hashMapOf()).toJson(any)
         }
 
         fun toModelRankList(json: String): List<ModelRank>? {
             return try {
-                rankItemGson.fromJson(json, modelRankListType.type) as List<ModelRank>
+                rankItemGson(hashMapOf()).fromJson(json, modelRankListType.type) as List<ModelRank>
             } catch (ignore: Exception) {
                 null
             }
         }
 
+        fun modelRank2Json(any: List<ModelRank>): String {
+            return rankItemGson(hashMapOf()).toJson(any)
+        }
+
         fun toModelRankItemList(json: String, images: HashMap<Long, RankItemImage>): List<ModelRankItem>? {
             return try {
-                GsonBuilder()
-                    .registerTypeAdapter(RankItemImage::class.java, UriConverter(images))
-                    .create().fromJson(json, modelRankItemListType.type) as List<ModelRankItem>
+                rankItemGson(images).fromJson(json, modelRankItemListType.type) as List<ModelRankItem>
             } catch (ignore: Exception) {
                 null
             }

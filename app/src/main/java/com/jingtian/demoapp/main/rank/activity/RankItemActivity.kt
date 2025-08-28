@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
+import android.widget.Toast
 import androidx.core.content.res.ResourcesCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -137,11 +138,21 @@ class RankItemActivity : BaseActivity(), AddCommentDialog.Companion.Callback {
             lastModifyDate = Date()
         )
         Utils.CoroutineUtils.runIOTask({
-            Utils.DataHolder.rankDB.rankCommentDao().insert(model)
-        }) { }
-        lifecycleScope.launch {
-            withContext(Dispatchers.Main) {
-                commentAdapter.append(model)
+            try {
+                Utils.DataHolder.rankDB.rankCommentDao().insert(model)
+                null
+            } catch (e: Exception) {
+                e
+            }
+        }) { e: Exception? ->
+            if (e != null) {
+                Toast.makeText(this, "评论失败$e", Toast.LENGTH_SHORT).show()
+                return@runIOTask
+            }
+            lifecycleScope.launch {
+                withContext(Dispatchers.Main) {
+                    commentAdapter.append(model)
+                }
             }
         }
     }

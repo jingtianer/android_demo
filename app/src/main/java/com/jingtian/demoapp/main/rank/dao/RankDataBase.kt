@@ -1,5 +1,6 @@
 package com.jingtian.demoapp.main.rank.dao
 
+import android.text.TextUtils
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
@@ -11,6 +12,7 @@ import com.jingtian.demoapp.main.rank.model.ModelRankItem
 import com.jingtian.demoapp.main.rank.model.ModelRankUser
 import com.jingtian.demoapp.main.rank.model.RankItemImageTypeConverter
 import com.jingtian.demoapp.main.rank.model.RankItemRankTypeConverter
+import java.util.concurrent.Callable
 
 @Database(
     entities = [
@@ -27,6 +29,17 @@ abstract class RankDatabase : RoomDatabase() {
     abstract fun rankCommentDao(): RankModelItemCommentDao
     abstract fun rankUserDao(): RankUserModelDao
 
+    fun deleteRankItem(rankItem: ModelRankItem) {
+        runInTransaction {
+            try {
+                Utils.DataHolder.ImageStorage.delete(rankItem.image.id)
+            } catch (ignore :Exception) {
+
+            }
+            rankItemDao().delete(rankItem)
+        }
+    }
+
     fun deleteRank(modelRank: ModelRank) {
         runInTransaction {
             val rankItems = rankItemDao().getAllRankItemByRankName(modelRank.rankName)
@@ -38,6 +51,41 @@ abstract class RankDatabase : RoomDatabase() {
                 }
             }
             rankListDao().delete(modelRank)
+        }
+    }
+
+    fun tryDeleteUser(modelRankUser: ModelRankUser): Int {
+        return try {
+            runInTransaction(Callable {
+                Utils.DataHolder.ImageStorage.delete(modelRankUser.image.id)
+                rankUserDao().delete(modelRankUser)
+            })
+        } catch (ignore : Exception) {
+            0
+        }
+    }
+
+    fun updateUser(oldUser: ModelRankUser, modelRankUser: ModelRankUser) {
+        runInTransaction {
+            val dao = rankUserDao()
+            if (TextUtils.equals(oldUser.userName, modelRankUser.userName)) {
+                dao.update(modelRankUser)
+            } else {
+                dao.updateUserName(oldUser.userName, modelRankUser.userName)
+                dao.update(modelRankUser)
+            }
+        }
+    }
+
+    fun updateRankItem(oldRankItem: ModelRankItem, rankItem: ModelRankItem) {
+        runInTransaction {
+            val dao = rankItemDao()
+            if (TextUtils.equals(oldRankItem.itemName, rankItem.itemName)) {
+                dao.update(rankItem)
+            } else {
+                dao.updateItemName(oldRankItem.itemName, rankItem.itemName)
+                dao.update(rankItem)
+            }
         }
     }
 }

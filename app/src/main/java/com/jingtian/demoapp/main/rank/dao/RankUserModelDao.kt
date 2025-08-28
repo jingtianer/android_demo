@@ -6,7 +6,6 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
-import com.jingtian.demoapp.main.rank.model.ModelRank
 import com.jingtian.demoapp.main.rank.model.ModelRankUser
 
 @Dao
@@ -23,6 +22,8 @@ interface RankUserModelDao {
     @Update
     fun update(modelRank: ModelRankUser)
 
+    @Query("UPDATE $TABLE_NAME SET userName = :newName WHERE userName == :oldName")
+    fun updateUserName(oldName: String, newName: String)
 
     @Delete
     fun delete(modelRank: ModelRankUser): Int
@@ -30,6 +31,6 @@ interface RankUserModelDao {
     @Query("SELECT * FROM $TABLE_NAME")
     fun getAllUser() : List<ModelRankUser>
 
-    @Query("SELECT * FROM $TABLE_NAME WHERE userName = :userName")
+    @Query("SELECT * FROM $TABLE_NAME WHERE userName == :userName")
     fun getUser(userName: String): ModelRankUser
 }

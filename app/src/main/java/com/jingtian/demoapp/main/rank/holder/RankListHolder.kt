@@ -96,7 +96,7 @@ class RankListHolder private constructor(private val binding: ItemRankListBindin
                     val shareIntent: Intent = Intent().apply {
                         action = Intent.ACTION_SEND
                         putExtra(Intent.EXTRA_STREAM, uri)
-                        type = "*/*"
+                        type = "application/zip"
                     }
                     context.startActivity(Intent.createChooser(shareIntent, ""))
                     exportingData = false

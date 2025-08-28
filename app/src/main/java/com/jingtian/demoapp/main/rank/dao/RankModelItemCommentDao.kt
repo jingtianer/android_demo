@@ -26,7 +26,6 @@ interface RankModelItemCommentDao {
     @Update
     fun update(modelRank: ModelItemComment)
 
-
     @Delete
     fun delete(modelRank: ModelItemComment)
 

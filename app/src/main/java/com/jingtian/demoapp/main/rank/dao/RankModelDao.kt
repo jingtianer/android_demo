@@ -22,7 +22,6 @@ interface RankModelDao {
     @Update
     fun update(modelRank: ModelRank)
 
-
     @Delete
     fun delete(modelRank: ModelRank)
 
