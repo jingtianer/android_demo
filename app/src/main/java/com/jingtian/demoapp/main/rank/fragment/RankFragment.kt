@@ -12,9 +12,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.jingtian.demoapp.databinding.FragmentRankBinding
 import com.jingtian.demoapp.databinding.ItemAddMoreBinding
-import com.jingtian.demoapp.main.app
 import com.jingtian.demoapp.main.base.BaseHeaderFooterAdapter
-import com.jingtian.demoapp.main.dp
 import com.jingtian.demoapp.main.fragments.BaseFragment
 import com.jingtian.demoapp.main.rank.Utils
 import com.jingtian.demoapp.main.rank.Utils.DataHolder.rankDB
@@ -89,7 +87,7 @@ class RankFragment : BaseFragment(), AddRankDialog.Companion.Callback, JsonDialo
                 JsonDialog(context, this@RankFragment).apply {
                     lifecycleScope.launch {
                         val json = withContext(Dispatchers.IO) {
-                            Utils.DataHolder.toJson(rankListAdapter.getDataList())
+                            Utils.DataHolder.modelRank2Json(rankListAdapter.getDataList())
                         }
                         setJson(json)
                         show()

@@ -25,7 +25,6 @@ import com.jingtian.demoapp.main.rank.activity.RankActivity
 import com.jingtian.demoapp.main.rank.adapter.RankItemAdapter
 import com.jingtian.demoapp.main.rank.dialog.AddRankItemDialog
 import com.jingtian.demoapp.main.rank.dialog.AlertDialog
-import com.jingtian.demoapp.main.rank.dialog.JsonDialog
 import com.jingtian.demoapp.main.rank.model.ModelRank
 import com.jingtian.demoapp.main.rank.model.ModelRankItem
 import com.jingtian.demoapp.main.rank.model.ModelRankItem.Companion.isValid
@@ -34,8 +33,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class RankListHolder private constructor(private val binding: ItemRankListBinding) :
-    BaseViewHolder<ModelRank>(binding.root), AddRankItemDialog.Companion.Callback,
-    JsonDialog.Companion.Callback {
+    BaseViewHolder<ModelRank>(binding.root), AddRankItemDialog.Companion.Callback {
     companion object {
         fun create(parent: ViewGroup): RankListHolder {
             return RankListHolder(
@@ -220,27 +218,6 @@ class RankListHolder private constructor(private val binding: ItemRankListBindin
             }
         } else {
             Toast.makeText(context, "添加失败", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    override fun onPositiveClick(dialog: Dialog, json: String, import: Boolean) {
-        dialog.dismiss()
-        if (import) {
-            Utils.CoroutineUtils.runIOTask({
-                Utils.DataHolder.toModelRankItemList(json)
-            }) { list->
-                list?.let { list ->
-                    Utils.CoroutineUtils.runIOTask({
-                        Utils.DataHolder.rankDB.rankItemDao().insertAll(list).map { it != -1L }
-                    }) { success->
-                        lifecycleScope.launch {
-                            rankItemAdapter.appendAll(list.filterIndexed { index, _ ->
-                                success[index]
-                            })
-                        }
-                    }
-                }
-            }
         }
     }
 

@@ -3,7 +3,6 @@ package com.jingtian.demoapp.main.rank
 import android.content.Context
 import android.net.Uri
 import android.os.FileUtils
-import android.util.Base64
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
@@ -30,9 +29,6 @@ import com.jingtian.demoapp.main.rank.model.RankItemImage
 import com.jingtian.demoapp.main.rank.model.RankItemImageTypeConverter
 import com.jingtian.demoapp.main.rank.model.RankItemRankTypeConverter
 import com.jingtian.demoapp.main.widget.StarRateView
-import io.reactivex.Observable
-import io.reactivex.android.schedulers.AndroidSchedulers
-import io.reactivex.schedulers.Schedulers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
@@ -41,17 +37,37 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayInputStream
 import java.io.File
+import java.io.FileOutputStream
+import java.nio.file.Path
 import java.util.concurrent.Callable
+import java.util.zip.ZipEntry
+import java.util.zip.ZipInputStream
+import java.util.zip.ZipOutputStream
 import kotlin.coroutines.CoroutineContext
-import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.math.abs
 
 object Utils {
+
     object Share {
         fun readShareRankItemList(uri: Uri) : List<ModelRankItem> {
-            app.contentResolver.openInputStream(uri)?.use {
-                val json = it.readBytes().decodeToString()
-                Utils.DataHolder.toModelRankItemList(json)?.let {
+            app.contentResolver.openInputStream(uri)?.use { `is`->
+                var json: String = ""
+                val images: HashMap<Long, ByteArray> = HashMap()
+                ZipInputStream(`is`).use { zis->
+                    var nextEntry = zis.nextEntry
+                    while (nextEntry != null) {
+                        val bytes = zis.readBytes()
+                        if (nextEntry.name.endsWith(".json")) {
+                            json = bytes.decodeToString()
+                        } else {
+                            val id = nextEntry.name.toLong()
+                            images[id] = bytes
+                        }
+                        zis.closeEntry()
+                        nextEntry = zis.nextEntry
+                    }
+                }
+                Utils.DataHolder.toModelRankItemList(json, images)?.let {
                     return it
                 }
             }
@@ -74,7 +90,7 @@ object Utils {
             }){}
         }
 
-        fun startShare(rankName: String, data: Any) : Uri {
+        fun startShare(rankName: String, data: List<ModelRankItem>) : Uri {
             val shareDir = File(app.filesDir, "share")
             if (!shareDir.exists()) {
                 shareDir.mkdir()
@@ -82,9 +98,25 @@ object Utils {
                 shareDir.delete()
                 shareDir.mkdir()
             }
-            val file = File.createTempFile("share-${rankName}", "", shareDir)
-            file.outputStream().use {
-                it.write(Utils.DataHolder.toJson(data).encodeToByteArray())
+            val file = File.createTempFile("share-${rankName}", ".zip", shareDir)
+            val json = Utils.DataHolder.modelRankItem2Json(data)
+            FileOutputStream(file).use { fos->
+                ZipOutputStream(fos).use { zos->
+                    data.forEach {
+                        val id = it.image.id
+                        val uri = it.image.image
+                        app.contentResolver.openInputStream(uri)?.use {
+                            val zipEntry = ZipEntry("$id")
+                            zipEntry.comment = "$id"
+                            zos.putNextEntry(zipEntry)
+                            zos.write(it.readBytes())
+                            zos.closeEntry()
+                        }
+                    }
+                    zos.putNextEntry(ZipEntry("$rankName.json"))
+                    zos.write(json.encodeToByteArray())
+                    zos.closeEntry()
+                }
             }
             return FileProvider.getUriForFile(
                 app,
@@ -112,6 +144,10 @@ object Utils {
             )
 
             private val imageCache = HashMap<Long, Uri>()
+
+            fun storagePath(id: Long) : Path {
+                return Path.of(".", RANK_IMAGE_STORE_DIR, RANK_IMAGE_PREFIX + id)
+            }
 
             fun getImage(id: Long): Uri? {
                 if (imageCache.containsKey(id)) {
@@ -225,34 +261,34 @@ object Utils {
             }
         }
 
-        object UriConverter : TypeAdapter<RankItemImage>() {
+        class UriConverter(private val images: HashMap<Long, ByteArray>) : TypeAdapter<RankItemImage>() {
             override fun write(out: JsonWriter, value: RankItemImage) {
-                app.contentResolver.openInputStream(value.image)?.use { input ->
-                    val image = input.readBytes()
-                    val base64 = Base64.encodeToString(image, Base64.DEFAULT)
-                    out.value(base64)
-                }
+                out.value(value.id)
             }
 
             override fun read(`in`: JsonReader?): RankItemImage {
-                val base64 = `in`?.nextString()
-                if (base64 != null) {
-                    val image = Base64.decode(base64, Base64.DEFAULT)
-                    return ImageStorage.storeImage(image)
+                `in`?.nextLong()?.let { id->
+                    images[id]?.let { image->
+                        return ImageStorage.storeImage(image)
+                    }
                 }
                 return RankItemImage()
             }
         }
 
-        private val rankItemGson = GsonBuilder()
-            .registerTypeAdapter(RankItemImage::class.java, UriConverter)
-            .create()
+        private val rankItemGson = GsonBuilder().create()
 
         private val modelRankListType = object : TypeToken<List<ModelRank>>() {}
         private val modelRankItemListType = object : TypeToken<List<ModelRankItem>>() {}
 
-        fun toJson(any: Any): String {
+        fun modelRank2Json(any: List<ModelRank>): String {
             return rankItemGson.toJson(any)
+        }
+
+        fun modelRankItem2Json(any: List<ModelRankItem>): String {
+            return GsonBuilder()
+                .registerTypeAdapter(RankItemImage::class.java, UriConverter(hashMapOf()))
+                .create().toJson(any)
         }
 
         fun toModelRankList(json: String): List<ModelRank>? {
@@ -263,9 +299,11 @@ object Utils {
             }
         }
 
-        fun toModelRankItemList(json: String): List<ModelRankItem>? {
+        fun toModelRankItemList(json: String, images: HashMap<Long, ByteArray>): List<ModelRankItem>? {
             return try {
-                rankItemGson.fromJson(json, modelRankItemListType.type) as List<ModelRankItem>
+                GsonBuilder()
+                    .registerTypeAdapter(RankItemImage::class.java, UriConverter(images))
+                    .create().fromJson(json, modelRankItemListType.type) as List<ModelRankItem>
             } catch (ignore: Exception) {
                 null
             }
