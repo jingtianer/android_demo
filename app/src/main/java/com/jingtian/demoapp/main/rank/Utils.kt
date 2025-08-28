@@ -21,6 +21,7 @@ import com.jingtian.demoapp.R
 import com.jingtian.demoapp.main.StorageUtil
 import com.jingtian.demoapp.main.app
 import com.jingtian.demoapp.main.dp
+import com.jingtian.demoapp.main.partitionIndexed
 import com.jingtian.demoapp.main.rank.Utils.DataHolder.ImageStorage.safeToFile
 import com.jingtian.demoapp.main.rank.dao.RankDatabase
 import com.jingtian.demoapp.main.rank.model.DateTypeConverter
@@ -31,6 +32,7 @@ import com.jingtian.demoapp.main.rank.model.ModelRankUser
 import com.jingtian.demoapp.main.rank.model.RankItemImage
 import com.jingtian.demoapp.main.rank.model.RankItemImageTypeConverter
 import com.jingtian.demoapp.main.rank.model.RankItemRankTypeConverter
+import com.jingtian.demoapp.main.tryForEach
 import com.jingtian.demoapp.main.widget.StarRateView
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
@@ -54,11 +56,11 @@ object Utils {
 
     object Share {
         fun readShareRankItemList(uri: Uri): List<ModelRankItem> {
-            app.contentResolver.openInputStream(uri)?.use { `is` ->
-                var json: String = ""
-                val images: HashMap<Long, RankItemImage> = HashMap()
-                val comments = mutableListOf<String>()
-                val users = mutableListOf<String>()
+            var json: String = ""
+            val images: HashMap<Long, RankItemImage> = HashMap()
+            val comments = mutableListOf<String>()
+            val users = mutableListOf<String>()
+            app.contentResolver.openInputStream(uri)?.let { `is` ->
                 ZipInputStream(`is`).use { zis ->
                     var nextEntry = zis.nextEntry
                     while (nextEntry != null) {
@@ -76,33 +78,39 @@ object Utils {
                         nextEntry = zis.nextEntry
                     }
                 }
-                Utils.DataHolder.toModelRankItemList(json, images)?.let { list ->
-                    val success =
-                        Utils.DataHolder.rankDB.rankItemDao().insertAll(list).map { it != -1L }
-                    val filteredList = list.filterIndexed { index, _ ->
-                        success[index]
-                    }.sortedByDescending { it.score }
-                    list.filterIndexed { index, _ ->
-                        !success[index]
-                    }.forEach {
-                        Utils.DataHolder.ImageStorage.delete(it.image.id)
-                    }
-                    Utils.CoroutineUtils.runIOTask({
-                        users.forEach { userJson ->
-                            val userList = Utils.DataHolder.toModelUserList(userJson, images)
-                            val success = Utils.DataHolder.rankDB.rankUserDao().insertAll(userList)
-                                .map { it != -1L }
-                            userList.filterIndexed { index, _ -> !success[index] }
-                                .forEach { Utils.DataHolder.ImageStorage.delete(it.image.id) }
-                        }
-                        comments.forEach { commentJson ->
-                            val commentList =
-                                Utils.DataHolder.toModelItemCommentList(commentJson, images)
-                            Utils.DataHolder.rankDB.rankCommentDao().insertAll(commentList)
-                        }
-                    }) {}
-                    return filteredList
+            }
+            Utils.DataHolder.toModelRankItemList(json, images)?.let { list ->
+                val success = try {
+                    Utils.DataHolder.rankDB.rankItemDao().insertAll(list).map { it != -1L }
+                } catch (ignore : Exception) {
+                    BooleanArray(list.size) { false }.toList()
                 }
+                val (successList, failedList) = list.partitionIndexed { index, _ -> success[index] }
+                val filteredList = successList.sortedByDescending { it.score }
+                Utils.CoroutineUtils.runIOTask({
+                    users.tryForEach { userJson ->
+                        val userList = Utils.DataHolder.toModelUserList(userJson, images)
+                        val success = try {
+                            Utils.DataHolder.rankDB.rankUserDao().insertAll(userList).map { it != -1L }
+                        } catch (ignore : Exception) {
+                            BooleanArray(userList.size) { false }.toList()
+                        }
+                        userList
+                            .filterIndexed { index, _ -> !success[index] }
+                            .tryForEach { Utils.DataHolder.ImageStorage.delete(it.image.id) }
+                    }
+                }) {}
+                Utils.CoroutineUtils.runIOTask({
+                    comments.tryForEach { commentJson ->
+                        val commentList =
+                            Utils.DataHolder.toModelItemCommentList(commentJson, images)
+                        Utils.DataHolder.rankDB.rankCommentDao().insertAll(commentList)
+                    }
+                }) {}
+                Utils.CoroutineUtils.runIOTask({
+                    failedList.tryForEach { Utils.DataHolder.ImageStorage.delete(it.image.id) }
+                }) {}
+                return filteredList
             }
             return listOf()
         }
@@ -136,34 +144,11 @@ object Utils {
             val filter: (RankItemImage) -> Boolean = {
                 it.id != -1L && it.image != Uri.EMPTY
             }
-            FileOutputStream(file).use { fos ->
-                ZipOutputStream(fos).use { zos ->
-                    data.forEach {
-                        if (filter(it.image)) {
-                            val id = it.image.id
-                            val uri = it.image.image
-                            app.contentResolver.openInputStream(uri)?.use {
-                                val zipEntry = ZipEntry("$id")
-                                zipEntry.comment = "$id"
-                                zos.putNextEntry(zipEntry)
-                                zos.write(it.readBytes())
-                                zos.closeEntry()
-                            }
-                        }
-                        val commentList =
-                            Utils.DataHolder.rankDB.rankCommentDao().getAllComment(it.itemName)
-                        val commentJson = Utils.DataHolder.modelItemCommentJson(commentList)
-
-                        val zipEntry = ZipEntry("comment/${it.itemName}.comment")
-                        zipEntry.comment = "comment/${it.itemName}.comment"
-                        zos.putNextEntry(zipEntry)
-                        zos.write(commentJson.encodeToByteArray())
-                        zos.closeEntry()
-                    }
-                    val userList = Utils.DataHolder.rankDB.rankUserDao().getAllUser()
-                    userList.filter { filter(it.image) }.forEach { user ->
-                        val id = user.image.id
-                        val uri = user.image.image
+            ZipOutputStream( FileOutputStream(file)).use { zos->
+                data.forEach {
+                    if (filter(it.image)) {
+                        val id = it.image.id
+                        val uri = it.image.image
                         app.contentResolver.openInputStream(uri)?.use {
                             val zipEntry = ZipEntry("$id")
                             zipEntry.comment = "$id"
@@ -172,15 +157,36 @@ object Utils {
                             zos.closeEntry()
                         }
                     }
+                    val commentList =
+                        Utils.DataHolder.rankDB.rankCommentDao().getAllComment(it.itemName)
+                    val commentJson = Utils.DataHolder.modelItemCommentJson(commentList)
 
-                    zos.putNextEntry(ZipEntry("$rankName.user"))
-                    zos.write(Utils.DataHolder.modelUser2Json(userList).encodeToByteArray())
-                    zos.closeEntry()
-
-                    zos.putNextEntry(ZipEntry("$rankName.json"))
-                    zos.write(json.encodeToByteArray())
+                    val zipEntry = ZipEntry("comment/${it.itemName}.comment")
+                    zipEntry.comment = "comment/${it.itemName}.comment"
+                    zos.putNextEntry(zipEntry)
+                    zos.write(commentJson.encodeToByteArray())
                     zos.closeEntry()
                 }
+                val userList = Utils.DataHolder.rankDB.rankUserDao().getAllUser()
+                userList.filter { filter(it.image) }.forEach { user ->
+                    val id = user.image.id
+                    val uri = user.image.image
+                    app.contentResolver.openInputStream(uri)?.use {
+                        val zipEntry = ZipEntry("$id")
+                        zipEntry.comment = "$id"
+                        zos.putNextEntry(zipEntry)
+                        zos.write(it.readBytes())
+                        zos.closeEntry()
+                    }
+                }
+
+                zos.putNextEntry(ZipEntry("$rankName.user"))
+                zos.write(Utils.DataHolder.modelUser2Json(userList).encodeToByteArray())
+                zos.closeEntry()
+
+                zos.putNextEntry(ZipEntry("$rankName.json"))
+                zos.write(json.encodeToByteArray())
+                zos.closeEntry()
             }
             return FileProvider.getUriForFile(
                 app,

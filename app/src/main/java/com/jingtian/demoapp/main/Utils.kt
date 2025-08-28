@@ -534,7 +534,7 @@ object StorageUtil {
     }
 }
 
-fun <T, R : Comparable<R>> mergeSortedListsByDescending(list1: List<T>, list2: List<T>, selector: (T) -> R): List<T> {
+inline fun <T, R : Comparable<R>> mergeSortedListsByDescending(list1: List<T>, list2: List<T>, selector: (T) -> R): List<T> {
     val result = mutableListOf<T>()
     var i = 0
     var j = 0
@@ -568,4 +568,27 @@ fun <T, R : Comparable<R>> mergeSortedListsByDescending(list1: List<T>, list2: L
     }
 
     return result
+}
+
+inline fun <T> Iterable<T>.partitionIndexed(predicate: (Int, T) -> Boolean): Pair<List<T>, List<T>> {
+    val first = ArrayList<T>()
+    val second = ArrayList<T>()
+    for ((index, t) in withIndex()) {
+        if (predicate(index, t)) {
+            first.add(t)
+        } else {
+            second.add(t)
+        }
+    }
+    return first to second
+}
+
+inline fun <T> Iterable<T>.tryForEach(action: (T) -> Unit) {
+    forEach {
+        try {
+            action(it)
+        } catch (ignore : Exception) {
+
+        }
+    }
 }
