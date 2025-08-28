@@ -36,8 +36,10 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
+import java.io.InputStream
 import java.nio.file.Path
 import java.util.concurrent.Callable
 import java.util.zip.ZipEntry
@@ -48,20 +50,37 @@ import kotlin.math.abs
 
 object Utils {
 
+    fun InputStream.readAllSequence(size: Int = DEFAULT_BUFFER_SIZE) = sequence<ByteArray> {
+        var byteArray = readNBytes(size)
+        while (byteArray.isNotEmpty()) {
+            yield(byteArray)
+            byteArray = readNBytes(size)
+        }
+    }
+
+    fun Sequence<ByteArray>.merge(): ByteArray {
+        ByteArrayOutputStream().use { bos->
+            for (bytes in this) {
+                bos.write(bytes)
+            }
+            return bos.toByteArray()
+        }
+    }
+
     object Share {
         fun readShareRankItemList(uri: Uri) : List<ModelRankItem> {
             app.contentResolver.openInputStream(uri)?.use { `is`->
                 var json: String = ""
-                val images: HashMap<Long, ByteArray> = HashMap()
+                val images: HashMap<Long, RankItemImage> = HashMap()
                 ZipInputStream(`is`).use { zis->
                     var nextEntry = zis.nextEntry
                     while (nextEntry != null) {
-                        val bytes = zis.readBytes()
+                        val bytes = zis.readAllSequence()
                         if (nextEntry.name.endsWith(".json")) {
-                            json = bytes.decodeToString()
+                            json = bytes.merge().decodeToString()
                         } else {
                             val id = nextEntry.name.toLong()
-                            images[id] = bytes
+                            images[id] = Utils.DataHolder.ImageStorage.storeImage(bytes.merge())
                         }
                         zis.closeEntry()
                         nextEntry = zis.nextEntry
@@ -261,7 +280,7 @@ object Utils {
             }
         }
 
-        class UriConverter(private val images: HashMap<Long, ByteArray>) : TypeAdapter<RankItemImage>() {
+        class UriConverter(private val images: HashMap<Long, RankItemImage>) : TypeAdapter<RankItemImage>() {
             override fun write(out: JsonWriter, value: RankItemImage) {
                 out.value(value.id)
             }
@@ -269,7 +288,7 @@ object Utils {
             override fun read(`in`: JsonReader?): RankItemImage {
                 `in`?.nextLong()?.let { id->
                     images[id]?.let { image->
-                        return ImageStorage.storeImage(image)
+                        return image
                     }
                 }
                 return RankItemImage()
@@ -299,7 +318,7 @@ object Utils {
             }
         }
 
-        fun toModelRankItemList(json: String, images: HashMap<Long, ByteArray>): List<ModelRankItem>? {
+        fun toModelRankItemList(json: String, images: HashMap<Long, RankItemImage>): List<ModelRankItem>? {
             return try {
                 GsonBuilder()
                     .registerTypeAdapter(RankItemImage::class.java, UriConverter(images))
