@@ -56,10 +56,12 @@ class RankListHolder private constructor(private val binding: ItemRankListBindin
             Utils.CoroutineUtils.runIOTask({
                 Utils.Share.readShareRankItemList(uri)
             }) { list->
-                lifecycleScope.launch {
-                    rankItemAdapter.setDataList(mergeSortedListsByDescending(list, rankItemAdapter.getDataList()) {
-                        it.score
-                    })
+                if (list.isNotEmpty()) {
+                    lifecycleScope.launch {
+                        rankItemAdapter.setDataList(mergeSortedListsByDescending(list, rankItemAdapter.getDataList()) {
+                            it.score
+                        })
+                    }
                 }
             }
 

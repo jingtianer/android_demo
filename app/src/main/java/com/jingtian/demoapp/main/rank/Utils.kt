@@ -21,6 +21,7 @@ import com.jingtian.demoapp.R
 import com.jingtian.demoapp.main.StorageUtil
 import com.jingtian.demoapp.main.app
 import com.jingtian.demoapp.main.dp
+import com.jingtian.demoapp.main.rank.Utils.DataHolder.ImageStorage.safeToFile
 import com.jingtian.demoapp.main.rank.dao.RankDatabase
 import com.jingtian.demoapp.main.rank.model.DateTypeConverter
 import com.jingtian.demoapp.main.rank.model.ModelItemComment
@@ -52,13 +53,13 @@ import kotlin.math.abs
 object Utils {
 
     object Share {
-        fun readShareRankItemList(uri: Uri) : List<ModelRankItem> {
-            app.contentResolver.openInputStream(uri)?.use { `is`->
+        fun readShareRankItemList(uri: Uri): List<ModelRankItem> {
+            app.contentResolver.openInputStream(uri)?.use { `is` ->
                 var json: String = ""
                 val images: HashMap<Long, RankItemImage> = HashMap()
                 val comments = mutableListOf<String>()
                 val users = mutableListOf<String>()
-                ZipInputStream(`is`).use { zis->
+                ZipInputStream(`is`).use { zis ->
                     var nextEntry = zis.nextEntry
                     while (nextEntry != null) {
                         if (nextEntry.name.endsWith(".json")) {
@@ -75,18 +76,28 @@ object Utils {
                         nextEntry = zis.nextEntry
                     }
                 }
-                Utils.DataHolder.toModelRankItemList(json, images)?.let { list->
-                    val success = Utils.DataHolder.rankDB.rankItemDao().insertAll(list).map { it != -1L }
+                Utils.DataHolder.toModelRankItemList(json, images)?.let { list ->
+                    val success =
+                        Utils.DataHolder.rankDB.rankItemDao().insertAll(list).map { it != -1L }
                     val filteredList = list.filterIndexed { index, _ ->
                         success[index]
-                    }.sortedByDescending  { it.score }
+                    }.sortedByDescending { it.score }
+                    list.filterIndexed { index, _ ->
+                        !success[index]
+                    }.forEach {
+                        Utils.DataHolder.ImageStorage.delete(it.image.id)
+                    }
                     Utils.CoroutineUtils.runIOTask({
-                        users.forEach { userJson->
+                        users.forEach { userJson ->
                             val userList = Utils.DataHolder.toModelUserList(userJson, images)
-                            Utils.DataHolder.rankDB.rankUserDao().insertAll(userList)
+                            val success = Utils.DataHolder.rankDB.rankUserDao().insertAll(userList)
+                                .map { it != -1L }
+                            userList.filterIndexed { index, _ -> !success[index] }
+                                .forEach { Utils.DataHolder.ImageStorage.delete(it.image.id) }
                         }
-                        comments.forEach { commentJson->
-                            val commentList = Utils.DataHolder.toModelItemCommentList(commentJson, images)
+                        comments.forEach { commentJson ->
+                            val commentList =
+                                Utils.DataHolder.toModelItemCommentList(commentJson, images)
                             Utils.DataHolder.rankDB.rankCommentDao().insertAll(commentList)
                         }
                     }) {}
@@ -109,10 +120,10 @@ object Utils {
                 shareDir.listFiles()?.forEach {
                     it.delete()
                 }
-            }){}
+            }) {}
         }
 
-        fun startShare(rankName: String, data: List<ModelRankItem>) : Uri {
+        fun startShare(rankName: String, data: List<ModelRankItem>): Uri {
             val shareDir = File(app.filesDir, "share")
             if (!shareDir.exists()) {
                 shareDir.mkdir()
@@ -122,11 +133,11 @@ object Utils {
             }
             val file = File.createTempFile("share-${rankName}", ".zip", shareDir)
             val json = Utils.DataHolder.modelRankItem2Json(data)
-            val filter: (RankItemImage)->Boolean = {
+            val filter: (RankItemImage) -> Boolean = {
                 it.id != -1L && it.image != Uri.EMPTY
             }
-            FileOutputStream(file).use { fos->
-                ZipOutputStream(fos).use { zos->
+            FileOutputStream(file).use { fos ->
+                ZipOutputStream(fos).use { zos ->
                     data.forEach {
                         if (filter(it.image)) {
                             val id = it.image.id
@@ -139,7 +150,8 @@ object Utils {
                                 zos.closeEntry()
                             }
                         }
-                        val commentList = Utils.DataHolder.rankDB.rankCommentDao().getAllComment(it.itemName)
+                        val commentList =
+                            Utils.DataHolder.rankDB.rankCommentDao().getAllComment(it.itemName)
                         val commentJson = Utils.DataHolder.modelItemCommentJson(commentList)
 
                         val zipEntry = ZipEntry("comment/${it.itemName}.comment")
@@ -149,7 +161,7 @@ object Utils {
                         zos.closeEntry()
                     }
                     val userList = Utils.DataHolder.rankDB.rankUserDao().getAllUser()
-                    userList.filter { filter(it.image) }.forEach { user->
+                    userList.filter { filter(it.image) }.forEach { user ->
                         val id = user.image.id
                         val uri = user.image.image
                         app.contentResolver.openInputStream(uri)?.use {
@@ -177,6 +189,7 @@ object Utils {
             )
         }
     }
+
     object DataHolder {
 
         var userName by StorageUtil.StorageNullableString(
@@ -230,7 +243,7 @@ object Utils {
                 }
             }
 
-            private fun Uri.safeToFile(): File? {
+            fun Uri.safeToFile(): File? {
                 return if ("file".equals(scheme, ignoreCase = true)) {
                     path?.let { File(it) }
                 } else {
@@ -242,7 +255,7 @@ object Utils {
                 if (uri == Uri.EMPTY) {
                     return -1
                 }
-                val id  = if (oldId >= this.id || oldId < 0) {
+                val id = if (oldId >= this.id || oldId < 0) {
                     this.id++
                 } else {
                     oldId
@@ -290,7 +303,11 @@ object Utils {
                 return File(storeDir, RANK_IMAGE_PREFIX + id)
             }
 
-            private fun innerStoreImage(id: Long, input: InputStream, storageFile: File): RankItemImage {
+            private fun innerStoreImage(
+                id: Long,
+                input: InputStream,
+                storageFile: File
+            ): RankItemImage {
                 storageFile.outputStream().use { output ->
                     input.copyTo(output)
                 }
@@ -300,14 +317,15 @@ object Utils {
             }
         }
 
-        class UriConverter(private val images: HashMap<Long, RankItemImage>) : TypeAdapter<RankItemImage>() {
+        class UriConverter(private val images: HashMap<Long, RankItemImage>) :
+            TypeAdapter<RankItemImage>() {
             override fun write(out: JsonWriter, value: RankItemImage) {
                 out.value(value.id)
             }
 
             override fun read(`in`: JsonReader?): RankItemImage {
-                `in`?.nextLong()?.let { id->
-                    images[id]?.let { image->
+                `in`?.nextLong()?.let { id ->
+                    images[id]?.let { image ->
                         return image
                     }
                 }
@@ -315,7 +333,7 @@ object Utils {
             }
         }
 
-        private val rankItemGson: (HashMap<Long, RankItemImage>) -> Gson = { images->
+        private val rankItemGson: (HashMap<Long, RankItemImage>) -> Gson = { images ->
             GsonBuilder()
                 .registerTypeAdapter(Date::class.java, DateTypeConverter())
                 .registerTypeAdapter(RankItemImage::class.java, UriConverter(images))
@@ -331,7 +349,10 @@ object Utils {
             return rankItemGson(hashMapOf()).toJson(any)
         }
 
-        fun toModelUserList(any: String, images: HashMap<Long, RankItemImage>): List<ModelRankUser> {
+        fun toModelUserList(
+            any: String,
+            images: HashMap<Long, RankItemImage>
+        ): List<ModelRankUser> {
             return rankItemGson(images).fromJson(any, modelRankUserListType.type)
         }
 
@@ -339,7 +360,10 @@ object Utils {
             return rankItemGson(hashMapOf()).toJson(any)
         }
 
-        fun toModelItemCommentList(any: String, images: HashMap<Long, RankItemImage>): List<ModelItemComment> {
+        fun toModelItemCommentList(
+            any: String,
+            images: HashMap<Long, RankItemImage>
+        ): List<ModelItemComment> {
             return rankItemGson(images).fromJson(any, modelRankItemCommentListType.type)
         }
 
@@ -359,9 +383,15 @@ object Utils {
             return rankItemGson(hashMapOf()).toJson(any)
         }
 
-        fun toModelRankItemList(json: String, images: HashMap<Long, RankItemImage>): List<ModelRankItem>? {
+        fun toModelRankItemList(
+            json: String,
+            images: HashMap<Long, RankItemImage>
+        ): List<ModelRankItem>? {
             return try {
-                rankItemGson(images).fromJson(json, modelRankItemListType.type) as List<ModelRankItem>
+                rankItemGson(images).fromJson(
+                    json,
+                    modelRankItemListType.type
+                ) as List<ModelRankItem>
             } catch (ignore: Exception) {
                 null
             }
@@ -453,7 +483,7 @@ object Utils {
     object CoroutineUtils {
         private val globalScope = CoroutineScope(Dispatchers.Main + Job())
 
-        fun <T> runIOTask(block: Callable<T>, callback: (T)-> Unit) {
+        fun <T> runIOTask(block: Callable<T>, callback: (T) -> Unit) {
             globalScope.launch {
                 val ret = withContext(Dispatchers.IO) {
                     block.call()
