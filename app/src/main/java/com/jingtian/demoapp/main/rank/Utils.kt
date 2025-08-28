@@ -23,6 +23,7 @@ import com.jingtian.demoapp.main.app
 import com.jingtian.demoapp.main.dp
 import com.jingtian.demoapp.main.rank.dao.RankDatabase
 import com.jingtian.demoapp.main.rank.model.DateTypeConverter
+import com.jingtian.demoapp.main.rank.model.ModelItemComment
 import com.jingtian.demoapp.main.rank.model.ModelRank
 import com.jingtian.demoapp.main.rank.model.ModelRankItem
 import com.jingtian.demoapp.main.rank.model.RankItemImage
@@ -41,6 +42,7 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
 import java.nio.file.Path
+import java.util.Date
 import java.util.concurrent.Callable
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
@@ -72,12 +74,19 @@ object Utils {
             app.contentResolver.openInputStream(uri)?.use { `is`->
                 var json: String = ""
                 val images: HashMap<Long, RankItemImage> = HashMap()
+                val comments = mutableListOf<List<ModelItemComment>>()
                 ZipInputStream(`is`).use { zis->
                     var nextEntry = zis.nextEntry
                     while (nextEntry != null) {
                         val bytes = zis.readAllSequence()
                         if (nextEntry.name.endsWith(".json")) {
                             json = bytes.merge().decodeToString()
+                        } else if (nextEntry.name.endsWith(".comment")) {
+                            comments.add(
+                                Utils.DataHolder.toModelItemCommentList(
+                                    bytes.merge().decodeToString()
+                                )
+                            )
                         } else {
                             val id = nextEntry.name.toLong()
                             images[id] = Utils.DataHolder.ImageStorage.storeImage(bytes.merge())
@@ -86,8 +95,20 @@ object Utils {
                         nextEntry = zis.nextEntry
                     }
                 }
-                Utils.DataHolder.toModelRankItemList(json, images)?.let {
-                    return it
+                Utils.DataHolder.toModelRankItemList(json, images)?.let { list->
+                    val success = Utils.DataHolder.rankDB.rankItemDao().insertAll(list).map { it != -1L }
+                    val filteredList = list.filterIndexed { index, _ ->
+                        success[index]
+                    }.sortedByDescending  { it.score }
+                    Utils.CoroutineUtils.runIOTask({
+                        comments.forEach { comment->
+                            comment.forEach {
+                                it.id = 0
+                            }
+                            Utils.DataHolder.rankDB.rankCommentDao().insertAll(comment)
+                        }
+                    }) {}
+                    return filteredList
                 }
             }
             return listOf()
@@ -131,6 +152,14 @@ object Utils {
                             zos.write(it.readBytes())
                             zos.closeEntry()
                         }
+                        val commentList = Utils.DataHolder.rankDB.rankCommentDao().getAllComment(it.itemName)
+                        val commentJson = Utils.DataHolder.modelItemCommentJson(commentList)
+
+                        val zipEntry = ZipEntry("comment/${it.itemName}.comment")
+                        zipEntry.comment = "comment/${it.itemName}.comment"
+                        zos.putNextEntry(zipEntry)
+                        zos.write(commentJson.encodeToByteArray())
+                        zos.closeEntry()
                     }
                     zos.putNextEntry(ZipEntry("$rankName.json"))
                     zos.write(json.encodeToByteArray())
@@ -299,9 +328,22 @@ object Utils {
 
         private val modelRankListType = object : TypeToken<List<ModelRank>>() {}
         private val modelRankItemListType = object : TypeToken<List<ModelRankItem>>() {}
+        private val modelRankItemCommentListType = object : TypeToken<List<ModelItemComment>>() {}
 
         fun modelRank2Json(any: List<ModelRank>): String {
             return rankItemGson.toJson(any)
+        }
+
+        fun modelItemCommentJson(any: List<ModelItemComment>): String {
+            return GsonBuilder()
+                .registerTypeAdapter(Date::class.java, DateTypeConverter())
+                .create().toJson(any)
+        }
+
+        fun toModelItemCommentList(any: String): List<ModelItemComment> {
+            return GsonBuilder()
+                .registerTypeAdapter(Date::class.java, DateTypeConverter())
+                .create().fromJson(any, modelRankItemCommentListType.type)
         }
 
         fun modelRankItem2Json(any: List<ModelRankItem>): String {

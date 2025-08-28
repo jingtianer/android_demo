@@ -8,6 +8,10 @@ import androidx.room.PrimaryKey
 import androidx.room.ProvidedTypeConverter
 import androidx.room.Relation
 import androidx.room.TypeConverter
+import com.google.gson.TypeAdapter
+import com.google.gson.stream.JsonReader
+import com.google.gson.stream.JsonWriter
+import com.jingtian.demoapp.main.rank.Utils
 import com.jingtian.demoapp.main.rank.dao.RankModelItemCommentDao
 import java.util.Date
 
@@ -32,7 +36,7 @@ data class ModelItemComment(
 )
 
 @ProvidedTypeConverter
-class DateTypeConverter {
+class DateTypeConverter : TypeAdapter<Date>() {
     @TypeConverter
     fun toDate(time: Long): Date {
         return Date(time)
@@ -41,6 +45,14 @@ class DateTypeConverter {
     @TypeConverter
     fun toString(date: Date): Long {
         return date.time
+    }
+
+    override fun write(out: JsonWriter, value: Date) {
+        out.value(value.time)
+    }
+
+    override fun read(`in`: JsonReader): Date {
+        return Date(`in`.nextLong())
     }
 }
 

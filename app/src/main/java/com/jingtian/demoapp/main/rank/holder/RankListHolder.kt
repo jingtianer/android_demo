@@ -52,11 +52,7 @@ class RankListHolder private constructor(private val binding: ItemRankListBindin
     private val documentCallback = object : BaseActivity.Companion.DocumentPickerCallback {
         override fun onDocumentCallback(uri: Uri) {
             Utils.CoroutineUtils.runIOTask({
-                val list = Utils.Share.readShareRankItemList(uri)
-                val success = Utils.DataHolder.rankDB.rankItemDao().insertAll(list).map { it != -1L }
-                list.filterIndexed { index, _ ->
-                    success[index]
-                }.sortedByDescending  { it.score }
+                Utils.Share.readShareRankItemList(uri)
             }) { list->
                 lifecycleScope.launch {
                     rankItemAdapter.setDataList(mergeSortedListsByDescending(list, rankItemAdapter.getDataList()) {
