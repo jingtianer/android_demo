@@ -19,6 +19,7 @@ import com.google.gson.reflect.TypeToken
 import com.google.gson.stream.JsonReader
 import com.google.gson.stream.JsonWriter
 import com.jingtian.demoapp.R
+import com.jingtian.demoapp.main.IOUtils
 import com.jingtian.demoapp.main.IOUtils.readAndBlock
 import com.jingtian.demoapp.main.IOUtils.writeInt
 import com.jingtian.demoapp.main.Quadruple
@@ -38,10 +39,12 @@ import com.jingtian.demoapp.main.rank.model.RankItemImageTypeConverter
 import com.jingtian.demoapp.main.rank.model.RankItemRankTypeConverter
 import com.jingtian.demoapp.main.tryForEach
 import com.jingtian.demoapp.main.widget.StarRateView
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.BufferedOutputStream
@@ -50,6 +53,10 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
+import java.io.OutputStreamWriter
+import java.io.RandomAccessFile
+import java.nio.MappedByteBuffer
+import java.nio.channels.FileChannel
 import java.util.Collections
 import java.util.Date
 import java.util.LinkedList
@@ -62,8 +69,10 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.Semaphore
+import java.util.concurrent.ThreadFactory
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.locks.Condition
@@ -126,7 +135,7 @@ object Utils {
                                 val blockIdHeap = PriorityQueue<Pair<Pair<Int, Int>, ByteArray>> { a, b->
                                     a.first.first - b.first.first
                                 }
-                                val bos = ByteArrayOutputStream()
+                                val bos = IOUtils.FastByteArrayOutputStream()
                                 var nextBlockId = 0
                                 var endBlockId = Int.MAX_VALUE
                                 while (poll != null) {
@@ -162,9 +171,8 @@ object Utils {
                                 }
                                 when(taskCode) {
                                     MaskReadImage, MaskReadUserImage -> {
-                                        ByteArrayInputStream(bos.toByteArray()).use {
-                                            imagesConcurrentHashMap[index] = Utils.DataHolder.ImageStorage.storeImage(it)
-                                        }
+                                        val imageBytes = bos.toByteArray()
+                                        imagesConcurrentHashMap[index] = Utils.DataHolder.ImageStorage.storeImage(imageBytes)
                                     }
                                     MaskReadComment -> {
                                         comments.add(bos.toByteArray().decodeToString())
@@ -196,26 +204,6 @@ object Utils {
             val images = HashMap<Long, RankItemImage>().apply {
                 putAll(imagesConcurrentHashMap)
             }
-            Utils.CoroutineUtils.runIOTask({
-                processingRead.incrementAndGet()
-                users.tryForEach { userJson ->
-                    val userList = Utils.DataHolder.toModelUserList(userJson, images)
-                    val success = try {
-                        Utils.DataHolder.rankDB.rankUserDao().insertAll(userList).map { it != -1L }
-                    } catch (ignore : Exception) {
-                        BooleanArray(userList.size) { false }.toList()
-                    }
-                    userList
-                        .filterIndexed { index, _ -> !success[index] }
-                        .tryForEach { Utils.DataHolder.ImageStorage.delete(it.image.id) }
-                }
-                comments.tryForEach { commentJson ->
-                    val commentList =
-                        Utils.DataHolder.toModelItemCommentList(commentJson, images)
-                    Utils.DataHolder.rankDB.rankCommentDao().insertAll(commentList)
-                }
-                processingRead.decrementAndGet()
-            }) {}
             jsons.poll()?.let { json->
                 Utils.DataHolder.toModelRankItemList(json, images)?.let { list ->
                     val success = try {
@@ -225,6 +213,26 @@ object Utils {
                     }
                     val (successList, failedList) = list.partitionIndexed { index, _ -> success[index] }
                     val filteredList = successList.sortedByDescending { it.score }
+                    Utils.CoroutineUtils.runIOTask({
+                        processingRead.incrementAndGet()
+                        users.tryForEach { userJson ->
+                            val userList = Utils.DataHolder.toModelUserList(userJson, images)
+                            val success = try {
+                                Utils.DataHolder.rankDB.rankUserDao().insertAll(userList).map { it != -1L }
+                            } catch (ignore : Exception) {
+                                BooleanArray(userList.size) { false }.toList()
+                            }
+                            userList
+                                .filterIndexed { index, _ -> !success[index] }
+                                .tryForEach { Utils.DataHolder.ImageStorage.delete(it.image.id) }
+                        }
+                        comments.tryForEach { commentJson ->
+                            val commentList =
+                                Utils.DataHolder.toModelItemCommentList(commentJson, images)
+                            Utils.DataHolder.rankDB.rankCommentDao().insertAll(commentList)
+                        }
+                        processingRead.decrementAndGet()
+                    }) {}
                     Utils.CoroutineUtils.runIOTask({
                         failedList.tryForEach { Utils.DataHolder.ImageStorage.delete(it.image.id) }
                     }) {}
@@ -449,13 +457,26 @@ object Utils {
                 return id
             }
 
-            fun storeImage(input: InputStream): RankItemImage {
+            fun storeImage(imageBytes: ByteArray): RankItemImage {
                 val id = synchronized(this) {
                     this.id++
                 }
+
                 val storageFile = getStoreFile(id)
                 storageFile.delete()
-                return innerStoreImage(id, input, storageFile)
+                val raf = RandomAccessFile(storageFile, "rw")
+                val channel = raf.channel
+                val fileSize = imageBytes.size.toLong()
+                val mappedBuffer: MappedByteBuffer = channel.map(
+                    FileChannel.MapMode.READ_WRITE,
+                    0,
+                    fileSize
+                )
+                mappedBuffer.put(imageBytes)
+                Utils.CoroutineUtils.runIOTaskLowPriority({
+                    raf.use { }
+                })
+                return RankItemImage(id, storageFile.toUri())
             }
 
             private fun getStoreFile(id: Long): File {
@@ -648,6 +669,31 @@ object Utils {
 
     object CoroutineUtils {
         private val globalScope = CoroutineScope(Dispatchers.Main + Job())
+
+        class LowPriorityThreadFactory : ThreadFactory {
+            private val group = ThreadGroup("LowPriorityGroup")
+
+            override fun newThread(r: Runnable): Thread {
+                val thread = Thread(group, r)
+                thread.priority = Thread.MIN_PRIORITY
+                thread.isDaemon = true
+                return thread
+            }
+        }
+
+        private val lowPriorityDispatcher: CoroutineDispatcher = Executors.newFixedThreadPool(2, LowPriorityThreadFactory())
+            .asCoroutineDispatcher()
+
+        fun <T> runIOTaskLowPriority(block: Callable<T>, callback: (T) -> Unit = {}): Job {
+            return globalScope.launch {
+                val ret = withContext(lowPriorityDispatcher) {
+                    block.call()
+                }
+                withContext(Dispatchers.Main) {
+                    callback.invoke(ret)
+                }
+            }
+        }
 
         fun <T> runIOTask(block: Callable<T>, callback: (T) -> Unit = {}): Job {
             return globalScope.launch {

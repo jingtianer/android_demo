@@ -22,6 +22,7 @@ import io.reactivex.Observable
 import io.reactivex.ObservableEmitter
 import io.reactivex.ObservableOnSubscribe
 import java.io.BufferedInputStream
+import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
@@ -636,6 +637,12 @@ object IOUtils {
             n += count
         }
         return n
+    }
+
+    class FastByteArrayOutputStream : ByteArrayOutputStream() {
+        override fun toByteArray(): ByteArray {
+            return this.buf
+        }
     }
 
     fun ContentResolver.openBufferedInputStream(uri: Uri, size: Int = DEFAULT_BUFFER_SIZE): BufferedInputStream? = openInputStream(uri)?.let { BufferedInputStream(it, size) }
