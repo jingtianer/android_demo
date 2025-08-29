@@ -18,12 +18,14 @@ import com.google.gson.reflect.TypeToken
 import com.google.gson.stream.JsonReader
 import com.google.gson.stream.JsonWriter
 import com.jingtian.demoapp.R
+import com.jingtian.demoapp.main.IOUtils.openBufferedInputStream
+import com.jingtian.demoapp.main.IOUtils.readAndBlock
 import com.jingtian.demoapp.main.StorageUtil
+import com.jingtian.demoapp.main.TimeTracer
 import com.jingtian.demoapp.main.app
 import com.jingtian.demoapp.main.dp
 import com.jingtian.demoapp.main.partitionIndexed
 import com.jingtian.demoapp.main.rank.Utils.CoroutineUtils.ioProducer
-import com.jingtian.demoapp.main.rank.Utils.DataHolder.ImageStorage.safeToFile
 import com.jingtian.demoapp.main.rank.dao.RankDatabase
 import com.jingtian.demoapp.main.rank.model.DateTypeConverter
 import com.jingtian.demoapp.main.rank.model.ModelItemComment
@@ -39,10 +41,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.Runnable
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.ByteArrayOutputStream
+import java.io.BufferedOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
@@ -136,7 +137,18 @@ object Utils {
             }) {}
         }
 
+        private const val MaskReadImage: Byte = 1
+        private const val MaskReadComment: Byte = 2
+        private const val MaskReadUserImage: Byte = 3
+        private const val MaskReadUserJson: Byte = 4
+        private const val MaskReadRankJson: Byte = 5
         fun startShare(rankName: String, data: List<ModelRankItem>): Uri {
+            return TimeTracer.trace("startShare") {
+                realStartShare(rankName, data)
+            }
+        }
+
+        private fun realStartShare(rankName: String, data: List<ModelRankItem>): Uri {
             val shareDir = File(app.filesDir, "share")
             if (!shareDir.exists()) {
                 shareDir.mkdir()
@@ -148,68 +160,106 @@ object Utils {
             val filter: (RankItemImage) -> Boolean = {
                 it.id != -1L && it.image != Uri.EMPTY
             }
-            val queue = Utils.CoroutineUtils.startProduce<ByteArray?>()
-            val maskReadImage = 0x40000000
-            val maskReadComment = 0x20000000
-            val maskReadUserImage = 0x10000000
-            val maskReadUserJson = 0x08000000
-            val maskReadRankJson = 0x04000000
+            val queue = Utils.CoroutineUtils.startProduce<Pair<Byte, Int>, Pair<Job, BlockingDeque<ByteArray>>>()
+            val jsonQueue = Utils.CoroutineUtils.startProduce<Pair<Byte, Int>, ByteArray>()
             data.forEachIndexed { index, item ->
-                queue.ioProducer(maskReadImage or index) {
-                    if (filter(item.image)) {
-                        app.contentResolver.openInputStream(item.image.image)?.use {
-                            it.readBytes()
+                queue.ioProducer(MaskReadImage to index) {
+                    val blockingQueue = LinkedBlockingDeque<ByteArray>(32)
+                    val job = Utils.CoroutineUtils.runIOTask({
+                        if (filter(item.image)) {
+                            app.contentResolver.openInputStream(item.image.image)?.use {
+                                val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                                var len = it.readAndBlock(buffer, 0, DEFAULT_BUFFER_SIZE)
+                                while (len >= 0) {
+                                    blockingQueue.putLast(buffer.copyOf())
+                                    len = it.read(buffer)
+                                }
+                            }
                         }
-                    } else {
-                        null
-                    }
+                        blockingQueue.putLast(byteArrayOf())
+                    })
+                    job to blockingQueue
                 }
             }
             data.forEachIndexed { index, item ->
-                queue.ioProducer(maskReadComment or index) {
+                jsonQueue.ioProducer(MaskReadComment to index) {
                     val commentList = Utils.DataHolder.rankDB.rankCommentDao().getAllComment(item.itemName)
                     val commentJson = Utils.DataHolder.modelItemCommentJson(commentList)
                     commentJson.encodeToByteArray()
                 }
             }
-            queue.ioProducer(maskReadRankJson or 1) {
+            jsonQueue.ioProducer(MaskReadRankJson to 1) {
                 Utils.DataHolder.modelRankItem2Json(data).encodeToByteArray()
             }
             val userList = Utils.DataHolder.rankDB.rankUserDao().getAllUser()
             userList.forEachIndexed { index, user ->
-                queue.ioProducer(maskReadUserImage or index) {
-                    if (filter(user.image)) {
-                        val uri = user.image.image
-                        app.contentResolver.openInputStream(uri)?.use {
-                            it.readBytes()
+                queue.ioProducer(MaskReadUserImage to index) {
+                    val blockingQueue = LinkedBlockingDeque<ByteArray>(32)
+                    val job = Utils.CoroutineUtils.runIOTask({
+                        if (filter(user.image)) {
+                            app.contentResolver.openBufferedInputStream(user.image.image)?.use {
+                                val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                                var len = it.readAndBlock(buffer, 0, DEFAULT_BUFFER_SIZE)
+                                while (len >= 0) {
+                                    blockingQueue.putLast(buffer.copyOf())
+                                    len = it.read(buffer)
+                                }
+                            }
                         }
-                    } else {
-                        null
-                    }
+                        blockingQueue.putLast(byteArrayOf())
+                    })
+                    job to blockingQueue
                 }
             }
-            queue.ioProducer(maskReadUserJson or 1) {
+            jsonQueue.ioProducer(MaskReadUserJson to 1) {
                 Utils.DataHolder.modelUser2Json(userList).encodeToByteArray()
             }
-            ZipOutputStream( FileOutputStream(file)).use { zos->
-                val hasMask: Int.(Int)-> Boolean = { mask-> (this and mask) == mask }
-                val removeMask: Int.(Int)-> Int = { mask-> this and mask.inv() }
+            ZipOutputStream(BufferedOutputStream(FileOutputStream(file))).use { zos->
                 while (queue.hasMore()) {
-                    val (taskCode, byteArray) = queue.poll()
-                    byteArray ?: continue
-                    when {
-                        taskCode.hasMask(maskReadImage) -> {
-                            val index = taskCode.removeMask(maskReadImage)
+                    val (key, jobTask) = queue.poll()
+                    val (taskCode, index) = key
+                    val (job, byteArrayQueue) = jobTask
+                    when (taskCode) {
+                        MaskReadImage -> {
                             val rankItem = data[index]
+                            if (!filter(rankItem.image)) {
+                                continue
+                            }
                             val id = rankItem.image.id
                             val zipEntry = ZipEntry("$id")
                             zipEntry.comment = "$id"
                             zos.putNextEntry(zipEntry)
-                            zos.write(byteArray)
+                            var byte = byteArrayQueue.takeFirst()
+                            while (byte.isNotEmpty()) {
+                                zos.write(byte)
+                                byte = byteArrayQueue.takeFirst()
+                            }
                             zos.closeEntry()
                         }
-                        taskCode.hasMask(maskReadComment) -> {
-                            val index = taskCode.removeMask(maskReadComment)
+                        MaskReadUserImage -> {
+                            val user = userList[index]
+                            if (!filter(user.image)) {
+                                continue
+                            }
+                            val id = user.image.id
+                            val zipEntry = ZipEntry("$id")
+                            zipEntry.comment = "$id"
+                            zos.putNextEntry(zipEntry)
+                            var byte = byteArrayQueue.takeFirst()
+                            while (byte.isNotEmpty()) {
+                                zos.write(byte)
+                                byte = byteArrayQueue.takeFirst()
+                            }
+                            zos.closeEntry()
+                        }
+                    }
+                }
+                while (jsonQueue.hasMore()) {
+                    val (key, byteArray) = jsonQueue.poll()
+                    val (taskCode, index) = key
+                    byteArray ?: continue
+                    when (taskCode) {
+                        MaskReadComment -> {
                             val rankItem = data[index]
                             val zipEntry = ZipEntry("comment/${rankItem.itemName}.comment")
                             zipEntry.comment = "comment/${rankItem.itemName}.comment"
@@ -217,22 +267,12 @@ object Utils {
                             zos.write(byteArray)
                             zos.closeEntry()
                         }
-                        taskCode.hasMask(maskReadUserImage) -> {
-                            val index = taskCode.removeMask(maskReadUserImage)
-                            val user = userList[index]
-                            val id = user.image.id
-                            val zipEntry = ZipEntry("$id")
-                            zipEntry.comment = "$id"
-                            zos.putNextEntry(zipEntry)
-                            zos.write(byteArray)
-                            zos.closeEntry()
-                        }
-                        taskCode.hasMask(maskReadUserJson) -> {
+                        MaskReadUserJson -> {
                             zos.putNextEntry(ZipEntry("$rankName.user"))
                             zos.write(byteArray)
                             zos.closeEntry()
                         }
-                        taskCode.hasMask(maskReadRankJson) -> {
+                        MaskReadRankJson -> {
                             zos.putNextEntry(ZipEntry("$rankName.json"))
                             zos.write(byteArray)
                             zos.closeEntry()
@@ -541,7 +581,7 @@ object Utils {
     object CoroutineUtils {
         private val globalScope = CoroutineScope(Dispatchers.Main + Job())
 
-        fun <T> runIOTask(block: Callable<T>, callback: (T) -> Unit): Job {
+        fun <T> runIOTask(block: Callable<T>, callback: (T) -> Unit = {}): Job {
             return globalScope.launch {
                 val ret = withContext(Dispatchers.IO) {
                     block.call()
@@ -552,12 +592,12 @@ object Utils {
             }
         }
 
-        class Producer<T>(capacity: Int) {
-            val queue = LinkedBlockingDeque<Pair<Int, T>>(capacity)
+        class Producer<K, T>(capacity: Int) {
+            val queue = LinkedBlockingDeque<Pair<K, T>>(capacity)
 
             val taskCnt = AtomicLong(0)
 
-            fun poll(): Pair<Int, T> {
+            fun poll(): Pair<K, T> {
                 return queue.takeFirst()
             }
 
@@ -566,13 +606,13 @@ object Utils {
             }
         }
 
-        fun <T> startProduce(capacity : Int = 1024) = Producer<T>(capacity)
+        fun <K, T> startProduce(capacity : Int = 1024) = Producer<K, T>(capacity)
 
-        fun <T> Producer<T>.producer(
-            taskCode: Int,
+        fun <K, T> Producer<K, T>.producer(
+            taskCode: K,
             context: CoroutineContext,
             block: () -> T
-        ): Producer<T> {
+        ): Producer<K, T> {
             taskCnt.incrementAndGet()
             globalScope.launch {
                 withContext(context) {
@@ -583,10 +623,10 @@ object Utils {
             return this
         }
 
-        fun <T> Producer<T>.ioProducer(
-            taskCode: Int,
+        fun <K, T> Producer<K, T>.ioProducer(
+            taskCode: K,
             block: () -> T
-        ): Producer<T> {
+        ): Producer<K, T> {
             return producer(taskCode,Dispatchers.IO, block)
         }
 

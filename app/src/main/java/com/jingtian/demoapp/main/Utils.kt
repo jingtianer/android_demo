@@ -1,12 +1,14 @@
 package com.jingtian.demoapp.main
 
-import android.app.Application
+import android.content.ContentResolver
 import android.content.Context
 import android.content.SharedPreferences
 import android.graphics.Color
+import android.net.Uri
 import android.os.SystemClock
 import android.text.TextPaint
 import android.util.DisplayMetrics
+import android.util.Log
 import android.util.TypedValue
 import android.view.MotionEvent
 import android.view.View
@@ -19,10 +21,15 @@ import com.jingtian.demoapp.main.base.BaseActivity
 import io.reactivex.Observable
 import io.reactivex.ObservableEmitter
 import io.reactivex.ObservableOnSubscribe
+import java.io.BufferedInputStream
+import java.io.IOException
+import java.io.InputStream
+import java.io.OutputStream
 import java.lang.reflect.Constructor
 import java.lang.reflect.Field
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
+import java.util.Objects
 import kotlin.properties.ReadWriteProperty
 import kotlin.reflect.KProperty
 
@@ -590,5 +597,55 @@ inline fun <T> Iterable<T>.tryForEach(action: (T) -> Unit) {
         } catch (ignore : Exception) {
 
         }
+    }
+}
+
+object IOUtils {
+    private val byteArray4 = ByteArray(4) { 0 }
+        get() {
+            field[0] = 0
+            field[1] = 0
+            field[2] = 0
+            field[3] = 0
+            return field
+        }
+
+    private fun Byte.shiftAndMask(n: Int, mask: Int): Int {
+        return (this.toInt() shl n) and mask
+    }
+
+    fun OutputStream.writeInt(i : Int) {
+        val bits = byteArrayOf(((i ushr 24) and 0xff).toByte(), ((i ushr 16) and 0xff).toByte(), ((i ushr 8) and 0xff).toByte(), ((i ushr 0) and 0xff).toByte())
+        write(bits)
+    }
+
+    fun InputStream.readInt() : Int {
+        val bits = byteArray4
+        read(bits, 0, 4)
+        return bits[0].shiftAndMask(24, 0xff000000u.toInt()) or bits[1].shiftAndMask(16, 0x00ff0000u.toInt()) or bits[2].shiftAndMask(8, 0x0000ff00u.toInt()) or bits[4].shiftAndMask(0, 0x000000ffu.toInt())
+    }
+
+    @Throws(IOException::class)
+    fun InputStream.readAndBlock(b: ByteArray, off: Int, len: Int): Int {
+        Objects.checkFromIndexSize(off, len, b.size)
+        var n = 0
+        while (n < len) {
+            val count: Int = read(b, off + n, len - n)
+            if (count < 0) break
+            n += count
+        }
+        return n
+    }
+
+    fun ContentResolver.openBufferedInputStream(uri: Uri, size: Int = DEFAULT_BUFFER_SIZE): BufferedInputStream? = openInputStream(uri)?.let { BufferedInputStream(it, size) }
+}
+
+object TimeTracer {
+    inline fun <T> trace(taskName: String, block: () -> T) : T {
+        val start = SystemClock.elapsedRealtime()
+        val retValue = block()
+        val elapsedTime = SystemClock.elapsedRealtime() - start
+        Log.d("TimeTracer", "trace: elapsedTime = $elapsedTime")
+        return retValue
     }
 }
