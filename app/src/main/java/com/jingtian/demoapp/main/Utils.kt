@@ -645,7 +645,7 @@ object TimeTracer {
         val start = SystemClock.elapsedRealtime()
         val retValue = block()
         val elapsedTime = SystemClock.elapsedRealtime() - start
-        Log.d("TimeTracer", "trace: elapsedTime = $elapsedTime")
+        Log.d("TimeTracer", "[$taskName] trace: elapsedTime = $elapsedTime")
         return retValue
     }
 }
