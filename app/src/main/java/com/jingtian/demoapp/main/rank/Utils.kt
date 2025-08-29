@@ -49,6 +49,7 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
+import java.util.Collections
 import java.util.Date
 import java.util.LinkedList
 import java.util.PriorityQueue
@@ -57,9 +58,12 @@ import java.util.TreeSet
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.Callable
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.Semaphore
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.locks.Condition
 import java.util.concurrent.locks.ReentrantLock
@@ -77,6 +81,8 @@ object Utils {
         private const val MaskReadUserImage: Byte = 3
         private const val MaskReadUserJson: Byte = 4
         private const val MaskReadRankJson: Byte = 5
+
+        private var processingRead = AtomicLong(0)
         private fun consumerMaskReadImage(images: ConcurrentHashMap<Long, RankItemImage>, blockingQueue: LinkedBlockingQueue<Any>) = CoroutineUtils.startProduce<Long, ByteArrayInputStream>(16).ioProducer { queue->
             var poll = queue.poll()
             while (poll != null) {
@@ -130,10 +136,14 @@ object Utils {
         }
 
         private fun realReadShareRankItemList(uri: Uri): List<ModelRankItem> {
-            val jsons = mutableListOf<String>()
+            if (processingRead.get() != 0L) {
+                return listOf()
+            }
+            processingRead.incrementAndGet()
+            val jsons = ConcurrentLinkedQueue<String>()
             val imagesConcurrentHashMap: ConcurrentHashMap<Long, RankItemImage> = ConcurrentHashMap()
-            val comments = mutableListOf<String>()
-            val users = mutableListOf<String>()
+            val comments = ConcurrentLinkedQueue<String>()
+            val users = ConcurrentLinkedQueue<String>()
             val producers = HashMap<Pair<Byte, Long>, CoroutineUtils.Producer<Int, ByteArray>>()
 //            val comsumer = CoroutineUtils.startProduce<Int, Int>(1024)
 //            val consumersInstance = HashMap<Byte, CoroutineUtils.Producer<Long, ByteArrayInputStream>>()
@@ -248,6 +258,7 @@ object Utils {
                 putAll(imagesConcurrentHashMap)
             }
             Utils.CoroutineUtils.runIOTask({
+                processingRead.incrementAndGet()
                 users.tryForEach { userJson ->
                     val userList = Utils.DataHolder.toModelUserList(userJson, images)
                     val success = try {
@@ -264,8 +275,9 @@ object Utils {
                         Utils.DataHolder.toModelItemCommentList(commentJson, images)
                     Utils.DataHolder.rankDB.rankCommentDao().insertAll(commentList)
                 }
+                processingRead.decrementAndGet()
             }) {}
-            jsons.getOrNull(0)?.let { json->
+            jsons.poll()?.let { json->
                 Utils.DataHolder.toModelRankItemList(json, images)?.let { list ->
                     val success = try {
                         Utils.DataHolder.rankDB.rankItemDao().insertAll(list).map { it != -1L }
@@ -277,9 +289,11 @@ object Utils {
                     Utils.CoroutineUtils.runIOTask({
                         failedList.tryForEach { Utils.DataHolder.ImageStorage.delete(it.image.id) }
                     }) {}
+                    processingRead.decrementAndGet()
                     return filteredList
                 }
             }
+            processingRead.decrementAndGet()
             return listOf()
         }
 
