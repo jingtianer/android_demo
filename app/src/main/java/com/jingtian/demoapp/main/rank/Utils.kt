@@ -19,9 +19,7 @@ import com.google.gson.reflect.TypeToken
 import com.google.gson.stream.JsonReader
 import com.google.gson.stream.JsonWriter
 import com.jingtian.demoapp.R
-import com.jingtian.demoapp.main.IOUtils
 import com.jingtian.demoapp.main.IOUtils.readAndBlock
-import com.jingtian.demoapp.main.IOUtils.writeInt
 import com.jingtian.demoapp.main.Quadruple
 import com.jingtian.demoapp.main.StorageUtil
 import com.jingtian.demoapp.main.TimeTracer
@@ -47,33 +45,26 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
-import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.InputStream
+import java.io.InputStreamReader
+import java.io.OutputStream
 import java.io.OutputStreamWriter
 import java.io.RandomAccessFile
-import java.nio.MappedByteBuffer
-import java.nio.channels.FileChannel
-import java.util.Collections
+import java.nio.channels.Channels
 import java.util.Date
 import java.util.LinkedList
 import java.util.PriorityQueue
-import java.util.TreeMap
-import java.util.TreeSet
-import java.util.concurrent.BlockingQueue
 import java.util.concurrent.Callable
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
-import java.util.concurrent.CopyOnWriteArrayList
-import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.Semaphore
 import java.util.concurrent.ThreadFactory
-import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.locks.Condition
 import java.util.concurrent.locks.ReentrantLock
@@ -105,10 +96,10 @@ object Utils {
                 return listOf()
             }
             processingRead.incrementAndGet()
-            val jsons = ConcurrentLinkedQueue<String>()
+            val jsons = ConcurrentLinkedQueue<File>()
             val imagesConcurrentHashMap: ConcurrentHashMap<Long, RankItemImage> = ConcurrentHashMap()
-            val comments = ConcurrentLinkedQueue<String>()
-            val users = ConcurrentLinkedQueue<String>()
+            val comments = ConcurrentLinkedQueue<File>()
+            val users = ConcurrentLinkedQueue<File>()
             val producers = HashMap<Pair<Byte, Long>, CoroutineUtils.Producer<Pair<Int, Int>, ByteArray>>()
             val blockingQueue = LinkedBlockingQueue<Any>()
             app.contentResolver.openInputStream(uri)?.let { `is` ->
@@ -130,65 +121,71 @@ object Utils {
                             continue
                         }
                         val producer = producers.getOrPut(taskCode to index) {
-                            Utils.CoroutineUtils.startProduce<Pair<Int, Int>, ByteArray>(16).ioProducer { queue->
-                                var poll = queue.poll()
-                                val blockIdHeap = PriorityQueue<Pair<Pair<Int, Int>, ByteArray>> { a, b->
-                                    a.first.first - b.first.first
+                            Utils.CoroutineUtils.buildProducer<Pair<Int, Int>, ByteArray>(16).ioProducer { queue->
+                                val (file, newIndex) = if(taskCode == MaskReadImage || taskCode == MaskReadUserImage) {
+                                    Utils.DataHolder.ImageStorage.storeImage()
+                                } else {
+                                    File.createTempFile("tmp-read", ".cache", app.filesDir) to index
                                 }
-                                val bos = IOUtils.FastByteArrayOutputStream()
-                                var nextBlockId = 0
-                                var endBlockId = Int.MAX_VALUE
-                                while (poll != null) {
-                                    val (pollInfo, byteArray) = poll
-                                    val (blockId, end) = pollInfo
-                                    if (end == 1) {
-                                        endBlockId = blockId
+                                FileOutputStream(file).use { bos->
+                                    var poll = queue.poll()
+                                    val blockIdHeap = PriorityQueue<Pair<Pair<Int, Int>, ByteArray>> { a, b->
+                                        a.first.first - b.first.first
                                     }
-                                    if (blockId == nextBlockId) {
-                                        bos.write(byteArray)
-                                        nextBlockId++
-                                        var peek = blockIdHeap.peek()
-                                        while (peek != null && peek.first.first == nextBlockId) {
-                                            blockIdHeap.poll()
-                                            bos.write(peek.second)
-                                            nextBlockId++
-                                            peek = blockIdHeap.peek()
+//                                    val bos = Channels.newOutputStream(raf.channel)
+                                    var nextBlockId = 0
+                                    var endBlockId = Int.MAX_VALUE
+                                    while (poll != null) {
+                                        val (pollInfo, byteArray) = poll
+                                        val (blockId, end) = pollInfo
+                                        if (end == 1) {
+                                            endBlockId = blockId
                                         }
-                                    } else {
-                                        blockIdHeap.add(poll)
+                                        if (blockId == nextBlockId) {
+                                            bos.write(byteArray)
+                                            nextBlockId++
+                                            var peek = blockIdHeap.peek()
+                                            while (peek != null && peek.first.first == nextBlockId) {
+                                                blockIdHeap.poll()
+                                                bos.write(peek.second)
+                                                nextBlockId++
+                                                peek = blockIdHeap.peek()
+                                            }
+                                        } else {
+                                            blockIdHeap.add(poll)
+                                        }
+                                        if (nextBlockId >= endBlockId) {
+                                            break
+                                        }
+                                        poll = queue.poll()
                                     }
-                                    if (nextBlockId >= endBlockId) {
-                                        break
+                                    var peek = blockIdHeap.peek()
+                                    while (peek != null && peek.first.first == nextBlockId) {
+                                        blockIdHeap.poll()
+                                        bos.write(peek.second)
+                                        nextBlockId++
+                                        peek = blockIdHeap.peek()
                                     }
-                                    poll = queue.poll()
-                                }
-                                var peek = blockIdHeap.peek()
-                                while (peek != null && peek.first.first == nextBlockId) {
-                                    blockIdHeap.poll()
-                                    bos.write(peek.second)
-                                    nextBlockId++
-                                    peek = blockIdHeap.peek()
                                 }
                                 when(taskCode) {
                                     MaskReadImage, MaskReadUserImage -> {
-                                        val imageBytes = bos.toByteArray()
-                                        imagesConcurrentHashMap[index] = Utils.DataHolder.ImageStorage.storeImage(imageBytes)
+                                        imagesConcurrentHashMap[index] = RankItemImage(newIndex, file.toUri())
                                     }
                                     MaskReadComment -> {
-                                        comments.add(bos.toByteArray().decodeToString())
+                                        comments.add(file)
                                     }
                                     MaskReadUserJson -> {
-                                        users.add(bos.toByteArray().decodeToString())
+                                        users.add(file)
                                     }
                                     MaskReadRankJson -> {
-                                        jsons.add(bos.toByteArray().decodeToString())
+                                        jsons.add(file)
                                     }
+                                    else -> {}
                                 }
                                 blockingQueue.offer(Any())
                             }.build()
                         }
                         producer.offer(blockIndex to end, zis.readBytes())
-                        Log.d("Producer", "readShareRankItemList: offer producer $taskCode $index $blockIndex")
                         zis.closeEntry()
                         nextEntry = zis.nextEntry
                     }
@@ -204,19 +201,20 @@ object Utils {
             val images = HashMap<Long, RankItemImage>().apply {
                 putAll(imagesConcurrentHashMap)
             }
-            jsons.poll()?.let { json->
-                Utils.DataHolder.toModelRankItemList(json, images)?.let { list ->
+            val filteredList: MutableList<ModelRankItem> = mutableListOf()
+            jsons.forEach { json->
+                Utils.DataHolder.toModelRankItemList(FileInputStream(json), images)?.let { list ->
                     val success = try {
                         Utils.DataHolder.rankDB.rankItemDao().insertAll(list).map { it != -1L }
                     } catch (ignore : Exception) {
                         BooleanArray(list.size) { false }.toList()
                     }
                     val (successList, failedList) = list.partitionIndexed { index, _ -> success[index] }
-                    val filteredList = successList.sortedByDescending { it.score }
+                    filteredList.addAll(successList)
                     Utils.CoroutineUtils.runIOTask({
                         processingRead.incrementAndGet()
                         users.tryForEach { userJson ->
-                            val userList = Utils.DataHolder.toModelUserList(userJson, images)
+                            val userList = Utils.DataHolder.toModelUserList(FileInputStream(userJson), images)
                             val success = try {
                                 Utils.DataHolder.rankDB.rankUserDao().insertAll(userList).map { it != -1L }
                             } catch (ignore : Exception) {
@@ -228,20 +226,25 @@ object Utils {
                         }
                         comments.tryForEach { commentJson ->
                             val commentList =
-                                Utils.DataHolder.toModelItemCommentList(commentJson, images)
+                                Utils.DataHolder.toModelItemCommentList(FileInputStream(commentJson), images)
                             Utils.DataHolder.rankDB.rankCommentDao().insertAll(commentList)
                         }
+                        Utils.CoroutineUtils.runIOTaskLowPriority({
+                            users.forEach { it.delete() }
+                            comments.forEach { it.delete() }
+                        })
                         processingRead.decrementAndGet()
                     }) {}
                     Utils.CoroutineUtils.runIOTask({
                         failedList.tryForEach { Utils.DataHolder.ImageStorage.delete(it.image.id) }
                     }) {}
-                    processingRead.decrementAndGet()
-                    return filteredList
                 }
             }
+            Utils.CoroutineUtils.runIOTaskLowPriority({
+                jsons.forEach { it.delete() }
+            })
             processingRead.decrementAndGet()
-            return listOf()
+            return filteredList.sortedByDescending { it.score }
         }
 
         fun asyncClearShareDir() {
@@ -276,38 +279,62 @@ object Utils {
             val filter: (RankItemImage) -> Boolean = {
                 it.id != -1L && it.image != Uri.EMPTY
             }
+
             val bufferSize = DEFAULT_BUFFER_SIZE * 2
-            val queueBuilder = Utils.CoroutineUtils.startProduce<Quadruple<Byte, Long, Int, Int>, ByteArray>()
-            data.filter { filter(it.image) }.forEachIndexed { index, item ->
-//                MaskReadImage to index
-                queueBuilder.ioProducer { queue->
-                    app.contentResolver.openInputStream(item.image.image)?.use {
-                        var blockCnt = 0
-                        val buffer = ByteArray(bufferSize)
-                        var len = it.readAndBlock(buffer, 0, bufferSize)
-                        while (len > 0) {
-                            queue.offer(Quadruple(MaskReadImage, item.image.id, blockCnt, 0), buffer.copyOf())
-                            len = it.readAndBlock(buffer, 0, bufferSize)
-                            blockCnt++
-                        }
-                        queue.offer(Quadruple(MaskReadImage, item.image.id, blockCnt, 1), byteArrayOf())
+            val offerByteArray: Utils.CoroutineUtils.Producer<Quadruple<Byte, Long, Int, Int>, ByteArray>.(Byte, Long, InputStream) -> Unit = { taskCode, index, `is` ->
+                `is`.use {
+                    var blockCnt = 0
+                    val buffer = ByteArray(bufferSize)
+                    var len = it.readAndBlock(buffer, 0, bufferSize)
+                    while (len > 0) {
+                        this.offer(Quadruple(taskCode, index, blockCnt, 0), buffer.copyOf())
+                        len = it.readAndBlock(buffer, 0, bufferSize)
+                        blockCnt++
                     }
-                    queue.complete()
+                    this.offer(Quadruple(taskCode, index, blockCnt, 1), byteArrayOf())
                 }
             }
+
+            val queueBuilder = Utils.CoroutineUtils.buildProducer<Quadruple<Byte, Long, Int, Int>, ByteArray>(32)
             data.forEachIndexed { index, item ->
 //                MaskReadComment to index
                 queueBuilder.ioProducer { queue->
                     val commentList = Utils.DataHolder.rankDB.rankCommentDao().getAllComment(item.itemName)
-                    val commentJson = Utils.DataHolder.modelItemCommentJson(commentList)
-                    queue.offer(Quadruple(MaskReadComment, index.toLong(), 0, 1), commentJson.encodeToByteArray())
+                    val tmpFile = File.createTempFile("tmp", ".json", app.filesDir)
+                    RandomAccessFile(tmpFile, "rw").use { raf->
+                        val os = Channels.newOutputStream(raf.channel)
+                        val `is` =  Channels.newInputStream(raf.channel)
+                        Utils.DataHolder.modelItemCommentJson(commentList, os)
+                        os.flush()
+                        raf.seek(0)
+                        queue.offerByteArray(MaskReadComment, index.toLong(),`is`)
+                    }
+                    tmpFile.delete()
                     queue.complete()
+                }
+                if (filter(item.image)) {
+//                MaskReadImage to index
+                    queueBuilder.ioProducer { queue->
+                        Log.d("Producer", "realReadShareRankItemList: ${item.itemName}, ${item.image.id}")
+                        app.contentResolver.openInputStream(item.image.image)?.let {
+                            queue.offerByteArray(MaskReadImage, item.image.id, it)
+                        }
+                        queue.complete()
+                    }
                 }
             }
 //            MaskReadRankJson to 1
             queueBuilder.ioProducer { queue->
-                val rankItemJson = Utils.DataHolder.modelRankItem2Json(data).encodeToByteArray()
-                queue.offer(Quadruple(MaskReadRankJson, 0L, 0, 1), rankItemJson)
+                val tmpFile = File.createTempFile("tmp", ".json", app.filesDir)
+                RandomAccessFile(tmpFile, "rw").use { raf->
+                    val os = Channels.newOutputStream(raf.channel)
+                    val `is` =  Channels.newInputStream(raf.channel)
+                    Utils.DataHolder.modelRankItem2Json(data, os)
+                    os.flush()
+                    raf.seek(0)
+                    queue.offerByteArray(MaskReadRankJson, 0, `is`)
+                }
+                tmpFile.delete()
                 queue.complete()
             }
             val userList = Utils.DataHolder.rankDB.rankUserDao().getAllUser()
@@ -315,16 +342,8 @@ object Utils {
 //                MaskReadUserImage to index
                 queueBuilder.ioProducer { queue->
                     if (filter(user.image)) {
-                        app.contentResolver.openInputStream(user.image.image)?.use {
-                            var blockCnt = 0
-                            val buffer = ByteArray(bufferSize)
-                            var len = it.readAndBlock(buffer, 0, bufferSize)
-                            while (len > 0) {
-                                queue.offer(Quadruple(MaskReadUserImage, user.image.id, blockCnt, 0), buffer.copyOf())
-                                len = it.readAndBlock(buffer, 0, bufferSize)
-                                blockCnt++
-                            }
-                            queue.offer(Quadruple(MaskReadUserImage, user.image.id, blockCnt, 1), buffer.copyOf())
+                        app.contentResolver.openInputStream(user.image.image)?.let {
+                            queue.offerByteArray(MaskReadUserImage, user.image.id, it)
                         }
                     }
                     queue.complete()
@@ -332,8 +351,16 @@ object Utils {
             }
 //            MaskReadUserJson to 1
             queueBuilder.ioProducer { queue->
-                val modelUserJson = Utils.DataHolder.modelUser2Json(userList).encodeToByteArray()
-                queue.offer(Quadruple(MaskReadUserJson, 0, 0, 1), modelUserJson)
+                val tmpFile = File.createTempFile("tmp", ".json", app.filesDir)
+                RandomAccessFile(tmpFile, "rw").use { raf->
+                    val os = Channels.newOutputStream(raf.channel)
+                    val `is` =  Channels.newInputStream(raf.channel)
+                    Utils.DataHolder.modelUser2Json(userList, os)
+                    os.flush()
+                    raf.seek(0)
+                    queue.offerByteArray(MaskReadUserJson, 0, `is`)
+                }
+                tmpFile.delete()
                 queue.complete()
             }
             val queue = queueBuilder.build()
@@ -380,16 +407,9 @@ object Utils {
                 StorageUtil.StorageLong(sp, "image-id", 0L)
             )
 
-            private val imageCache = HashMap<Long, Uri>()
-
             fun getImage(id: Long): Uri? {
                 if (id == -1L) {
                     Uri.EMPTY
-                }
-                synchronized(this) {
-                    if (imageCache.containsKey(id)) {
-                        return imageCache[id] ?: Uri.EMPTY
-                    }
                 }
                 val storeDir = File(app.filesDir, RANK_IMAGE_STORE_DIR)
                 val storageFile = File(storeDir, RANK_IMAGE_PREFIX + id)
@@ -401,11 +421,6 @@ object Utils {
             }
 
             fun delete(id: Long) {
-                synchronized(this) {
-                    if (imageCache.containsKey(id)) {
-                        imageCache.remove(id)
-                    }
-                }
                 val storeDir = File(app.filesDir, RANK_IMAGE_STORE_DIR)
                 val storageFile = File(storeDir, RANK_IMAGE_PREFIX + id)
                 if (storageFile.exists()) {
@@ -425,10 +440,12 @@ object Utils {
                 if (uri == Uri.EMPTY) {
                     return -1
                 }
-                val id = if (oldId >= this.id || oldId < 0) {
-                    synchronized(this) { this.id++ }
-                } else {
-                    oldId
+                val id = synchronized(this) {
+                    if (oldId >= this.id || oldId < 0) {
+                        this.id++
+                    } else {
+                        oldId
+                    }
                 }
                 val storageFile = getStoreFile(id)
                 if (uri.safeToFile()?.absolutePath?.equals(storageFile.absolutePath) != true) {
@@ -457,26 +474,13 @@ object Utils {
                 return id
             }
 
-            fun storeImage(imageBytes: ByteArray): RankItemImage {
+            fun storeImage(): Pair<File, Long> {
                 val id = synchronized(this) {
                     this.id++
                 }
-
                 val storageFile = getStoreFile(id)
                 storageFile.delete()
-                val raf = RandomAccessFile(storageFile, "rw")
-                val channel = raf.channel
-                val fileSize = imageBytes.size.toLong()
-                val mappedBuffer: MappedByteBuffer = channel.map(
-                    FileChannel.MapMode.READ_WRITE,
-                    0,
-                    fileSize
-                )
-                mappedBuffer.put(imageBytes)
-                Utils.CoroutineUtils.runIOTaskLowPriority({
-                    raf.use { }
-                })
-                return RankItemImage(id, storageFile.toUri())
+                return storageFile to id
             }
 
             private fun getStoreFile(id: Long): File {
@@ -499,7 +503,6 @@ object Utils {
                     input.copyTo(output)
                 }
                 val uri = storageFile.toUri()
-                imageCache[id] = uri
                 return RankItemImage(id, uri)
             }
         }
@@ -532,30 +535,40 @@ object Utils {
         private val modelRankItemCommentListType = object : TypeToken<List<ModelItemComment>>() {}
         private val modelRankUserListType = object : TypeToken<List<ModelRankUser>>() {}
 
-        fun modelUser2Json(any: List<ModelRankUser>): String {
-            return rankItemGson(hashMapOf()).toJson(any)
+        fun modelUser2Json(any: List<ModelRankUser>, os: OutputStream) {
+            val writer = JsonWriter(OutputStreamWriter(BufferedOutputStream(os)))
+            rankItemGson(hashMapOf()).toJson(any, modelRankUserListType.type, writer)
+            writer.flush()
         }
 
         fun toModelUserList(
-            any: String,
+            `is`: InputStream,
             images: HashMap<Long, RankItemImage>
         ): List<ModelRankUser> {
-            return rankItemGson(images).fromJson(any, modelRankUserListType.type)
+            return rankItemGson(images).fromJson(JsonReader(InputStreamReader(BufferedInputStream(`is`))), modelRankUserListType.type)
         }
 
-        fun modelItemCommentJson(any: List<ModelItemComment>): String {
-            return rankItemGson(hashMapOf()).toJson(any)
+        fun modelItemCommentJson(any: List<ModelItemComment>, os: OutputStream) {
+            val writer = JsonWriter(OutputStreamWriter(BufferedOutputStream(os)))
+            rankItemGson(hashMapOf()).toJson(any, modelRankItemCommentListType.type, writer)
+            writer.flush()
+        }
+
+        fun modelItemCommentJson(any: List<ModelItemComment>) : String {
+            return rankItemGson(hashMapOf()).toJson(any, modelRankItemCommentListType.type)
         }
 
         fun toModelItemCommentList(
-            any: String,
+            `is`: InputStream,
             images: HashMap<Long, RankItemImage>
         ): List<ModelItemComment> {
-            return rankItemGson(images).fromJson(any, modelRankItemCommentListType.type)
+            return rankItemGson(images).fromJson(JsonReader(InputStreamReader(BufferedInputStream(`is`))), modelRankItemCommentListType.type)
         }
 
-        fun modelRankItem2Json(any: List<ModelRankItem>): String {
-            return rankItemGson(hashMapOf()).toJson(any)
+        fun modelRankItem2Json(any: List<ModelRankItem>, os: OutputStream) {
+            val writer = JsonWriter(OutputStreamWriter(BufferedOutputStream(os)))
+            rankItemGson(hashMapOf()).toJson(any, modelRankItemListType.type, writer)
+            writer.flush()
         }
 
         fun toModelRankList(json: String): List<ModelRank>? {
@@ -571,12 +584,12 @@ object Utils {
         }
 
         fun toModelRankItemList(
-            json: String,
+            `is`: InputStream,
             images: HashMap<Long, RankItemImage>
         ): List<ModelRankItem>? {
             return try {
                 rankItemGson(images).fromJson(
-                    json,
+                    JsonReader(InputStreamReader(BufferedInputStream(`is`))),
                     modelRankItemListType.type
                 ) as List<ModelRankItem>
             } catch (ignore: Exception) {
@@ -768,41 +781,39 @@ object Utils {
                     lock.unlock()
                 }
             }
-        }
 
-        class ProducerBuilder<K, T>(
-            private val capacity: Int
-        ) {
-            private val taskList = mutableListOf<Pair<CoroutineContext, (Producer<K, T>) -> Unit>>()
-            fun producer(
-                context: CoroutineContext,
-                block: (Producer<K, T>) -> Unit
-            ): ProducerBuilder<K, T> {
-                taskList.add(context to block)
-                return this
-            }
+            class ProducerBuilder<K, T>(private val capacity: Int) {
+                private val taskList = mutableListOf<Pair<CoroutineContext, (Producer<K, T>) -> Unit>>()
+                fun producer(
+                    context: CoroutineContext,
+                    block: (Producer<K, T>) -> Unit
+                ): ProducerBuilder<K, T> {
+                    taskList.add(context to block)
+                    return this
+                }
 
-            fun ioProducer(
-                block: (Producer<K, T>) -> Unit
-            ): ProducerBuilder<K, T> {
-                return producer(Dispatchers.IO, block)
-            }
+                fun ioProducer(
+                    block: (Producer<K, T>) -> Unit
+                ): ProducerBuilder<K, T> {
+                    return producer(Dispatchers.IO, block)
+                }
 
-            fun build() : Producer<K, T> {
-                val producer = Producer<K, T>(capacity, taskList.size)
-                for ((context, block) in taskList) {
-                    globalScope.launch {
-                        withContext(context) {
-                            block(producer)
+                fun build() : Producer<K, T> {
+                    val producer = Producer<K, T>(capacity, taskList.size)
+                    for ((context, block) in taskList) {
+                        globalScope.launch {
+                            withContext(context) {
+                                block(producer)
+                            }
                         }
                     }
+                    taskList.clear()
+                    return producer
                 }
-                taskList.clear()
-                return producer
             }
         }
 
-        fun <K, T> startProduce(capacity : Int = 1024) = ProducerBuilder<K, T>(capacity)
+        fun <K, T> buildProducer(capacity : Int = 1024) = Producer.ProducerBuilder<K, T>(capacity)
 
         fun Context.activityLifecycleLaunch(
             context: CoroutineContext = globalScope.coroutineContext,
