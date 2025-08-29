@@ -21,7 +21,6 @@ import com.google.gson.stream.JsonWriter
 import com.jingtian.demoapp.R
 import com.jingtian.demoapp.main.IOUtils
 import com.jingtian.demoapp.main.IOUtils.readAndBlock
-import com.jingtian.demoapp.main.IOUtils.writeInt
 import com.jingtian.demoapp.main.Quadruple
 import com.jingtian.demoapp.main.StorageUtil
 import com.jingtian.demoapp.main.TimeTracer
@@ -49,31 +48,24 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.BufferedOutputStream
 import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
+import java.io.InputStreamReader
+import java.io.OutputStream
 import java.io.OutputStreamWriter
 import java.io.RandomAccessFile
 import java.nio.MappedByteBuffer
 import java.nio.channels.FileChannel
-import java.util.Collections
 import java.util.Date
 import java.util.LinkedList
 import java.util.PriorityQueue
-import java.util.TreeMap
-import java.util.TreeSet
-import java.util.concurrent.BlockingQueue
 import java.util.concurrent.Callable
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
-import java.util.concurrent.CopyOnWriteArrayList
-import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.Semaphore
 import java.util.concurrent.ThreadFactory
-import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.locks.Condition
 import java.util.concurrent.locks.ReentrantLock
@@ -277,31 +269,31 @@ object Utils {
                 it.id != -1L && it.image != Uri.EMPTY
             }
             val bufferSize = DEFAULT_BUFFER_SIZE * 2
-            val queueBuilder = Utils.CoroutineUtils.startProduce<Quadruple<Byte, Long, Int, Int>, ByteArray>()
-            data.filter { filter(it.image) }.forEachIndexed { index, item ->
-//                MaskReadImage to index
-                queueBuilder.ioProducer { queue->
-                    app.contentResolver.openInputStream(item.image.image)?.use {
-                        var blockCnt = 0
-                        val buffer = ByteArray(bufferSize)
-                        var len = it.readAndBlock(buffer, 0, bufferSize)
-                        while (len > 0) {
-                            queue.offer(Quadruple(MaskReadImage, item.image.id, blockCnt, 0), buffer.copyOf())
-                            len = it.readAndBlock(buffer, 0, bufferSize)
-                            blockCnt++
-                        }
-                        queue.offer(Quadruple(MaskReadImage, item.image.id, blockCnt, 1), byteArrayOf())
-                    }
-                    queue.complete()
-                }
-            }
+            val queueBuilder = Utils.CoroutineUtils.startProduce<Quadruple<Byte, Long, Int, Int>, ByteArray>(32)
+            val commentProducerBuilder = Utils.CoroutineUtils.startProduce<Quadruple<Byte, Long, Int, Int>, List<ModelItemComment>>(32)
             data.forEachIndexed { index, item ->
 //                MaskReadComment to index
-                queueBuilder.ioProducer { queue->
+                commentProducerBuilder.ioProducer { queue->
                     val commentList = Utils.DataHolder.rankDB.rankCommentDao().getAllComment(item.itemName)
-                    val commentJson = Utils.DataHolder.modelItemCommentJson(commentList)
-                    queue.offer(Quadruple(MaskReadComment, index.toLong(), 0, 1), commentJson.encodeToByteArray())
+                    queue.offer(Quadruple(MaskReadComment, index.toLong(), 0, 1), commentList)
                     queue.complete()
+                }
+                if (filter(item.image)) {
+//                MaskReadImage to index
+                    queueBuilder.ioProducer { queue->
+                        app.contentResolver.openInputStream(item.image.image)?.use {
+                            var blockCnt = 0
+                            val buffer = ByteArray(bufferSize)
+                            var len = it.readAndBlock(buffer, 0, bufferSize)
+                            while (len > 0) {
+                                queue.offer(Quadruple(MaskReadImage, item.image.id, blockCnt, 0), buffer.copyOf())
+                                len = it.readAndBlock(buffer, 0, bufferSize)
+                                blockCnt++
+                            }
+                            queue.offer(Quadruple(MaskReadImage, item.image.id, blockCnt, 1), byteArrayOf())
+                        }
+                        queue.complete()
+                    }
                 }
             }
 //            MaskReadRankJson to 1
@@ -337,6 +329,7 @@ object Utils {
                 queue.complete()
             }
             val queue = queueBuilder.build()
+            val commentQueue = commentProducerBuilder.build()
             val file = File.createTempFile("share-${rankName}", ".zip", shareDir)
             ZipOutputStream(BufferedOutputStream(FileOutputStream(file))).use { zos->
                 while (true) {
@@ -345,6 +338,15 @@ object Utils {
                     val zipEntry = ZipEntry("$taskCode-$index-$blockIndex-$end")
                     zos.putNextEntry(zipEntry)
                     zos.write(byteArray)
+                    zos.closeEntry()
+                }
+
+                while (true) {
+                    val (key, commentList) = commentQueue.poll() ?: break
+                    val (taskCode, index, blockIndex, end) = key
+                    val zipEntry = ZipEntry("$taskCode-$index-$blockIndex-$end")
+                    zos.putNextEntry(zipEntry)
+                    zos.write(Utils.DataHolder.modelItemCommentJson(commentList).encodeToByteArray())
                     zos.closeEntry()
                 }
             }
