@@ -25,6 +25,7 @@ import java.io.BufferedInputStream
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
+import java.io.Serializable
 import java.lang.reflect.Constructor
 import java.lang.reflect.Field
 import java.lang.reflect.Method
@@ -648,4 +649,16 @@ object TimeTracer {
         Log.d("TimeTracer", "[$taskName] trace: elapsedTime = $elapsedTime")
         return retValue
     }
+}
+
+class Quadruple<A, B, C, D>(
+    val first: A,
+    val second: B,
+    val third: C,
+    val forth: D,
+) : Serializable {
+    operator fun component1(): A = first
+    operator fun component2(): B = second
+    operator fun component3(): C = third
+    operator fun component4(): D = forth
 }

@@ -21,6 +21,7 @@ import com.google.gson.stream.JsonWriter
 import com.jingtian.demoapp.R
 import com.jingtian.demoapp.main.IOUtils.readAndBlock
 import com.jingtian.demoapp.main.IOUtils.writeInt
+import com.jingtian.demoapp.main.Quadruple
 import com.jingtian.demoapp.main.StorageUtil
 import com.jingtian.demoapp.main.TimeTracer
 import com.jingtian.demoapp.main.app
@@ -83,51 +84,6 @@ object Utils {
         private const val MaskReadRankJson: Byte = 5
 
         private var processingRead = AtomicLong(0)
-        private fun consumerMaskReadImage(images: ConcurrentHashMap<Long, RankItemImage>, blockingQueue: LinkedBlockingQueue<Any>) = CoroutineUtils.startProduce<Long, ByteArrayInputStream>(16).ioProducer { queue->
-            var poll = queue.poll()
-            while (poll != null) {
-                val (id, bis) = poll
-                images[id] = Utils.DataHolder.ImageStorage.storeImage(bis)
-                poll = queue.poll()
-            }
-            blockingQueue.offer(Any())
-        }.build()
-        private fun consumerMaskReadComment(comments: MutableList<String>, blockingQueue: LinkedBlockingQueue<Any>) = CoroutineUtils.startProduce<Long, ByteArrayInputStream>(16).ioProducer { queue->
-            var poll = queue.poll()
-            while (poll != null) {
-                val (id, bis) = poll
-                comments.add(bis.readBytes().decodeToString())
-                poll = queue.poll()
-            }
-            blockingQueue.offer(Any())
-        }.build()
-        private fun consumerReadUserImage(images: ConcurrentHashMap<Long, RankItemImage>, blockingQueue: LinkedBlockingQueue<Any>) = CoroutineUtils.startProduce<Long, ByteArrayInputStream>(16).ioProducer { queue->
-            var poll = queue.poll()
-            while (poll != null) {
-                val (id, bis) = poll
-                images[id] = Utils.DataHolder.ImageStorage.storeImage(bis)
-                poll = queue.poll()
-            }
-            blockingQueue.offer(Any())
-        }.build()
-        private fun consumerUserJson(users: MutableList<String>, blockingQueue: LinkedBlockingQueue<Any>) = CoroutineUtils.startProduce<Long, ByteArrayInputStream>(16).ioProducer { queue->
-            var poll = queue.poll()
-            while (poll != null) {
-                val (id, bis) = poll
-                users.add(bis.readBytes().decodeToString())
-                poll = queue.poll()
-            }
-            blockingQueue.offer(Any())
-        }.build()
-        private fun consumerRankJson(json: MutableList<String>, blockingQueue: LinkedBlockingQueue<Any>) = CoroutineUtils.startProduce<Long, ByteArrayInputStream>(16).ioProducer { queue->
-            var poll = queue.poll()
-            while (poll != null) {
-                val (id, bis) = poll
-                json.add(bis.readBytes().decodeToString())
-                poll = queue.poll()
-            }
-            blockingQueue.offer(Any())
-        }.build()
 
         fun readShareRankItemList(uri: Uri): List<ModelRankItem> {
             return TimeTracer.trace("readShareRankItemList") {
@@ -144,19 +100,7 @@ object Utils {
             val imagesConcurrentHashMap: ConcurrentHashMap<Long, RankItemImage> = ConcurrentHashMap()
             val comments = ConcurrentLinkedQueue<String>()
             val users = ConcurrentLinkedQueue<String>()
-            val producers = HashMap<Pair<Byte, Long>, CoroutineUtils.Producer<Int, ByteArray>>()
-//            val comsumer = CoroutineUtils.startProduce<Int, Int>(1024)
-//            val consumersInstance = HashMap<Byte, CoroutineUtils.Producer<Long, ByteArrayInputStream>>()
-//            val consumers = HashMap<Byte, () -> CoroutineUtils.Producer<Long, ByteArrayInputStream>>()
-//            val blockingQueue = LinkedBlockingQueue<Any>()
-//            consumers[MaskReadImage] =
-//                { consumerMaskReadImage(imagesConcurrentHashMap, blockingQueue) }
-//            consumers[MaskReadComment] = { consumerMaskReadComment(comments, blockingQueue) }
-//            consumers[MaskReadUserImage] =
-//                { consumerReadUserImage(imagesConcurrentHashMap, blockingQueue) }
-//            consumers[MaskReadUserJson] = { consumerUserJson(users, blockingQueue) }
-//            consumers[MaskReadRankJson] = { consumerRankJson(jsons, blockingQueue) }
-//            val record = Array<AtomicLong>(5) { AtomicLong(0) }
+            val producers = HashMap<Pair<Byte, Long>, CoroutineUtils.Producer<Pair<Int, Int>, ByteArray>>()
             val blockingQueue = LinkedBlockingQueue<Any>()
             app.contentResolver.openInputStream(uri)?.let { `is` ->
                 ZipInputStream(`is`).use { zis ->
@@ -169,28 +113,33 @@ object Utils {
                             nextEntry = zis.nextEntry
                             continue
                         }
-                        val taskCode = nameSplit[0].toByte()
-                        val index = nameSplit[1].toLong()
-                        val blockIndex = nameSplit[2].toInt()
+                        val (taskCode, index, blockIndex, end) = try {
+                            Quadruple(nameSplit[0].toByte(), nameSplit[1].toLong(), nameSplit[2].toInt(), nameSplit.getOrNull(3)?.toInt() ?: 0)
+                        } catch (ignore : Exception) {
+                            zis.closeEntry()
+                            nextEntry = zis.nextEntry
+                            continue
+                        }
                         val producer = producers.getOrPut(taskCode to index) {
-//                            record[taskCode.toInt() - 1].incrementAndGet()
-//                            consumers[taskCode]?.invoke()?.let {
-//                                consumersInstance[taskCode] = it
-//                            }
-                            Utils.CoroutineUtils.startProduce<Int, ByteArray>(16).ioProducer { queue->
+                            Utils.CoroutineUtils.startProduce<Pair<Int, Int>, ByteArray>(16).ioProducer { queue->
                                 var poll = queue.poll()
-                                val blockIdHeap = PriorityQueue<Pair<Int, ByteArray>> { a, b->
-                                    a.first - b.first
+                                val blockIdHeap = PriorityQueue<Pair<Pair<Int, Int>, ByteArray>> { a, b->
+                                    a.first.first - b.first.first
                                 }
                                 val bos = ByteArrayOutputStream()
                                 var nextBlockId = 0
+                                var endBlockId = Int.MAX_VALUE
                                 while (poll != null) {
-                                    val (blockId, byteArray) = poll
+                                    val (pollInfo, byteArray) = poll
+                                    val (blockId, end) = pollInfo
+                                    if (end == 1) {
+                                        endBlockId = blockId
+                                    }
                                     if (blockId == nextBlockId) {
                                         bos.write(byteArray)
                                         nextBlockId++
                                         var peek = blockIdHeap.peek()
-                                        while (peek != null && peek.first == nextBlockId) {
+                                        while (peek != null && peek.first.first == nextBlockId) {
                                             blockIdHeap.poll()
                                             bos.write(peek.second)
                                             nextBlockId++
@@ -199,10 +148,13 @@ object Utils {
                                     } else {
                                         blockIdHeap.add(poll)
                                     }
+                                    if (nextBlockId >= endBlockId) {
+                                        break
+                                    }
                                     poll = queue.poll()
                                 }
                                 var peek = blockIdHeap.peek()
-                                while (peek != null && peek.first == nextBlockId) {
+                                while (peek != null && peek.first.first == nextBlockId) {
                                     blockIdHeap.poll()
                                     bos.write(peek.second)
                                     nextBlockId++
@@ -225,19 +177,9 @@ object Utils {
                                     }
                                 }
                                 blockingQueue.offer(Any())
-//                                consumersInstance[taskCode]?.apply {
-//                                    Log.d("Producer", "readShareRankItemList: offer consumer $taskCode $index")
-//                                    offer(index, ByteArrayInputStream(bos.toByteArray()))
-//
-//                                    val remainedTask = record[taskCode.toInt() - 1].decrementAndGet()
-//                                    if (remainedTask == 0L) {
-//                                        complete()
-//                                    }
-//                                }
-
                             }.build()
                         }
-                        producer.offer(blockIndex, zis.readBytes())
+                        producer.offer(blockIndex to end, zis.readBytes())
                         Log.d("Producer", "readShareRankItemList: offer producer $taskCode $index $blockIndex")
                         zis.closeEntry()
                         nextEntry = zis.nextEntry
@@ -247,10 +189,7 @@ object Utils {
             // 通知producers完成，没有更多数据
             producers.forEach { it.value.complete() }
 
-            // 等待consumer完成
-//            repeat(consumersInstance.size) {
-//                blockingQueue.take()
-//            }
+            // 等待producers完成
             repeat(producers.size) {
                 blockingQueue.take()
             }
@@ -330,7 +269,7 @@ object Utils {
                 it.id != -1L && it.image != Uri.EMPTY
             }
             val bufferSize = DEFAULT_BUFFER_SIZE * 2
-            val queueBuilder = Utils.CoroutineUtils.startProduce<Triple<Byte, Long, Int>, ByteArray>()
+            val queueBuilder = Utils.CoroutineUtils.startProduce<Quadruple<Byte, Long, Int, Int>, ByteArray>()
             data.filter { filter(it.image) }.forEachIndexed { index, item ->
 //                MaskReadImage to index
                 queueBuilder.ioProducer { queue->
@@ -339,10 +278,11 @@ object Utils {
                         val buffer = ByteArray(bufferSize)
                         var len = it.readAndBlock(buffer, 0, bufferSize)
                         while (len > 0) {
-                            queue.offer(Triple(MaskReadImage, item.image.id, blockCnt), buffer.copyOf())
+                            queue.offer(Quadruple(MaskReadImage, item.image.id, blockCnt, 0), buffer.copyOf())
                             len = it.readAndBlock(buffer, 0, bufferSize)
                             blockCnt++
                         }
+                        queue.offer(Quadruple(MaskReadImage, item.image.id, blockCnt, 1), byteArrayOf())
                     }
                     queue.complete()
                 }
@@ -352,14 +292,14 @@ object Utils {
                 queueBuilder.ioProducer { queue->
                     val commentList = Utils.DataHolder.rankDB.rankCommentDao().getAllComment(item.itemName)
                     val commentJson = Utils.DataHolder.modelItemCommentJson(commentList)
-                    queue.offer(Triple(MaskReadComment, index.toLong(), 0), commentJson.encodeToByteArray())
+                    queue.offer(Quadruple(MaskReadComment, index.toLong(), 0, 1), commentJson.encodeToByteArray())
                     queue.complete()
                 }
             }
 //            MaskReadRankJson to 1
             queueBuilder.ioProducer { queue->
                 val rankItemJson = Utils.DataHolder.modelRankItem2Json(data).encodeToByteArray()
-                queue.offer(Triple(MaskReadRankJson, 0L, 0), rankItemJson)
+                queue.offer(Quadruple(MaskReadRankJson, 0L, 0, 1), rankItemJson)
                 queue.complete()
             }
             val userList = Utils.DataHolder.rankDB.rankUserDao().getAllUser()
@@ -372,10 +312,11 @@ object Utils {
                             val buffer = ByteArray(bufferSize)
                             var len = it.readAndBlock(buffer, 0, bufferSize)
                             while (len > 0) {
-                                queue.offer(Triple(MaskReadUserImage, user.image.id, blockCnt), buffer.copyOf())
+                                queue.offer(Quadruple(MaskReadUserImage, user.image.id, blockCnt, 0), buffer.copyOf())
                                 len = it.readAndBlock(buffer, 0, bufferSize)
                                 blockCnt++
                             }
+                            queue.offer(Quadruple(MaskReadUserImage, user.image.id, blockCnt, 1), buffer.copyOf())
                         }
                     }
                     queue.complete()
@@ -384,7 +325,7 @@ object Utils {
 //            MaskReadUserJson to 1
             queueBuilder.ioProducer { queue->
                 val modelUserJson = Utils.DataHolder.modelUser2Json(userList).encodeToByteArray()
-                queue.offer(Triple(MaskReadUserJson, 0, 0), modelUserJson)
+                queue.offer(Quadruple(MaskReadUserJson, 0, 0, 1), modelUserJson)
                 queue.complete()
             }
             val queue = queueBuilder.build()
@@ -392,8 +333,8 @@ object Utils {
             ZipOutputStream(BufferedOutputStream(FileOutputStream(file))).use { zos->
                 while (true) {
                     val (key, byteArray) = queue.poll() ?: break
-                    val (taskCode, index, blockIndex) = key
-                    val zipEntry = ZipEntry("$taskCode-$index-$blockIndex")
+                    val (taskCode, index, blockIndex, end) = key
+                    val zipEntry = ZipEntry("$taskCode-$index-$blockIndex-$end")
                     zos.putNextEntry(zipEntry)
                     zos.write(byteArray)
                     zos.closeEntry()
