@@ -51,7 +51,10 @@ class CommentHolder private constructor(private val binding: ItemRankItemComment
         }
         with(binding.root) {
             setOnLongClickListener { v->
-                AddCommentDialog(context, this@CommentHolder).show()
+                AddCommentDialog(context, this@CommentHolder, true).apply {
+                    setComment(data.comment)
+                    show()
+                }
                 false
             }
         }
@@ -71,6 +74,18 @@ class CommentHolder private constructor(private val binding: ItemRankItemComment
 
     override fun onNegativeClick(dialog: Dialog) {
         dialog.dismiss()
+    }
+
+    override fun onDeleteClick(dialog: Dialog) {
+        dialog.dismiss()
+        val currentData = currentData ?: return
+        Utils.CoroutineUtils.runIOTask({
+            Utils.DataHolder.rankDB.rankCommentDao().delete(currentData)
+        }) {
+            lifecycleScope.launch {
+                currentAdapter?.remove(currentPosition)
+            }
+        }
     }
 
 }

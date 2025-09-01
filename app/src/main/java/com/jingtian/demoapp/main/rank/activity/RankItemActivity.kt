@@ -13,8 +13,6 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.jingtian.demoapp.R
 import com.jingtian.demoapp.databinding.ActivityRankItemBinding
-import com.jingtian.demoapp.databinding.ItemAddCommentBinding
-import com.jingtian.demoapp.main.ScreenUtils.screenHeight
 import com.jingtian.demoapp.main.ScreenUtils.screenWidth
 import com.jingtian.demoapp.main.app
 import com.jingtian.demoapp.main.base.BaseActivity
@@ -49,7 +47,6 @@ class RankItemActivity : BaseActivity(), AddCommentDialog.Companion.Callback {
     private var rankName: String = ""
     private var rankItemName: String = ""
 
-    private lateinit var addCommentBinding: ItemAddCommentBinding
     private val commentAdapter = CommentListAdapter()
     private val commentHeaderFooterAdapter = BaseHeaderFooterAdapter<ModelItemComment>()
 
@@ -112,9 +109,7 @@ class RankItemActivity : BaseActivity(), AddCommentDialog.Companion.Callback {
         with(binding.recyclerView) {
             layoutManager = LinearLayoutManager(context, RecyclerView.VERTICAL, false)
             commentHeaderFooterAdapter.bindRecyclerView(this, commentAdapter)
-            addCommentBinding = ItemAddCommentBinding.inflate(layoutInflater, this, false)
-            commentHeaderFooterAdapter.addFooter(addCommentBinding.root)
-            with(addCommentBinding.root) {
+            with(binding.add) {
                 setOnClickListener {
                     AddCommentDialog(this@RankItemActivity, this@RankItemActivity).show()
                 }
@@ -160,5 +155,9 @@ class RankItemActivity : BaseActivity(), AddCommentDialog.Companion.Callback {
 
     override fun onNegativeClick(dialog: Dialog) {
         dialog.dismiss()
+    }
+
+    override fun onDeleteClick(dialog: Dialog) {
+
     }
 }

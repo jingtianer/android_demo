@@ -3,14 +3,16 @@ package com.jingtian.demoapp.main.rank.dialog
 import android.app.Dialog
 import android.content.Context
 import android.os.Bundle
+import android.view.View
 import com.jingtian.demoapp.databinding.DialogJsonBinding
 
-class AddCommentDialog(context: Context, var callback: Callback): Dialog(context) {
+class AddCommentDialog(context: Context, var callback: Callback, private val showDelete: Boolean = false): Dialog(context) {
 
     companion object {
         interface Callback {
             fun onPositiveClick(dialog: Dialog, comment: String)
             fun onNegativeClick(dialog: Dialog)
+            fun onDeleteClick(dialog: Dialog)
         }
     }
 
@@ -18,12 +20,16 @@ class AddCommentDialog(context: Context, var callback: Callback): Dialog(context
 
     private var comment: String = ""
 
+    fun setComment(comment: String) {
+        this.comment = comment
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = DialogJsonBinding.inflate(layoutInflater)
         setContentView(binding.root)
         with(binding.et) {
-            binding.et.setText(comment)
+            setText(comment)
         }
         with(binding.positive) {
             setOnClickListener {
@@ -33,6 +39,14 @@ class AddCommentDialog(context: Context, var callback: Callback): Dialog(context
         with(binding.negative) {
             setOnClickListener {
                 callback.onNegativeClick(this@AddCommentDialog)
+            }
+        }
+        with(binding.delete) {
+            if (showDelete) {
+                visibility = View.VISIBLE
+            }
+            setOnClickListener {
+                callback.onDeleteClick(this@AddCommentDialog)
             }
         }
     }
