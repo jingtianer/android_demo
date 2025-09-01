@@ -1,12 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    app:cardElevation="0dp"
+    app:cardCornerRadius="8dp"
     android:layout_width="wrap_content"
-    android:layout_height="300dp">
+    android:layout_height="wrap_content">
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
-        android:orientation="vertical">
+        android:orientation="vertical"
+        android:background="#f8f8f8">
 
         <FrameLayout
             android:layout_weight="1"
@@ -17,7 +21,7 @@
                 android:scaleType="centerCrop"
                 android:adjustViewBounds="true"
                 android:layout_width="200dp"
-                android:layout_height="match_parent"/>
+                android:layout_height="240dp"/>
             <View
                 android:id="@+id/rank_type"
                 android:layout_gravity="end|top"
@@ -29,13 +33,19 @@
             android:id="@+id/title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textSize="14sp"
+            android:layout_marginTop="6dp"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:layout_marginLeft="3dp"
             tools:text="标题"/>
 
         <com.jingtian.demoapp.main.widget.StarRateView
             android:id="@+id/star_rate"
+            android:layout_marginTop="6dp"
+            android:layout_marginLeft="3dp"
             android:layout_width="match_parent"
-            android:layout_height="30dp"/>
+            android:layout_height="30dp"
+            android:layout_marginBottom="8dp"/>
     </LinearLayout>
 
 </androidx.cardview.widget.CardView>

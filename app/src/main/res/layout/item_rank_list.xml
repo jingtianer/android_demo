@@ -1,50 +1,67 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    xmlns:app="http://schemas.android.com/apk/res-auto">
+    android:layout_height="wrap_content">
+
     <TextView
         android:id="@+id/title"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        tools:text="标题"
-        android:textSize="16sp"
+        android:layout_marginLeft="8dp"
+        android:textSize="18sp"
         android:textStyle="bold"
         app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintTop_toTopOf="parent"/>
+        app:layout_constraintTop_toTopOf="parent"
+        tools:text="标题" />
 
     <ImageView
         android:id="@+id/more_icon"
-        android:layout_width="32dp"
-        android:layout_height="32dp"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
         android:src="@drawable/rank"
-        app:layout_constraintRight_toLeftOf="@+id/more"/>
+        android:layout_marginRight="2dp"
+        app:layout_constraintRight_toLeftOf="@+id/more"
+        app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
         android:id="@+id/more"
         android:layout_width="wrap_content"
         android:layout_height="0dp"
+        android:layout_marginRight="8dp"
         android:gravity="center_vertical"
         android:text="更多 >"
-        android:textSize="16sp"
-        app:layout_constraintTop_toTopOf="@id/more_icon"
+        android:textSize="14sp"
         app:layout_constraintBottom_toBottomOf="@id/more_icon"
-        app:layout_constraintRight_toRightOf="parent"/>
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toTopOf="@id/more_icon" />
 
     <androidx.constraintlayout.widget.Barrier
         android:id="@+id/title_barrier"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         app:barrierDirection="bottom"
-        app:constraint_referenced_ids="title,more,more_icon"/>
+        app:barrierMargin="6dp"
+        app:constraint_referenced_ids="title,more,more_icon" />
 
     <com.jingtian.demoapp.main.widget.FixHorizontalScrollRecyclerView
         android:id="@+id/recycler_view"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:paddingHorizontal="4dp"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/title_barrier"/>
+        app:layout_constraintTop_toBottomOf="@id/title_barrier" />
+
+    <include
+        android:id="@+id/layout_add_more"
+        layout="@layout/item_add_more"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_margin="8dp"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/recycler_view" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

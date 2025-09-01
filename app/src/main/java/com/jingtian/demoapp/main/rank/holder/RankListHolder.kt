@@ -8,6 +8,7 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -74,8 +75,7 @@ class RankListHolder private constructor(private val binding: ItemRankListBindin
         binding.recyclerView.layoutManager =
             LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
         addMore =
-            ItemAddMoreBinding.inflate(LayoutInflater.from(context), binding.recyclerView, false)
-        rankItemHeaderFooterAdapter.addFooter(addMore.root)
+            ItemAddMoreBinding.bind(binding.layoutAddMore.root)
         with(addMore.layoutImport) {
             setOnClickListener {
                 context.getBaseActivity()?.pickFile(arrayOf("*/*"), null, documentCallback)
@@ -105,10 +105,6 @@ class RankListHolder private constructor(private val binding: ItemRankListBindin
                 }
             }
         }
-        with(addMore.root) {
-            layoutParams.height = 300f.dp.toInt()
-            layoutParams.width = RecyclerView.LayoutParams.WRAP_CONTENT
-        }
         with(binding.recyclerView) {
             addItemDecoration(object : RecyclerView.ItemDecoration() {
                 override fun getItemOffsets(
@@ -118,13 +114,14 @@ class RankListHolder private constructor(private val binding: ItemRankListBindin
                     state: RecyclerView.State
                 ) {
                     outRect.set(
-                        6f.dp.toInt(),
+                        4f.dp.toInt(),
                         0,
-                        6f.dp.toInt(),
+                        4f.dp.toInt(),
                         0,
                     )
                 }
             })
+            clipToPadding = false
         }
     }
 

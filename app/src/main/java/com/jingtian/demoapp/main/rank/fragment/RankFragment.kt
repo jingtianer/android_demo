@@ -35,7 +35,6 @@ class RankFragment : BaseFragment(), AddRankDialog.Companion.Callback, JsonDialo
     private lateinit var binding: FragmentRankBinding
     private val rankListAdapter = RankListAdapter()
     private val headerFooterAdapter = BaseHeaderFooterAdapter<ModelRank>()
-    private lateinit var addMore:ItemAddMoreBinding
 
 
     private var user: ModelRankUser? = null
@@ -67,7 +66,6 @@ class RankFragment : BaseFragment(), AddRankDialog.Companion.Callback, JsonDialo
         binding = FragmentRankBinding.inflate(layoutInflater, container, false)
         with(binding.recyclerView) {
             layoutManager = LinearLayoutManager(context, RecyclerView.VERTICAL, false)
-            addMore = ItemAddMoreBinding.inflate(LayoutInflater.from(context), binding.recyclerView, false)
         }
         lifecycleScope.launch {
             val list = withContext(Dispatchers.IO) {
@@ -96,40 +94,11 @@ class RankFragment : BaseFragment(), AddRankDialog.Companion.Callback, JsonDialo
             }
         }
         with(binding.recyclerView) {
-            headerFooterAdapter.addFooter(addMore.root)
             headerFooterAdapter.bindRecyclerView(this, rankListAdapter)
         }
-        with(addMore.root) {
-            orientation = LinearLayout.HORIZONTAL
-            layoutParams?.height = ViewGroup.LayoutParams.WRAP_CONTENT
-        }
-        with(addMore.text) {
-            text = "添加更多排行榜"
-        }
-        with(addMore.layoutAdd) {
+        with(binding.add) {
             setOnClickListener {
                 AddRankDialog(context, this@RankFragment).show()
-            }
-        }
-        with(addMore.layoutImport) {
-            setOnClickListener {
-                JsonDialog(context, this@RankFragment, true).show()
-            }
-        }
-        with(addMore.layoutDelete) {
-            visibility = View.GONE
-        }
-        with(addMore.layoutExport) {
-            setOnClickListener {
-                JsonDialog(context, this@RankFragment).apply {
-                    lifecycleScope.launch {
-                        val json = withContext(Dispatchers.IO) {
-                            Utils.DataHolder.modelRank2Json(rankListAdapter.getDataList())
-                        }
-                        setJson(json)
-                        show()
-                    }
-                }
             }
         }
     }
