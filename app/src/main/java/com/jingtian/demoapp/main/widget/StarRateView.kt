@@ -87,8 +87,10 @@ class StarRateView @JvmOverloads constructor(
     }
 
     override fun dispatchTouchEvent(event: MotionEvent): Boolean {
-        fixNestedScroll.onTouch(this, event)
-        return super.dispatchTouchEvent(event)
+        if (enable) {
+            fixNestedScroll.onTouch(this, event)
+        }
+        return super.dispatchTouchEvent(event) && enable
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
