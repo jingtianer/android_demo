@@ -39,13 +39,12 @@
             <androidx.cardview.widget.CardView
                 android:id="@+id/image_layout"
                 android:layout_width="0dp"
-                android:layout_height="0dp"
+                android:layout_height="wrap_content"
                 android:layout_marginHorizontal="24dp"
                 android:layout_marginTop="8dp"
                 app:cardCornerRadius="16dp"
                 app:cardElevation="0dp"
                 app:layout_constraintHorizontal_bias="0.0"
-                app:layout_constraintBottom_toBottomOf="@id/guideline_pic"
                 app:layout_constraintLeft_toLeftOf="parent"
                 app:layout_constraintRight_toRightOf="parent"
                 app:layout_constraintTop_toBottomOf="@+id/title">
@@ -53,7 +52,8 @@
                 <ImageView
                     android:id="@+id/image"
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent"
+                    android:layout_height="wrap_content"
+                    android:adjustViewBounds="true"
                     android:scaleType="centerCrop"
                     android:src="@drawable/load_failed" />
 
@@ -71,7 +71,7 @@
                 android:layout_marginTop="12dp"
                 app:layout_constraintLeft_toLeftOf="parent"
                 app:layout_constraintRight_toRightOf="parent"
-                app:layout_constraintTop_toTopOf="@+id/guideline_pic" />
+                app:layout_constraintTop_toBottomOf="@+id/image_layout" />
 
             <TextView
                 android:id="@+id/score"
@@ -96,7 +96,6 @@
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="16dp"
                 android:layout_marginTop="12dp"
-                android:background="@drawable/bg_border_rank_quote"
                 android:orientation="vertical"
                 app:layout_constraintTop_toBottomOf="@id/rate_barrier">
 
