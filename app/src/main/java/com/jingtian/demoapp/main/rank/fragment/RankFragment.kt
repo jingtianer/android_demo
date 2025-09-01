@@ -6,14 +6,13 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.jingtian.demoapp.databinding.FragmentRankBinding
-import com.jingtian.demoapp.databinding.ItemAddMoreBinding
 import com.jingtian.demoapp.main.RxEvents.setDoubleClickListener
+import com.jingtian.demoapp.main.ScreenUtils.screenHeight
 import com.jingtian.demoapp.main.base.BaseHeaderFooterAdapter
 import com.jingtian.demoapp.main.dp
 import com.jingtian.demoapp.main.fragments.BaseFragment
@@ -32,7 +31,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class RankFragment : BaseFragment(), AddRankDialog.Companion.Callback, JsonDialog.Companion.Callback {
+class RankFragment : BaseFragment(), AddRankDialog.Companion.Callback,
+    JsonDialog.Companion.Callback {
 
     private lateinit var binding: FragmentRankBinding
     private val rankListAdapter = RankListAdapter()
@@ -41,7 +41,7 @@ class RankFragment : BaseFragment(), AddRankDialog.Companion.Callback, JsonDialo
 
     private var user: ModelRankUser? = null
 
-    private val addUserCallback = object :AddUserDialog.Companion.Callback {
+    private val addUserCallback = object : AddUserDialog.Companion.Callback {
         override fun onPositiveClick(dialog: Dialog, modelRankUser: ModelRankUser) {
             modelRankUser.let {
                 user = it
@@ -96,6 +96,7 @@ class RankFragment : BaseFragment(), AddRankDialog.Companion.Callback, JsonDialo
             }
         }
         with(binding.recyclerView) {
+            layoutParams.height = context.screenHeight
             headerFooterAdapter.bindRecyclerView(this, rankListAdapter)
             clipToPadding = false
             repeat(itemDecorationCount) {
@@ -118,28 +119,33 @@ class RankFragment : BaseFragment(), AddRankDialog.Companion.Callback, JsonDialo
                 AddRankDialog(context, this@RankFragment).show()
             }
         }
-        with(binding.root) {
+        with(binding.nestedScrollView) {
             setInnerRecyclerView(binding.recyclerView)
         }
         getTabView()?.apply {
             setDoubleClickListener(600L) {
                 binding.recyclerView.scrollToPosition(0)
-                binding.root.scrollTo(0, 0)
+                binding.nestedScrollView.scrollTo(0, 0)
             }
         }
     }
+
     override fun onPositiveClick(dialog: Dialog, modelRank: ModelRank) {
         dialog.dismiss()
         if (modelRank.isValid()) {
             Utils.CoroutineUtils.runIOTask({
                 Utils.DataHolder.rankDB.rankListDao().insert(modelRank) != -1L
-            }) { success->
+            }) { success ->
                 if (success) {
                     lifecycleScope.launch {
                         rankListAdapter.append(modelRank)
                     }
                 } else {
-                    Toast.makeText(context, "添加失败，${modelRank.rankName}已存在", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        context,
+                        "添加失败，${modelRank.rankName}已存在",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             }
         } else {
@@ -152,11 +158,11 @@ class RankFragment : BaseFragment(), AddRankDialog.Companion.Callback, JsonDialo
         if (import) {
             Utils.CoroutineUtils.runIOTask({
                 Utils.DataHolder.toModelRankList(json)
-            }) { list->
+            }) { list ->
                 list?.let {
                     Utils.CoroutineUtils.runIOTask({
                         Utils.DataHolder.rankDB.rankListDao().insertAll(it).map { it != -1L }
-                    }) { success->
+                    }) { success ->
                         lifecycleScope.launch {
                             rankListAdapter.appendAll(it.filterIndexed { index, _ ->
                                 success[index]

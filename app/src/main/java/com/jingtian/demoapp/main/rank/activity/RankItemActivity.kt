@@ -14,6 +14,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.jingtian.demoapp.R
 import com.jingtian.demoapp.databinding.ActivityRankItemBinding
 import com.jingtian.demoapp.databinding.ItemAddCommentBinding
+import com.jingtian.demoapp.main.ScreenUtils.screenHeight
 import com.jingtian.demoapp.main.ScreenUtils.screenWidth
 import com.jingtian.demoapp.main.app
 import com.jingtian.demoapp.main.base.BaseActivity
@@ -106,10 +107,6 @@ class RankItemActivity : BaseActivity(), AddCommentDialog.Companion.Callback {
                     }
                 }
             }
-        }
-
-        with(binding.root) {
-            setInnerRecyclerView(binding.recyclerView)
         }
 
         with(binding.recyclerView) {
