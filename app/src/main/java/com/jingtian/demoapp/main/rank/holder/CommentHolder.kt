@@ -53,6 +53,7 @@ class CommentHolder private constructor(private val binding: ItemRankItemComment
             setOnLongClickListener { v->
                 AddCommentDialog(context, this@CommentHolder, true).apply {
                     setComment(data.comment)
+                    setHint("修改评论")
                     show()
                 }
                 false

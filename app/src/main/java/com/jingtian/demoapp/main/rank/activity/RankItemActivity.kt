@@ -111,7 +111,10 @@ class RankItemActivity : BaseActivity(), AddCommentDialog.Companion.Callback {
             commentHeaderFooterAdapter.bindRecyclerView(this, commentAdapter)
             with(binding.add) {
                 setOnClickListener {
-                    AddCommentDialog(this@RankItemActivity, this@RankItemActivity).show()
+                    AddCommentDialog(this@RankItemActivity, this@RankItemActivity).apply {
+                        setHint("发表评论")
+                        show()
+                    }
                 }
             }
             lifecycleScope.launch {

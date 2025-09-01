@@ -19,9 +19,14 @@ class AddCommentDialog(context: Context, var callback: Callback, private val sho
     private lateinit var binding: DialogJsonBinding
 
     private var comment: String = ""
+    private var hint: String = ""
 
     fun setComment(comment: String) {
         this.comment = comment
+    }
+
+    fun setHint(hint: String) {
+        this.hint = hint
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -30,6 +35,7 @@ class AddCommentDialog(context: Context, var callback: Callback, private val sho
         setContentView(binding.root)
         with(binding.et) {
             setText(comment)
+            setHint(this@AddCommentDialog.hint)
         }
         with(binding.positive) {
             setOnClickListener {
