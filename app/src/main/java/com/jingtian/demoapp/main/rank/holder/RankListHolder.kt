@@ -121,7 +121,7 @@ class RankListHolder private constructor(private val binding: ItemRankListBindin
                     )
                 }
             })
-            clipToPadding = false
+            clipToPadding = true
         }
     }
 

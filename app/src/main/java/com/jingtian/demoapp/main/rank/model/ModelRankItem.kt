@@ -48,12 +48,15 @@ data class RankItemImage(
                     inPreferredConfig = Bitmap.Config.RGB_565 // 可选：使用 RGB_565 节省内存（比 ARGB_8888 节省一半）
                     inPurgeable = true // 允许系统在内存不足时回收像素
                 }
-
                 BitmapFactory.decodeByteArray(byteArray, 0, byteArray.size, options)
             }
         }) { bitMap->
             imageView.setImageBitmap(bitMap)
         }
+    }
+
+    fun isValid(): Boolean {
+        return image != Uri.EMPTY && id != -1L
     }
 
     private fun calculateScaleFactor(

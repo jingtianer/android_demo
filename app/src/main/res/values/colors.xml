@@ -10,4 +10,9 @@
     <color name="grey">#767575</color>
     <color name="yellow">#ffff00</color>
     <color name="transparent">#00000000</color>
+    <color name="color_card_bg">#f4f4f4</color>
+    <color name="color_star_stroke">#2C2C2C</color>
+    <color name="color_comment_quote">#FF000000</color>
+    <color name="color_comment_content">#585858</color>
+    <color name="color_comment_quote_boarder">#42753b</color>
 </resources>

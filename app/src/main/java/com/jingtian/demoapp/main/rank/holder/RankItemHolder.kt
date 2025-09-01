@@ -3,6 +3,7 @@ package com.jingtian.demoapp.main.rank.holder
 import android.app.Dialog
 import android.view.LayoutInflater
 import android.view.ViewGroup
+import android.widget.ImageView
 import androidx.core.content.res.ResourcesCompat
 import androidx.lifecycle.lifecycleScope
 import com.jingtian.demoapp.R
@@ -13,6 +14,7 @@ import com.jingtian.demoapp.main.rank.Utils
 import com.jingtian.demoapp.main.rank.activity.RankItemActivity
 import com.jingtian.demoapp.main.rank.dialog.AddRankItemDialog
 import com.jingtian.demoapp.main.rank.model.ModelRankItem
+import com.jingtian.demoapp.main.rank.model.ModelRankItem.Companion.isValid
 import com.jingtian.demoapp.main.widget.RankTypeChooser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -65,7 +67,13 @@ class RankItemHolder private constructor(private val binding: ItemRankItemBindin
             text = data.itemName
         }
         with(binding.image) {
-            data.image.loadImage(this, maxWidth = IMAGE_WIDTH.dp.toInt(), maxHeight = -1)
+            if (data.image.isValid()) {
+                scaleType = ImageView.ScaleType.CENTER_CROP
+                data.image.loadImage(this, maxWidth = IMAGE_WIDTH.dp.toInt(), maxHeight = -1)
+            } else {
+                scaleType = ImageView.ScaleType.CENTER_INSIDE
+                setImageResource(R.drawable.load_failed)
+            }
         }
     }
 

@@ -1,6 +1,7 @@
 package com.jingtian.demoapp.main.rank.fragment
 
 import android.app.Dialog
+import android.graphics.Rect
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -12,6 +13,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.jingtian.demoapp.databinding.FragmentRankBinding
 import com.jingtian.demoapp.databinding.ItemAddMoreBinding
+import com.jingtian.demoapp.main.RxEvents.setDoubleClickListener
 import com.jingtian.demoapp.main.base.BaseHeaderFooterAdapter
 import com.jingtian.demoapp.main.dp
 import com.jingtian.demoapp.main.fragments.BaseFragment
@@ -95,10 +97,34 @@ class RankFragment : BaseFragment(), AddRankDialog.Companion.Callback, JsonDialo
         }
         with(binding.recyclerView) {
             headerFooterAdapter.bindRecyclerView(this, rankListAdapter)
+            clipToPadding = false
+            repeat(itemDecorationCount) {
+                removeItemDecorationAt(0)
+            }
+            addItemDecoration(object : RecyclerView.ItemDecoration() {
+                override fun getItemOffsets(
+                    outRect: Rect,
+                    view: View,
+                    parent: RecyclerView,
+                    state: RecyclerView.State
+                ) {
+                    super.getItemOffsets(outRect, view, parent, state)
+                    outRect.set(0, 6f.dp.toInt(), 0, 6f.dp.toInt())
+                }
+            })
         }
         with(binding.add) {
             setOnClickListener {
                 AddRankDialog(context, this@RankFragment).show()
+            }
+        }
+        with(binding.root) {
+            setInnerRecyclerView(binding.recyclerView)
+        }
+        getTabView()?.apply {
+            setDoubleClickListener(600L) {
+                binding.recyclerView.scrollToPosition(0)
+                binding.root.scrollTo(0, 0)
             }
         }
     }

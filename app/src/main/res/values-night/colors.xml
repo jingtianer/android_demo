@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="color_card_bg">#282828</color>
+    <color name="color_star_stroke">#585858</color>
+    <color name="color_comment_quote">#787878</color>
+    <color name="color_comment_content">#888888</color>
+    <color name="color_comment_quote_boarder">#96ab93</color>
+</resources>

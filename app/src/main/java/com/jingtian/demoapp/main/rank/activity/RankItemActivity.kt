@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
+import android.widget.ImageView
 import android.widget.Toast
 import androidx.core.content.res.ResourcesCompat
 import androidx.lifecycle.lifecycleScope
@@ -88,7 +89,10 @@ class RankItemActivity : BaseActivity(), AddCommentDialog.Companion.Callback {
                         text = data.itemName
                     }
                     with(binding.image) {
-                        data.image.loadImage(this, maxWidth = IMAGE_WIDTH.toInt())
+                        if (data.image.isValid()) {
+                            scaleType = ImageView.ScaleType.CENTER_CROP
+                            data.image.loadImage(this, maxWidth = IMAGE_WIDTH.toInt())
+                        }
                     }
                     with(binding.score) {
                         text = String.format("%.2f分", binding.starRate.getScore())

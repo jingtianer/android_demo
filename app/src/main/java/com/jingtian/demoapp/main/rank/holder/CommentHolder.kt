@@ -41,7 +41,7 @@ class CommentHolder private constructor(private val binding: ItemRankItemComment
                 ModelRankUser.getUserInfo(data.userName)
             }
             user.loadUserImage(binding.avatar, 30f.dp.toInt(), 30f.dp.toInt())
-            binding.userName.text = user.getUserNameOrDefault()
+            binding.userName.text = "@${user.getUserNameOrDefault()}"
         }
         with(binding.logTime) {
             text = dataTimeFormat.format(data.lastModifyDate)

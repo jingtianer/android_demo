@@ -14,37 +14,45 @@
             android:layout_height="wrap_content"
             android:gravity="center_horizontal"
             android:textSize="28sp"
+            android:textStyle="bold"
             tools:text="标题"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintLeft_toLeftOf="parent"
             app:layout_constraintRight_toRightOf="parent"/>
 
-        <ImageView
-            android:id="@+id/image"
+        <androidx.cardview.widget.CardView
+            android:id="@+id/image_layout"
             android:layout_width="0dp"
             android:layout_marginTop="8dp"
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="24dp"
-            android:adjustViewBounds="true"
-            android:src="@drawable/add"
+            app:cardElevation="0dp"
+            app:cardCornerRadius="16dp"
             app:layout_constraintHorizontal_bias="0.0"
             app:layout_constraintLeft_toLeftOf="parent"
             app:layout_constraintRight_toRightOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/title" />
+            app:layout_constraintTop_toBottomOf="@+id/title">
+            <ImageView
+                android:id="@+id/image"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:adjustViewBounds="true"
+                android:src="@drawable/load_failed" />
 
-        <View
-            android:id="@+id/rank_type"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            app:layout_constraintTop_toTopOf="@id/image"
-            app:layout_constraintRight_toRightOf="@id/image"/>
+
+            <View
+                android:id="@+id/rank_type"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="top|end"/>
+        </androidx.cardview.widget.CardView>
 
         <com.jingtian.demoapp.main.widget.StarRateView
             android:id="@+id/star_rate"
             android:layout_width="wrap_content"
             android:layout_height="45dp"
             android:layout_marginTop="12dp"
-            app:layout_constraintTop_toBottomOf="@+id/image"
+            app:layout_constraintTop_toBottomOf="@+id/image_layout"
             app:layout_constraintLeft_toLeftOf="parent"
             app:layout_constraintRight_toRightOf="parent"/>
 
@@ -71,33 +79,59 @@
             android:layout_marginTop="12dp"
             android:layout_marginHorizontal="16dp"
             android:orientation="vertical"
+            android:background="@drawable/bg_border_rank_quote"
             app:layout_constraintTop_toBottomOf="@id/rate_barrier">
             <ImageView
                 android:layout_width="32dp"
                 android:layout_height="32dp"
                 android:layout_gravity="top|start"
+                android:layout_marginTop="4dp"
+                android:layout_marginLeft="4dp"
                 android:src="@drawable/quote"/>
             <TextView
                 android:id="@+id/desc"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:paddingHorizontal="32dp"
                 tools:text="对物品的描述"
+                android:layout_marginHorizontal="4dp"
+                android:textStyle="italic"
+                android:textColor="@color/color_comment_content"
                 android:textAlignment="center"
                 android:textSize="18sp"/>
             <ImageView
                 android:layout_width="32dp"
                 android:layout_height="32dp"
                 android:rotation="180"
+                android:layout_marginEnd="4dp"
+                android:layout_marginBottom="4dp"
                 android:layout_gravity="bottom|end"
                 android:src="@drawable/quote"/>
 
         </LinearLayout>
 
+        <androidx.cardview.widget.CardView
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            app:layout_constraintTop_toTopOf="@id/comment_title"
+            app:layout_constraintBottom_toBottomOf="@id/recycler_view"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintRight_toRightOf="parent"
+            android:layout_marginHorizontal="16dp"
+            app:cardElevation="0dp"
+            app:cardCornerRadius="8dp"
+            app:cardBackgroundColor="@color/color_card_bg"/>
+
         <TextView
             android:id="@+id/comment_title"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textSize="16dp"
+            android:paddingTop="8dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginHorizontal="16dp"
+            android:paddingHorizontal="8dp"
+            android:textSize="20sp"
+            android:textStyle="bold"
             android:text="评论区"
             app:layout_constraintTop_toBottomOf="@id/desc_layout"/>
 
@@ -105,7 +139,11 @@
             android:id="@+id/recycler_view"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            app:layout_constraintTop_toBottomOf="@id/comment_title"/>
+            android:layout_marginHorizontal="16dp"
+            android:layout_marginTop="8dp"
+            android:paddingHorizontal="8dp"
+            app:layout_constraintTop_toBottomOf="@id/comment_title"
+            tools:layout_editor_absoluteX="16dp" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
