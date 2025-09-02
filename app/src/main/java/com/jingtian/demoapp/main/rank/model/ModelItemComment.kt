@@ -4,6 +4,7 @@ import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
+import androidx.room.Junction
 import androidx.room.PrimaryKey
 import androidx.room.ProvidedTypeConverter
 import androidx.room.Relation
@@ -76,4 +77,11 @@ class RelationRankItemAndComment(
         entity = ModelItemComment::class,
     )
     val list: List<ModelItemComment>
+)
+
+data class RelationUserAndComment(
+    @Embedded(prefix = "user_")
+    var user: ModelRankUser,
+    @Embedded(prefix = "comment_")
+    var comment: ModelItemComment
 )

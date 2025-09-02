@@ -20,8 +20,11 @@ import com.jingtian.demoapp.main.base.BaseHeaderFooterAdapter
 import com.jingtian.demoapp.main.dp
 import com.jingtian.demoapp.main.rank.Utils
 import com.jingtian.demoapp.main.rank.adapter.CommentListAdapter
+import com.jingtian.demoapp.main.rank.dao.RankUserModelDao
 import com.jingtian.demoapp.main.rank.dialog.AddCommentDialog
 import com.jingtian.demoapp.main.rank.model.ModelItemComment
+import com.jingtian.demoapp.main.rank.model.ModelRankUser
+import com.jingtian.demoapp.main.rank.model.RelationUserAndComment
 import com.jingtian.demoapp.main.widget.RankTypeChooser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -48,7 +51,7 @@ class RankItemActivity : BaseActivity(), AddCommentDialog.Companion.Callback {
     private var rankItemName: String = ""
 
     private val commentAdapter = CommentListAdapter()
-    private val commentHeaderFooterAdapter = BaseHeaderFooterAdapter<ModelItemComment>()
+    private val commentHeaderFooterAdapter = BaseHeaderFooterAdapter<RelationUserAndComment>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -119,7 +122,7 @@ class RankItemActivity : BaseActivity(), AddCommentDialog.Companion.Callback {
             }
             lifecycleScope.launch {
                 val data = withContext(Dispatchers.IO) {
-                    Utils.DataHolder.rankDB.rankCommentDao().getAllComment(rankItemName)
+                    Utils.DataHolder.rankDB.rankCommentDao().getAllUserWithComments(rankItemName)
                 }
                 withContext(Dispatchers.Main) {
                     commentAdapter.setDataList(data)
@@ -130,6 +133,7 @@ class RankItemActivity : BaseActivity(), AddCommentDialog.Companion.Callback {
 
     override fun onPositiveClick(dialog: Dialog, comment: String) {
         dialog.dismiss()
+        val user = ModelRankUser.getUserInfo() ?: return
         val model = ModelItemComment(
             itemName = rankItemName,
             comment = comment,
@@ -150,7 +154,7 @@ class RankItemActivity : BaseActivity(), AddCommentDialog.Companion.Callback {
             }
             lifecycleScope.launch {
                 withContext(Dispatchers.Main) {
-                    commentAdapter.append(model)
+                    commentAdapter.append(RelationUserAndComment(user, model))
                 }
             }
         }

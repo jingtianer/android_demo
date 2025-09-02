@@ -13,6 +13,7 @@ import com.jingtian.demoapp.main.rank.model.ModelItemComment
 import com.jingtian.demoapp.main.rank.model.ModelRankUser
 import com.jingtian.demoapp.main.rank.model.ModelRankUser.Companion.getUserNameOrDefault
 import com.jingtian.demoapp.main.rank.model.ModelRankUser.Companion.loadUserImage
+import com.jingtian.demoapp.main.rank.model.RelationUserAndComment
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -20,7 +21,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 
 class CommentHolder private constructor(private val binding: ItemRankItemCommentBinding):
-    BaseViewHolder<ModelItemComment>(binding.root), AddCommentDialog.Companion.Callback {
+    BaseViewHolder<RelationUserAndComment>(binding.root), AddCommentDialog.Companion.Callback {
 
     companion object {
         fun create(parent: ViewGroup): CommentHolder {
@@ -35,24 +36,19 @@ class CommentHolder private constructor(private val binding: ItemRankItemComment
         private val dataTimeFormat = SimpleDateFormat.getDateTimeInstance()
     }
 
-    override fun onBind(data: ModelItemComment, position: Int) {
-        lifecycleScope.launch {
-            val user = withContext(Dispatchers.IO) {
-                ModelRankUser.getUserInfo(data.userName)
-            }
-            user.loadUserImage(binding.avatar, 30f.dp.toInt(), 30f.dp.toInt())
-            binding.userName.text = "@${user.getUserNameOrDefault()}"
-        }
+    override fun onBind(data: RelationUserAndComment, position: Int) {
+        data.user.loadUserImage(binding.avatar, 30f.dp.toInt(), 30f.dp.toInt())
+        binding.userName.text = "@${data.user.getUserNameOrDefault()}"
         with(binding.logTime) {
-            text = dataTimeFormat.format(data.lastModifyDate)
+            text = dataTimeFormat.format(data.comment.lastModifyDate)
         }
         with(binding.logContent) {
-            text = data.comment
+            text = data.comment.comment
         }
         with(binding.root) {
             setOnLongClickListener { v->
                 AddCommentDialog(context, this@CommentHolder, true).apply {
-                    setComment(data.comment)
+                    setComment(data.comment.comment)
                     setHint("修改评论")
                     show()
                 }
@@ -64,12 +60,12 @@ class CommentHolder private constructor(private val binding: ItemRankItemComment
     override fun onPositiveClick(dialog: Dialog, comment: String) {
         dialog.dismiss()
         val currentData = currentData?.apply {
-            this.comment = comment
-            this.lastModifyDate = Date()
+            this.comment.comment = comment
+            this.comment.lastModifyDate = Date()
         } ?: return
         currentAdapter?.setData(currentData, currentPosition)
         Utils.CoroutineUtils.runIOTask({
-            Utils.DataHolder.rankDB.rankCommentDao().update(currentData)
+            Utils.DataHolder.rankDB.rankCommentDao().update(currentData.comment)
         }) {}
     }
 
@@ -81,7 +77,7 @@ class CommentHolder private constructor(private val binding: ItemRankItemComment
         dialog.dismiss()
         val currentData = currentData ?: return
         Utils.CoroutineUtils.runIOTask({
-            Utils.DataHolder.rankDB.rankCommentDao().delete(currentData)
+            Utils.DataHolder.rankDB.rankCommentDao().delete(currentData.comment)
         }) {
             lifecycleScope.launch {
                 currentAdapter?.remove(currentPosition)
