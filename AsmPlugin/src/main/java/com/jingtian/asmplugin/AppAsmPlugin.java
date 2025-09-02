@@ -234,8 +234,10 @@ public class AppAsmPlugin extends Transform implements Plugin<Project> {
                 printLog("afterEvaluate");
                 AppAsmPlugin.this.args = (AsmPluginArgs) target.property("AsmPlugin");
                 printLog("args = " + args);
-                AppExtension appExtension = project.getExtensions().getByType(AppExtension.class);
-                appExtension.registerTransform(AppAsmPlugin.this);
+                if (args.enable) {
+                    AppExtension appExtension = project.getExtensions().getByType(AppExtension.class);
+                    appExtension.registerTransform(AppAsmPlugin.this);
+                }
             }
         });
     }
@@ -243,8 +245,10 @@ public class AppAsmPlugin extends Transform implements Plugin<Project> {
 
     public static class AsmPluginArgs {
         List<String> extraJars;
+        boolean enable;
         public AsmPluginArgs() {
             this.extraJars = ImmutableList.copyOf(new ArrayList<>());
+            this.enable = true;
         }
 
         public static AsmPluginArgs getInstance(Project project) {
@@ -261,6 +265,8 @@ public class AppAsmPlugin extends Transform implements Plugin<Project> {
             sb.append("AsmPluginArgs: {\n");
             sb.append("\textraJars: ");
             sb.append(Arrays.deepToString(extraJars.toArray()));
+            sb.append("\n\tenable: ");
+            sb.append(enable);
             sb.append("\n}");
             return sb.toString();
         }

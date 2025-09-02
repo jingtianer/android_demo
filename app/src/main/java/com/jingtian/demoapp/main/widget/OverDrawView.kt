@@ -69,7 +69,7 @@ class OverDrawView @JvmOverloads constructor(
         strokeWidth = this@OverDrawView.strokeWidth
     }
 
-    private val instrumentedClipRect : Canvas.(Float, Float, Float, Float, Int) -> Boolean = run {
+    private val instrumentedClipRect : Canvas.(Float, Float, Float, Float, Int) -> Boolean by lazy {
         val method = try {
             ReflectClass(Canvas::class.java).method("clipRect", arrayOf(
                 Float::class.javaPrimitiveType!!,
@@ -90,7 +90,7 @@ class OverDrawView @JvmOverloads constructor(
         returnFunction
     }
 
-    private val nClipRect : Canvas.(Float, Float, Float, Float, Int) -> Boolean = run {
+    private val nClipRect : Canvas.(Float, Float, Float, Float, Int) -> Boolean by lazy {
         val method = try {
             ReflectClass(Canvas::class.java).method("nClipRect", arrayOf(
                 Long::class.javaPrimitiveType!!,
@@ -115,7 +115,7 @@ class OverDrawView @JvmOverloads constructor(
         returnFunction
     }
 
-    private val instrumentedViewClipRect : Canvas.(Float, Float, Float, Float, Int) -> Boolean = run {
+    private val instrumentedViewClipRect : Canvas.(Float, Float, Float, Float, Int) -> Boolean by lazy {
         val method = try {
             ReflectObject(this).method("clipRect", arrayOf(
                 Canvas::class.java,

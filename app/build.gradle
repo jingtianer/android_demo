@@ -51,6 +51,7 @@ print(sdkPath)
 
 AsmPlugin {
 //    extraJars = [sdkPath + androidJar] // 可惜，没用
+    enable = false
 }
 
 dependencies {
