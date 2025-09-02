@@ -133,7 +133,10 @@ class RankItemActivity : BaseActivity(), AddCommentDialog.Companion.Callback {
 
     override fun onPositiveClick(dialog: Dialog, comment: String) {
         dialog.dismiss()
-        val user = ModelRankUser.getUserInfo() ?: return
+        val user = ModelRankUser.getUserInfo() ?: run {
+            Toast.makeText(this, "评论失败，请登录后再发评论哦", Toast.LENGTH_SHORT).show()
+            return
+        }
         val model = ModelItemComment(
             itemName = rankItemName,
             comment = comment,
