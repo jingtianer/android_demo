@@ -60,6 +60,11 @@ class RankFragment : BaseFragment(), AddRankDialog.Companion.Callback,
         }
     }
 
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        Utils.DataHolder.ImagePool.bindLifeCycle(this.lifecycle)
+    }
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,

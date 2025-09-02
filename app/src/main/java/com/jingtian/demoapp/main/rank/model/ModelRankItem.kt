@@ -2,11 +2,9 @@ package com.jingtian.demoapp.main.rank.model
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.Color
 import android.net.Uri
-import android.view.ViewGroup
+import android.util.Log
 import android.widget.ImageView
-import androidx.annotation.ColorInt
 import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.ForeignKey
@@ -16,7 +14,6 @@ import androidx.room.PrimaryKey
 import androidx.room.ProvidedTypeConverter
 import androidx.room.Relation
 import androidx.room.TypeConverter
-import androidx.room.TypeConverters
 import com.jingtian.demoapp.main.app
 import com.jingtian.demoapp.main.rank.Utils
 import com.jingtian.demoapp.main.rank.dao.RankModelItemDao
@@ -31,24 +28,39 @@ data class RankItemImage(
             return
         }
         Utils.CoroutineUtils.runIOTask({
-            app.contentResolver.openInputStream(image)?.use {
-                val byteArray = it.readBytes()
+            val options = BitmapFactory.Options().apply {
+                inJustDecodeBounds = true // 只获取尺寸，不加载像素
+            }
+            val scaleFactor =  app.contentResolver.openInputStream(image)?.use { `is`->
                 // 第一步：仅解码边界，获取图片原始宽高
-                val options = BitmapFactory.Options().apply {
-                    inJustDecodeBounds = true // 只获取尺寸，不加载像素
-                }
-                BitmapFactory.decodeByteArray(byteArray, 0, byteArray.size, options)
+                BitmapFactory.decodeStream(`is`, null, options)
                 // 第二步：计算缩放比例（避免图片过大导致 OOM）
-                val scaleFactor = calculateScaleFactor(options.outWidth, options.outHeight, maxWidth, maxHeight)
-
-                // 第三步：按缩放比例解码图片
-                options.apply {
-                    inJustDecodeBounds = false // 实际加载像素
-                    inSampleSize = scaleFactor // 缩放比例（2的倍数，如 2=1/2 大小，4=1/4 大小）
-                    inPreferredConfig = Bitmap.Config.RGB_565 // 可选：使用 RGB_565 节省内存（比 ARGB_8888 节省一半）
-                    inPurgeable = true // 允许系统在内存不足时回收像素
+                calculateScaleFactor(options.outWidth, options.outHeight, maxWidth, maxHeight)
+            }
+            if (scaleFactor != null) {
+                Utils.DataHolder.ImagePool.get(id, scaleFactor)?.let {
+                    Log.d("TAG", "loadImage: ${id}-${image}-${scaleFactor} hit ${imageView.hashCode()}")
+                    return@runIOTask it
                 }
-                BitmapFactory.decodeByteArray(byteArray, 0, byteArray.size, options)
+            }
+            val bitmap = scaleFactor?.let {
+                app.contentResolver.openInputStream(image)?.use { `is`->
+                    // 第三步：按缩放比例解码图片
+                    options.apply {
+                        inJustDecodeBounds = false // 实际加载像素
+                        inSampleSize = scaleFactor // 缩放比例（2的倍数，如 2=1/2 大小，4=1/4 大小）
+                        inPreferredConfig = Bitmap.Config.RGB_565 // 可选：使用 RGB_565 节省内存（比 ARGB_8888 节省一半）
+                        inPurgeable = true // 允许系统在内存不足时回收像素
+                    }
+                    BitmapFactory.decodeStream(`is`, null, options)
+                }
+            }
+            return@runIOTask if (bitmap == null) {
+                Log.d("TAG", "loadImage fail, try get from pool: ${id}-${image} ${imageView.hashCode()}")
+                Utils.DataHolder.ImagePool.get(id, -1)
+            } else {
+                Utils.DataHolder.ImagePool.put(id, bitmap, scaleFactor)
+                bitmap
             }
         }) { bitMap->
             imageView.setImageBitmap(bitMap)

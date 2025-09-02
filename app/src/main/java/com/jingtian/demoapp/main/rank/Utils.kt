@@ -1,6 +1,7 @@
 package com.jingtian.demoapp.main.rank
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.net.Uri
 import android.util.Log
 import android.view.MotionEvent
@@ -9,6 +10,9 @@ import android.view.ViewConfiguration
 import androidx.core.content.FileProvider
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.net.toUri
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
 import androidx.room.Room
@@ -397,6 +401,53 @@ object Utils {
             .addTypeConverter(RankItemRankTypeConverter())
             .allowMainThreadQueries()
             .build()
+
+        object ImagePool {
+            private const val TAG = "ImagePool"
+            private val lock = Any()
+            private val imagePool = HashMap<Long, ArrayList<Pair<Int, Bitmap>>>()
+
+            fun bindLifeCycle(lifecycle: Lifecycle) {
+                lifecycle.addObserver(object : DefaultLifecycleObserver {
+                    override fun onDestroy(owner: LifecycleOwner) {
+                        super.onDestroy(owner)
+                        lifecycle.removeObserver(this)
+                        imagePool.clear()
+                        Log.d(TAG, "onDestroy: clear image pool")
+                    }
+                })
+            }
+
+            private fun getQueue(id: Long):ArrayList<Pair<Int, Bitmap>> {
+                return imagePool.getOrPut(id) { ArrayList() }
+            }
+
+            fun put(id: Long, bitmap: Bitmap, scaleFactor: Int) {
+                synchronized(lock) {
+                    val queue = getQueue(id)
+                    var insertPos = queue.binarySearch {
+                        it.first - scaleFactor
+                    }
+                    if (insertPos < 0) {
+                        insertPos = -insertPos-1
+                    }
+                    queue.add(insertPos, scaleFactor to bitmap)
+                }
+            }
+
+            fun get(id: Long, scaleFactor: Int = -1): Bitmap? {
+                return synchronized(lock) {
+                    val queue = getQueue(id)
+                    var insertPos = queue.binarySearch {
+                        it.first - scaleFactor
+                    }
+                    if (insertPos < 0) {
+                        insertPos = -insertPos-1
+                    }
+                    queue.getOrNull(insertPos)?.second
+                }
+            }
+        }
 
         object ImageStorage {
 
