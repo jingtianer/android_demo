@@ -14,6 +14,7 @@ import androidx.room.PrimaryKey
 import androidx.room.ProvidedTypeConverter
 import androidx.room.Relation
 import androidx.room.TypeConverter
+import com.jingtian.demoapp.R
 import com.jingtian.demoapp.main.app
 import com.jingtian.demoapp.main.rank.Utils
 import com.jingtian.demoapp.main.rank.dao.RankModelItemDao
@@ -36,34 +37,26 @@ data class RankItemImage(
                 BitmapFactory.decodeStream(`is`, null, options)
                 // 第二步：计算缩放比例（避免图片过大导致 OOM）
                 calculateScaleFactor(options.outWidth, options.outHeight, maxWidth, maxHeight)
-            }
-            if (scaleFactor != null) {
-                Utils.DataHolder.ImagePool.get(id, scaleFactor)?.let {
-                    Log.d("TAG", "loadImage: ${id}-${image}-${scaleFactor} hit ${imageView.hashCode()}")
-                    return@runIOTask it
-                }
-            }
-            val bitmap = scaleFactor?.let {
+            } ?: -1
+            Log.d("TAG", "loadImage: $id, $scaleFactor, $image")
+            return@runIOTask Utils.DataHolder.ImagePool.put(id, scaleFactor) {
                 app.contentResolver.openInputStream(image)?.use { `is`->
+                    Log.d("TAG", "loadImage failed: $id, $scaleFactor, $image")
                     // 第三步：按缩放比例解码图片
                     options.apply {
                         inJustDecodeBounds = false // 实际加载像素
                         inSampleSize = scaleFactor // 缩放比例（2的倍数，如 2=1/2 大小，4=1/4 大小）
                         inPreferredConfig = Bitmap.Config.RGB_565 // 可选：使用 RGB_565 节省内存（比 ARGB_8888 节省一半）
-                        inPurgeable = true // 允许系统在内存不足时回收像素
                     }
                     BitmapFactory.decodeStream(`is`, null, options)
                 }
             }
-            return@runIOTask if (bitmap == null) {
-                Log.d("TAG", "loadImage fail, try get from pool: ${id}-${image} ${imageView.hashCode()}")
-                Utils.DataHolder.ImagePool.get(id, -1)
-            } else {
-                Utils.DataHolder.ImagePool.put(id, bitmap, scaleFactor)
-                bitmap
-            }
         }) { bitMap->
-            imageView.setImageBitmap(bitMap)
+            if (bitMap != null) {
+                imageView.setImageBitmap(bitMap)
+            } else {
+                imageView.setImageResource(R.drawable.load_failed)
+            }
         }
     }
 

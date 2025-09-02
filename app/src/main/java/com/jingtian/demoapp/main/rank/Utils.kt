@@ -59,6 +59,7 @@ import java.io.InputStreamReader
 import java.io.OutputStream
 import java.io.OutputStreamWriter
 import java.io.RandomAccessFile
+import java.lang.ref.SoftReference
 import java.nio.channels.Channels
 import java.util.Date
 import java.util.LinkedList
@@ -404,7 +405,7 @@ object Utils {
 
         object ImagePool {
             private const val TAG = "ImagePool"
-            private val imagePool = ConcurrentHashMap<Long, ArrayList<Pair<Int, Bitmap>>>()
+            private val imagePool = ConcurrentHashMap<Long, ArrayList<Pair<Int, SoftReference<Bitmap?>>>>()
 
             fun bindLifeCycle(lifecycle: Lifecycle) {
                 lifecycle.addObserver(object : DefaultLifecycleObserver {
@@ -417,33 +418,31 @@ object Utils {
                 })
             }
 
-            private fun getQueue(id: Long):ArrayList<Pair<Int, Bitmap>> {
+            private fun getQueue(id: Long):ArrayList<Pair<Int, SoftReference<Bitmap?>>> {
                 return imagePool.getOrPut(id) { ArrayList() }
             }
 
-            fun put(id: Long, bitmap: Bitmap, scaleFactor: Int) {
+            fun put(id: Long, scaleFactor: Int = -1, bitmapCreator: () -> Bitmap?): Bitmap? {
                 val queue = getQueue(id)
                 synchronized(queue) {
-                    var insertPos = queue.binarySearch {
-                        it.first - scaleFactor
+                    if (scaleFactor == -1) {
+                        return queue.lastOrNull()?.second?.get() ?: bitmapCreator()
+                    }
+                    val insertPos = queue.binarySearch {
+                        scaleFactor - it.first
                     }
                     if (insertPos < 0) {
-                        insertPos = -insertPos-1
+                        val bitmap = bitmapCreator()
+                        queue.add(-insertPos-1, scaleFactor to SoftReference(bitmap))
+                        return bitmap
                     }
-                    queue.add(insertPos, scaleFactor to bitmap)
-                }
-            }
-
-            fun get(id: Long, scaleFactor: Int = -1): Bitmap? {
-                val queue = getQueue(id)
-                return synchronized(queue) {
-                    var insertPos = queue.binarySearch {
-                        it.first - scaleFactor
+                    val cachedBitmap = queue[insertPos].second.get()
+                    if (cachedBitmap == null || cachedBitmap.isRecycled) {
+                        val bitmap = bitmapCreator()
+                        queue[insertPos] = scaleFactor to SoftReference(bitmap)
+                        return bitmap
                     }
-                    if (insertPos < 0) {
-                        insertPos = -insertPos-1
-                    }
-                    queue.getOrNull(insertPos)?.second
+                    return cachedBitmap
                 }
             }
         }
