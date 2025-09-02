@@ -404,8 +404,7 @@ object Utils {
 
         object ImagePool {
             private const val TAG = "ImagePool"
-            private val lock = Any()
-            private val imagePool = HashMap<Long, ArrayList<Pair<Int, Bitmap>>>()
+            private val imagePool = ConcurrentHashMap<Long, ArrayList<Pair<Int, Bitmap>>>()
 
             fun bindLifeCycle(lifecycle: Lifecycle) {
                 lifecycle.addObserver(object : DefaultLifecycleObserver {
@@ -423,8 +422,8 @@ object Utils {
             }
 
             fun put(id: Long, bitmap: Bitmap, scaleFactor: Int) {
-                synchronized(lock) {
-                    val queue = getQueue(id)
+                val queue = getQueue(id)
+                synchronized(queue) {
                     var insertPos = queue.binarySearch {
                         it.first - scaleFactor
                     }
@@ -436,8 +435,8 @@ object Utils {
             }
 
             fun get(id: Long, scaleFactor: Int = -1): Bitmap? {
-                return synchronized(lock) {
-                    val queue = getQueue(id)
+                val queue = getQueue(id)
+                return synchronized(queue) {
                     var insertPos = queue.binarySearch {
                         it.first - scaleFactor
                     }
