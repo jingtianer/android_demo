@@ -184,8 +184,8 @@
             android:id="@+id/add"
             android:layout_width="32dp"
             android:layout_height="32dp"
-            android:src="@drawable/add"
-            android:layout_gravity="end"/>
+            android:layout_gravity="end"
+            android:src="@drawable/add" />
     </FrameLayout>
 
     <androidx.recyclerview.widget.RecyclerView
