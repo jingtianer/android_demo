@@ -14,6 +14,8 @@ import android.widget.Toast
 import androidx.core.app.ActivityOptionsCompat
 import androidx.core.app.SharedElementCallback
 import androidx.core.content.res.ResourcesCompat
+import androidx.core.transition.addListener
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -35,6 +37,7 @@ import com.jingtian.demoapp.main.rank.model.ModelRankUser
 import com.jingtian.demoapp.main.rank.model.RelationUserAndComment
 import com.jingtian.demoapp.main.widget.RankTypeChooser
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Date
@@ -86,7 +89,7 @@ class RankItemActivity : BaseActivity(), AddCommentDialog.Companion.Callback {
         private val snapshotMap = mutableMapOf<View, SharedElementParcelable>()
         override fun onCreateSnapshotView(context: Context?, snapshot: Parcelable?): View {
             if (snapshot is SharedElementParcelable && context != null) {
-                val view =  snapshot.createSnapShotView(context)
+                val view = snapshot.createSnapShotView(context)
                 snapshotMap[view] = snapshot
                 Log.d("TAG", "onCreateSnapshotView: ${view.hashCode()}")
                 return view
@@ -104,7 +107,10 @@ class RankItemActivity : BaseActivity(), AddCommentDialog.Companion.Callback {
             sharedElementSnapshots ?: return
             for ((index, shareElement) in sharedElements.withIndex()) {
                 if (shareElement is ISharedElement) {
-                    Log.d("TAG", "onSharedElementStart: ${shareElement.hashCode()} ${shareElement.onCaptureSharedElementSnapshot().bundle}")
+                    Log.d(
+                        "TAG",
+                        "onSharedElementStart: ${shareElement.hashCode()} ${shareElement.onCaptureSharedElementSnapshot().bundle}"
+                    )
 //                    val newSnapShot = shareElement.onCaptureSharedElementSnapshot()
                     shareElement.applySnapShot(snapshotMap[sharedElementSnapshots[index]], true)
 //                    snapshotMap[sharedElementSnapshots[index]] = newSnapShot
@@ -122,7 +128,10 @@ class RankItemActivity : BaseActivity(), AddCommentDialog.Companion.Callback {
             sharedElementSnapshots ?: return
             for ((index, shareElement) in sharedElements.withIndex()) {
                 if (shareElement is ISharedElement) {
-                    Log.d("TAG", "onSharedElementStart: ${shareElement.hashCode()} ${shareElement.onCaptureSharedElementSnapshot().bundle}")
+                    Log.d(
+                        "TAG",
+                        "onSharedElementStart: ${shareElement.hashCode()} ${shareElement.onCaptureSharedElementSnapshot().bundle}"
+                    )
 //                    val newSnapShot = shareElement.onCaptureSharedElementSnapshot()
                     shareElement.applySnapShot(snapshotMap[sharedElementSnapshots[index]], false)
 //                    snapshotMap[sharedElementSnapshots[index]] = newSnapShot
@@ -208,16 +217,18 @@ class RankItemActivity : BaseActivity(), AddCommentDialog.Companion.Callback {
                         } else {
                             binding.descLayout.visibility = View.GONE
                         }
-                        with(binding.image) {
-                            if (data.image.isValid()) {
-                                scaleType = ImageView.ScaleType.CENTER_CROP
-                                data.image.loadImage(this, maxWidth = IMAGE_WIDTH.toInt()) { _, _ ->
-                                    startPostponedEnterTransition()
+                        window.sharedElementEnterTransition.addListener(onEnd = {
+                            with(binding.image) {
+                                if (data.image.isValid()) {
+                                    scaleType = ImageView.ScaleType.CENTER_CROP
+                                    data.image.loadImage(
+                                        this,
+                                        maxWidth = IMAGE_WIDTH.toInt()
+                                    )
                                 }
-                            } else {
-                                startPostponedEnterTransition()
                             }
-                        }
+                        })
+                        startPostponedEnterTransition()
                     }
                 }
             }

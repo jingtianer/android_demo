@@ -5,6 +5,7 @@ import android.graphics.Canvas
 import android.graphics.Rect
 import android.graphics.drawable.Drawable
 import android.util.AttributeSet
+import android.util.Log
 import android.view.MotionEvent
 import android.view.View
 import androidx.recyclerview.widget.RecyclerView
@@ -81,6 +82,9 @@ class StarRateView @JvmOverloads constructor(
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
+        if (w <= 0 || h <= 0) {
+            return
+        }
         this.w = w
         this.h = h
         val width = if (starCnt <= 1) {
@@ -90,6 +94,7 @@ class StarRateView @JvmOverloads constructor(
         }
         starSize = min(h.toFloat(), width)
         starTotalWidth = starSize * starCnt + (starCnt - 1) * starPadding
+        Log.d("TAG", "onSizeChanged: $w, $h, $width, $starSize, $starTotalWidth, $measuredWidth")
         layoutParams = layoutParams?.apply {
             this.width = starTotalWidth.toInt()
             this.height = h
