@@ -59,18 +59,22 @@
                 app:layout_constraintRight_toRightOf="parent"
                 app:layout_constraintTop_toBottomOf="@+id/title">
 
-                <ImageView
+                <com.jingtian.demoapp.main.widget.RoundRectImageView
                     android:id="@+id/image"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:transitionName="itemImage"
+                    app:radius="16dp"
                     android:adjustViewBounds="true"
                     android:scaleType="centerCrop"
                     android:src="@drawable/load_failed" />
 
-                <View
+                <com.jingtian.demoapp.main.widget.RoundRectImageView
                     android:id="@+id/rank_type"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:transitionName="itemRankType"
+                    app:radiusRightTop="16dp"
                     android:layout_gravity="top|end" />
             </androidx.cardview.widget.CardView>
 
@@ -79,6 +83,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="45dp"
                 android:layout_marginTop="12dp"
+                android:transitionName="itemStarRate"
                 app:layout_constraintLeft_toLeftOf="parent"
                 app:layout_constraintRight_toRightOf="parent"
                 app:layout_constraintTop_toBottomOf="@+id/image_layout" />

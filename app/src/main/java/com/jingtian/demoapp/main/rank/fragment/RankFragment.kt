@@ -1,12 +1,17 @@
 package com.jingtian.demoapp.main.rank.fragment
 
 import android.app.Dialog
+import android.content.Context
+import android.graphics.Matrix
 import android.graphics.Rect
+import android.graphics.RectF
 import android.os.Bundle
+import android.os.Parcelable
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.core.app.SharedElementCallback
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -14,8 +19,11 @@ import com.jingtian.demoapp.databinding.FragmentRankBinding
 import com.jingtian.demoapp.main.RxEvents.setDoubleClickListener
 import com.jingtian.demoapp.main.ScreenUtils.screenHeight
 import com.jingtian.demoapp.main.base.BaseHeaderFooterAdapter
+import com.jingtian.demoapp.main.base.ISharedElement
+import com.jingtian.demoapp.main.base.SharedElementParcelable
 import com.jingtian.demoapp.main.dp
 import com.jingtian.demoapp.main.fragments.BaseFragment
+import com.jingtian.demoapp.main.getBaseActivity
 import com.jingtian.demoapp.main.rank.Utils
 import com.jingtian.demoapp.main.rank.Utils.DataHolder.rankDB
 import com.jingtian.demoapp.main.rank.adapter.RankListAdapter
@@ -27,6 +35,7 @@ import com.jingtian.demoapp.main.rank.model.ModelRank.Companion.isValid
 import com.jingtian.demoapp.main.rank.model.ModelRankUser
 import com.jingtian.demoapp.main.rank.model.ModelRankUser.Companion.getUserNameOrDefault
 import com.jingtian.demoapp.main.rank.model.ModelRankUser.Companion.loadUserImage
+import com.jingtian.demoapp.main.widget.RoundRectImageView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -63,6 +72,31 @@ class RankFragment : BaseFragment(), AddRankDialog.Companion.Callback,
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Utils.DataHolder.ImagePool.bindLifeCycle(this.lifecycle)
+    }
+
+    private val capture = object : SharedElementCallback() {
+        override fun onCaptureSharedElementSnapshot(
+            sharedElement: View?,
+            viewToGlobalMatrix: Matrix?,
+            screenBounds: RectF?
+        ): Parcelable {
+            if (sharedElement is ISharedElement) {
+                return sharedElement.onCaptureSharedElementSnapshot()
+            }
+            return super.onCaptureSharedElementSnapshot(
+                sharedElement,
+                viewToGlobalMatrix,
+                screenBounds
+            )
+        }
+    }
+
+    override fun onAttach(context: Context) {
+        super.onAttach(context)
+        context.getBaseActivity()?.let {
+            it.setEnterSharedElementCallback(capture)
+            it.setExitSharedElementCallback(capture)
+        }
     }
 
     override fun onCreateView(

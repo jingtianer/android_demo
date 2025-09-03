@@ -2,6 +2,7 @@ package com.jingtian.demoapp.main.widget
 
 import android.content.Context
 import android.graphics.Canvas
+import android.graphics.Rect
 import android.graphics.drawable.Drawable
 import android.util.AttributeSet
 import android.view.MotionEvent
@@ -63,6 +64,36 @@ class StarRateView @JvmOverloads constructor(
             (measuredWidth - (starCnt - 1) * starPadding) / starCnt.toFloat()
         }
         return min(measuredHeight.toFloat(), width)
+    }
+    private var w = 0
+    private var h = 0
+
+    override fun getClipBounds(): Rect {
+        val bounds = super.getClipBounds()
+        if (bounds == null) {
+            val clipBounds = Rect(0, 0, w, h)
+            setClipBounds(clipBounds)
+            return clipBounds
+        }
+        bounds.set(0, 0, w, h)
+        return bounds
+    }
+
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        this.w = w
+        this.h = h
+        val width = if (starCnt <= 1) {
+            w * 1f
+        } else {
+            (w - (starCnt - 1) * starPadding) / starCnt.toFloat()
+        }
+        starSize = min(h.toFloat(), width)
+        starTotalWidth = starSize * starCnt + (starCnt - 1) * starPadding
+        layoutParams = layoutParams?.apply {
+            this.width = starTotalWidth.toInt()
+            this.height = h
+        }
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {

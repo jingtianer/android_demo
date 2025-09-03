@@ -1,8 +1,11 @@
 package com.jingtian.demoapp.main.rank.holder
 
 import android.app.Dialog
+import android.graphics.Outline
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
+import android.view.ViewOutlineProvider
 import android.widget.ImageView
 import androidx.core.content.res.ResourcesCompat
 import androidx.lifecycle.lifecycleScope
@@ -32,8 +35,11 @@ class RankItemHolder private constructor(private val binding: ItemRankItemBindin
                 )
             )
         }
+
         private const val IMAGE_WIDTH = 200f
     }
+
+    private var scaleFactor = -1
 
     override fun onBind(data: ModelRankItem, position: Int) {
         with(binding.starRate) {
@@ -48,7 +54,16 @@ class RankItemHolder private constructor(private val binding: ItemRankItemBindin
         }
         with(binding.root) {
             setOnClickListener {
-                RankItemActivity.startActivity(context, data.rankName, data.itemName)
+                RankItemActivity.startActivity(
+                    context, data.rankName, data.itemName,
+                    placeHoldImage = data.image.id,
+                    placeHoldImageFactor = scaleFactor,
+                    transitionElementMap = mapOf(
+                        binding.starRate to "itemStarRate",
+                        binding.rankType to "itemRankType",
+                        binding.image to "itemImage",
+                    )
+                )
             }
             setOnLongClickListener {
                 AddRankItemDialog(context, data.rankName, this@RankItemHolder, data).show()
@@ -69,7 +84,13 @@ class RankItemHolder private constructor(private val binding: ItemRankItemBindin
         with(binding.image) {
             if (data.image.isValid()) {
                 scaleType = ImageView.ScaleType.CENTER_CROP
-                data.image.loadImage(this, maxWidth = IMAGE_WIDTH.dp.toInt(), maxHeight = -1)
+                data.image.loadImage(
+                    this,
+                    maxWidth = IMAGE_WIDTH.dp.toInt(),
+                    maxHeight = -1
+                ) { scaleFactor, _ ->
+                    this@RankItemHolder.scaleFactor = scaleFactor
+                }
             } else {
                 scaleType = ImageView.ScaleType.CENTER_INSIDE
                 setImageResource(R.drawable.load_failed)
@@ -102,7 +123,7 @@ class RankItemHolder private constructor(private val binding: ItemRankItemBindin
                 }
             }
             val insertPos = if (searchPos < 0) {
-                - searchPos - 1
+                -searchPos - 1
             } else {
                 searchPos
             }

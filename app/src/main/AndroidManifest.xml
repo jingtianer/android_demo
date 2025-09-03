@@ -36,7 +36,7 @@
         </provider>
         <activity android:name=".main.rank.activity.RankActivity"
             android:theme="@style/AppTheme.DarkActivity"/>
-        <activity android:name=".main.rank.activity.RankItemActivity"/>
+        <activity android:name=".main.rank.activity.RankItemActivity" android:theme="@style/SharedElementActivity"/>
     </application>
 
 </manifest>

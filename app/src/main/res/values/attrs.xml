@@ -3,4 +3,11 @@
     <declare-styleable name="PopupMenuView">
         <attr name="popUpMenuBottomView" format="reference"/>
     </declare-styleable>
+    <declare-styleable name="RoundRectImageView">
+        <attr name="radius" format="dimension"/>
+        <attr name="radiusLeftTop" format="dimension"/>
+        <attr name="radiusLeftBottom" format="dimension"/>
+        <attr name="radiusRightTop" format="dimension"/>
+        <attr name="radiusRightBottom" format="dimension"/>
+    </declare-styleable>
 </resources>

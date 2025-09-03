@@ -24,7 +24,7 @@ import kotlin.math.min
 data class RankItemImage(
     var id: Long = -1, var image: Uri = Uri.EMPTY
 ) {
-    fun loadImage(imageView: ImageView, maxWidth: Int = -1, maxHeight: Int = -1) {
+    fun loadImage(imageView: ImageView, maxWidth: Int = -1, maxHeight: Int = -1, callback:(Int, Bitmap?)->Unit = { _,_-> }) {
         if (image == Uri.EMPTY) {
             return
         }
@@ -39,7 +39,7 @@ data class RankItemImage(
                 calculateScaleFactor(options.outWidth, options.outHeight, maxWidth, maxHeight)
             } ?: -1
             Log.d("TAG", "loadImage: $id, $scaleFactor, $image")
-            return@runIOTask Utils.DataHolder.ImagePool.put(id, scaleFactor) {
+            return@runIOTask scaleFactor to Utils.DataHolder.ImagePool.put(id, scaleFactor) {
                 app.contentResolver.openInputStream(image)?.use { `is`->
                     Log.d("TAG", "loadImage failed: $id, $scaleFactor, $image")
                     // 第三步：按缩放比例解码图片
@@ -51,12 +51,13 @@ data class RankItemImage(
                     BitmapFactory.decodeStream(`is`, null, options)
                 }
             }
-        }) { bitMap->
+        }) { (scaleFactor, bitMap)->
             if (bitMap != null) {
                 imageView.setImageBitmap(bitMap)
             } else {
                 imageView.setImageResource(R.drawable.load_failed)
             }
+            callback(scaleFactor, bitMap)
         }
     }
 
