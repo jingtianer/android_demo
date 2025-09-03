@@ -51,8 +51,6 @@ class RankItemActivity : BaseActivity(), AddCommentDialog.Companion.Callback {
             rankItemName: String,
             placeHoldImage: Long = -1,
             placeHoldImageFactor: Int = -1,
-            imageRadius: FloatArray = FloatArray(4),
-            rankTypeRadius: FloatArray = FloatArray(4),
             transitionElementMap: Map<View, String> = mapOf()
         ) {
             val options = context.getBaseActivity()?.let {
@@ -85,7 +83,7 @@ class RankItemActivity : BaseActivity(), AddCommentDialog.Companion.Callback {
     private val commentAdapter = CommentListAdapter()
     private val commentHeaderFooterAdapter = BaseHeaderFooterAdapter<RelationUserAndComment>()
 
-    class SharedElementCallbackImpl() : SharedElementCallback() {
+    class SharedElementCallbackImpl : SharedElementCallback() {
         private val snapshotMap = mutableMapOf<View, SharedElementParcelable>()
         override fun onCreateSnapshotView(context: Context?, snapshot: Parcelable?): View {
             if (snapshot is SharedElementParcelable && context != null) {
@@ -164,71 +162,73 @@ class RankItemActivity : BaseActivity(), AddCommentDialog.Companion.Callback {
         supportPostponeEnterTransition()
         rankName = intent.getStringExtra(KEY_RANK_NAME) ?: ""
         rankItemName = intent.getStringExtra(KEY_RANK_ITEM_NAME) ?: ""
-
-        lifecycleScope.launch {
-            val placeHoldImage = intent.getLongExtra(KEY_PLACE_HOLD_IMAGE, -1)
-            val placeHoldImageFactor = intent.getIntExtra(KEY_PLACE_HOLD_IMAGE_FACTOR, -1)
-            Utils.DataHolder.ImagePool.get(placeHoldImage, placeHoldImageFactor)?.let {
+        val placeHoldImage = intent.getLongExtra(KEY_PLACE_HOLD_IMAGE, -1)
+        val placeHoldImageFactor = intent.getIntExtra(KEY_PLACE_HOLD_IMAGE_FACTOR, -1)
+        Utils.CoroutineUtils.runIOTask({
+            Utils.DataHolder.ImagePool.get(placeHoldImage, placeHoldImageFactor)?.apply {
                 Log.d(
                     "TAG",
                     "onCreate: placeHoldImage=$placeHoldImage, placeHoldImageFactor=$placeHoldImageFactor"
                 )
-                binding.image.setImageBitmap(it)
             }
-            if (rankName.isNotEmpty() && rankItemName.isNotEmpty()) {
-                lifecycleScope.launch {
-                    val data = withContext(Dispatchers.IO) {
-                        Utils.DataHolder.rankDB.rankItemDao().getRankItem(rankName, rankItemName)
-                    }.getOrNull(0) ?: return@launch
-                    withContext(Dispatchers.Main) {
-                        with(binding.starRate) {
-                            updateStarConfig(
-                                false,
-                                5,
-                                3f.dp,
-                                ResourcesCompat.getDrawable(
-                                    resources,
-                                    R.drawable.star_high_lighted,
-                                    null
-                                ),
-                                ResourcesCompat.getDrawable(resources, R.drawable.star, null),
-                            )
-                            setScore(data.score)
-                        }
-                        with(binding.rankType) {
-                            val bg = RankTypeChooser.createBg(data.rankType)
-                            bg.setTextSize(32f.dp)
-                            binding.rankType.layoutParams.apply {
-                                width = bg.getWidth().toInt() + 8f.dp.toInt()
-                                height = bg.getHeight().toInt()
+        }) {
+            binding.image.setImageBitmap(it)
+            lifecycleScope.launch {
+                if (rankName.isNotEmpty() && rankItemName.isNotEmpty()) {
+                    lifecycleScope.launch {
+                        val data = withContext(Dispatchers.IO) {
+                            Utils.DataHolder.rankDB.rankItemDao().getRankItem(rankName, rankItemName)
+                        }.getOrNull(0) ?: return@launch
+                        withContext(Dispatchers.Main) {
+                            with(binding.starRate) {
+                                updateStarConfig(
+                                    false,
+                                    5,
+                                    3f.dp,
+                                    ResourcesCompat.getDrawable(
+                                        resources,
+                                        R.drawable.star_high_lighted,
+                                        null
+                                    ),
+                                    ResourcesCompat.getDrawable(resources, R.drawable.star, null),
+                                )
+                                setScore(data.score)
                             }
-                            background = bg
-                        }
-                        with(binding.title) {
-                            text = data.itemName
-                        }
-                        with(binding.score) {
-                            text = String.format("%.2f分", binding.starRate.getScore())
-                        }
-                        if (data.desc.isNotEmpty()) {
-                            with(binding.desc) {
-                                text = data.desc
-                            }
-                        } else {
-                            binding.descLayout.visibility = View.GONE
-                        }
-                        window.sharedElementEnterTransition.addListener(onEnd = {
-                            with(binding.image) {
-                                if (data.image.isValid()) {
-                                    scaleType = ImageView.ScaleType.CENTER_CROP
-                                    data.image.loadImage(
-                                        this,
-                                        maxWidth = IMAGE_WIDTH.toInt()
-                                    )
+                            with(binding.rankType) {
+                                val bg = RankTypeChooser.createBg(data.rankType)
+                                bg.setTextSize(32f.dp)
+                                binding.rankType.layoutParams.apply {
+                                    width = bg.getWidth().toInt() + 8f.dp.toInt()
+                                    height = bg.getHeight().toInt()
                                 }
+                                background = bg
                             }
-                        })
-                        startPostponedEnterTransition()
+                            with(binding.title) {
+                                text = data.itemName
+                            }
+                            with(binding.score) {
+                                text = String.format("%.2f分", binding.starRate.getScore())
+                            }
+                            if (data.desc.isNotEmpty()) {
+                                with(binding.desc) {
+                                    text = data.desc
+                                }
+                            } else {
+                                binding.descLayout.visibility = View.GONE
+                            }
+                            window.sharedElementEnterTransition.addListener(onEnd = {
+                                with(binding.image) {
+                                    if (data.image.isValid()) {
+                                        scaleType = ImageView.ScaleType.CENTER_CROP
+                                        data.image.loadImage(
+                                            this,
+                                            maxWidth = IMAGE_WIDTH.toInt()
+                                        )
+                                    }
+                                }
+                            })
+                            supportStartPostponedEnterTransition()
+                        }
                     }
                 }
             }

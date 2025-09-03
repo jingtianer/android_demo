@@ -56,6 +56,7 @@ class LinkedListAdapter(private val context: Context) : BaseAdapter<ModelRankIte
                     context,
                     rankName = data.rankName,
                     rankItemName = data.itemName,
+                    placeHoldImage = data.image.id,
                 )
             }
         }
