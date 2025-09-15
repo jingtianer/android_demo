@@ -18,6 +18,7 @@ import com.jingtian.demoapp.main.fragments.BaseFragment.Companion.getFragmentNam
 import com.jingtian.demoapp.main.fragments.BaseFragment.Companion.BaseFragmentCallback
 import com.jingtian.demoapp.main.fragments.BuildInfoFragment
 import com.jingtian.demoapp.main.fragments.CanvasFragment
+import com.jingtian.demoapp.main.fragments.ConcatAdapterFragment
 import com.jingtian.demoapp.main.fragments.FocusFragment
 import com.jingtian.demoapp.main.fragments.FollowLeftFragment
 import com.jingtian.demoapp.main.fragments.FragmentInfoFragment
@@ -41,6 +42,7 @@ class MainActivity : BaseActivity(), BaseFragmentCallback {
             RankFragment::class.java to arrayOf<Any>(),
             FocusFragment::class.java to arrayOf<Any>(),
             NestedScrollFragment::class.java to arrayOf<Any>(),
+            ConcatAdapterFragment::class.java to arrayOf<Any>(),
             CanvasFragment::class.java to arrayOf<Any>(),
             FollowLeftFragment::class.java to arrayOf<Any>(),
             RxJavaFragment::class.java to arrayOf<Any>(),
