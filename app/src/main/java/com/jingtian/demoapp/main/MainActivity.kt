@@ -5,7 +5,6 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
-import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
 import androidx.viewpager2.adapter.FragmentStateAdapter
@@ -19,7 +18,7 @@ import com.jingtian.demoapp.main.fragments.BaseFragment.Companion.BaseFragmentCa
 import com.jingtian.demoapp.main.fragments.BuildInfoFragment
 import com.jingtian.demoapp.main.fragments.CanvasFragment
 import com.jingtian.demoapp.main.fragments.ConcatAdapterFragment
-import com.jingtian.demoapp.main.fragments.EmptyFragment
+import com.jingtian.demoapp.main.fragments.SpannableStringFragment
 import com.jingtian.demoapp.main.fragments.FocusFragment
 import com.jingtian.demoapp.main.fragments.FollowLeftFragment
 import com.jingtian.demoapp.main.fragments.FragmentInfoFragment
@@ -53,7 +52,7 @@ class MainActivity : BaseActivity(), BaseFragmentCallback {
             FragmentInfoFragment::class.java to arrayOf<Any>(),
             OverDrawFragment::class.java to arrayOf<Any>(),
             WidthAnimFragment::class.java to arrayOf<Any>(),
-            EmptyFragment::class.java to arrayOf<Any>(),
+            SpannableStringFragment::class.java to arrayOf<Any>(),
         )
 
         fun Activity.backToMain(tabIndex: Class<out BaseFragment>? = null) {
