@@ -15,4 +15,7 @@
     <color name="color_comment_quote">#FF000000</color>
     <color name="color_comment_content">#585858</color>
     <color name="color_comment_quote_boarder">#42753b</color>
+    <color name="color_toast_text_color">#585858</color>
+    <color name="color_toast_bg_color">#f4f4f4</color>
+    <color name="color_arrow_down">#2f2f2f</color>
 </resources>

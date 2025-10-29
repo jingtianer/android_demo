@@ -5,4 +5,7 @@
     <color name="color_comment_quote">#787878</color>
     <color name="color_comment_content">#888888</color>
     <color name="color_comment_quote_boarder">#96ab93</color>
+    <color name="color_toast_text_color">#888888</color>
+    <color name="color_toast_bg_color">#282828</color>
+    <color name="color_arrow_down">#f6f6f6</color>
 </resources>

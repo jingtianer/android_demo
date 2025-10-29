@@ -17,11 +17,13 @@ import com.jingtian.demoapp.main.fragments.BaseFragment.Companion.getFragmentNam
 import com.jingtian.demoapp.main.fragments.BaseFragment.Companion.BaseFragmentCallback
 import com.jingtian.demoapp.main.fragments.BuildInfoFragment
 import com.jingtian.demoapp.main.fragments.CanvasFragment
+import com.jingtian.demoapp.main.fragments.ClickableSpanFragment
 import com.jingtian.demoapp.main.fragments.ConcatAdapterFragment
 import com.jingtian.demoapp.main.fragments.SpannableStringFragment
 import com.jingtian.demoapp.main.fragments.FocusFragment
 import com.jingtian.demoapp.main.fragments.FollowLeftFragment
 import com.jingtian.demoapp.main.fragments.FragmentInfoFragment
+import com.jingtian.demoapp.main.fragments.GradientFragment
 import com.jingtian.demoapp.main.fragments.NBPlusTextFragment
 import com.jingtian.demoapp.main.fragments.NestedScrollFragment
 import com.jingtian.demoapp.main.fragments.OverDrawFragment
@@ -40,6 +42,8 @@ class MainActivity : BaseActivity(), BaseFragmentCallback {
             NBPlusTextFragment::class.java to arrayOf<Any>(),
             TextOnFingerFragment::class.java to arrayOf<Any>(),
             RankFragment::class.java to arrayOf<Any>(),
+            ClickableSpanFragment::class.java to arrayOf<Any>(),
+            GradientFragment::class.java to arrayOf<Any>(),
             FocusFragment::class.java to arrayOf<Any>(),
             NestedScrollFragment::class.java to arrayOf<Any>(),
             ConcatAdapterFragment::class.java to arrayOf<Any>(),
