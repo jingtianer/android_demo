@@ -8,19 +8,21 @@ import android.view.View
 import android.view.ViewConfiguration
 import android.view.ViewGroup
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.jingtian.demoapp.databinding.FragmentColorBlockBinding
 import com.jingtian.demoapp.databinding.FragmentNestedScrollBinding
 import com.jingtian.demoapp.main.RxEvents.setDoubleClickListener
 import com.jingtian.demoapp.main.ScreenUtils.screenHeight
 import com.jingtian.demoapp.main.dp
 import com.jingtian.demoapp.main.list.colorblock.ColorBlockAdapter
+import com.jingtian.demoapp.main.widget.HeightChangeRecyclerViewAnimator
 import kotlin.math.abs
 
-class NestedScrollFragment : BaseFragment() {
+class ColorBlockFragment : BaseFragment() {
     companion object {
-        private const val DATA_SIZE = 200
+        private const val DATA_SIZE = 3
     }
 
-    private lateinit var binding: FragmentNestedScrollBinding
+    private lateinit var binding: FragmentColorBlockBinding
     private val adapter = ColorBlockAdapter(minHeight = 20f.dp.toInt(), maxHeight = 40f.dp.toInt())
 
     override fun onCreateView(
@@ -28,18 +30,16 @@ class NestedScrollFragment : BaseFragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        binding = FragmentNestedScrollBinding.inflate(inflater, container, false)
+        binding = FragmentColorBlockBinding.inflate(inflater, container, false)
         return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         with(binding.recyclerView) {
-            adapter = this@NestedScrollFragment.adapter
+            adapter = this@ColorBlockFragment.adapter
             layoutManager = LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false)
             isNestedScrollingEnabled = true
-            layoutParams?.height = context.screenHeight
-            binding.nestedScrollView.setInnerRecyclerView(this)
             setOnTouchListener(object : View.OnTouchListener {
                 private var lastX = 0f
                 private var lastY = 0f
@@ -63,6 +63,7 @@ class NestedScrollFragment : BaseFragment() {
                     return false
                 }
             })
+            itemAnimator = HeightChangeRecyclerViewAnimator(this)
         }
         for (i in 0 until DATA_SIZE) {
             adapter.addData()

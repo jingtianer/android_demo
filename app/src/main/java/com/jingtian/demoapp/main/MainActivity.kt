@@ -18,6 +18,7 @@ import com.jingtian.demoapp.main.fragments.BaseFragment.Companion.BaseFragmentCa
 import com.jingtian.demoapp.main.fragments.BuildInfoFragment
 import com.jingtian.demoapp.main.fragments.CanvasFragment
 import com.jingtian.demoapp.main.fragments.ClickableSpanFragment
+import com.jingtian.demoapp.main.fragments.ColorBlockFragment
 import com.jingtian.demoapp.main.fragments.ConcatAdapterFragment
 import com.jingtian.demoapp.main.fragments.SpannableStringFragment
 import com.jingtian.demoapp.main.fragments.FocusFragment
@@ -46,6 +47,7 @@ class MainActivity : BaseActivity(), BaseFragmentCallback {
             GradientFragment::class.java to arrayOf<Any>(),
             FocusFragment::class.java to arrayOf<Any>(),
             NestedScrollFragment::class.java to arrayOf<Any>(),
+            ColorBlockFragment::class.java to arrayOf<Any>(),
             ConcatAdapterFragment::class.java to arrayOf<Any>(),
             CanvasFragment::class.java to arrayOf<Any>(),
             FollowLeftFragment::class.java to arrayOf<Any>(),
