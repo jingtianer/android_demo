@@ -20,10 +20,12 @@ import kotlin.math.abs
 class ColorBlockFragment : BaseFragment() {
     companion object {
         private const val DATA_SIZE = 3
+        private const val BOTTOM_DATA_SIZE = 100
     }
 
     private lateinit var binding: FragmentColorBlockBinding
     private val adapter = ColorBlockAdapter(minHeight = 20f.dp.toInt(), maxHeight = 40f.dp.toInt())
+    private val bottomAdapter = ColorBlockAdapter()
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -65,12 +67,19 @@ class ColorBlockFragment : BaseFragment() {
             })
             itemAnimator = HeightChangeRecyclerViewAnimator(this)
         }
-        for (i in 0 until DATA_SIZE) {
+        repeat(DATA_SIZE) {
             adapter.addData()
+        }
+        repeat(BOTTOM_DATA_SIZE) {
+            bottomAdapter.addData()
         }
         getTabView()?.setDoubleClickListener(300L) {
             binding.nestedScrollView.scrollTo(0, 0)
             binding.recyclerView.scrollToPosition(0)
+        }
+        binding.recyclerViewBottom.apply {
+            adapter = this@ColorBlockFragment.bottomAdapter
+            layoutManager = LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false)
         }
     }
 }

@@ -81,12 +81,18 @@ class ColorBlockAdapter(private val minHeight: Int = 50, private val maxHeight: 
         val (color, height) = dataList[position]
         holder.onBind(color, height, position)
         holder.itemView.setOnClickListener {
-            addData(holder.bindingAdapterPosition + 1)
-            notifyItemInserted(holder.bindingAdapterPosition + 1)
+            val cnt = Random.nextInt(1, 5)
+            repeat(cnt) {
+                addData(holder.bindingAdapterPosition + 1)
+            }
+            notifyItemRangeInserted(holder.bindingAdapterPosition + 1, cnt)
         }
         holder.itemView.setOnLongClickListener {
-            dataList.removeAt(holder.bindingAdapterPosition)
-            notifyItemRemoved(holder.bindingAdapterPosition)
+            val cnt = min(dataList.size - holder.bindingAdapterPosition, Random.nextInt(1, 5))
+            repeat(cnt) {
+                dataList.removeAt(holder.bindingAdapterPosition)
+            }
+            notifyItemRangeRemoved(holder.bindingAdapterPosition, cnt)
             true
         }
     }

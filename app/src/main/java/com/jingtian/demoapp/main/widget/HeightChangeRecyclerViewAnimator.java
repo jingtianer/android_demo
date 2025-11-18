@@ -22,10 +22,11 @@ import java.util.List;
 
 public class HeightChangeRecyclerViewAnimator extends SimpleItemAnimator {
 
-    private static final boolean ENABLE_DEBUG_MODE = true;
+    private static final boolean ENABLE_DEBUG_MODE = false;
     private static final boolean DEBUG = ENABLE_DEBUG_MODE;
     @NonNull
-    private final RecyclerView parent;
+    private final View parent;
+    private final RecyclerView recyclerView;
     private static final TimeInterpolator sDefaultInterpolator = new AccelerateDecelerateInterpolator();
 
     private final ArrayList<ViewHolder> mPendingRemovals = new ArrayList<>();
@@ -44,9 +45,11 @@ public class HeightChangeRecyclerViewAnimator extends SimpleItemAnimator {
     ArrayList<ViewHolder> mChangeAnimations = new ArrayList<>();
     ArrayList<ParentChangeInfo> mParentChangeAnimations = new ArrayList<>();
 
-    public HeightChangeRecyclerViewAnimator(@NonNull RecyclerView parent) {
-        this.parent = parent;
-        parent.getLayoutParams().height = ViewGroup.LayoutParams.WRAP_CONTENT;
+    public HeightChangeRecyclerViewAnimator(@NonNull RecyclerView recyclerView) {
+        this.parent = (View) recyclerView.getParent();
+        this.recyclerView = recyclerView;
+        setLayoutParamsHeight(this.parent, ViewGroup.LayoutParams.WRAP_CONTENT);
+        setLayoutParamsHeight(this.recyclerView, ViewGroup.LayoutParams.WRAP_CONTENT);
     }
 
     private static class ParentChangeInfo {
@@ -140,7 +143,6 @@ public class HeightChangeRecyclerViewAnimator extends SimpleItemAnimator {
             int targetHeight = animationInfo.animatedObj.finalHeight;
             finalHeight = targetHeight - removalHeightChange + changeHeightChange + addHeightChange;
             initialHeight = animationInfo.animatedObj.currentHeight;
-            Log.d("jingtian", "runPendingAnimations: has anim: initialHeight=" + initialHeight);
         } else {
             if (!mPendingParentChange.isEmpty()) {
                 initialHeight = mPendingParentChange.get(0);
@@ -150,16 +152,14 @@ public class HeightChangeRecyclerViewAnimator extends SimpleItemAnimator {
                 finalHeight = parentHeight;
                 initialHeight = parentHeight + removalHeightChange - changeHeightChange - addHeightChange;
             }
-            Log.d("jingtian", "runPendingAnimations: no anim: initialHeight=" + initialHeight);
         }
-        updateHeight(parent, initialHeight);
+        updateHeight(initialHeight);
         if (initialHeight != finalHeight) {
             parentChangeAnimImpl(initialHeight, finalHeight, finalHeight, getMoveDuration());
             movesPending = true;
         }
 
         mPendingRemovals.clear();
-        // Next, move stuff
         if (movesPending) {
             final ArrayList<MoveInfo> moves = new ArrayList<>(mPendingMoves);
             mMovesList.add(moves);
@@ -230,22 +230,19 @@ public class HeightChangeRecyclerViewAnimator extends SimpleItemAnimator {
             anim.anim.removeAllListeners();
             anim.anim.cancel();
             anim.isCancel = true;
-            updateHeight(parent, anim.animatedObj.currentHeight);
+            updateHeight(anim.animatedObj.currentHeight);
             blockNextDraw(parent);
-            Log.d("jingtian", "animateRemove: has anim: initialHeight=" + anim.animatedObj.currentHeight);
         } else if (mPendingParentChange.isEmpty()) {
             int delta = getViewHeightWithMargins(holder);
             mPendingParentChange.add(delta + parent.getHeight());
-            changeHeight(parent, delta);
+            changeHeight(delta);
             blockNextDraw(parent);
-            Log.d("jingtian", "animateRemove: has other: initialHeight=" + delta + parent.getHeight());
         } else {
             int delta = getViewHeightWithMargins(holder);
             int targetHeight = mPendingParentChange.get(0) + delta;
             mPendingParentChange.set(0, targetHeight);
-            updateHeight(parent, targetHeight);
+            updateHeight(targetHeight);
             blockNextDraw(parent);
-            Log.d("jingtian", "animateRemove: first: initialHeight=" + delta + parent.getHeight());
         }
         return true;
     }
@@ -281,22 +278,19 @@ public class HeightChangeRecyclerViewAnimator extends SimpleItemAnimator {
             anim.anim.removeAllListeners();
             anim.anim.cancel();
             anim.isCancel = true;
-            updateHeight(parent, anim.animatedObj.currentHeight);
+            updateHeight(anim.animatedObj.currentHeight);
             blockNextDraw(parent);
-            Log.d("jingtian", "animateAdd: has anim: initialHeight=" + anim.animatedObj.currentHeight);
         } else if (mPendingParentChange.isEmpty()) {
             int delta = -getViewHeightWithMargins(holder);
             mPendingParentChange.add(parent.getHeight() + delta);
-            changeHeight(parent, delta);
+            changeHeight(delta);
             blockNextDraw(parent);
-            Log.d("jingtian", "animateAdd: no anim: initialHeight=" + delta + parent.getHeight());
         } else {
             int delta = -getViewHeightWithMargins(holder);
             int targetHeight = mPendingParentChange.get(0) + delta;
             mPendingParentChange.set(0, targetHeight);
-            updateHeight(parent, targetHeight);
+            updateHeight(targetHeight);
             blockNextDraw(parent);
-            Log.d("jingtian", "animateAdd: first: initialHeight=" + delta + parent.getHeight());
         }
         return true;
     }
@@ -328,7 +322,6 @@ public class HeightChangeRecyclerViewAnimator extends SimpleItemAnimator {
 
     @Override
     public boolean animateMove(final ViewHolder holder, int fromX, int fromY, int toX, int toY) {
-        Log.d("jingtian", "animateMove: has anim: initialHeight=" + holder.getBindingAdapterPosition());
         final View view = holder.itemView;
         fromX += (int) holder.itemView.getTranslationX();
         fromY += (int) holder.itemView.getTranslationY();
@@ -399,22 +392,19 @@ public class HeightChangeRecyclerViewAnimator extends SimpleItemAnimator {
             anim.anim.removeAllListeners();
             anim.anim.cancel();
             anim.isCancel = true;
-            updateHeight(parent, anim.animatedObj.currentHeight);
+            updateHeight(anim.animatedObj.currentHeight);
             blockNextDraw(parent);
-            Log.d("jingtian", "animateChange: has anim: initialHeight=" + anim.animatedObj.currentHeight);
         } else if (mPendingParentChange.isEmpty()) {
             int delta = getViewHeightWithMargins(oldHolder) - getViewHeightWithMargins(newHolder);
             mPendingParentChange.add(parent.getHeight() + delta);
-            changeHeight(parent, delta);
+            changeHeight(delta);
             blockNextDraw(parent);
-            Log.d("jingtian", "animateChange: no anim: initialHeight=" + delta + parent.getHeight());
         } else {
             int delta = getViewHeightWithMargins(oldHolder) - getViewHeightWithMargins(newHolder);
             int targetHeight = mPendingParentChange.get(0) + delta;
             mPendingParentChange.set(0, targetHeight);
-            updateHeight(parent, targetHeight);
+            updateHeight(targetHeight);
             blockNextDraw(parent);
-            Log.d("jingtian", "animateChange: first: initialHeight=" + delta + parent.getHeight());
         }
         final float prevTranslationX = oldHolder.itemView.getTranslationX();
         final float prevTranslationY = oldHolder.itemView.getTranslationY();
@@ -527,7 +517,6 @@ public class HeightChangeRecyclerViewAnimator extends SimpleItemAnimator {
 
     @Override
     public void endAnimation(ViewHolder item) {
-        Log.d("jingtian", "endAnimation: ");
         final View view = item.itemView;
         // this will trigger end callback which should set properties to their target values.
         view.animate().cancel();
@@ -622,7 +611,6 @@ public class HeightChangeRecyclerViewAnimator extends SimpleItemAnimator {
 
     @Override
     public void endAnimations() {
-        Log.d("jingtian", "endAnimations: ");
         int count = mPendingMoves.size();
         for (int i = count - 1; i >= 0; i--) {
             MoveInfo item = mPendingMoves.get(i);
@@ -698,8 +686,8 @@ public class HeightChangeRecyclerViewAnimator extends SimpleItemAnimator {
             }
         }
 
-        for (ParentChangeInfo mParentChangeAnimation : mParentChangeAnimations) {
-            mParentChangeAnimation.anim.cancel();
+        for (ParentChangeInfo anim : mParentChangeAnimations) {
+            anim.anim.cancel();
         }
         mParentChangeAnimations.clear();
 
@@ -747,20 +735,7 @@ public class HeightChangeRecyclerViewAnimator extends SimpleItemAnimator {
         anim.setInterpolator(sDefaultInterpolator);
         anim.addListener(new AnimatorListenerAdapter() {
             @Override
-            public void onAnimationStart(Animator animation) {
-                super.onAnimationStart(animation);
-                Log.d("jingtian", "parent onAnimationStart: from=" + from + ", to=" + to + ", final=" + finalHeight);
-            }
-
-            @Override
-            public void onAnimationCancel(Animator animation) {
-                Log.d("jingtian", "parent onAnimationCancel: from=" + from + ", to=" + to + ", final=" + finalHeight);
-                super.onAnimationCancel(animation);
-            }
-
-            @Override
             public void onAnimationEnd(Animator animator) {
-                Log.d("jingtian", "parent onAnimationEnd: from=" + from + ", to=" + to + ", final=" + finalHeight);
                 anim.removeListener(this);
                 parentAnimObj.setProgress(1f);
                 mParentChangeAnimations.remove(animationInfo);
@@ -786,12 +761,12 @@ public class HeightChangeRecyclerViewAnimator extends SimpleItemAnimator {
         @Keep
         public void setProgress(float progress) {
             currentHeight = (int) (progress * (targetHeight - fromHeight) + fromHeight);
-            updateHeight(parent, currentHeight);
+            updateHeight(currentHeight);
         }
 
         public void onEnd() {
             currentHeight = targetHeight;
-            updateHeight(parent, ViewGroup.LayoutParams.WRAP_CONTENT);
+            updateHeight(ViewGroup.LayoutParams.WRAP_CONTENT);
         }
     }
 
@@ -812,11 +787,16 @@ public class HeightChangeRecyclerViewAnimator extends SimpleItemAnimator {
         int marginHeight = getViewMargin(view);
         return view.getHeight() + marginHeight;
     }
-
-    private static void updateHeight(View view, int height) {
+    
+    private static void setLayoutParamsHeight(View view, int height) {
         ViewGroup.LayoutParams lp = view.getLayoutParams();
         lp.height = height;
         view.setLayoutParams(lp);
+    }
+
+    private void updateHeight(int height) {
+        setLayoutParamsHeight(parent, height);
+        recyclerView.setMinimumHeight(height);
     }
 
     private static void blockNextDraw(@NonNull View view) {
@@ -825,7 +805,11 @@ public class HeightChangeRecyclerViewAnimator extends SimpleItemAnimator {
             observer.addOnPreDrawListener(new ViewTreeObserver.OnPreDrawListener() {
                 @Override
                 public boolean onPreDraw() {
-                    if (observer.isAlive()) {
+                    ViewTreeObserver aliveObserver = observer;
+                    if (!aliveObserver.isAlive()) {
+                        aliveObserver = view.getViewTreeObserver();
+                    }
+                    if (aliveObserver.isAlive()) {
                         observer.removeOnPreDrawListener(this);
                         // 阻止下一次绘制，避免闪烁
                         return false;
@@ -836,10 +820,8 @@ public class HeightChangeRecyclerViewAnimator extends SimpleItemAnimator {
         }
     }
 
-    private static void changeHeight(View view, int delta) {
-        ViewGroup.LayoutParams lp = view.getLayoutParams();
-        lp.height = delta + view.getHeight();
-        view.setLayoutParams(lp);
+    private void changeHeight(int delta) {
+        updateHeight(delta + parent.getHeight());
     }
 
     private static int getViewHeightWithMargins(ViewHolder view) {
