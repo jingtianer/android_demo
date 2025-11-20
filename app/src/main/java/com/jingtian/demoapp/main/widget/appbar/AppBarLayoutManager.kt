@@ -157,10 +157,10 @@ class AppBarLayoutManager: RecyclerView.LayoutManager() {
             val noScrollLast = LayoutInfo.noScrollList.lastOrNull()
             val cachedItem = viewCache.getAndMeasureViewForPosition(scrollStart)
             val lastItem = if (cachedItem != null) {
-                if (cachedItem.topHasMoreSpace()) {
-                    cachedItem.offset = 0
-                    cachedItem.below(noScrollLast)
-                }
+//                if (cachedItem.topHasMoreSpace()) {
+//                    cachedItem.offset = 0
+//                    cachedItem.below(noScrollLast)
+//                }
                 cachedItem
             } else {
                 recycler.unsafeGetMeasuredItemData(scrollStart).below(noScrollLast)
@@ -202,10 +202,7 @@ class AppBarLayoutManager: RecyclerView.LayoutManager() {
     }
 
     private fun fillBottomGap(viewCache: MutableMap<Int, ItemData>, recycler: Recycler): Int {
-        val delta: Int = LayoutInfo.viewList.lastOrNull()?.bottomMoreSpace()?.takeIf { it > 0 } ?: 0
-        if (delta <= 0) {
-            return 0
-        }
+        val delta: Int = (LayoutInfo.viewList.lastOrNull())?.bottomMoreSpace()?.takeIf { it > 0 } ?: 0
         var firstItem = LayoutInfo.viewList.firstOrNull() ?: run {
             val lastNoScroll = LayoutInfo.noScrollList.removeLast()
             if (lastNoScroll != null) {
