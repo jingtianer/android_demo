@@ -18,6 +18,8 @@ import kotlin.math.min
 class AppBarLayoutManager(private val parent: RecyclerView): RecyclerView.LayoutManager() {
 
     companion object {
+        private const val DEBUG = false
+        private const val TAG = "jingtian"
         fun View.createDefaultLayoutParam(width: Int, height: Int, isScrollable: Boolean = true): AppBarLayoutParams {
             val layoutParams = layoutParams
             val lp = if (layoutParams == null) {
@@ -80,71 +82,90 @@ class AppBarLayoutManager(private val parent: RecyclerView): RecyclerView.Layout
         if (LayoutInfo.inited) {
 //            adjustViews(recycler)
 //            layoutViews()
-            adjustView1(recycler)
+            adjustViews(recycler)
         } else {
             fill(recycler)
         }
     }
 
-    private fun adjustViewList(recycler: Recycler) {
-        val list = ArrayList(LayoutInfo.viewList)
-        if (list.size > 0) {
-            list[0].updateInfo(recycler)
-            var index = 0
-            while (index < list.size - 1) {
-                val info = list[index]
-                val next = list[index + 1]
-                next.updateInfo(recycler)
-                if (next.position != info.position + 1) {
-                    val view = recycler.getViewForPosition(info.position + 1)
-                    (view.layoutParams as AppBarLayoutParams).isItemChanged
-                    addView(view)
-                    list.add(index + 1, ItemData(view, info.position + 1))
-                }
-                index++
-            }
-        }
-        LayoutInfo.viewList.clear()
-        LayoutInfo.viewList.addAll(list)
-    }
-
-    private fun adjustNoScrollViewList(recycler: Recycler) {
-        val list = ArrayList(LayoutInfo.noScrollList)
-        list.getOrNull(0)?.updateInfo(recycler)
-        var index = 0
-        while (index < list.size - 1) {
-            val info = list[index]
-            val next = list[index + 1]
-            next.updateInfo(recycler)
-            var viewAdded = 0
-            for (position in (info.position + 1) until next.position) {
-                val view = recycler.getViewForPosition(position)
-                if (!view.isScrollable) {
-                    viewAdded++
-                    list.add(index + viewAdded, ItemData(view, position))
-                } else {
-                    recycler.recycleView(view)
-                }
-            }
-            index += viewAdded + 1
-        }
-        LayoutInfo.noScrollList.clear()
-        LayoutInfo.noScrollList.addAll(list)
-    }
+//    private fun adjustViewList(recycler: Recycler) {
+//        val list = ArrayList(LayoutInfo.viewList)
+//        if (list.size > 0) {
+//            list[0].updateInfo(recycler)
+//            var index = 0
+//            while (index < list.size - 1) {
+//                val info = list[index]
+//                val next = list[index + 1]
+//                next.updateInfo(recycler)
+//                if (next.position != info.position + 1) {
+//                    val view = recycler.getViewForPosition(info.position + 1)
+//                    (view.layoutParams as AppBarLayoutParams).isItemChanged
+//                    addView(view)
+//                    list.add(index + 1, ItemData(view, info.position + 1))
+//                }
+//                index++
+//            }
+//        }
+//        LayoutInfo.viewList.clear()
+//        LayoutInfo.viewList.addAll(list)
+//    }
+//
+//    private fun adjustNoScrollViewList(recycler: Recycler) {
+//        val list = ArrayList(LayoutInfo.noScrollList)
+//        list.getOrNull(0)?.updateInfo(recycler)
+//        var index = 0
+//        while (index < list.size - 1) {
+//            val info = list[index]
+//            val next = list[index + 1]
+//            next.updateInfo(recycler)
+//            var viewAdded = 0
+//            for (position in (info.position + 1) until next.position) {
+//                val view = recycler.getViewForPosition(position)
+//                if (!view.isScrollable) {
+//                    viewAdded++
+//                    list.add(index + viewAdded, ItemData(view, position))
+//                } else {
+//                    recycler.recycleView(view)
+//                }
+//            }
+//            index += viewAdded + 1
+//        }
+//        LayoutInfo.noScrollList.clear()
+//        LayoutInfo.noScrollList.addAll(list)
+//    }
 //
 //    fun isScrollable(position: Int): Boolean {
 //        return LayoutInfo.isScrollableInfoList[position]
 //    }
 
-    private fun adjustView1(recycler: Recycler) {
+    private fun MutableMap<Int, ItemData>.getAndMeasureViewForPosition(position: Int): ItemData? {
+        val viewCacheItem = this[position]
+        if (viewCacheItem != null) {
+            viewCacheItem.measure()
+            this.remove(position)
+            return viewCacheItem
+        }
+        return null
+    }
+
+    private fun Recycler.unsafeGetMeasuredItemData(position: Int) : ItemData {
+        return ItemData(this.getViewForPosition(position), position).measure()
+    }
+
+    private fun Recycler.getMeasuredItemData(position: Int) : ItemData? {
+        if (position.isValidPosition()) {
+            return unsafeGetMeasuredItemData(position)
+        }
+        return null
+    }
+
+    private fun adjustViews(recycler: Recycler) {
         val viewCache: TreeMap<Int, ItemData> = TreeMap()
-        var ite = LayoutInfo.viewList.iterator()
         val anchorInViewList = IntArray(2) { Int.MAX_VALUE }
         val anchorNoScrollViewList = IntArray(2) { -1 }
         LayoutInfo.visibleItems.clear()
-        Log.d("jingtian", "adjustViews: noScrollList=${LayoutInfo.noScrollList.toArray().contentDeepToString()}\nviewList=${LayoutInfo.viewList.toArray().contentDeepToString()}")
-        while (ite.hasNext()) {
-            val info = ite.next()
+        logD { "adjustViews: $this" }
+        LayoutInfo.viewList.forEach { info->
             if (info.position.isValidPosition()) {
                 info.updateInfo(recycler)
                 if (info.position.isValidPosition()) {
@@ -154,16 +175,11 @@ class AppBarLayoutManager(private val parent: RecyclerView): RecyclerView.Layout
                     } else {
                         anchorInViewList[1] = min(anchorInViewList[1], info.position)
                     }
-                } else {
-//                    removeAndRecycleView(info.view, recycler)
                 }
-            } else {
-//                removeAndRecycleView(info.view, recycler)
             }
         }
-        ite = LayoutInfo.noScrollList.iterator()
-        while (ite.hasNext()) {
-            val info = ite.next()
+
+        LayoutInfo.noScrollList.forEach { info->
             if (info.position.isValidPosition()) {
                 info.updateInfo(recycler)
                 if (info.position.isValidPosition()) {
@@ -173,86 +189,65 @@ class AppBarLayoutManager(private val parent: RecyclerView): RecyclerView.Layout
                     } else {
                         anchorNoScrollViewList[1] = max(anchorNoScrollViewList[1], info.position)
                     }
-                } else {
-//                    removeAndRecycleView(info.view, recycler)
                 }
-            } else {
-//                removeAndRecycleView(info.view, recycler)
             }
         }
         LayoutInfo.noScrollList.clear()
         LayoutInfo.viewList.clear()
+
         var lastItem: ItemData? = null
         val noScrollEnd: Int = (min(anchorInViewList[1], anchorInViewList[0]) - 1).takeIf { it < itemCount } ?: anchorNoScrollViewList[1].takeIf { it < itemCount } ?: 0
         val scrollStart: Int = if (anchorInViewList[0] >= itemCount) noScrollEnd + 1 else anchorInViewList[0]
-        Log.d("jingtian", "adjustView: noScrollEnd=$noScrollEnd, scrollStart=$scrollStart")
+        logD { "adjustViews: noScrollEnd=$noScrollEnd, scrollStart=$scrollStart" }
+        logD { "adjustViews: $this" }
         for (position in 0 .. noScrollEnd) {
-            val viewCacheItem = viewCache[position]
-            if (viewCacheItem != null && !viewCacheItem.isScrollable) {
-                LayoutInfo.noScrollList.addLast(viewCacheItem)
-                if (lastItem == null) {
-                    viewCacheItem.offset = 0
+            val cachedItem = viewCache.getAndMeasureViewForPosition(position)
+            val itemData = if (cachedItem != null) {
+                if (cachedItem.isScrollable) {
+                    viewCache[position] = cachedItem
+                    continue
+                } else if (lastItem == null) {
+                    cachedItem.offset = 0
                 }
-                viewCacheItem.measure().below(lastItem)
-                LayoutInfo.visibleItems.put(position, viewCacheItem)
-                viewCache.remove(position)
-                lastItem = viewCacheItem
+                cachedItem
             } else {
                 val view = recycler.getViewForPosition(position)
-                if (!view.isScrollable) {
-                    val item = ItemData(view, position)
-                        .measure()
-                        .below(lastItem)
-                    lastItem = item
-                    LayoutInfo.visibleItems.put(position, item)
-                    LayoutInfo.noScrollList.addLast(item)
-                } else {
+                if (view.isScrollable) {
                     recycler.recycleView(view)
+                    continue
                 }
+                ItemData(view, position).measure()
             }
+            itemData.below(lastItem)
+            LayoutInfo.visibleItems.put(position, itemData)
+            LayoutInfo.noScrollList.addLast(itemData)
+            lastItem = itemData
         }
-        Log.d("jingtian", "adjustViews: noScrollList=${LayoutInfo.noScrollList.toArray().contentDeepToString()}\nviewList=${LayoutInfo.viewList.toArray().contentDeepToString()}")
+        logD { "adjustViews: $this" }
         if (scrollStart.isValidPosition()) {
-            val lastItem = viewCache[scrollStart]?.apply {
-                measure()
-                if (topHasMoreSpace()) {
-                    LayoutInfo.noScrollList.lastOrNull()?.let {
-                        below(it)
-                    } ?: run {
-                        offset = 0
-                    }
+            val noScrollLast = LayoutInfo.noScrollList.lastOrNull()
+            val cachedItem = viewCache.getAndMeasureViewForPosition(scrollStart)
+            lastItem = if (cachedItem != null) {
+                if (cachedItem.topHasMoreSpace()) {
+                    cachedItem.offset = 0
+                    cachedItem.below(noScrollLast)
                 }
-                viewCache.remove(scrollStart)
-            } ?: ItemData(recycler.getViewForPosition(scrollStart), scrollStart)
-                .measure()
-                .below(LayoutInfo.noScrollList.lastOrNull())
-
+                cachedItem
+            } else {
+                recycler.unsafeGetMeasuredItemData(scrollStart).below(noScrollLast)
+            }
             LayoutInfo.viewList.addLast(lastItem)
             var currentItem: ItemData = lastItem
             while (currentItem.bottomHasMoreSpace()) {
                 val position = currentItem.position.nextPosition()
-                if (!position.isValidPosition()) {
-                    break
-                }
-                val viewCacheItem = viewCache[position]
-                if (viewCacheItem != null && !viewCacheItem.isScrollable) {
-                    LayoutInfo.viewList.addLast(viewCacheItem)
-                    viewCacheItem.measure().below(lastItem)
-                    currentItem = viewCacheItem
-                    LayoutInfo.visibleItems.put(position, viewCacheItem)
-                    viewCache.remove(position)
-                } else {
-                    val view = recycler.getViewForPosition(position)
-                    val item = ItemData(view, position)
-                        .measure()
-                        .below(currentItem)
-                    currentItem = item
-                    LayoutInfo.viewList.addLast(item)
-                    LayoutInfo.visibleItems.put(position, viewCacheItem)
-                }
+                val itemData = viewCache.getAndMeasureViewForPosition(position) ?: recycler.getMeasuredItemData(position) ?: break
+                itemData.below(currentItem)
+                LayoutInfo.viewList.addLast(itemData)
+                LayoutInfo.visibleItems.put(position, itemData)
+                currentItem = itemData
             }
         }
-        Log.d("jingtian", "adjustViews: noScrollList=${LayoutInfo.noScrollList.toArray().contentDeepToString()}\nviewList=${LayoutInfo.viewList.toArray().contentDeepToString()}")
+        logD { "adjustViews: $this" }
         fillBottomGap(viewCache, recycler)
         viewCache.clear()
         addViews()
@@ -274,87 +269,85 @@ class AppBarLayoutManager(private val parent: RecyclerView): RecyclerView.Layout
             var prevItem = LayoutInfo.visibleItems.get(firstItem.position.lastPosition(), null)
             if (prevItem != null && !prevItem.isScrollable) {
                 LayoutInfo.noScrollList.removeLast()
-                prevItem.offset = firstItem.offset - prevItem.measuredHeight
+                prevItem.above(firstItem)
                 firstItem = prevItem
             } else {
                 val position = firstItem.position.lastPosition().takeIf { it.isValidPosition() } ?: break
-                val viewCacheItem = viewCache[position]
-                if (viewCacheItem != null) {
+                val viewCacheItem = viewCache.getAndMeasureViewForPosition(position)
+                prevItem = if (viewCacheItem != null) {
+                    viewCacheItem.above(firstItem)
                     LayoutInfo.viewList.addFirst(viewCacheItem)
-                    viewCacheItem.measure().above(firstItem)
-                    prevItem = viewCacheItem
                     LayoutInfo.visibleItems.put(position, viewCacheItem)
-                    viewCache.remove(position)
+                    viewCacheItem
                 } else {
                     val view = recycler.getViewForPosition(position)
-                    val item = ItemData(view, position)
-                        .measure()
-                        .above(firstItem)
-                    prevItem = item
+                    val item = ItemData(view, position).measure().above(firstItem)
+                    recycler.unsafeGetMeasuredItemData(position).above(firstItem)
+                    item
                 }
                 firstItem = prevItem
             }
             LayoutInfo.viewList.addFirst(firstItem)
             LayoutInfo.visibleItems[firstItem.position] = firstItem
         }
-        for (item in LayoutInfo.viewList) {
+        LayoutInfo.viewList.forEach { item->
             item.offset += delta
         }
-        Log.d("jingtian", "adjustViews: noScrollList=${LayoutInfo.noScrollList.toArray().contentDeepToString()}\nviewList=${LayoutInfo.viewList.toArray().contentDeepToString()}")
+        logD { "adjustViews: $this" }
     }
 
-    private fun adjustViews(recycler: Recycler) {
-        LayoutInfo.visibleItems.clear()
-        Log.d("jingtian", "adjustViews: noScrollList=${LayoutInfo.noScrollList.toArray().contentDeepToString()}\nviewList=${LayoutInfo.viewList.toArray().contentDeepToString()}")
-        adjustViewList(recycler)
-        Log.d("jingtian", "adjustViews: noScrollList=${LayoutInfo.noScrollList.toArray().contentDeepToString()}\nviewList=${LayoutInfo.viewList.toArray().contentDeepToString()}")
-        adjustNoScrollViewList(recycler)
-
-        Log.d("jingtian", "adjustViews: noScrollList=${LayoutInfo.noScrollList.toArray().contentDeepToString()}\nviewList=${LayoutInfo.viewList.toArray().contentDeepToString()}")
-        val noScrollLast = LayoutInfo.noScrollList.lastOrNull()?.position
-        val viewListFirst = LayoutInfo.viewList.firstOrNull()?.position
-        if (noScrollLast != null && viewListFirst != null) {
-            for (position in ((noScrollLast + 1) until viewListFirst)) {
-                val view = recycler.getViewForPosition(position)
-                if (!view.isScrollable) {
-                    LayoutInfo.noScrollList.addLast(ItemData(view, position))
-                    addView(view)
-                } else {
-                    recycler.recycleView(view)
-                }
-            }
-        }
-
-        Log.d("jingtian", "adjustViews: noScrollList=${LayoutInfo.noScrollList.toArray().contentDeepToString()}\nviewList=${LayoutInfo.viewList.toArray().contentDeepToString()}")
-        val checkOther = LayoutInfo.noScrollList.firstOrNull()?.position ?: 0
-        for (position in (0 until checkOther).reversed()) {
-            val view = recycler.getViewForPosition(position)
-            if (!view.isScrollable) {
-                LayoutInfo.noScrollList.addFirst(ItemData(view, position))
-                addView(view)
-            } else {
-                recycler.recycleView(view)
-            }
-        }
-
-        Log.d("jingtian", "adjustViews: noScrollList=${LayoutInfo.noScrollList.toArray().contentDeepToString()}\nviewList=${LayoutInfo.viewList.toArray().contentDeepToString()}")
-        var lastItemData: ItemData? = null
-        LayoutInfo.noScrollList.firstOrNull()?.offset = 0
-        for (info in LayoutInfo.noScrollList) {
-            measureChildWithMargins(info.view, 0, 0)
-            info.below(lastItemData)
-            LayoutInfo.visibleItems[info.position] = info
-            lastItemData = info
-        }
-        lastItemData = null
-        for (info in LayoutInfo.viewList) {
-            measureChildWithMargins(info.view, 0, 0)
-            info.below(lastItemData)
-            LayoutInfo.visibleItems[info.position] = info
-            lastItemData = info
-        }
-        Log.d("jingtian", "adjustViews: noScrollList=${LayoutInfo.noScrollList.toArray().contentDeepToString()}\nviewList=${LayoutInfo.viewList.toArray().contentDeepToString()}")
-    }
+//    private fun adjustViews(recycler: Recycler) {
+//        LayoutInfo.visibleItems.clear()
+//        logD(TAG, "adjustViews: $this")
+//        adjustViewList(recycler)
+//        logD(TAG, "adjustViews: $this")
+//        adjustNoScrollViewList(recycler)
+//
+//        logD(TAG, "adjustViews: $this")
+//        val noScrollLast = LayoutInfo.noScrollList.lastOrNull()?.position
+//        val viewListFirst = LayoutInfo.viewList.firstOrNull()?.position
+//        if (noScrollLast != null && viewListFirst != null) {
+//            for (position in ((noScrollLast + 1) until viewListFirst)) {
+//                val view = recycler.getViewForPosition(position)
+//                if (!view.isScrollable) {
+//                    LayoutInfo.noScrollList.addLast(ItemData(view, position))
+//                    addView(view)
+//                } else {
+//                    recycler.recycleView(view)
+//                }
+//            }
+//        }
+//
+//        logD(TAG, "adjustViews: $this")
+//        val checkOther = LayoutInfo.noScrollList.firstOrNull()?.position ?: 0
+//        for (position in (0 until checkOther).reversed()) {
+//            val view = recycler.getViewForPosition(position)
+//            if (!view.isScrollable) {
+//                LayoutInfo.noScrollList.addFirst(ItemData(view, position))
+//                addView(view)
+//            } else {
+//                recycler.recycleView(view)
+//            }
+//        }
+//
+//        logD(TAG, "adjustViews: $this")
+//        var lastItemData: ItemData? = null
+//        LayoutInfo.noScrollList.firstOrNull()?.offset = 0
+//        for (info in LayoutInfo.noScrollList) {
+//            measureChildWithMargins(info.view, 0, 0)
+//            info.below(lastItemData)
+//            LayoutInfo.visibleItems[info.position] = info
+//            lastItemData = info
+//        }
+//        lastItemData = null
+//        for (info in LayoutInfo.viewList) {
+//            measureChildWithMargins(info.view, 0, 0)
+//            info.below(lastItemData)
+//            LayoutInfo.visibleItems[info.position] = info
+//            lastItemData = info
+//        }
+//        logD(TAG, "adjustViews: $this")
+//    }
 
     private fun initViewList(recycler: Recycler, position: Int) {
         val viewList = LayoutInfo.viewList
@@ -363,7 +356,8 @@ class AppBarLayoutManager(private val parent: RecyclerView): RecyclerView.Layout
         viewList.clear()
         noScrollList.clear()
         visibleItems.clear()
-        var itemData: ItemData = generateItemData(position, recycler) ?: return
+        var itemData: ItemData = recycler.getMeasuredItemData(position) ?: return
+        itemData.addView()
         visibleItems[itemData.position] = itemData
         LayoutInfo.firstVisiblePosition = itemData.position
         LayoutInfo.lastVisiblePosition = itemData.position
@@ -372,6 +366,7 @@ class AppBarLayoutManager(private val parent: RecyclerView): RecyclerView.Layout
             while (itemData.bottomHasMoreSpace()) {
                 LayoutInfo.lastVisibleOffset = itemData.position
                 itemData = itemData.fetchDown(recycler) ?: return
+                itemData.addView()
                 if (itemData.isScrollable) {
                     viewList.addLast(itemData)
                     visibleItems[itemData.position] = itemData
@@ -385,6 +380,7 @@ class AppBarLayoutManager(private val parent: RecyclerView): RecyclerView.Layout
         }
         while (itemData.bottomHasMoreSpace()) {
             itemData = itemData.fetchDown(recycler) ?: break
+            itemData.addView()
             LayoutInfo.lastVisibleOffset = itemData.position
             viewList.addLast(itemData)
             visibleItems[itemData.position] = itemData
@@ -421,18 +417,20 @@ class AppBarLayoutManager(private val parent: RecyclerView): RecyclerView.Layout
     }
 
     private fun moveVisibleUp(dy: Int, recycler: Recycler) {
-        Log.d("jingtian", "moveVisibleUp: dy=$dy\nnoScrollList=${LayoutInfo.noScrollList.toArray().contentDeepToString()}\nviewList=${LayoutInfo.viewList.toArray().contentDeepToString()}")
-        val ite = LayoutInfo.viewList.listIterator()
+        val viewList = LayoutInfo.viewList
+        val visibleItems = LayoutInfo.visibleItems
+        logD { "moveVisibleUp: dy=$dy\n$this" }
+        val ite = viewList.listIterator()
         while (ite.hasNext()) {
             val info = ite.next()
             if (!info.isScrollable && info.shouldMoveToTopView(dy)) {
                 ite.remove()
                 info.appendToNoScrollViewList()
-                Log.d("jingtian", "moveOut = $info moveVisibleUp: dy=$dy\nnoScrollList=${LayoutInfo.noScrollList.toArray().contentDeepToString()}\nviewList=${LayoutInfo.viewList.toArray().contentDeepToString()}")
+//                logD(TAG, "moveOut = $info moveVisibleUp: dy=$dy\n$this")
             } else if (info.shouldMoveOut(dy)) {
                 ite.remove()
                 removeAndRecycleView(info.view, recycler)
-                LayoutInfo.visibleItems.remove(info.position)
+                visibleItems.remove(info.position)
             } else {
                 info.offset -= dy
             }
@@ -440,14 +438,16 @@ class AppBarLayoutManager(private val parent: RecyclerView): RecyclerView.Layout
     }
 
     private fun moveVisibleDown(dy: Int, recycler: Recycler) {
-        Log.d("jingtian", "moveVisibleDown: dy=$dy\nnoScrollList=${LayoutInfo.noScrollList.toArray().contentDeepToString()}\nviewList=${LayoutInfo.viewList.toArray().contentDeepToString()}")
-        val ite = LayoutInfo.viewList.iterator()
+        val viewList = LayoutInfo.viewList
+        val visibleItems = LayoutInfo.visibleItems
+        logD { "moveVisibleDown: dy=$dy\n$this" }
+        val ite = viewList.iterator()
         while (ite.hasNext()) {
             val info = ite.next()
             if (info.shouldMoveOut(dy)) {
                 ite.remove()
                 removeAndRecycleView(info.view, recycler)
-                LayoutInfo.visibleItems.remove(info.position)
+                visibleItems.remove(info.position)
             } else {
                 info.offset -= dy
             }
@@ -455,6 +455,7 @@ class AppBarLayoutManager(private val parent: RecyclerView): RecyclerView.Layout
     }
 
     override fun scrollVerticallyBy(dy: Int, recycler: Recycler?, state: State?): Int {
+        val noScrollList = LayoutInfo.noScrollList
         if (dy == 0 || recycler == null) {
             return 0
         }
@@ -466,19 +467,22 @@ class AppBarLayoutManager(private val parent: RecyclerView): RecyclerView.Layout
             fillDown(dy, recycler)
         }.also {
             LayoutInfo.offset += it
-            for (info in LayoutInfo.noScrollList) {
-                info.reattach(recycler)
+            for (info in noScrollList) {
+                info.reattach()
             }
-            Log.d("jingtian", "scrollVerticallyBy: dy=$dy, ret=$it")
+            logD { "scrollVerticallyBy: dy=$dy, ret=$it" }
         }
     }
 
     private fun fillUp(dy: Int, recycler: Recycler): Int {
-        Log.d("jingtian", "fillUp: dy=$dy\nnoScrollList=${LayoutInfo.noScrollList.toArray().contentDeepToString()}\nviewList=${LayoutInfo.viewList.toArray().contentDeepToString()}")
-        var lastItem = LayoutInfo.viewList.lastOrNull() ?: LayoutInfo.noScrollList.lastOrNull() ?: return 0
+        val viewList = LayoutInfo.viewList
+        val noScrollList = LayoutInfo.noScrollList
+        val visibleItems = LayoutInfo.visibleItems
+        logD { "fillUp: dy=$dy\n$this" }
+        var lastItem = viewList.lastOrNull() ?: noScrollList.lastOrNull() ?: return 0
         while (lastItem.bottomHasMoreSpace()) {
-            val viewLast = LayoutInfo.viewList.lastOrNull()
-            val noScrollLast = LayoutInfo.noScrollList.lastOrNull()
+            val viewLast = viewList.lastOrNull()
+            val noScrollLast = noScrollList.lastOrNull()
             val anchorItem = if (viewLast != null && noScrollLast != null) {
                 if (viewLast.position > noScrollLast.position) {
                     viewLast
@@ -487,50 +491,55 @@ class AppBarLayoutManager(private val parent: RecyclerView): RecyclerView.Layout
                 }
             } else viewLast ?: noScrollLast ?: break
             lastItem = anchorItem.fetchDown(recycler) ?: break
+            lastItem.addView()
             lastItem.requestLayout()
-            LayoutInfo.viewList.addLast(lastItem)
-            LayoutInfo.visibleItems[lastItem.position] = lastItem
+            viewList.addLast(lastItem)
+            visibleItems[lastItem.position] = lastItem
         }
-        Log.d("jingtian", "fillUp: dy=$dy\nnoScrollList=${LayoutInfo.noScrollList.toArray().contentDeepToString()}\nviewList=${LayoutInfo.viewList.toArray().contentDeepToString()}")
+        logD { "fillUp: dy=$dy\n$this" }
         val offset = lastItem.bottomMoreSpace().takeIf { it > 0 } ?: 0
         for (info in LayoutInfo.viewList) {
             info.offset += offset
             info.applyOffset()
         }
-        Log.d("jingtian", "fillUp: dy=$dy\nnoScrollList=${LayoutInfo.noScrollList.toArray().contentDeepToString()}\nviewList=${LayoutInfo.viewList.toArray().contentDeepToString()}")
+        logD { "fillUp: dy=$dy\n$this" }
         return dy - offset
     }
 
     private fun fillDown(dy: Int, recycler: Recycler): Int {
+        val viewList = LayoutInfo.viewList
+        val noScrollList = LayoutInfo.noScrollList
+        val visibleItems = LayoutInfo.visibleItems
         var firstItem = LayoutInfo.viewList.firstOrNull() ?: run {
             val lastNoScroll = LayoutInfo.noScrollList.removeLast()
             if (lastNoScroll != null) {
-                LayoutInfo.viewList.addLast(lastNoScroll)
+                viewList.addLast(lastNoScroll)
             }
             lastNoScroll
         } ?: return 0
         while (firstItem.topHasMoreSpace()) {
-            var prevItem = LayoutInfo.visibleItems.get(firstItem.position.lastPosition(), null)
+            var prevItem = visibleItems.get(firstItem.position.lastPosition(), null)
             if (prevItem != null && !prevItem.isScrollable) {
-                LayoutInfo.noScrollList.removeLast()
+                noScrollList.removeLast()
                 prevItem.offset = firstItem.offset - prevItem.measuredHeight
                 firstItem = prevItem
             } else {
                 prevItem = firstItem.fetchUp(recycler) ?: break
+                prevItem.addView()
                 prevItem.offset = firstItem.offset - prevItem.measuredHeight
                 firstItem = prevItem
                 firstItem.requestLayout()
             }
-            LayoutInfo.viewList.addFirst(firstItem)
-            LayoutInfo.visibleItems[firstItem.position] = firstItem
+            viewList.addFirst(firstItem)
+            visibleItems[firstItem.position] = firstItem
         }
-        Log.d("jingtian", "fillDown: dy=$dy\nnoScrollList=${LayoutInfo.noScrollList.toArray().contentDeepToString()}\nviewList=${LayoutInfo.viewList.toArray().contentDeepToString()}")
+        logD { "fillDown: dy=$dy\n$this" }
         val offset = firstItem.topMoreSpace().takeIf { it > 0 } ?: 0
         for (info in LayoutInfo.viewList) {
             info.offset -= offset
             info.applyOffset()
         }
-        Log.d("jingtian", "fillDown: dy=$dy\nnoScrollList=${LayoutInfo.noScrollList.toArray().contentDeepToString()}\nviewList=${LayoutInfo.viewList.toArray().contentDeepToString()}")
+        logD { "fillDown: dy=$dy\n$this" }
         return dy + offset
     }
 
@@ -589,6 +598,7 @@ class AppBarLayoutManager(private val parent: RecyclerView): RecyclerView.Layout
 
         val measuredWidth: Int
             get() = getDecoratedMeasuredWidth(view)
+
         val measuredHeight: Int
             get() = getDecoratedMeasuredHeight(view)
 
@@ -600,9 +610,9 @@ class AppBarLayoutManager(private val parent: RecyclerView): RecyclerView.Layout
             return (offset - delta < boundsTop) // && !isScrollable
         }
 
-        fun isVisible(): Boolean {
-            return !shouldMoveOut()
-        }
+//        fun isVisible(): Boolean {
+//            return !shouldMoveOut()
+//        }
 
         fun topHasMoreSpace(delta: Int = 0, top: Int = boundsTop): Boolean {
             return offset - delta > top
@@ -621,17 +631,13 @@ class AppBarLayoutManager(private val parent: RecyclerView): RecyclerView.Layout
         }
 
         fun fetchUp(recycler: Recycler): ItemData? {
-            val nextIndex = this.position.lastPosition()
-            return generateItemData(nextIndex, recycler) {
-                this.offset - it.measuredHeight
-            }
+            val nextIndex = this.position.lastPosition().takeIf { it.isValidPosition() } ?: return null
+            return recycler.unsafeGetMeasuredItemData(nextIndex).above(this)
         }
 
         fun fetchDown(recycler: Recycler): ItemData? {
-            val nextIndex = this.position.nextPosition()
-            return generateItemData(nextIndex, recycler) {
-                this.bottom
-            }
+            val nextIndex = this.position.nextPosition().takeIf { it.isValidPosition() } ?: return null
+            return recycler.unsafeGetMeasuredItemData(nextIndex).below(this)
         }
 
         val bottom: Int
@@ -670,13 +676,12 @@ class AppBarLayoutManager(private val parent: RecyclerView): RecyclerView.Layout
         }
 
         override fun toString(): String {
-            return "position=${position}, offset=${offset}, height=${measuredHeight}, view=${view.hashCode()}\n"
+            return "${this.javaClass.simpleName}{position=${position}, offset=${offset}, height=${measuredHeight}, view=${view.hashCode()}, bottom=$bottom}"
         }
 
-        fun reattach(recycler: Recycler) {
+        fun reattach() {
             removeView(view)
-            addView(view)
-            measureChildWithMargins(view, 0, 0)
+            addView()
             requestLayout()
         }
 
@@ -689,27 +694,17 @@ class AppBarLayoutManager(private val parent: RecyclerView): RecyclerView.Layout
             addView(view)
             return this
         }
-    }
 
-    private fun ItemData.updateInfo(recycler: Recycler) {
-        position = getPosition(view)
-        if (position.isValidPosition()) {
-            view = recycler.getViewForPosition(position)
+        fun updateInfo(recycler: Recycler) {
+            position = getPosition(view)
+            if (position.isValidPosition()) {
+                view = recycler.getViewForPosition(position)
+            }
         }
     }
 
     private fun Int.isValidPosition() : Boolean {
         return this in 0 until itemCount
-    }
-
-    private fun generateItemData(position: Int, recycler: Recycler, getOffset: (View)->Int = { 0 }): ItemData? {
-        if (position.isValidPosition()) {
-            val view = recycler.getViewForPosition(position)
-            addView(view)
-            measureChildWithMargins(view, 0, 0)
-            return ItemData(view, position, getOffset(view))
-        }
-        return null
     }
 
     class AppBarLayoutParams : RecyclerView.LayoutParams {
@@ -720,5 +715,24 @@ class AppBarLayoutManager(private val parent: RecyclerView): RecyclerView.Layout
         constructor(source: RecyclerView.LayoutParams?) : super(source)
 
         var isScrollable: Boolean = true
+    }
+
+    private fun <E> MutableCollection<E>.deepToString(sep: String = ",\n\t"): String {
+        return this.joinToString(
+            separator = sep,
+            prefix = "[\n\t",
+            postfix = "\n]",
+        ) { it.toString() }
+    }
+
+    override fun toString(): String {
+        return "noScrollList=${LayoutInfo.noScrollList.deepToString()}\n" +
+                "viewList=${LayoutInfo.viewList.deepToString()}"
+    }
+    
+    private fun logD(msg: ()->String) {
+        if (DEBUG) {
+            Log.d(TAG, msg.invoke())
+        }
     }
 }
