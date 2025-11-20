@@ -11,6 +11,7 @@ import androidx.viewpager2.adapter.FragmentStateAdapter
 import com.google.android.material.tabs.TabLayoutMediator
 import com.jingtian.demoapp.databinding.ActivityMainBinding
 import com.jingtian.demoapp.main.base.BaseActivity
+import com.jingtian.demoapp.main.fragments.AppBarRecyclerViewFragment
 import com.jingtian.demoapp.main.fragments.BaseFragment
 import com.jingtian.demoapp.main.fragments.BaseFragment.Companion.KEY_TAB_INDEX
 import com.jingtian.demoapp.main.fragments.BaseFragment.Companion.getFragmentName
@@ -47,6 +48,7 @@ class MainActivity : BaseActivity(), BaseFragmentCallback {
             GradientFragment::class.java to arrayOf<Any>(),
             FocusFragment::class.java to arrayOf<Any>(),
             NestedScrollFragment::class.java to arrayOf<Any>(),
+            AppBarRecyclerViewFragment::class.java to arrayOf<Any>(),
             ColorBlockFragment::class.java to arrayOf<Any>(),
             ConcatAdapterFragment::class.java to arrayOf<Any>(),
             CanvasFragment::class.java to arrayOf<Any>(),
