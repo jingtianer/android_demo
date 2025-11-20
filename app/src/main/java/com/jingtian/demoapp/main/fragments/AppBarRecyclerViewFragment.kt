@@ -8,6 +8,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
 import android.view.ViewGroup
+import androidx.recyclerview.widget.DefaultItemAnimator
 import com.jingtian.demoapp.databinding.FragmentAppBarColorBlockBinding
 import com.jingtian.demoapp.main.RxEvents.setDoubleClickListener
 import com.jingtian.demoapp.main.dp
@@ -36,7 +37,7 @@ class AppBarRecyclerViewFragment : BaseFragment() {
         super.onViewCreated(view, savedInstanceState)
         with(binding.recyclerView) {
             adapter = this@AppBarRecyclerViewFragment.adapter
-            layoutManager = AppBarLayoutManager(this)
+            layoutManager = AppBarLayoutManager()
             isNestedScrollingEnabled = true
             setOnTouchListener(object : View.OnTouchListener {
                 private var lastX = 0f
