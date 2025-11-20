@@ -73,6 +73,9 @@ class AppBarLayoutManager(private val parent: RecyclerView): RecyclerView.Layout
     }
 
     override fun onLayoutChildren(recycler: Recycler, state: State) {
+        if (height == 0) {
+            return
+        }
         detachAndScrapAttachedViews(recycler)
         if (LayoutInfo.inited) {
 //            adjustViews(recycler)
