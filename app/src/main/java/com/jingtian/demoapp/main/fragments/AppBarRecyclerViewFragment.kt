@@ -8,16 +8,22 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
 import android.view.ViewGroup
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.DefaultItemAnimator
 import com.jingtian.demoapp.databinding.FragmentAppBarColorBlockBinding
 import com.jingtian.demoapp.main.RxEvents.setDoubleClickListener
 import com.jingtian.demoapp.main.dp
 import com.jingtian.demoapp.main.list.colorblock.AppBarColorBlockAdapter
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.math.abs
+import kotlin.math.min
 
 class AppBarRecyclerViewFragment : BaseFragment() {
     companion object {
-        private const val DATA_SIZE = 120
+        private const val DATA_SIZE = 999999
+        private const val BATCH = 30
     }
 
     private lateinit var binding: FragmentAppBarColorBlockBinding
@@ -37,8 +43,7 @@ class AppBarRecyclerViewFragment : BaseFragment() {
         super.onViewCreated(view, savedInstanceState)
         with(binding.recyclerView) {
             adapter = this@AppBarRecyclerViewFragment.adapter
-            layoutManager = AppBarLayoutManager()
-            isNestedScrollingEnabled = true
+            layoutManager = AppBarLayoutManager(this@AppBarRecyclerViewFragment.adapter)
             setOnTouchListener(object : View.OnTouchListener {
                 private var lastX = 0f
                 private var lastY = 0f
@@ -65,8 +70,17 @@ class AppBarRecyclerViewFragment : BaseFragment() {
                 }
             })
         }
-        repeat(DATA_SIZE) {
-            adapter.addData()
+        lifecycleScope.launch(Dispatchers.Default) {
+            var dataSize = DATA_SIZE
+            while (dataSize > 0) {
+                val dataList = withContext(Dispatchers.Default) {
+                    (0..min(dataSize, BATCH)).map { adapter.createRandomItem(DATA_SIZE - dataSize + it) }
+                }
+                withContext(Dispatchers.Main) {
+                    adapter.insert(dataList)
+                }
+                dataSize -= dataList.size
+            }
         }
         getTabView()?.setDoubleClickListener(300L) {
             binding.recyclerView.scrollToPosition(0)

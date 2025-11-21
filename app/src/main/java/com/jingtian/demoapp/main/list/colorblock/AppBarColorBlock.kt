@@ -1,12 +1,12 @@
 package com.jingtian.demoapp.main.list.colorblock
 
-import com.jingtian.demoapp.main.widget.appbar.AppBarLayoutManager.Companion.createDefaultLayoutParam
 import android.content.Context
 import android.graphics.Color
 import android.text.TextPaint
 import android.util.Log
 import android.util.TypedValue
 import android.view.Gravity
+import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.annotation.ColorInt
@@ -18,6 +18,7 @@ import com.jingtian.demoapp.main.TextUtils.measure
 import com.jingtian.demoapp.main.app
 import com.jingtian.demoapp.main.dp
 import com.jingtian.demoapp.main.px2Dp
+import com.jingtian.demoapp.main.widget.appbar.IAppBarAdapter
 import kotlin.math.ceil
 import kotlin.math.min
 import kotlin.random.Random
@@ -55,15 +56,22 @@ class AppBarColorBlockHolder(context: Context) :
         textView.gravity = Gravity.CENTER
     }
     fun onBind(value: Int, color: Int, height: Int, isScrollable: Boolean, position: Int) {
-        itemView.layoutParams = itemView.createDefaultLayoutParam(ViewGroup.LayoutParams.MATCH_PARENT, height, isScrollable)
+        itemView.initLayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, height)
         itemView.setBackgroundColor(color)
         textView.text = "$value ${if (!isScrollable) "*" else ""}"
         textView.setTextColor(color.revers)
         textView.setTextSize(TypedValue.COMPLEX_UNIT_PX, autoAdjustTextSize(position.toString(), 0f, min(ITEM_WIDTH, height.toFloat()).px2Dp, ITEM_WIDTH.toInt().toFloat().px2Dp, height.toFloat().px2Dp).dp)
     }
+
+    private fun View.initLayoutParams(width: Int, height: Int) {
+        this.layoutParams = this.layoutParams?.also { lp->
+            lp.width = width
+            lp.height = height
+        } ?: RecyclerView.LayoutParams(width, height)
+    }
 }
 
-class AppBarColorBlockAdapter(private val minHeight: Int = 50, private val maxHeight: Int = 400) : RecyclerView.Adapter<AppBarColorBlockHolder>() {
+class AppBarColorBlockAdapter(private val minHeight: Int = 50, private val maxHeight: Int = 400) : RecyclerView.Adapter<AppBarColorBlockHolder>(), IAppBarAdapter {
     private val random = Random
     private val dataList = mutableListOf<AppBarColorBlockModel>()
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): AppBarColorBlockHolder {
@@ -95,20 +103,30 @@ class AppBarColorBlockAdapter(private val minHeight: Int = 50, private val maxHe
     }
 
     fun addData(position: Int = dataList.size, value: Int = dataList.size) {
-        dataList.add(
-            position,
-            AppBarColorBlockModel(
-                value,
-                Color.argb(
-                    255,
-                    random.nextInt(0, 255),
-                    random.nextInt(0, 255),
-                    random.nextInt(0, 255)
-                ),
-                random.nextInt(minHeight, maxHeight).toFloat().dp.toInt(),
-                random.nextFloat() < 0.89
-            )
+        dataList.add(position, createRandomItem(value))
+    }
+
+    fun insert(list: List<AppBarColorBlockModel>, position: Int = dataList.size) {
+        dataList.addAll(position, list)
+        notifyItemRangeInserted(position, list.size)
+    }
+
+    fun createRandomItem(value: Int): AppBarColorBlockModel {
+        return AppBarColorBlockModel(
+            value,
+            Color.argb(
+                255,
+                random.nextInt(0, 255),
+                random.nextInt(0, 255),
+                random.nextInt(0, 255)
+            ),
+            random.nextInt(minHeight, maxHeight).toFloat().dp.toInt(),
+            random.nextInt(0, 10) != 6
         )
+    }
+
+    override fun getScrollMode(position: Int): Boolean {
+        return dataList[position].isScrollable
     }
 }
 

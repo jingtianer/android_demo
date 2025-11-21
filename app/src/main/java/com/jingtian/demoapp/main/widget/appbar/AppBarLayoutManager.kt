@@ -1,7 +1,5 @@
 package com.jingtian.demoapp.main.widget.appbar
 
-import android.content.Context
-import android.util.AttributeSet
 import android.util.Log
 import android.util.SparseArray
 import android.view.View
@@ -13,43 +11,18 @@ import java.util.LinkedList
 import kotlin.math.max
 import kotlin.math.min
 
-class AppBarLayoutManager: RecyclerView.LayoutManager() {
+class AppBarLayoutManager(private val adapter: IAppBarAdapter): RecyclerView.LayoutManager() {
 
     companion object {
-        private const val DEBUG = true
+        private const val DEBUG = false
         private const val TAG = "jingtian"
-        fun View.createDefaultLayoutParam(width: Int, height: Int, isScrollable: Boolean = true): AppBarLayoutParams {
-            val layoutParams = layoutParams
-            val lp = if (layoutParams == null) {
-                AppBarLayoutParams(width, height)
-            } else if (layoutParams is AppBarLayoutParams) {
-                layoutParams
-            } else {
-                AppBarLayoutParams(layoutParams)
-            }
-            lp.isScrollable = isScrollable
-            lp.width = width
-            lp.height = height
-            return lp
-        }
     }
 
     override fun generateDefaultLayoutParams(): RecyclerView.LayoutParams {
-        return AppBarLayoutParams(
+        return RecyclerView.LayoutParams(
             ViewGroup.LayoutParams.WRAP_CONTENT,
             ViewGroup.LayoutParams.WRAP_CONTENT
         )
-    }
-
-    override fun generateLayoutParams(lp: ViewGroup.LayoutParams?): RecyclerView.LayoutParams {
-        return AppBarLayoutParams(lp)
-    }
-
-    override fun generateLayoutParams(
-        c: Context?,
-        attrs: AttributeSet?
-    ): RecyclerView.LayoutParams {
-        return AppBarLayoutParams(c, attrs)
     }
 
     override fun canScrollHorizontally(): Boolean {
@@ -128,27 +101,21 @@ class AppBarLayoutManager: RecyclerView.LayoutManager() {
 
     private fun checkNoScrollViews(recycler: Recycler, noScrollEnd: Int, viewCache: MutableMap<Int, ItemData>) {
         var lastItem: ItemData? = null
-        for (position in 0 .. noScrollEnd) {
-            val cachedItem = viewCache.getAndMeasureViewForPosition(position)
-            val itemData = if (cachedItem != null) {
-                if (cachedItem.isScrollable) {
-                    viewCache[position] = cachedItem
-                    continue
-                } else if (lastItem == null) {
-                    cachedItem.offset = 0
+        for (position in 0 until noScrollEnd) {
+            if (!adapter.getScrollMode(position)) {
+                val cachedItem = viewCache.getAndMeasureViewForPosition(position)
+                val itemData = if (cachedItem != null) {
+                    if (lastItem == null) {
+                        cachedItem.offset = 0
+                    }
+                    cachedItem.below(lastItem)
+                } else {
+                    recycler.unsafeGetMeasuredItemData(position).below(lastItem)
                 }
-                cachedItem.below(lastItem)
-            } else {
-                val view = recycler.getViewForPosition(position)
-                if (view.isScrollable) {
-                    recycler.recycleView(view)
-                    continue
-                }
-                ItemData(view, position).measure().below(lastItem)
+                LayoutInfo.visibleItems.put(position, itemData)
+                LayoutInfo.noScrollList.addLast(itemData)
+                lastItem = itemData
             }
-            LayoutInfo.visibleItems.put(position, itemData)
-            LayoutInfo.noScrollList.addLast(itemData)
-            lastItem = itemData
         }
     }
 
@@ -204,7 +171,7 @@ class AppBarLayoutManager: RecyclerView.LayoutManager() {
     private fun fillBottomGap(viewCache: MutableMap<Int, ItemData>, recycler: Recycler): Int {
         val delta: Int = (LayoutInfo.viewList.lastOrNull())?.bottomMoreSpace()?.takeIf { it > 0 } ?: 0
         var firstItem = LayoutInfo.viewList.firstOrNull() ?: run {
-            val lastNoScroll = LayoutInfo.noScrollList.removeLast()
+            val lastNoScroll = LayoutInfo.noScrollList.removeLastOrNull()
             if (lastNoScroll != null) {
                 LayoutInfo.viewList.addLast(lastNoScroll)
             }
@@ -420,9 +387,6 @@ class AppBarLayoutManager: RecyclerView.LayoutManager() {
     fun Int.nextPosition(): Int = (this + 1)
     fun Int.lastPosition(): Int = (this - 1)
 
-    private val View.isScrollable: Boolean
-        get() = (this.layoutParams as? AppBarLayoutParams)?.isScrollable != false
-
     inner class ItemData(var view: View, var position: Int, initOffset: Int = 0) {
         var offset: Int = initOffset
             set(value) {
@@ -433,7 +397,7 @@ class AppBarLayoutManager: RecyclerView.LayoutManager() {
         private var pendingOffset = 0
 
         val isScrollable: Boolean
-            get() = view.isScrollable
+            get() = adapter.getScrollMode(position)
 
         val measuredWidth: Int
             get() = getDecoratedMeasuredWidth(view)
@@ -552,16 +516,6 @@ class AppBarLayoutManager: RecyclerView.LayoutManager() {
 
     private fun Int.isValidPosition() : Boolean {
         return this in 0 until itemCount
-    }
-
-    class AppBarLayoutParams : RecyclerView.LayoutParams {
-        constructor(c: Context?, attrs: AttributeSet?) : super(c, attrs)
-        constructor(width: Int, height: Int) : super(width, height)
-        constructor(source: ViewGroup.MarginLayoutParams?) : super(source)
-        constructor(source: ViewGroup.LayoutParams?) : super(source)
-        constructor(source: RecyclerView.LayoutParams?) : super(source)
-
-        var isScrollable: Boolean = true
     }
 
     private fun <E> MutableCollection<E>.deepToString(sep: String = ",\n\t"): String {
