@@ -14,7 +14,7 @@ import kotlin.math.min
 class AppBarLayoutManager(private val adapter: IAppBarAdapter): RecyclerView.LayoutManager() {
 
     companion object {
-        private const val DEBUG = true
+        private const val DEBUG = false
         private const val TAG = "jingtian"
     }
     
