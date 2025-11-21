@@ -3,6 +3,7 @@ package com.jingtian.demoapp.main.fragments
 import com.jingtian.demoapp.main.widget.appbar.AppBarLayoutManager
 import android.annotation.SuppressLint
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
@@ -15,6 +16,7 @@ import com.jingtian.demoapp.main.RxEvents.setDoubleClickListener
 import com.jingtian.demoapp.main.dp
 import com.jingtian.demoapp.main.list.colorblock.AppBarColorBlockAdapter
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.abs
@@ -43,8 +45,8 @@ class AppBarRecyclerViewFragment : BaseFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         with(binding.recyclerView) {
-            adapter = this@AppBarRecyclerViewFragment.adapter
             layoutManager = AppBarLayoutManager(this@AppBarRecyclerViewFragment.adapter)
+            adapter = this@AppBarRecyclerViewFragment.adapter
             setOnTouchListener(object : View.OnTouchListener {
                 private var lastX = 0f
                 private var lastY = 0f
@@ -71,20 +73,28 @@ class AppBarRecyclerViewFragment : BaseFragment() {
                 }
             })
         }
-        lifecycleScope.launch(Dispatchers.Default) {
-            var dataSize = DATA_SIZE
+        val dataSize = DATA_SIZE - adapter.itemCount
+        insertData(dataSize)
+        getTabView()?.setDoubleClickListener(300L) {
+            binding.recyclerView.scrollToPosition(0)
+        }
+    }
+
+    private fun insertData(cnt: Int) {
+        var dataSize = cnt
+        Log.d("jingtian", "insertData: $cnt")
+        lifecycleScope.launch(Dispatchers.Default + Job()) {
             while (dataSize > 0) {
                 val dataList = withContext(Dispatchers.Default) {
                     (0..min(dataSize, BATCH)).map { adapter.createRandomItem(DATA_SIZE - dataSize + it) }
                 }
-                withContext(Dispatchers.Main) {
-                    adapter.insert(dataList)
+                withContext(Dispatchers.Main + Job()) {
+                    binding.recyclerView.post {
+                        adapter.insert(dataList)
+                    }
                 }
                 dataSize -= dataList.size
             }
-        }
-        getTabView()?.setDoubleClickListener(300L) {
-            binding.recyclerView.scrollToPosition(0)
         }
     }
 }
