@@ -55,6 +55,7 @@ class AppBarColorBlockHolder(context: Context) :
         textView.textAlignment = TextView.TEXT_ALIGNMENT_CENTER
         textView.gravity = Gravity.CENTER
     }
+
     fun onBind(value: Int, color: Int, height: Int, isScrollable: Boolean, position: Int) {
         itemView.initLayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, height)
         itemView.setBackgroundColor(color)
@@ -86,23 +87,26 @@ class AppBarColorBlockAdapter(private val minHeight: Int = 50, private val maxHe
         val (value, color, height, isScrollable) = dataList[position]
         holder.onBind(value, color, height, isScrollable, position)
         holder.itemView.setOnClickListener {
+            val position = holder.bindingAdapterPosition
             val cnt = Random.nextInt(1, 5)
             repeat(cnt) {
-                addData(holder.bindingAdapterPosition + 1)
+                addData(position + 1)
             }
-            notifyItemRangeInserted(holder.bindingAdapterPosition + 1, cnt)
+            notifyItemRangeInserted(position + 1, cnt)
+            notifyItemRangeChanged(position, dataList.size - position)
         }
         holder.itemView.setOnLongClickListener {
-            val cnt = min(dataList.size - holder.bindingAdapterPosition, Random.nextInt(1, 5))
+            val position = holder.bindingAdapterPosition
+            val cnt = min(dataList.size - position, Random.nextInt(1, 5))
             repeat(cnt) {
-                dataList.removeAt(holder.bindingAdapterPosition)
+                dataList.removeAt(position)
             }
-            notifyItemRangeRemoved(holder.bindingAdapterPosition, cnt)
+            notifyItemRangeRemoved(position, cnt)
             true
         }
     }
 
-    fun addData(position: Int = dataList.size, value: Int = dataList.size) {
+    private fun addData(position: Int = dataList.size, value: Int = dataList.size) {
         dataList.add(position, createRandomItem(value))
     }
 
