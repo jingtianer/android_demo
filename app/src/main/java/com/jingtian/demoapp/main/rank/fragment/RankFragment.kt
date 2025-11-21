@@ -40,6 +40,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+@BaseFragment.FragmentInfo(desc = "榜单梗")
 class RankFragment : BaseFragment(), AddRankDialog.Companion.Callback,
     JsonDialog.Companion.Callback {
 

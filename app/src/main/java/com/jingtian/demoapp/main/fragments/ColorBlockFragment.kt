@@ -9,14 +9,13 @@ import android.view.ViewConfiguration
 import android.view.ViewGroup
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.jingtian.demoapp.databinding.FragmentColorBlockBinding
-import com.jingtian.demoapp.databinding.FragmentNestedScrollBinding
 import com.jingtian.demoapp.main.RxEvents.setDoubleClickListener
-import com.jingtian.demoapp.main.ScreenUtils.screenHeight
 import com.jingtian.demoapp.main.dp
 import com.jingtian.demoapp.main.list.colorblock.ColorBlockAdapter
 import com.jingtian.demoapp.main.widget.HeightChangeRecyclerViewAnimator
 import kotlin.math.abs
 
+@BaseFragment.FragmentInfo(desc = "自定义ItemAnimator动画")
 class ColorBlockFragment : BaseFragment() {
     companion object {
         private const val DATA_SIZE = 3

@@ -20,6 +20,7 @@ import kotlinx.coroutines.withContext
 import kotlin.math.abs
 import kotlin.math.min
 
+@BaseFragment.FragmentInfo(desc = "支持吸顶的RecyclerView\n(自定义LayoutManager)")
 class AppBarRecyclerViewFragment : BaseFragment() {
     companion object {
         private const val DATA_SIZE = 999999

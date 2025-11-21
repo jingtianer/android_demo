@@ -16,6 +16,7 @@ import com.jingtian.demoapp.main.fragments.BaseFragment
 import com.jingtian.demoapp.main.fragments.BaseFragment.Companion.KEY_TAB_INDEX
 import com.jingtian.demoapp.main.fragments.BaseFragment.Companion.getFragmentName
 import com.jingtian.demoapp.main.fragments.BaseFragment.Companion.BaseFragmentCallback
+import com.jingtian.demoapp.main.fragments.BaseFragment.Companion.getFragmentDesc
 import com.jingtian.demoapp.main.fragments.BuildInfoFragment
 import com.jingtian.demoapp.main.fragments.CanvasFragment
 import com.jingtian.demoapp.main.fragments.ClickableSpanFragment
@@ -92,7 +93,8 @@ class MainActivity : BaseActivity(), BaseFragmentCallback {
         viewPager2.adapter = ReflectAdapter(this, fragmentCreator)
         viewPager2.visibility = View.VISIBLE
         TabLayoutMediator(tabs, viewPager2) { tab, position ->
-            tab.text = fragmentList[position].first.getFragmentName()
+            val fragment = fragmentList[position].first
+            tab.customView = MainTabItem(this@MainActivity, fragment.getFragmentName(), fragment.getFragmentDesc()).rootView()
         }.attach()
     }
 

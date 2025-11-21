@@ -15,6 +15,7 @@ import com.jingtian.demoapp.main.dp
 import com.jingtian.demoapp.main.list.colorblock.ColorBlockAdapter
 import kotlin.math.abs
 
+@BaseFragment.FragmentInfo(desc = "NestedScrollView和RecyclerView嵌套")
 class NestedScrollFragment : BaseFragment() {
     companion object {
         private const val DATA_SIZE = 200

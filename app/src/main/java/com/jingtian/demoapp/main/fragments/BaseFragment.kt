@@ -12,7 +12,11 @@ abstract class BaseFragment: Fragment() {
         }
 
         fun <T : BaseFragment> Class<T>.getFragmentName(): String {
-            return getAnnotation(FragmentInfo::class.java)?.name ?: simpleName.removeSuffix("Fragment")
+            return getAnnotation(FragmentInfo::class.java)?.name?.takeIf { it.isNotEmpty() } ?: simpleName.removeSuffix("Fragment").trim()
+        }
+
+        fun <T : BaseFragment> Class<T>.getFragmentDesc(): String {
+            return getAnnotation(FragmentInfo::class.java)?.desc ?: ""
         }
 
         interface BaseFragmentCallback {
@@ -29,6 +33,6 @@ abstract class BaseFragment: Fragment() {
 
     @Retention(AnnotationRetention.RUNTIME)
     @Target(AnnotationTarget.CLASS)
-    annotation class FragmentInfo(val name: String = "")
+    annotation class FragmentInfo(val name: String = "", val desc: String = "")
 
 }
