@@ -223,7 +223,7 @@ class AppBarLayoutManager(private val adapter: IAppBarAdapter): RecyclerView.Lay
 //                logD(TAG, "moveOut = $info moveVisibleUp: dy=$dy\n$this")
             } else if (info.shouldMoveOut(dy)) {
                 ite.remove()
-                detachAndScrapView(info.view, recycler)
+                removeAndRecycleView(info.view, recycler)
                 visibleItems.remove(info.position)
             } else {
                 info.offset -= dy
@@ -240,7 +240,7 @@ class AppBarLayoutManager(private val adapter: IAppBarAdapter): RecyclerView.Lay
             val info = ite.next()
             if (info.shouldMoveOut(dy)) {
                 ite.remove()
-                detachAndScrapView(info.view, recycler)
+                removeAndRecycleView(info.view, recycler)
                 visibleItems.remove(info.position)
             } else {
                 info.offset -= dy
@@ -301,6 +301,7 @@ class AppBarLayoutManager(private val adapter: IAppBarAdapter): RecyclerView.Lay
     }
 
     private fun fillDown(dy: Int, recycler: Recycler): Int {
+        logD { "fillDown: dy=$dy\n$this" }
         val viewList = layoutInfo.viewList
         val noScrollList = layoutInfo.noScrollList
         val visibleItems = layoutInfo.visibleItems
@@ -311,6 +312,7 @@ class AppBarLayoutManager(private val adapter: IAppBarAdapter): RecyclerView.Lay
             }
             lastNoScroll
         } ?: return 0
+        logD { "fillDown: dy=$dy\n$this, firstItem=$firstItem" }
         while (firstItem.topHasMoreSpace()) {
             var prevItem = visibleItems.get(firstItem.position.lastPosition(), null)
             if (prevItem != null && !prevItem.isScrollable) {
@@ -457,11 +459,12 @@ class AppBarLayoutManager(private val adapter: IAppBarAdapter): RecyclerView.Lay
             }
 
         fun requestLayout(delta: Int = 0): ItemData {
+            offset += delta
             layoutDecoratedWithMargins(view,
                 0,
-                offset + delta,
+                offset,
                 measuredWidth,
-                offset + delta + measuredHeight
+                offset + measuredHeight
             )
             pendingOffset = 0
             return this
@@ -524,12 +527,14 @@ class AppBarLayoutManager(private val adapter: IAppBarAdapter): RecyclerView.Lay
 
         fun updateInfo(recycler: Recycler): Boolean {
             logD { "updateInfo: before: $this, lp=${view.layoutParams}" }
-            val lp = view.layoutParams as? RecyclerView.LayoutParams ?: return false
-            if (!lp.isItemRemoved && !lp.isViewInvalid) {
-                position = lp.viewLayoutPosition
-                if (position.isValidPosition()) {
-                    logD { "updateInfo: after: $this" }
-                    return true
+            val lp = view.layoutParams as? RecyclerView.LayoutParams
+            if (lp != null) {
+                if (!lp.isItemRemoved && !lp.isViewInvalid) {
+                    position = lp.viewLayoutPosition
+                    if (position.isValidPosition()) {
+                        logD { "updateInfo: after: $this" }
+                        return true
+                    }
                 }
             }
             removeAndRecycleView(view, recycler)
