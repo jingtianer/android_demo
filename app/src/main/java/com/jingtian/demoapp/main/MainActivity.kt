@@ -33,6 +33,7 @@ import com.jingtian.demoapp.main.fragments.OverDrawFragment
 import com.jingtian.demoapp.main.fragments.RxJavaFragment
 import com.jingtian.demoapp.main.fragments.RxMergeFragment
 import com.jingtian.demoapp.main.fragments.RxZipFragment
+import com.jingtian.demoapp.main.fragments.StaggeredListFragment
 import com.jingtian.demoapp.main.fragments.TextOnFingerFragment
 import com.jingtian.demoapp.main.fragments.WidthAnimFragment
 import com.jingtian.demoapp.main.rank.fragment.RankFragment
@@ -52,6 +53,7 @@ class MainActivity : BaseActivity(), BaseFragmentCallback {
             AppBarRecyclerViewFragment::class.java to arrayOf<Any>(),
             ColorBlockFragment::class.java to arrayOf<Any>(),
             ConcatAdapterFragment::class.java to arrayOf<Any>(),
+            StaggeredListFragment::class.java to arrayOf<Any>(),
             CanvasFragment::class.java to arrayOf<Any>(),
             FollowLeftFragment::class.java to arrayOf<Any>(),
             RxJavaFragment::class.java to arrayOf<Any>(),

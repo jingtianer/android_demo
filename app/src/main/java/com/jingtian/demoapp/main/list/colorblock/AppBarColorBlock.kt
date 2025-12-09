@@ -72,7 +72,7 @@ class AppBarColorBlockHolder(context: Context) :
     }
 }
 
-class AppBarColorBlockAdapter(private val minHeight: Int = 50, private val maxHeight: Int = 400) : RecyclerView.Adapter<AppBarColorBlockHolder>(), IAppBarAdapter {
+class AppBarColorBlockAdapter(private val minHeight: Int = 50, private val maxHeight: Int = 400, private val maxDelta: Int = Int.MAX_VALUE) : RecyclerView.Adapter<AppBarColorBlockHolder>(), IAppBarAdapter {
     private val random = Random
     private val dataList = mutableListOf<AppBarColorBlockModel>()
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): AppBarColorBlockHolder {
@@ -88,7 +88,7 @@ class AppBarColorBlockAdapter(private val minHeight: Int = 50, private val maxHe
         holder.onBind(value, color, height, isScrollable, position)
         holder.itemView.setOnClickListener {
             val position = holder.bindingAdapterPosition
-            val cnt = Random.nextInt(1, 5)
+            val cnt = minOf(Random.nextInt(1, 5), maxDelta)
             repeat(cnt) {
                 addData(position + 1)
             }
@@ -97,7 +97,7 @@ class AppBarColorBlockAdapter(private val minHeight: Int = 50, private val maxHe
         }
         holder.itemView.setOnLongClickListener {
             val position = holder.bindingAdapterPosition
-            val cnt = min(dataList.size - position, Random.nextInt(1, 5))
+            val cnt = minOf(dataList.size - position, Random.nextInt(1, 5), maxDelta)
             repeat(cnt) {
                 dataList.removeAt(position)
             }
