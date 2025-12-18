@@ -20,7 +20,6 @@ object ToastQueue {
     fun show(toast: Toast) {
         this.toast?.cancel()
         this.toast = toast
-        toast.show()
     }
 }
 
@@ -37,7 +36,7 @@ class ClickableSimpleToast : ClickableToast<CustomToastViewBinding> {
                     text = charSequence
                 }
                 this.duration = duration
-                ToastQueue.show(this)
+                show()
             }
         }
     }
@@ -94,5 +93,10 @@ open class ClickableToast<B : ViewBinding>(context: Context, binding: B) : Custo
 open class CustomToast<B : ViewBinding>(context: Context, val binding: B) : Toast(context) {
     init {
         view = binding.root
+    }
+
+    override fun show() {
+        ToastQueue.show(this)
+        super.show()
     }
 }
