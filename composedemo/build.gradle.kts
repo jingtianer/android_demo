@@ -51,6 +51,7 @@ android {
 
 dependencies {
     implementation("androidx.core:core-ktx:1.8.0")
+    implementation("androidx.appcompat:appcompat:1.4.1")
 //    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.10.0")
     // activity-compose 版本需适配 Compose 和 AGP，1.4.0 是 AGP 7.0.4 兼容的稳定版
     implementation("androidx.activity:activity-compose:1.4.0")
