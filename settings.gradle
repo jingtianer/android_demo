@@ -31,3 +31,4 @@ dependencyResolutionManagement {
 rootProject.name = "DemoApp"
 include ':app'
 include ':AsmPlugin'
+include ':composedemo'
