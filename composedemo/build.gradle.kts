@@ -60,8 +60,8 @@ dependencies {
 
     implementation("androidx.compose.ui:ui:$composeVersion")
     implementation("androidx.compose.ui:ui-graphics:$composeVersion")
-    implementation("androidx.compose.ui:ui-tooling-preview:1.1.1")
-    implementation("androidx.compose.material3:material3:1.0.0-alpha14")
+    implementation("androidx.compose.ui:ui-tooling-preview:$composeVersion")
+    implementation("androidx.compose.material3:material3:1.2.0")
 
     // 测试依赖（版本适配）
     testImplementation("junit:junit:4.13.2")
