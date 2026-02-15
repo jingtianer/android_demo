@@ -3,7 +3,7 @@ package com.jingtian.composedemo
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-//import androidx.activity.enableEdgeToEdge
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.Text
 //import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -26,19 +28,24 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import com.jingtian.composedemo.ui.theme.DemoAppTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-//        enableEdgeToEdge()
+        enableEdgeToEdge()
         setContent {
-            HelloWorld()
+            DemoAppTheme {
+                HelloWorld()
+            }
         }
-//        ViewCompat.setOnApplyWindowInsetsListener() { v, insets ->
-//            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-//            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-//            insets
-//        }
+        ViewCompat.setOnApplyWindowInsetsListener(window.decorView) { v, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            insets
+        }
     }
 }
 
@@ -60,20 +67,23 @@ fun HelloWorldText(value: String, onValueChange: (String)-> Unit) {
     ) {
         BasicText(
             "hello $value",
-            Modifier.fillMaxWidth()
+            Modifier
+                .fillMaxWidth()
                 .padding(vertical = 6.dp),
-            style = TextStyle()
+            style = LocalTextStyle.current,
         )
         BasicTextField(
             value = value,
             onValueChange = onValueChange,
-            Modifier.fillMaxWidth()
+            Modifier
+                .fillMaxWidth()
                 .padding(4.dp)
                 .border(1.dp, Color.Cyan, shape = RoundedCornerShape(4.dp))
                 .padding(3.dp)
                 .border(2.dp, Color.Red, shape = RoundedCornerShape(4.dp))
                 .padding(4.dp)
             ,
+            textStyle = LocalTextStyle.current,
         )
     }
 }
