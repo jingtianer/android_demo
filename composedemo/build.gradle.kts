@@ -78,4 +78,6 @@ dependencies {
     implementation("androidx.room:room-ktx:$room_version")
     implementation("androidx.room:room-rxjava2:$room_version")
     implementation("androidx.room:room-paging:$room_version")
+
+    implementation("com.google.code.gson:gson:2.8.8")
 }
