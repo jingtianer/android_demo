@@ -20,12 +20,12 @@ class LabelTypeConverter :  TypeAdapter<Label>() {
     }
 
     @TypeConverter
-    fun toFileType(value: Int): FileType {
-        return FileType.fromValue(value) ?: FileType.RegularFile
+    fun toLabel(value: Int): Label {
+        return Label.fromValue(value) ?: Label.DEFAULT
     }
 
     @TypeConverter
-    fun toString(fileType: FileType): Int {
+    fun fromLabel(fileType: Label): Int {
         return fileType.value
     }
 }

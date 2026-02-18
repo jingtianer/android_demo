@@ -13,7 +13,7 @@ interface FileInfoDao {
     }
 
     @Query("select * from $TABLE_NAME where id = :fileId")
-    fun getFileInfo(fileId: Long)
+    fun getFileInfo(fileId: Long): FileInfo
 
     @Delete
     fun deleteFileInfo(fileInfo: FileInfo)

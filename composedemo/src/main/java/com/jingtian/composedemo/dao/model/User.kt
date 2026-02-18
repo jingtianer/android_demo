@@ -3,9 +3,9 @@ package com.jingtian.composedemo.dao.model
 private val DEFAULT_USER_NAME = "默认用户"
 private val DEFAULT_DESC = "这个人很懒，什么都没有留下"
 class User(
-    var userName: String? = null,
-    var userDesc: String? = null,
-    var userAvatar: FileInfo? = null,
+    private var userName: String? = null,
+    private var userDesc: String? = null,
+    private var userAvatar: FileInfo? = null,
 ) {
 
     fun getUserName(): String {

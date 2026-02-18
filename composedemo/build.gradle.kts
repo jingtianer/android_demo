@@ -80,4 +80,9 @@ dependencies {
     implementation("androidx.room:room-paging:$room_version")
 
     implementation("com.google.code.gson:gson:2.8.8")
+
+
+    implementation("androidx.lifecycle:lifecycle-viewmodel:2.5.1")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.5.1")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.5.1")
 }

@@ -23,7 +23,8 @@ import java.util.Date
             onDelete = ForeignKey.CASCADE,
             onUpdate = ForeignKey.CASCADE,
         ),
-    ]
+    ],
+    primaryKeys = ["itemId"]
 )
 class AlbumItem(
     var itemId: Long = DataBase.INVALID_ID,

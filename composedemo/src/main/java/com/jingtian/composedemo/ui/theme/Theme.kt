@@ -1,19 +1,20 @@
 package com.jingtian.composedemo.ui.theme
 
-import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.structuralEqualityPolicy
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.TextStyle
 
 private val DarkColorScheme = darkColorScheme(
     primary = Purple80,
     secondary = PurpleGrey80,
-    tertiary = Pink80
+    tertiary = Pink80,
+
 )
 
 private val LightColorScheme = lightColorScheme(
@@ -31,6 +32,24 @@ private val LightColorScheme = lightColorScheme(
     onSurface = Color(0xFF1C1B1F),
     */
 )
+
+data class AppUIConstants(
+    val drawerMaxPercent: Float = 0.8f,
+)
+
+class AppPalette(
+    val drawerBg: Color,
+)
+
+private val darkAppPalette = AppPalette(
+    drawerBg = color282828
+)
+private val liteAppPalette = AppPalette(
+    drawerBg = colorA8A8A8
+)
+
+val LocalAppPalette = compositionLocalOf(structuralEqualityPolicy()) { liteAppPalette }
+val LocalAppUIConstants = compositionLocalOf(structuralEqualityPolicy()) { AppUIConstants() }
 
 @Composable
 fun DemoAppTheme(
@@ -51,12 +70,20 @@ fun DemoAppTheme(
     val customTextStyle = LocalTextStyle.current.copy(
         color = if (darkTheme) colorF8f8f8 else colorBlack
     )
+    val appPalette = if (darkTheme) {
+        darkAppPalette
+    } else {
+        liteAppPalette
+    }
     MaterialTheme(
         colorScheme = colorScheme,
         typography = Typography,
         content = {
             CompositionLocalProvider(
-                LocalTextStyle provides customTextStyle, content
+                LocalTextStyle provides customTextStyle,
+                LocalAppPalette provides appPalette,
+                LocalAppUIConstants provides AppUIConstants(),
+                content = content
             )
         }
     )

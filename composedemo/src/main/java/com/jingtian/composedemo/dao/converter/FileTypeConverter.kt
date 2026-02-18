@@ -25,7 +25,7 @@ class FileTypeConverter :  TypeAdapter<FileType>() {
     }
 
     @TypeConverter
-    fun toString(fileType: FileType): Int {
+    fun fromFileType(fileType: FileType): Int {
         return fileType.value
     }
 }
