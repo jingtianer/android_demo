@@ -109,18 +109,18 @@ fun DrawerHeader(drawerState: DrawerState) {
     }
     var userName by remember { mutableStateOf(DEFAULT_USER_NAME) }
     var userDesc by remember { mutableStateOf(DEFAULT_DESC) }
+    var userAvatarImage by remember { mutableStateOf<ImageBitmap?>(null) }
 
     val avatarSize = 150.dp
 
     val scope = rememberCoroutineScope()
-    var userAvatarImage by remember { mutableStateOf<ImageBitmap?>(null) }
     var editIconJob by remember { mutableStateOf<Job?>(null) }
     var imageValid by remember { mutableStateOf(false) }
     var editUserInfoJob by remember { mutableStateOf<Job?>(null) }
 
     LaunchedEffect(imageValid, drawerState.isClosed, drawerState.isOpen) {
         editIconJob?.cancel()
-        if (!imageValid && !drawerState.isClosed) {
+        if (!imageValid && (!drawerState.isClosed || drawerState.isOpen)) {
             editIconJob = scope.launch(Dispatchers.IO) {
                 val innerUserInfo = UserStorage.userInstance
                 withContext(Dispatchers.Main) {
