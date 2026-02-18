@@ -17,7 +17,7 @@ class FileInfo(
     @Ignore
     var uri: Uri? = null,
     var storageId: Long = DataBase.INVALID_ID,
-    var fileType: FileType = FileType.RegularFile
+    var fileType: FileType = FileType.RegularFile,
 ) {
     fun getFileUri(): Uri? {
         val uri = this.uri
