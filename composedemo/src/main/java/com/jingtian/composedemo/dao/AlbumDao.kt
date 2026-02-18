@@ -5,6 +5,7 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Update
 import com.jingtian.composedemo.dao.model.Album
 import kotlinx.coroutines.flow.Flow
 
@@ -30,6 +31,8 @@ interface AlbumDao {
     @Query("select * from $TABLE_NAME")
     fun getAllAlbum(): Flow<List<Album>>
 
+    @Update
+    fun updateAlbum(album: Album)
 
     @Query("select * from $TABLE_NAME limit :maxSize")
     fun getAlbumList(maxSize: Int): List<Album>

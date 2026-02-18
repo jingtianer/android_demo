@@ -27,4 +27,13 @@ class AlbumViewModel : ViewModel() {
             dataChange.value = (dataChange.value ?: 0) + 1
         }
     }
+    fun deleteAlbum(album: Album) {
+        CoroutineUtils.runIOTask({
+            dao.deleteAlbum(album)
+            dao.getAllAlbum().collect { Log.d(TAG, "addAlbum: ${it.map { "${it.albumId}, ${it.albumName}, ${it.createTime}" }.joinToString { "," }}") }
+            Log.d(TAG, "addAlbum: ${album.albumName}")
+        }) {
+            dataChange.value = (dataChange.value ?: 0) + 1
+        }
+    }
 }

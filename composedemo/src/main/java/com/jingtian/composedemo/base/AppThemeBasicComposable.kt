@@ -12,11 +12,14 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorProducer
@@ -24,7 +27,9 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -59,8 +64,6 @@ fun AppThemeClickEditableText(
     onTextLayout: (TextLayoutResult) -> Unit = {},
     interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
     cursorBrush: Brush = SolidColor(Color.Black),
-    decorationBox: @Composable (innerTextField: @Composable () -> Unit) -> Unit =
-        @Composable { innerTextField -> innerTextField() },
 
     // text
     overflow: TextOverflow = TextOverflow.Clip,
@@ -69,16 +72,15 @@ fun AppThemeClickEditableText(
     initEditable: Boolean = false,
     horizontalOffset: Dp = 0.dp,
     verticalOffset: Dp = 0.dp,
-
-    ) {
+) {
     var editable by remember { mutableStateOf(initEditable) }
     ConstraintLayout(modifier) {
         val (iconRef, textRef, editTextRef) = createRefs()
         @Composable
         fun EditImage() {
             Image(
-                painter = painterResource(R.drawable.edit),
-                contentDescription = "编辑按钮",
+                painter = painterResource(if (editable) R.drawable.close else R.drawable.edit),
+                contentDescription = if (editable) "结束编辑按钮" else "编辑按钮",
                 Modifier
                     .size(editSize)
                     .width(editSize)
@@ -106,14 +108,20 @@ fun AppThemeClickEditableText(
                             }
                         }
                     }
-                    .clickable { editable = !editable },
+                    .clickable {
+                        editable = !editable
+                   },
             )
         }
         if (editable) {
+            val focusRequester = remember { FocusRequester() }
             AppThemeBasicTextField(
-                value,
+                value = TextFieldValue(
+                    text = value,
+                    selection = TextRange(value.length, value.length)
+                ),
                 { currentValue ->
-                    onValueChange(currentValue, editable)
+                    onValueChange(currentValue.text, editable)
                 },
                 Modifier
                     .wrapContentWidth()
@@ -121,9 +129,11 @@ fun AppThemeClickEditableText(
                         top.linkTo(parent.top)
                         start.linkTo(parent.start)
                     }
+                    .focusRequester(focusRequester)
                     .clickable {
                         onValueChange(value, editable)
-                    },
+                    }
+                    .wrapContentWidth(),
                 enabled,
                 readOnly,
                 textStyle,
@@ -137,6 +147,9 @@ fun AppThemeClickEditableText(
                 interactionSource,
                 cursorBrush,
             )
+            LaunchedEffect(Unit) {
+                focusRequester.requestFocus()
+            }
         } else {
             AppThemeText(
                 value,
@@ -271,6 +284,50 @@ fun AppThemeBasicTextField(
             AppThemeText(hint, style = LocalTextStyle.current.copy(color = hintColor))
         }
 
+        innerTextField()
+    }
+)
+
+@Composable
+fun AppThemeBasicTextField(
+    value: TextFieldValue,
+    onValueChange: (TextFieldValue) -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    readOnly: Boolean = false,
+    textStyle: TextStyle = TextStyle.Default,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    keyboardActions: KeyboardActions = KeyboardActions.Default,
+    singleLine: Boolean = false,
+    maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE,
+    minLines: Int = 1,
+    visualTransformation: VisualTransformation = VisualTransformation.None,
+    onTextLayout: (TextLayoutResult) -> Unit = {},
+    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
+    cursorBrush: Brush = SolidColor(Color.Black),
+    hint: String? = null,
+    hintColor: Color = Color.Gray,
+) = BasicTextField(
+    value,
+    onValueChange,
+    modifier,
+    enabled,
+    readOnly,
+    textStyle,
+    keyboardOptions,
+    keyboardActions,
+    singleLine,
+    maxLines,
+    minLines,
+    visualTransformation,
+    onTextLayout,
+    interactionSource,
+    cursorBrush,
+    decorationBox = @Composable { innerTextField ->
+        // places leading icon, text field with label and placeholder, trailing icon
+        if (!hint.isNullOrEmpty() && value.text.isEmpty()) {
+            AppThemeText(hint, style = LocalTextStyle.current.copy(color = hintColor))
+        }
         innerTextField()
     }
 )

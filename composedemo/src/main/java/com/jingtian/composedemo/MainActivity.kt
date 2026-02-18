@@ -1,13 +1,13 @@
 package com.jingtian.composedemo
 
 import android.net.Uri
-import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -19,19 +19,25 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.DrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.TextField
 import androidx.compose.material3.rememberDrawerState
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -41,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.times
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.jingtian.composedemo.base.AppThemeBasicTextField
 import com.jingtian.composedemo.base.AppThemeClickEditableText
 import com.jingtian.composedemo.base.AppThemeText
 import com.jingtian.composedemo.base.AppThemeTextField
@@ -74,16 +81,36 @@ fun Main() {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Open)
     val viewModel: AlbumViewModel = viewModel()
     var menuItemsEntity by remember { mutableStateOf(emptyList<Album>()) }
-    val rememberScope = rememberCoroutineScope()
-    var currentSelectedAlbum by remember { mutableStateOf<Album?>(null) }
+//    val rememberScope = rememberCoroutineScope()
+    var currentSelectedAlbum by remember { mutableStateOf<IndexedValue<Album>?>(null) }
     var dataChanged by remember { mutableStateOf(false) }
+
+    fun updateSelectedValue(list: List<Album>): IndexedValue<Album>? {
+        val currentSelectedAlbum = currentSelectedAlbum
+        if (currentSelectedAlbum != null) {
+            val lastSelectedIndex = currentSelectedAlbum.index
+            val lastSelectedAlbumId = currentSelectedAlbum.value.albumId
+            val findId = list.withIndex().find { it.value.albumId == lastSelectedAlbumId }
+            if (findId != null) {
+                return findId
+            }
+            if (lastSelectedIndex < list.size) {
+                return IndexedValue(lastSelectedIndex, list.get(lastSelectedIndex))
+            }
+            return list.asReversed().withIndex().firstOrNull()
+        } else {
+            return list.withIndex().firstOrNull()
+        }
+    }
 
     LaunchedEffect(drawerState.isOpen) {
         if (drawerState.isOpen) {
             withContext(Dispatchers.IO) {
                 viewModel.menuItemsFlow.collect { value ->
+                    val nextSelectedAlbum = updateSelectedValue(value)
                     withContext(Dispatchers.Main) {
                         menuItemsEntity = value
+                        currentSelectedAlbum = nextSelectedAlbum
                     }
                 }
             }
@@ -94,9 +121,11 @@ fun Main() {
         if (drawerState.isOpen && dataChanged) {
             withContext(Dispatchers.IO) {
                 viewModel.menuItemsFlow.collect { value ->
+                    val nextSelectedAlbum = updateSelectedValue(value)
                     withContext(Dispatchers.Main) {
                         menuItemsEntity = value
                         dataChanged = false
+                        currentSelectedAlbum = nextSelectedAlbum
                     }
                 }
             }
@@ -109,14 +138,16 @@ fun Main() {
 
     ModalNavigationDrawer(
         {
-            MainDrawer(drawerState, menuItemsEntity) { currentSelectedAlbum = it }
+            MainDrawer(drawerState, menuItemsEntity) { index, album ->
+                currentSelectedAlbum = IndexedValue(index, album)
+            }
         },
         Modifier.fillMaxSize(),
         drawerState = drawerState
     ) {
         Column(Modifier.fillMaxSize()) {
             AppThemeText(
-                currentSelectedAlbum?.albumName ?: "没有选择",
+                currentSelectedAlbum?.value?.albumName ?: "没有选择",
                 Modifier
                     .fillMaxSize()
                     .align(Alignment.CenterHorizontally),
@@ -151,7 +182,11 @@ fun DrawerHeader(drawerState: DrawerState) {
                     userDesc = innerUserInfo.userDesc
                 }
                 val fileInfo = innerUserInfo.userAvatar
-                val (_, image) = BitMapCachePool.loadImage(fileInfo, 150.dp.value.toInt(), 150.dp.value.toInt())
+                val (_, image) = BitMapCachePool.loadImage(
+                    fileInfo,
+                    150.dp.value.toInt(),
+                    150.dp.value.toInt()
+                )
                 withContext(Dispatchers.Main) {
                     userAvatarImage = image?.asImageBitmap()
                     imageValid = true
@@ -169,7 +204,8 @@ fun DrawerHeader(drawerState: DrawerState) {
             scope.launch(Dispatchers.IO) {
                 val imageStorage = FileStorageUtils.getStorage(FileType.IMAGE) ?: return@launch
                 val currentUser = UserStorage.userInstance
-                val currentImageId = currentUser.userAvatar.storageId.takeIf { it != DataBase.INVALID_ID }
+                val currentImageId =
+                    currentUser.userAvatar.storageId.takeIf { it != DataBase.INVALID_ID }
                 val nextId = if (currentImageId != null) {
                     imageStorage.asyncStore(currentImageId, uri)
                 } else {
@@ -228,7 +264,7 @@ fun DrawerHeader(drawerState: DrawerState) {
                 AppThemeClickEditableText(
                     editSize = editSize,
                     userName,
-                    { value, editable->
+                    { value, editable ->
                         val userInstance = UserStorage.userInstance
                         userInstance.userName = value
                         userName = value
@@ -244,7 +280,7 @@ fun DrawerHeader(drawerState: DrawerState) {
                 AppThemeClickEditableText(
                     editSize = editSize,
                     value = userDesc,
-                    { value, editable->
+                    { value, editable ->
                         val userInstance = UserStorage.userInstance
                         userInstance.userDesc = value
                         userDesc = value
@@ -294,7 +330,8 @@ fun DrawerFunctionArea() {
                 Modifier
                     .background(LocalAppPalette.current.dialogBg)
                     .fillMaxWidth(0.82f)
-                    .padding(8.dp)) {
+                    .padding(8.dp)
+            ) {
                 AppThemeTextField(albumName, { value ->
                     albumName = value
                 }, label = {
@@ -322,7 +359,7 @@ fun DrawerFunctionArea() {
 fun MainDrawer(
     drawerState: DrawerState,
     albumData: List<Album>,
-    onAlbumSelected: (Album) -> Unit
+    onAlbumSelected: (Int, Album) -> Unit
 ) {
     if (drawerState.isClosed) {
         return
@@ -332,15 +369,16 @@ fun MainDrawer(
         Modifier
             .fillMaxHeight()
             .fillMaxWidth(LocalAppUIConstants.current.drawerMaxPercent)
-            .background(LocalAppPalette.current.drawerBg)) {
+            .background(LocalAppPalette.current.drawerBg)
+    ) {
         DrawerHeader(drawerState)
         Spacer(modifier = Modifier.height(16.dp))
         LazyColumn(Modifier.fillMaxSize()) {
-            items(albumData.size) { index ->
+            items(albumData.size, key = { index: Int -> albumData[index].albumId ?: DataBase.INVALID_ID  }) { index ->
                 val item = albumData[index]
                 DrawerMenuItem(item, drawerState) {
                     rememberScope.launch {
-                        onAlbumSelected(item)
+                        onAlbumSelected(index, item)
                         drawerState.close()
                     }
                 }
@@ -349,32 +387,68 @@ fun MainDrawer(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DrawerMenuItem(
     item: Album,
     drawerState: DrawerState,
     onItemClick: () -> Unit
 ) {
-    val modifier = if (drawerState.isOpen) {
-        Modifier.clickable {
-            onItemClick()
-        }
-    } else {
-        Modifier
-    }
-        .padding(16.dp)
+    var albumName by remember { mutableStateOf(item.albumName) }
+    var changeNameJob by remember { mutableStateOf<Job?>(null) }
+    val viewModel: AlbumViewModel = viewModel()
+    val editSize = 14.dp
+    val size = 36.dp
+    val modifier = Modifier
         .fillMaxWidth()
+        .clip(RectangleShape)
+        .height(size)
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        AppThemeText(
-            text = item.albumName,
-        )
+        val swipeToDismissBoxState = rememberSwipeToDismissBoxState(confirmValueChange = { value->
+            when(value) {
+                SwipeToDismissBoxValue.StartToEnd -> {
+                    viewModel.deleteAlbum(item)
+                    true
+                }
+                else -> false
+            }
+        })
+        SwipeToDismissBox(swipeToDismissBoxState, modifier = Modifier.fillMaxHeight(), enableDismissFromEndToStart = false, backgroundContent = {
+            Row {
+                Image(
+                    painter = painterResource(R.drawable.trash_bin),
+                    contentDescription = "删除",
+                    Modifier
+                        .size(size)
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(size))
+                        .background(Color.Red),
+                )
+            }
+        }) {
+            Box(Modifier.align(Alignment.CenterVertically)
+                .fillMaxHeight()
+                .fillMaxWidth()
+                .clickable { onItemClick() }
+                .background(LocalAppPalette.current.drawerBg),) {
+                AppThemeClickEditableText(
+                    editSize = editSize,
+                    value = albumName,
+                    modifier = Modifier.align(Alignment.CenterStart),
+                    onValueChange = { value, _ ->
+                        albumName = value
+                        item.albumName = value
+                        changeNameJob?.cancel()
+                        changeNameJob = CoroutineUtils.runIOTask({
+                            DataBase.dbImpl.getAlbumDao().updateAlbum(item)
+                        })
+                    },
+                    verticalOffset = 2 * editSize / 3
+                )
+            }
+        }
     }
-}
-
-@Composable
-fun AddAlbumDialog() {
-
 }
