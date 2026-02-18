@@ -2,6 +2,7 @@ package com.jingtian.composedemo.dao.model
 
 import androidx.room.Entity
 import androidx.room.ForeignKey
+import androidx.room.Index
 import com.jingtian.composedemo.dao.DataBase
 import com.jingtian.composedemo.dao.LabelInfoDao
 
@@ -16,7 +17,8 @@ import com.jingtian.composedemo.dao.LabelInfoDao
             onDelete = ForeignKey.CASCADE,
             onUpdate = ForeignKey.CASCADE
         )
-    ]
+    ],
+    indices = [Index(value = ["albumItemId", "label"])]
 )
 
 class LabelInfo(

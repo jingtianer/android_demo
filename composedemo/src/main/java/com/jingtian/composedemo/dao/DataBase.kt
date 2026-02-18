@@ -30,7 +30,7 @@ abstract class DataBase: RoomDatabase() {
         val dbImpl = Room.databaseBuilder(app, DataBase::class.java, "app_db")
             .addTypeConverter(DateTypeConverter())
             .addTypeConverter(FileTypeConverter())
-            .addTypeConverter(FileTypeConverter())
+            .addTypeConverter(LabelTypeConverter())
             .addTypeConverter(ItemRankConverter())
             .build()
     }

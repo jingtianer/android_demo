@@ -15,6 +15,7 @@ class FileInfo(
     @PrimaryKey(autoGenerate = true)
     var id: Long = DataBase.INVALID_ID,
     @Ignore
+    @Transient
     var uri: Uri? = null,
     var storageId: Long = DataBase.INVALID_ID,
     var fileType: FileType = FileType.RegularFile,

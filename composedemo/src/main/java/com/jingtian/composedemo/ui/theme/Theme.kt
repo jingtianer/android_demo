@@ -83,6 +83,7 @@ fun DemoAppTheme(
                 LocalTextStyle provides customTextStyle,
                 LocalAppPalette provides appPalette,
                 LocalAppUIConstants provides AppUIConstants(),
+                LocalContentColor provides Color.Unspecified,
                 content = content
             )
         }

@@ -15,8 +15,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 object FileStorageUtils {
 
-    private const val RANK_IMAGE_PREFIX = "file_"
-    private const val RANK_IMAGE_STORE_DIR = "file"
+    private const val RANK_IMAGE_STORE_DIR = "file_"
 
     private val storage = ConcurrentHashMap<FileType, SoftReference<FileStorage>>()
 
@@ -37,19 +36,17 @@ object FileStorageUtils {
             SharedPreferenceUtils.StorageLong(sp, "file_id_${fileType.value}", 0L)
         )
 
-        private fun rankImageStoreDir(): String {
-            return RANK_IMAGE_STORE_DIR + fileType.value
-        }
+        private val rankImageStoreDir: String = RANK_IMAGE_STORE_DIR + fileType.value
 
         private fun rankImagePrefix(id: Long): String {
-            return "${RANK_IMAGE_PREFIX}_${fileType.value}_${id}"
+            return "${rankImageStoreDir}_${id}"
         }
 
         fun get(id: Long): Uri? {
             if (id == -1L) {
                 Uri.EMPTY
             }
-            val storeDir = File(app.filesDir, rankImageStoreDir())
+            val storeDir = File(app.filesDir, rankImageStoreDir)
             val storageFile = File(storeDir, rankImagePrefix(id))
             return if (storageFile.exists()) {
                 storageFile.toUri()
@@ -59,8 +56,8 @@ object FileStorageUtils {
         }
 
         fun delete(id: Long) {
-            val storeDir = File(app.filesDir, RANK_IMAGE_STORE_DIR)
-            val storageFile = File(storeDir, RANK_IMAGE_PREFIX + id)
+            val storeDir = File(app.filesDir, rankImageStoreDir)
+            val storageFile = File(storeDir, rankImagePrefix(id))
             if (storageFile.exists()) {
                 storageFile.delete()
             }
@@ -74,7 +71,7 @@ object FileStorageUtils {
             }
         }
 
-        fun store(oldId: Long, uri: Uri): Long {
+        fun asyncStore(oldId: Long, uri: Uri): Long {
             if (uri == Uri.EMPTY) {
                 return -1
             }
@@ -85,30 +82,34 @@ object FileStorageUtils {
                     oldId
                 }
             }
-            val storageFile = getStoreFile(id)
-            if (uri.safeToFile()?.absolutePath?.equals(storageFile.absolutePath) != true) {
-                if (storageFile.exists()) {
-                    storageFile.delete()
+            CoroutineUtils.runIOTask({
+                val storageFile = getStoreFile(id)
+                if (uri.safeToFile()?.absolutePath?.equals(storageFile.absolutePath) != true) {
+                    if (storageFile.exists()) {
+                        storageFile.delete()
+                    }
+                    app.contentResolver.openInputStream(uri)?.use { input ->
+                        innerStoreImage(id, input, storageFile)
+                    }
                 }
-                app.contentResolver.openInputStream(uri)?.use { input ->
-                    innerStoreImage(id, input, storageFile)
-                }
-            }
+            }) {}
             return id
         }
 
-        fun store(uri: Uri): Long {
+        fun asyncStore(uri: Uri): Long {
             if (uri == Uri.EMPTY) {
                 return -1
             }
             val id = synchronized(this) {
                 this.id++
             }
-            val storageFile = getStoreFile(id)
-            storageFile.delete()
-            app.contentResolver.openInputStream(uri)?.use { input ->
-                innerStoreImage(id, input, storageFile)
-            }
+            CoroutineUtils.runIOTask({
+                val storageFile = getStoreFile(id)
+                storageFile.delete()
+                app.contentResolver.openInputStream(uri)?.use { input ->
+                    innerStoreImage(id, input, storageFile)
+                }
+            }, {})
             return id
         }
 
@@ -122,14 +123,14 @@ object FileStorageUtils {
         }
 
         private fun getStoreFile(id: Long): File {
-            val storeDir = File(app.filesDir, RANK_IMAGE_STORE_DIR)
+            val storeDir = File(app.filesDir, rankImageStoreDir)
             if (!storeDir.exists()) {
                 storeDir.mkdirs()
             } else if (storeDir.isFile) {
                 storeDir.delete()
                 storeDir.mkdirs()
             }
-            return File(storeDir, RANK_IMAGE_PREFIX + id)
+            return File(storeDir, rankImagePrefix(id))
         }
 
         private fun innerStoreImage(
@@ -141,7 +142,7 @@ object FileStorageUtils {
                 input.copyTo(output)
             }
             val uri = storageFile.toUri()
-            return FileInfo(id, uri)
+            return FileInfo(storageId = id, uri = uri, fileType = fileType)
         }
     }
 }

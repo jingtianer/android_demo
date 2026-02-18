@@ -22,7 +22,7 @@ class SharedPreferenceUtils {
 
         override fun setValue(thisRef: V, property: KProperty<*>, value: T) {
             this.value = value
-            sp.edit().putValue(key, value).apply()
+            sp.edit().putValue(key, value).commit()
         }
     }
 
@@ -86,8 +86,8 @@ class SharedPreferenceUtils {
         sp: SharedPreferences,
         key: String,
         defaultValue: V,
-        private val gson: Gson,
-        typeToken: TypeToken<V>
+        typeToken: TypeToken<V>,
+        private val gson: Gson = Gson(),
     ) : ReadWriteProperty<T, V> {
         private var json by StorageString(sp, key, gson.toJson(defaultValue))
         private var value = gson.fromJson(json, typeToken.type) as V

@@ -5,11 +5,10 @@ import androidx.room.TypeConverter
 import com.google.gson.TypeAdapter
 import com.google.gson.stream.JsonReader
 import com.google.gson.stream.JsonWriter
-import com.jingtian.composedemo.dao.model.FileType
 import com.jingtian.composedemo.dao.model.Label
 
 @ProvidedTypeConverter
-class LabelTypeConverter :  TypeAdapter<Label>() {
+class LabelTypeConverter : TypeAdapter<Label>() {
     override fun write(out: JsonWriter?, value: Label?) {
         out?.value((value ?: Label.DEFAULT).value)
     }
@@ -25,7 +24,7 @@ class LabelTypeConverter :  TypeAdapter<Label>() {
     }
 
     @TypeConverter
-    fun fromLabel(fileType: Label): Int {
-        return fileType.value
+    fun fromLabel(label: Label): Int {
+        return label.value
     }
 }
