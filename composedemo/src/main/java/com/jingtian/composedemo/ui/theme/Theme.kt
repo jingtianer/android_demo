@@ -39,13 +39,19 @@ data class AppUIConstants(
 
 class AppPalette(
     val drawerBg: Color,
+    val dialogBg: Color,
+    val spaceColor: Color,
 )
 
 private val darkAppPalette = AppPalette(
-    drawerBg = color282828
+    drawerBg = color282828,
+    dialogBg = color282828,
+    spaceColor = colorBlack,
 )
 private val liteAppPalette = AppPalette(
-    drawerBg = colorA8A8A8
+    drawerBg = colorA8A8A8,
+    dialogBg = colorA8A8A8,
+    spaceColor = color282828,
 )
 
 val LocalAppPalette = compositionLocalOf(structuralEqualityPolicy()) { liteAppPalette }

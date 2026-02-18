@@ -47,10 +47,10 @@ object CoroutineUtils {
         }
     }
 
-    fun <T> runIOTask(block: Callable<T>, callback: (T) -> Unit = {}): Job {
+    fun <T> runIOTask(block: suspend ()->T, callback: suspend (T) -> Unit = {}): Job {
         return globalScope.launch {
             val ret = withContext(Dispatchers.IO) {
-                block.call()
+                block()
             }
             withContext(Dispatchers.Main) {
                 callback.invoke(ret)

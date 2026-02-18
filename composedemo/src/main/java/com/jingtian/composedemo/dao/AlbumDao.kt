@@ -14,7 +14,7 @@ interface AlbumDao {
         const val TABLE_NAME = "TB_ALBUM"
     }
 
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    @Insert(onConflict = OnConflictStrategy.ABORT)
     fun insertAlbum(album: Album)
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)

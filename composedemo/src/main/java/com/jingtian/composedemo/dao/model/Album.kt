@@ -11,7 +11,7 @@ import java.util.Date
 )
 class Album(
     @PrimaryKey(autoGenerate = true)
-    var albumId: Long = DataBase.INVALID_ID,
+    var albumId: Long? = null,
     var createTime: Date = Date(),
     var albumName: String = "",
 )

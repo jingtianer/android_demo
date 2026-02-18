@@ -1,6 +1,7 @@
 package com.jingtian.composedemo
 
 import android.net.Uri
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -18,15 +19,18 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Button
 import androidx.compose.material3.DrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.TextField
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -35,9 +39,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.times
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.jingtian.composedemo.base.AppThemeClickEditableText
 import com.jingtian.composedemo.base.AppThemeText
+import com.jingtian.composedemo.base.AppThemeTextField
 import com.jingtian.composedemo.base.BaseActivity
 import com.jingtian.composedemo.dao.DataBase
 import com.jingtian.composedemo.dao.model.Album
@@ -50,6 +56,7 @@ import com.jingtian.composedemo.utils.BitMapCachePool
 import com.jingtian.composedemo.utils.CoroutineUtils
 import com.jingtian.composedemo.utils.FileStorageUtils
 import com.jingtian.composedemo.utils.UserStorage
+import com.jingtian.composedemo.utils.composeObserve
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -69,19 +76,35 @@ fun Main() {
     var menuItemsEntity by remember { mutableStateOf(emptyList<Album>()) }
     val rememberScope = rememberCoroutineScope()
     var currentSelectedAlbum by remember { mutableStateOf<Album?>(null) }
-    var currentCollectJob by remember { mutableStateOf<Job?>(null) }
+    var dataChanged by remember { mutableStateOf(false) }
 
     LaunchedEffect(drawerState.isOpen) {
         if (drawerState.isOpen) {
-            currentCollectJob?.cancel()
-            currentCollectJob = rememberScope.launch {
+            withContext(Dispatchers.IO) {
                 viewModel.menuItemsFlow.collect { value ->
-                    menuItemsEntity = value
+                    withContext(Dispatchers.Main) {
+                        menuItemsEntity = value
+                    }
                 }
             }
-        } else {
-            currentCollectJob?.cancel()
         }
+    }
+
+    LaunchedEffect(dataChanged) {
+        if (drawerState.isOpen && dataChanged) {
+            withContext(Dispatchers.IO) {
+                viewModel.menuItemsFlow.collect { value ->
+                    withContext(Dispatchers.Main) {
+                        menuItemsEntity = value
+                        dataChanged = false
+                    }
+                }
+            }
+        }
+    }
+
+    viewModel.dataChange.composeObserve {
+        dataChanged = true
     }
 
     ModalNavigationDrawer(
@@ -164,13 +187,23 @@ fun DrawerHeader(drawerState: DrawerState) {
     )
 
     Column(
-        Modifier.fillMaxSize()
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp)
     ) {
         val currentUserAvatarImage = userAvatarImage
 
-        val imageModifier = Modifier.size(avatarSize, avatarSize).clip(CircleShape).clickable {
-            multipleImagePickerLauncher.launch(PickVisualMediaRequest.Builder().setMediaType(ActivityResultContracts.PickVisualMedia.ImageOnly).build())
-        }
+        val imageModifier = Modifier
+            .size(avatarSize, avatarSize)
+            .clip(CircleShape)
+            .clickable {
+                multipleImagePickerLauncher.launch(
+                    PickVisualMediaRequest
+                        .Builder()
+                        .setMediaType(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                        .build()
+                )
+            }
         Row(
             Modifier.fillMaxWidth()
         ) {
@@ -225,6 +258,63 @@ fun DrawerHeader(drawerState: DrawerState) {
                 )
             }
         }
+        Spacer(Modifier.padding(8.dp))
+        DrawerFunctionArea()
+    }
+}
+
+@Composable
+fun DrawerFunctionArea() {
+    var dialogState by remember { mutableStateOf(false) }
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clickable {
+                dialogState = true
+            }
+    ) {
+        Image(
+            painter = painterResource(R.drawable.add),
+            contentDescription = "添加按钮",
+            Modifier
+                .size(24.dp)
+                .align(Alignment.CenterVertically),
+        )
+        Spacer(Modifier.padding(2.dp))
+        AppThemeText("添加相册", Modifier.align(Alignment.CenterVertically))
+    }
+
+    if (dialogState) {
+        val viewModel: AlbumViewModel = viewModel()
+        var albumName by remember { mutableStateOf("") }
+        Dialog(
+            onDismissRequest = { dialogState = false },
+        ) {
+            Column(
+                Modifier
+                    .background(LocalAppPalette.current.dialogBg)
+                    .fillMaxWidth(0.82f)
+                    .padding(8.dp)) {
+                AppThemeTextField(albumName, { value ->
+                    albumName = value
+                }, label = {
+                    AppThemeText("相册名称")
+                })
+                Row {
+                    Button({
+                        dialogState = false
+                    }) {
+                        AppThemeText("取消")
+                    }
+                    Button({
+                        dialogState = false
+                        viewModel.addAlbum(Album(albumName = albumName))
+                    }) {
+                        AppThemeText("确认")
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -245,15 +335,13 @@ fun MainDrawer(
             .background(LocalAppPalette.current.drawerBg)) {
         DrawerHeader(drawerState)
         Spacer(modifier = Modifier.height(16.dp))
-        LazyColumn {
+        LazyColumn(Modifier.fillMaxSize()) {
             items(albumData.size) { index ->
                 val item = albumData[index]
-                key(item.albumId) {
-                    DrawerMenuItem(item, drawerState) {
-                        rememberScope.launch {
-                            onAlbumSelected(item)
-                            drawerState.close()
-                        }
+                DrawerMenuItem(item, drawerState) {
+                    rememberScope.launch {
+                        onAlbumSelected(item)
+                        drawerState.close()
                     }
                 }
             }
