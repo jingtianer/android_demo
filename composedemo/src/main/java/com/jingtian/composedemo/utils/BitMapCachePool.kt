@@ -89,6 +89,29 @@ object BitMapCachePool {
         return max(1,  max(widthScaleFactor,heightScaleFactor) / 2)
     }
 
+    fun toBitMap(image: Uri, maxWidth: Int = -1, maxHeight: Int = -1): Pair<Int, Bitmap?> {
+        val options = BitmapFactory.Options().apply {
+            inJustDecodeBounds = true // 只获取尺寸，不加载像素
+        }
+        val scaleFactor =  app.contentResolver.openInputStream(image)?.use { `is`->
+            // 第一步：仅解码边界，获取图片原始宽高
+            BitmapFactory.decodeStream(`is`, null, options)
+            // 第二步：计算缩放比例（避免图片过大导致 OOM）
+            calculateScaleFactor(options.outWidth, options.outHeight, maxWidth, maxHeight)
+        } ?: -1
+        val bitmap = app.contentResolver.openInputStream(image)?.use { `is`->
+            Log.d("TAG", "loadImage failed: $image, $scaleFactor, $image")
+            // 第三步：按缩放比例解码图片
+            options.apply {
+                inJustDecodeBounds = false // 实际加载像素
+                inSampleSize = scaleFactor // 缩放比例（2的倍数，如 2=1/2 大小，4=1/4 大小）
+                inPreferredConfig = Bitmap.Config.RGB_565 // 可选：使用 RGB_565 节省内存（比 ARGB_8888 节省一半）
+            }
+            BitmapFactory.decodeStream(`is`, null, options)
+        }
+        return scaleFactor to bitmap
+    }
+
     fun loadImage(
         fileInfo: FileInfo,
         maxWidth: Int = -1,

@@ -13,7 +13,7 @@ import com.jingtian.composedemo.utils.FileStorageUtils
 )
 class FileInfo(
     @PrimaryKey(autoGenerate = true)
-    var id: Long = DataBase.INVALID_ID,
+    var id: Long? = null,
     @Ignore
     @Transient
     var uri: Uri? = null,
@@ -32,7 +32,8 @@ class FileInfo(
 
 enum class FileType(val value: Int) {
     RegularFile(0),
-    IMAGE(1)
+    IMAGE(1),
+    VIDEO(2),
     ;
 
     companion object {

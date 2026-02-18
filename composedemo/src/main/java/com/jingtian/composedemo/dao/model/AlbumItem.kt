@@ -31,7 +31,7 @@ import java.util.Date
     primaryKeys = ["itemId"]
 )
 class AlbumItem(
-    var itemId: Long = DataBase.INVALID_ID,
+    var itemId: Long? = null,
     var createTime: Date = Date(),
     var itemName: String = "",
     var rank: ItemRank = ItemRank.NONE,

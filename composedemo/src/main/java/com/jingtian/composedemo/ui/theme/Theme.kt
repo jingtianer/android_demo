@@ -35,6 +35,7 @@ private val LightColorScheme = lightColorScheme(
 
 data class AppUIConstants(
     val drawerMaxPercent: Float = 0.8f,
+    val dialogaxPercent: Float = 0.9f,
 )
 
 class AppPalette(

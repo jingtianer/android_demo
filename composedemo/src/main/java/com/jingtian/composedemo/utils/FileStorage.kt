@@ -1,12 +1,20 @@
 package com.jingtian.composedemo.utils
 
+import android.content.ContentResolver
 import android.content.Context
 import android.graphics.Bitmap
+import android.media.MediaMetadataRetriever
 import android.net.Uri
+import android.webkit.MimeTypeMap
 import androidx.core.net.toUri
 import com.jingtian.composedemo.base.app
 import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.FileType
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.InputStream
 import java.lang.ref.SoftReference
@@ -143,6 +151,58 @@ object FileStorageUtils {
             }
             val uri = storageFile.toUri()
             return FileInfo(storageId = id, uri = uri, fileType = fileType)
+        }
+    }
+
+    enum class MediaType {
+        IMAGE, VIDEO, UNKNOWN
+    }
+
+    fun getMediaType(uri: Uri): MediaType {
+        // 方式1：通过ContentResolver获取MIME类型（推荐，最可靠）
+        val contentResolver: ContentResolver = app.contentResolver
+        val mimeType = contentResolver.getType(uri)
+
+        return when {
+            // 判断是否为图片
+            mimeType?.startsWith("image/") == true -> MediaType.IMAGE
+            // 判断是否为视频
+            mimeType?.startsWith("video/") == true -> MediaType.VIDEO
+            // 方式2：兜底方案（通过文件扩展名判断，防止ContentResolver获取失败）
+            else -> {
+                val extension = MimeTypeMap.getFileExtensionFromUrl(uri.toString())
+                val fallbackMimeType = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension)
+                when {
+                    fallbackMimeType?.startsWith("image/") == true -> MediaType.IMAGE
+                    fallbackMimeType?.startsWith("video/") == true -> MediaType.VIDEO
+                    else -> MediaType.UNKNOWN
+                }
+            }
+        }
+    }
+
+
+    fun getVideoThumbnail(
+        coroutineScope: CoroutineScope,
+        videoUri: Uri,
+        onLoadBitmap: (Bitmap?)->Unit
+    ): Job = coroutineScope.launch(Dispatchers.IO) {
+        val retriever = MediaMetadataRetriever()
+        val bitmap =  try {
+            retriever.setDataSource(app, videoUri)
+            // 获取第一帧作为封面
+            retriever.frameAtTime
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        } finally {
+            try {
+                retriever.release()
+            } catch (e: Exception) {
+            }
+        }
+        withContext(Dispatchers.Main) {
+            onLoadBitmap(bitmap)
         }
     }
 }
