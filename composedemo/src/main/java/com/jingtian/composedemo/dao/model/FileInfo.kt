@@ -7,6 +7,7 @@ import androidx.room.PrimaryKey
 import com.jingtian.composedemo.dao.DataBase
 import com.jingtian.composedemo.dao.FileInfoDao
 import com.jingtian.composedemo.utils.FileStorageUtils
+import com.jingtian.composedemo.utils.FileStorageUtils.extension
 
 @Entity(
     tableName = FileInfoDao.TABLE_NAME,
@@ -20,6 +21,7 @@ class FileInfo(
     var storageId: Long = DataBase.INVALID_ID,
     var fileType: FileType = FileType.RegularFile,
 ) {
+    var extension: String? = uri?.extension()
     fun getFileUri(): Uri? {
         val uri = this.uri
         return if (uri == null) {
@@ -30,19 +32,16 @@ class FileInfo(
     }
 }
 
-enum class FileType(val value: Int) {
-    RegularFile(0),
-    IMAGE(1),
-    VIDEO(2),
+enum class FileType(val value: Int, val mimeType: String) {
+    RegularFile(0, "*/*"),
+    IMAGE(1, "image/*"),
+    VIDEO(2, "video/*"),
     ;
 
     companion object {
+        private val valueMap = mutableMapOf(*entries.map { it.value to it }.toTypedArray())
         fun fromValue(value: Int): FileType? {
-            return when(value) {
-                0 -> RegularFile
-                1 -> IMAGE
-                else -> null
-            }
+            return valueMap.get(value)
         }
     }
 }

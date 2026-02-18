@@ -35,6 +35,7 @@ class AlbumItem(
     var createTime: Date = Date(),
     var itemName: String = "",
     var rank: ItemRank = ItemRank.NONE,
+    var desc: String = "",
     @FloatRange(from = 0.0, to = 5.0, fromInclusive = true, toInclusive = true)
     var score: Float = 0f,
 

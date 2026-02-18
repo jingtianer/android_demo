@@ -23,18 +23,5 @@ import com.jingtian.composedemo.dao.LabelInfoDao
 
 class LabelInfo(
     var albumItemId: Long = DataBase.INVALID_ID,
-    var label: Label = Label.DEFAULT
+    var label: String = ""
 )
-
-enum class Label(val value: Int) {
-    DEFAULT(0)
-    ;
-    companion object {
-        fun fromValue(value: Int): Label? {
-            return when(value) {
-                0 -> DEFAULT
-                else -> null
-            }
-        }
-    }
-}

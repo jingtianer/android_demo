@@ -3,6 +3,8 @@ package com.jingtian.composedemo.base
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
@@ -17,6 +19,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -280,11 +283,17 @@ fun AppThemeBasicTextField(
     cursorBrush,
     decorationBox = @Composable { innerTextField ->
         // places leading icon, text field with label and placeholder, trailing icon
-        if (!hint.isNullOrEmpty() && value.isEmpty()) {
-            AppThemeText(hint, style = LocalTextStyle.current.copy(color = hintColor))
-        }
 
-        innerTextField()
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.CenterStart
+        ) {
+            if (!hint.isNullOrEmpty() && value.isEmpty()) {
+                AppThemeText(hint, style = LocalTextStyle.current.copy(color = hintColor))
+            }
+
+            innerTextField()
+        }
     }
 )
 
@@ -326,7 +335,7 @@ fun AppThemeBasicTextField(
     decorationBox = @Composable { innerTextField ->
         // places leading icon, text field with label and placeholder, trailing icon
         if (!hint.isNullOrEmpty() && value.text.isEmpty()) {
-            AppThemeText(hint, style = LocalTextStyle.current.copy(color = hintColor))
+            AppThemeText(hint, modifier, style = LocalTextStyle.current.copy(color = hintColor))
         }
         innerTextField()
     }

@@ -1,0 +1,228 @@
+package com.jingtian.composedemo.ui.widget
+
+import android.content.Context
+import android.graphics.Canvas
+import android.graphics.Rect
+import android.graphics.drawable.Drawable
+import android.util.AttributeSet
+import android.util.Log
+import android.view.MotionEvent
+import android.view.View
+import androidx.recyclerview.widget.RecyclerView
+import com.jingtian.composedemo.utils.ViewUtils
+import kotlin.math.max
+import kotlin.math.min
+
+class StarRateView @JvmOverloads constructor(
+    context: Context,
+    attrs: AttributeSet? = null,
+    defStyleAttr: Int = 0,
+    defStyleRes: Int = 0
+) : View(context, attrs, defStyleAttr, defStyleRes) {
+
+    companion object {
+        fun interface OnScoreChange {
+            fun onScoreChange(score: Float)
+        }
+    }
+
+    var onScoreChange: OnScoreChange = OnScoreChange {  }
+
+    private val fixNestedScroll = ViewUtils.FixNestedScroll(this, RecyclerView.HORIZONTAL)
+
+    private var starCnt = 0
+    private var starPadding = 0f
+    private var enable = false
+    private var starDrawable: Drawable? = null
+    private var starGreyDrawable: Drawable? = null
+
+    private var starSize = 0f
+    private var progress = 0f
+    private var score = 0f
+    private var scoreInvalid = false
+    private var starTotalWidth = 0f
+
+    fun updateStarConfig(
+        enable: Boolean = this.enable,
+        starCnt: Int = this.starCnt,
+        starPadding: Float = this.starPadding,
+        starDrawable: Drawable? = this.starDrawable,
+        starGreyDrawable: Drawable? = this.starGreyDrawable,
+    ) {
+        this.enable = enable
+        this.starCnt = starCnt
+        this.starPadding = starPadding
+        this.starDrawable = starDrawable
+        this.starGreyDrawable = starGreyDrawable
+        invalidate()
+        requestLayout()
+    }
+
+    private fun getStarSize(): Float {
+        val width = if (starCnt <= 1) {
+            measuredWidth * 1f
+        } else {
+            (measuredWidth - (starCnt - 1) * starPadding) / starCnt.toFloat()
+        }
+        return min(measuredHeight.toFloat(), width)
+    }
+    private var w = 0
+    private var h = 0
+
+    override fun getClipBounds(): Rect {
+        val bounds = super.getClipBounds()
+        if (bounds == null) {
+            val clipBounds = Rect(0, 0, w, h)
+            setClipBounds(clipBounds)
+            return clipBounds
+        }
+        bounds.set(0, 0, w, h)
+        return bounds
+    }
+
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        if (w <= 0 || h <= 0) {
+            return
+        }
+        this.w = w
+        this.h = h
+        val width = if (starCnt <= 1) {
+            w * 1f
+        } else {
+            (w - (starCnt - 1) * starPadding) / starCnt.toFloat()
+        }
+        starSize = min(h.toFloat(), width)
+        starTotalWidth = starSize * starCnt + (starCnt - 1) * starPadding
+        Log.d("TAG", "onSizeChanged: $w, $h, $width, $starSize, $starTotalWidth, $measuredWidth")
+        layoutParams = layoutParams?.apply {
+            this.width = starTotalWidth.toInt()
+            this.height = h
+        }
+    }
+
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        super.onMeasure(widthMeasureSpec, heightMeasureSpec)
+        starSize = getStarSize()
+        starTotalWidth = starSize * starCnt + (starCnt - 1) * starPadding
+        if (!scoreInvalid) {
+            progress = scoreToProgress(score)
+        }
+        if (MeasureSpec.getMode(widthMeasureSpec) != MeasureSpec.EXACTLY) {
+            super.onMeasure(MeasureSpec.makeMeasureSpec(starTotalWidth.toInt(), MeasureSpec.EXACTLY), heightMeasureSpec)
+        }
+    }
+
+    override fun canScrollHorizontally(direction: Int): Boolean {
+        if (direction > 0) {
+            return progress > 0
+        } else if (direction < 0) {
+            return progress < 1
+        }
+        return super.canScrollHorizontally(direction)
+    }
+
+    override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+        if (enable) {
+            fixNestedScroll.onTouch(this, event)
+        }
+        return super.dispatchTouchEvent(event) && enable
+    }
+
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        when(event.actionMasked) {
+            MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE, MotionEvent.ACTION_UP -> {
+                if (enable && starTotalWidth > 0){
+                    progress = event.x / starTotalWidth
+                    scoreInvalid = true
+                    val onScoreChange = onScoreChange
+                    onScoreChange.onScoreChange(progressToScore())
+                    invalidate()
+                }
+            }
+        }
+        val ret = super.onTouchEvent(event)
+        return enable || ret
+    }
+
+    fun setScore(score: Float) {
+        scoreInvalid = false
+        progress = scoreToProgress(score)
+        this.score = score
+        invalidate()
+    }
+
+    fun getScore(): Float {
+        if (scoreInvalid) {
+            scoreInvalid = false
+            score = progressToScore()
+        }
+        return score
+    }
+
+    private fun progressToScore(): Float {
+        var star = 0
+        if (progress > 0.5f) {
+            for (i in starCnt - 1 downTo 0) {
+                val p = ((starSize + starPadding) * i) / starTotalWidth
+                if (p < progress) {
+                    star = i
+                    break
+                }
+            }
+        } else {
+            for (i in 0..< starCnt) {
+                val p = ((starSize + starPadding) * i) / starTotalWidth
+                if (p > progress) {
+                    star = i - 1
+                    break
+                }
+            }
+        }
+        var remainedWidth = starTotalWidth * progress - star * (starSize + starPadding)
+        if (remainedWidth > starSize) {
+            remainedWidth = starSize
+        }
+        return max(star + remainedWidth / starSize, 0f)
+    }
+
+    private fun scoreToProgress(score: Float): Float {
+        val starCnt = score.toInt()
+        val width = starCnt * (starSize + starPadding) + starSize * (score - starCnt)
+        return width / starTotalWidth
+    }
+
+    override fun onDraw(canvas: Canvas) {
+        super.onDraw(canvas)
+        val starDrawable = this.starDrawable ?: return
+        val starGreyDrawable = this.starGreyDrawable ?: return
+        val savedCount: Int
+        savedCount = canvas.save()
+        val highlightedWith = starTotalWidth * progress
+        canvas.clipRect(0f, 0f, highlightedWith, measuredHeight.toFloat())
+        for(i in 0 until starCnt) {
+            val left = i * (starSize + starPadding)
+            starDrawable.setBounds(
+                left.toInt(),
+                0,
+                (left + starSize).toInt(),
+                starSize.toInt()
+            )
+            starDrawable.draw(canvas)
+        }
+        canvas.restoreToCount(savedCount)
+
+        canvas.clipRect(highlightedWith, 0f, starTotalWidth, measuredHeight.toFloat())
+        for(i in 0 until starCnt) {
+            val left = i * (starSize + starPadding)
+            starGreyDrawable.setBounds(
+                left.toInt(),
+                0,
+                (left + starSize).toInt(),
+                starSize.toInt()
+            )
+            starGreyDrawable.draw(canvas)
+        }
+        canvas.restoreToCount(savedCount)
+    }
+}

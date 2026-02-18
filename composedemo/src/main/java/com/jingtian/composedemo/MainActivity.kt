@@ -1,13 +1,19 @@
 package com.jingtian.composedemo
 
+import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
+import android.os.Build
+import android.view.View
+import android.view.ViewGroup
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,8 +24,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -30,10 +40,13 @@ import androidx.compose.material3.DrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.*
@@ -45,13 +58,24 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.TextUnitType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.times
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
+import androidx.core.net.toFile
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.jingtian.composedemo.base.AppThemeBasicTextField
 import com.jingtian.composedemo.base.AppThemeClickEditableText
 import com.jingtian.composedemo.base.AppThemeText
 import com.jingtian.composedemo.base.AppThemeTextField
@@ -64,15 +88,24 @@ import com.jingtian.composedemo.dao.model.DEFAULT_USER_NAME
 import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.FileType
 import com.jingtian.composedemo.dao.model.ItemRank
-import com.jingtian.composedemo.dao.model.Label
 import com.jingtian.composedemo.dao.model.LabelInfo
 import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
 import com.jingtian.composedemo.ui.theme.LocalAppPalette
 import com.jingtian.composedemo.ui.theme.LocalAppUIConstants
+import com.jingtian.composedemo.ui.widget.RankTypeChooser
+import com.jingtian.composedemo.ui.widget.RankTypeChooser.Companion.createBg
+import com.jingtian.composedemo.ui.widget.StarRateView
+import com.jingtian.composedemo.ui.widget.StarRateView.Companion.OnScoreChange
 import com.jingtian.composedemo.utils.BitMapCachePool
 import com.jingtian.composedemo.utils.CoroutineUtils
 import com.jingtian.composedemo.utils.FileStorageUtils
+import com.jingtian.composedemo.utils.FileStorageUtils.getMediaType
+import com.jingtian.composedemo.utils.FileStorageUtils.getVideoThumbnail
+import com.jingtian.composedemo.utils.FileStorageUtils.safeToFile
 import com.jingtian.composedemo.utils.UserStorage
+import com.jingtian.composedemo.utils.ViewUtils.commonConfig
+import com.jingtian.composedemo.utils.ViewUtils.commonEditableConfig
+import com.jingtian.composedemo.utils.ViewUtils.dpValue
 import com.jingtian.composedemo.utils.composeObserve
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
 import kotlinx.coroutines.Dispatchers
@@ -184,7 +217,8 @@ fun Gallery(album: IndexedValue<Album>?) {
             Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 8.dp)
-                .wrapContentHeight()) {
+                .wrapContentHeight()
+        ) {
             AppThemeText(album.value.albumName, Modifier.align(Alignment.CenterStart))
             Image(
                 painter = painterResource(R.drawable.add),
@@ -195,8 +229,15 @@ fun Gallery(album: IndexedValue<Album>?) {
                     .clickable { addImageDialogState = true }
             )
         }
-        LazyColumn(Modifier.fillMaxSize().weight(1f)) {
-            items(itemList.size, key = { index: Int ->  itemList[index].albumItem.itemId ?: DataBase.INVALID_ID } ) { index: Int ->
+        LazyColumn(
+            Modifier
+                .fillMaxSize()
+                .weight(1f)) {
+            items(
+                itemList.size,
+                key = { index: Int ->
+                    itemList[index].albumItem.itemId ?: DataBase.INVALID_ID
+                }) { index: Int ->
                 AlbumItemView(itemList[index])
             }
         }
@@ -211,50 +252,175 @@ fun Gallery(album: IndexedValue<Album>?) {
 
 @Composable
 fun AlbumItemView(albumItemRelation: AlbumItemRelation) {
-    val size = 130.dp
+    val size = 160.dp
     var imageBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
-    LaunchedEffect(Unit) {
+
+    var itemName by remember { mutableStateOf(albumItemRelation.albumItem.itemName) }
+    var itemDesc by remember { mutableStateOf(albumItemRelation.albumItem.desc) }
+    var itemRank by remember { mutableStateOf(albumItemRelation.albumItem.rank) }
+    var itemScore by remember { mutableStateOf(albumItemRelation.albumItem.score) }
+    val itemLabel by remember { mutableStateOf(albumItemRelation.labelInfos.toMutableList()) }
+    var itemLabelSize by remember { mutableStateOf(albumItemRelation.labelInfos.size) }
+
+    val scope = rememberCoroutineScope()
+    var imageResource by remember { mutableStateOf(R.drawable.load_failed) }
+    suspend fun fetchImage() {
         withContext(Dispatchers.IO) {
-            val (_, bitmap) = BitMapCachePool.loadImage(albumItemRelation.fileInfo ?: return@withContext, size.value.toInt(), size.value.toInt())
-            withContext(Dispatchers.Main) {
-                imageBitmap = bitmap?.asImageBitmap()
+            val uri = albumItemRelation.fileInfo?.getFileUri() ?: return@withContext
+            val fileType = albumItemRelation.fileInfo.fileType
+            when(fileType) {
+                FileType.IMAGE -> {
+                    val (_, bitmap) = BitMapCachePool.loadImage(
+                        albumItemRelation.fileInfo,
+                        size.dpValue.toInt(),
+                        size.dpValue.toInt()
+                    )
+                    withContext(Dispatchers.Main) {
+                        imageBitmap = bitmap?.asImageBitmap()
+                    }
+                }
+                FileType.VIDEO -> {
+                    getVideoThumbnail(scope, uri) { bitmap->
+                        imageBitmap = bitmap?.asImageBitmap()
+                    }
+                }
+                FileType.RegularFile -> {
+                    imageResource = R.drawable.file
+                }
             }
         }
     }
-    Column {
-        val currentImage: ImageBitmap? = imageBitmap
-        if (currentImage == null) {
-            Image(
-                painter = painterResource(R.drawable.load_failed),
-                contentDescription = "图片加载失败",
-                Modifier.size(size)
+    LaunchedEffect(Unit) {
+        fetchImage()
+    }
+
+    val context = LocalContext.current
+    val playIntent = remember(albumItemRelation) {
+        val fileInfo = albumItemRelation.fileInfo ?: return@remember null
+        val mediaType = fileInfo.fileType.mimeType
+        val originFileUri = fileInfo.getFileUri()?.safeToFile() ?: return@remember null
+        val mediaUri: Uri =
+            FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                originFileUri
             )
-        } else {
-            Image(
-                bitmap = currentImage,
-                contentDescription = "图片加载失败",
-                Modifier.size(size)
-            )
+        Intent(Intent.ACTION_VIEW).apply {
+
+            // 设置Uri和媒体类型
+            setDataAndType(mediaUri, mediaType)
+            // 关键：授予系统应用访问该Uri的权限
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            // 适配Android 12+的前台服务权限（可选，避免部分播放器启动失败）
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+        }
+    }
+
+    Column(Modifier.width(size)) {
+        val currentPickedImage = imageBitmap
+        Box {
+            if (currentPickedImage == null) {
+                Image(
+                    painter = painterResource(imageResource),
+                    contentDescription = "上传照片",
+                    Modifier
+                        .clickable { scope.launch(Dispatchers.IO) { fetchImage() } }
+                        .fillMaxWidth()
+                        .wrapContentHeight()
+                        .align(Alignment.Center),
+                    contentScale = ContentScale.Fit
+                )
+            } else {
+                Image(
+                    bitmap = currentPickedImage,
+                    contentDescription = "上传照片",
+                    Modifier
+                        .clickable {
+                            context.startActivity(playIntent)
+                        }
+                        .fillMaxWidth()
+                        .wrapContentHeight()
+                        .align(Alignment.Center),
+                    contentScale = ContentScale.Fit
+                )
+            }
+
+            AndroidView({ context ->
+                View(context).apply {
+                    val bg = createBg(itemRank)
+                    background = bg
+                    layoutParams = ViewGroup.LayoutParams(bg.getWidth().toInt(), bg.getHeight().toInt())
+                }
+            },
+                Modifier.wrapContentSize().align(Alignment.TopEnd),
+                update = {
+                    val bg = createBg(itemRank)
+                    it.background = bg
+                    it.layoutParams = ViewGroup.LayoutParams(bg.getWidth().toInt(), bg.getHeight().toInt())
+                })
+        }
+
+        OutlinedTextField(itemName, { value->
+            itemName = value
+        }, modifier = Modifier.fillMaxWidth(), label = {
+            AppThemeText("文件名称")
+        }, maxLines = Int.MAX_VALUE, enabled = false)
+
+        OutlinedTextField(itemDesc, { value->
+            itemDesc = value
+        }, modifier = Modifier.fillMaxWidth(), label = {
+            AppThemeText("文件描述")
+        }, maxLines = Int.MAX_VALUE, enabled = false)
+
+        AndroidView({ context ->
+            StarRateView(context).commonConfig().apply {
+                layoutParams = ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+            }
+        },
+            Modifier
+                .fillMaxWidth()
+                .height(30.dp),
+            update = {
+                it.setScore(itemScore)
+            })
+
+        LazyRow {
+            items(itemLabelSize, key = { index: Int ->
+                itemLabel[index].label
+            }) { index: Int ->
+                LabelView(itemLabel[index], editable = false) {
+                    itemLabel.removeAt(index)
+                    itemLabelSize = itemLabel.size
+                }
+            }
         }
     }
 }
 
 @Composable
 fun AddImageDialog(album: Album, onDismiss: () -> Unit) {
-    Dialog(onDismissRequest = { onDismiss() }) {
+    Dialog(onDismissRequest = { onDismiss() }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Column(
             Modifier
                 .fillMaxWidth(LocalAppUIConstants.current.dialogaxPercent)
                 .verticalScroll(rememberScrollState())
                 .background(LocalAppPalette.current.dialogBg)
                 .padding(12.dp)
+                .clip(RectangleShape)
                 .wrapContentHeight()
         ) {
             var pickedImage by remember { mutableStateOf<ImageBitmap?>(null) }
             var itemName by remember { mutableStateOf("") }
+            var itemDesc by remember { mutableStateOf("") }
             var itemRank by remember { mutableStateOf(ItemRank.NONE) }
             var itemScore by remember { mutableStateOf(0.0f) }
-            var itemLabel by remember { mutableStateOf<List<Label>>(listOf()) }
+            val itemLabel by remember { mutableStateOf<MutableList<LabelInfo>>(mutableListOf()) }
+            var itemLabelSize by remember { mutableStateOf<Int>(0) }
 
             var selectedUri by remember { mutableStateOf<Uri?>(null) }
             val scope = rememberCoroutineScope()
@@ -264,26 +430,23 @@ fun AddImageDialog(album: Album, onDismiss: () -> Unit) {
                 val albumId = album.albumId ?: return
                 val uri = selectedUri ?: return
                 CoroutineUtils.runIOTask({
-                    val nextId = when(FileStorageUtils.getMediaType(uri)) {
-                        FileStorageUtils.MediaType.IMAGE -> {
-                            val imageStorage = FileStorageUtils.getStorage(FileType.IMAGE) ?: return@runIOTask
-                            imageStorage.asyncStore(uri)
-                        }
-                        FileStorageUtils.MediaType.VIDEO -> {
-                            val imageStorage = FileStorageUtils.getStorage(FileType.VIDEO) ?: return@runIOTask
-                            imageStorage.asyncStore(uri)
-                        }
-                        FileStorageUtils.MediaType.UNKNOWN -> {
-                            val imageStorage = FileStorageUtils.getStorage(FileType.RegularFile) ?: return@runIOTask
-                            imageStorage.asyncStore(uri)
-                        }
-                    }
-                    val file = FileInfo(uri = uri, storageId = nextId, fileType = FileType.IMAGE)
+                    val mediaType = FileStorageUtils.getMediaType(uri)
+                    val imageStorage =
+                        FileStorageUtils.getStorage(mediaType) ?: return@runIOTask
+                    val nextId = imageStorage.asyncStore(uri)
+                    val file = FileInfo(uri = uri, storageId = nextId, fileType = mediaType)
                     val fileId = DataBase.dbImpl.getFileInfoDao().insertFileInfo(file)
-                    val albumItem = AlbumItem(itemName = itemName, rank = itemRank, score = itemScore, albumId = albumId, fileId = fileId)
+                    val albumItem = AlbumItem(
+                        itemName = itemName,
+                        rank = itemRank,
+                        desc = itemDesc,
+                        score = itemScore,
+                        albumId = albumId,
+                        fileId = fileId
+                    )
                     val albumItemId = DataBase.dbImpl.getAlbumItemDao().insertAlbumItem(albumItem)
-                    val label = itemLabel.map { LabelInfo(albumItemId = albumItemId, label = it) }
-                    DataBase.dbImpl.getLabelInfoDao().insertAllLabel(label)
+                    itemLabel.forEach { it.albumItemId = albumItemId }
+                    DataBase.dbImpl.getLabelInfoDao().insertAllLabel(itemLabel)
                 }) {
                 }
             }
@@ -292,8 +455,8 @@ fun AddImageDialog(album: Album, onDismiss: () -> Unit) {
                 contract = ActivityResultContracts.PickVisualMedia(),
                 onResult = { uri: Uri? ->
                     uri ?: return@rememberLauncherForActivityResult
-                    when(FileStorageUtils.getMediaType(uri)) {
-                        FileStorageUtils.MediaType.IMAGE -> {
+                    when (FileStorageUtils.getMediaType(uri)) {
+                        FileType.IMAGE -> {
                             scope.launch(Dispatchers.IO) {
                                 val bitmap = BitMapCachePool.toBitMap(uri).second?.asImageBitmap()
                                 withContext(Dispatchers.Main) {
@@ -301,12 +464,14 @@ fun AddImageDialog(album: Album, onDismiss: () -> Unit) {
                                 }
                             }
                         }
-                        FileStorageUtils.MediaType.VIDEO -> {
+
+                        FileType.VIDEO -> {
                             FileStorageUtils.getVideoThumbnail(scope, uri) { bitmap: Bitmap? ->
                                 pickedImage = bitmap?.asImageBitmap()
                             }
                         }
-                        FileStorageUtils.MediaType.UNKNOWN -> {
+
+                        FileType.RegularFile -> {
                             imageResource = R.drawable.file
                         }
                     }
@@ -315,9 +480,11 @@ fun AddImageDialog(album: Album, onDismiss: () -> Unit) {
             )
 
             fun pickImage() {
-                multipleImagePickerLauncher.launch(PickVisualMediaRequest.Builder()
-                    .setMediaType(ActivityResultContracts.PickVisualMedia.ImageAndVideo)
-                    .build())
+                multipleImagePickerLauncher.launch(
+                    PickVisualMediaRequest.Builder()
+                        .setMediaType(ActivityResultContracts.PickVisualMedia.ImageAndVideo)
+                        .build()
+                )
             }
 
             val currentPickedImage = pickedImage
@@ -325,20 +492,102 @@ fun AddImageDialog(album: Album, onDismiss: () -> Unit) {
                 Image(
                     painter = painterResource(imageResource),
                     contentDescription = "上传照片",
-                    Modifier.clickable {
-                        pickImage()
-                    }.fillMaxWidth().wrapContentHeight(),
+                    Modifier
+                        .clickable {
+                            pickImage()
+                        }
+                        .fillMaxWidth()
+                        .wrapContentHeight(),
                     contentScale = ContentScale.Fit
                 )
             } else {
                 Image(
                     bitmap = currentPickedImage,
                     contentDescription = "上传照片",
-                    Modifier.clickable {
-                        pickImage()
-                    }.fillMaxWidth().wrapContentHeight(),
+                    Modifier
+                        .clickable {
+                            pickImage()
+                        }
+                        .fillMaxWidth()
+                        .wrapContentHeight(),
                     contentScale = ContentScale.Fit
                 )
+            }
+
+            AppThemeTextField(itemName, { value->
+                itemName = value
+            }, modifier = Modifier.fillMaxWidth(), label = {
+                AppThemeText("文件名称")
+            }, maxLines = Int.MAX_VALUE)
+
+            AppThemeTextField(itemDesc, { value->
+                itemDesc = value
+            }, modifier = Modifier.fillMaxWidth(), label = {
+                AppThemeText("文件描述")
+            }, maxLines = Int.MAX_VALUE)
+
+            AndroidView({ context ->
+                StarRateView(context).commonEditableConfig().apply {
+                    onScoreChange = StarRateView.Companion.OnScoreChange { score: Float ->
+                        itemScore = score
+                    }
+                    layoutParams = ViewGroup.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT
+                    )
+                }
+            },
+                Modifier
+                    .fillMaxWidth()
+                    .height(30.dp),
+                update = {
+                    it.setScore(itemScore)
+                })
+
+            AndroidView({ context ->
+                RankTypeChooser(context).apply {
+                    layoutParams = ViewGroup.LayoutParams(
+                        ViewGroup.LayoutParams.WRAP_CONTENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                    )
+                    onRankChange = RankTypeChooser.Companion.OnRankTypeChange { value ->
+                        itemRank = value
+                    }
+                }
+            },
+                Modifier
+                    .wrapContentWidth()
+                    .height(30.dp),
+                update = {
+                    it.setRankType(itemRank)
+                })
+
+            LazyRow {
+                items(itemLabelSize + 1, key = { index: Int ->
+                    if (index == 0) {
+                        "null"
+                    } else {
+                        itemLabel[index - 1].label
+                    }
+                }, contentType = { index->
+                    if (index == 0) {
+                        0
+                    } else {
+                        1
+                    }
+                }) { index: Int ->
+                    if (index == 0) {
+                        EditLabelView {
+                            itemLabel.add(LabelInfo(label = it))
+                            itemLabelSize = itemLabel.size
+                        }
+                    } else {
+                        LabelView(itemLabel[index - 1]) {
+                            itemLabel.removeAt(index - 1)
+                            itemLabelSize = itemLabel.size
+                        }
+                    }
+                }
             }
 
             Row {
@@ -356,6 +605,44 @@ fun AddImageDialog(album: Album, onDismiss: () -> Unit) {
             }
 
         }
+    }
+}
+
+@Composable
+fun LabelView(label: LabelInfo, editable: Boolean = true, onRemove: ()->Unit) {
+    if (editable) {
+        Row(Modifier.wrapContentSize(), verticalAlignment = Alignment.CenterVertically) {
+            AppThemeText(label.label, Modifier.wrapContentSize(), style = LocalTextStyle.current.copy(fontSize = 10.sp))
+            Spacer(Modifier.padding(2.dp))
+            Image(
+                painter = painterResource(R.drawable.close),
+                contentDescription = "删除标签",
+                Modifier.size(12.dp).clickable { onRemove() },
+            )
+        }
+    } else {
+        AppThemeText(label.label, Modifier.wrapContentSize(), style = LocalTextStyle.current.copy(fontSize = 10.sp))
+    }
+}
+
+@Composable
+fun EditLabelView(onAddLabel: (String)->Unit) {
+    var labelText by remember { mutableStateOf("") }
+    Row(Modifier.wrapContentSize(), verticalAlignment = Alignment.CenterVertically) {
+        CompositionLocalProvider(LocalTextStyle provides LocalTextStyle.current.copy(fontSize = 10.sp)) {
+            AppThemeBasicTextField(labelText, {value-> labelText = value}, Modifier.wrapContentWidth().height(13.dp), hint = "添加标签")
+        }
+        Spacer(Modifier.padding(2.dp))
+        Image(
+            painter = painterResource(R.drawable.add),
+            contentDescription = "添加标签",
+            Modifier.size(12.dp).clickable {
+                if (labelText.isNotBlank()) {
+                    onAddLabel(labelText)
+                    labelText = ""
+                }
+            },
+        )
     }
 }
 
@@ -387,8 +674,8 @@ fun DrawerHeader(drawerState: DrawerState) {
                 val fileInfo = innerUserInfo.userAvatar
                 val (_, image) = BitMapCachePool.loadImage(
                     fileInfo,
-                    150.dp.value.toInt(),
-                    150.dp.value.toInt()
+                    avatarSize.dpValue.toInt(),
+                    avatarSize.dpValue.toInt()
                 )
                 withContext(Dispatchers.Main) {
                     userAvatarImage = image?.asImageBitmap()

@@ -39,6 +39,7 @@ android {
     }
     buildFeatures {
         compose = true
+        viewBinding = true
     }
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.3"
@@ -56,6 +57,7 @@ dependencies {
 //    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.10.0")
     // activity-compose 版本需适配 Compose 和 AGP，1.4.0 是 AGP 7.0.4 兼容的稳定版
     implementation("androidx.activity:activity-compose:1.8.0")
+    implementation("androidx.recyclerview:recyclerview:1.2.0")
 
     val composeVersion = "1.6.0"
 
