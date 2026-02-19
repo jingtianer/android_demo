@@ -72,6 +72,8 @@ object FileStorageUtils {
 
         private val rankImageStoreDir: String = RANK_IMAGE_STORE_DIR + fileType.value
 
+        private val uriCache = ConcurrentHashMap<Long, Uri>()
+
         private fun rankImagePrefix(id: Long): String {
             return "${RANK_IMAGE_STORE_PREFIX}_${id}"
         }
@@ -79,6 +81,10 @@ object FileStorageUtils {
         fun get(id: Long): Uri? {
             if (id == -1L) {
                 Uri.EMPTY
+            }
+            val cachedUri = uriCache.get(id)
+            if (cachedUri != null) {
+                return cachedUri
             }
             val storeDir = File(app.filesDir, rankImageStoreDir)
             val storageFile = File(storeDir, rankImagePrefix(id))
@@ -108,6 +114,7 @@ object FileStorageUtils {
                     oldId
                 }
             }
+            uriCache[id] = uri
             CoroutineUtils.runIOTask({
                 val storageFile = getStoreFile(id)
                 if (uri.safeToFile()?.absolutePath?.equals(storageFile.absolutePath) != true) {
@@ -129,6 +136,7 @@ object FileStorageUtils {
             val id = synchronized(this) {
                 this.id++
             }
+            uriCache[id] = uri
             CoroutineUtils.runIOTask({
                 val storageFile = getStoreFile(id)
                 storageFile.delete()
@@ -159,6 +167,7 @@ object FileStorageUtils {
                 input.copyTo(output)
             }
             val uri = storageFile.toUri()
+            uriCache[id] = uri
             return FileInfo(storageId = id, uri = uri, fileType = fileType)
         }
     }

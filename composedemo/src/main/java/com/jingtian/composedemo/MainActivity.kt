@@ -375,15 +375,18 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, size: Dp, padding: Dp) {
     val playIntent = remember(albumItemRelation) {
         val fileInfo = albumItemRelation.fileInfo ?: return@remember null
         val mediaType = fileInfo.fileType.mimeType
-        val originFileUri = fileInfo.getFileUri()?.safeToFile() ?: return@remember null
-        val mediaUri: Uri =
+        val originFileUri = fileInfo.getFileUri()
+        val originFile = originFileUri?.safeToFile()
+        val mediaUri: Uri = if (originFile != null) {
             FileProvider.getUriForFile(
                 context,
                 "${context.packageName}.fileprovider",
-                originFileUri
+                originFile
             )
+        } else {
+            originFileUri
+        } ?: return@remember null
         Intent(Intent.ACTION_VIEW).apply {
-
             // 设置Uri和媒体类型
             setDataAndType(mediaUri, mediaType)
             // 关键：授予系统应用访问该Uri的权限
@@ -407,7 +410,9 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, size: Dp, padding: Dp) {
                             scope.launch(Dispatchers.IO) {
                                 fetchImage()
                             }
-                            context.startActivity(playIntent)
+                            if (playIntent != null) {
+                                context.startActivity(playIntent)
+                            }
                         }
                         .fillMaxWidth()
                         .wrapContentHeight()
@@ -420,7 +425,9 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, size: Dp, padding: Dp) {
                     contentDescription = "上传照片",
                     Modifier
                         .clickable {
-                            context.startActivity(playIntent)
+                            if (playIntent != null) {
+                                context.startActivity(playIntent)
+                            }
                         }
                         .fillMaxWidth()
                         .wrapContentHeight()
