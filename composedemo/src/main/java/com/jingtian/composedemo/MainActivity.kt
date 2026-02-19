@@ -50,6 +50,7 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -121,12 +122,12 @@ class MainActivity : BaseActivity() {
 @Preview
 @Composable
 fun Main() {
-    val drawerState = rememberDrawerState(initialValue = DrawerValue.Open)
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val viewModel: AlbumViewModel = viewModel()
     var menuItemsEntity by remember { mutableStateOf(emptyList<Album>()) }
 //    val rememberScope = rememberCoroutineScope()
     var currentSelectedAlbum by remember { mutableStateOf<IndexedValue<Album>?>(null) }
-    var dataChanged by remember { mutableStateOf(false) }
+    val albumListChange by viewModel.albumListChange.observeAsState()
 
     fun updateSelectedValue(list: List<Album>): IndexedValue<Album>? {
         val currentSelectedAlbum = currentSelectedAlbum
@@ -146,38 +147,21 @@ fun Main() {
         }
     }
 
-    LaunchedEffect(drawerState.isOpen) {
-        if (drawerState.isOpen) {
-            withContext(Dispatchers.IO) {
-                viewModel.menuItemsFlow.collect { value ->
-                    val nextSelectedAlbum = updateSelectedValue(value)
-                    withContext(Dispatchers.Main) {
-                        menuItemsEntity = value
-                        currentSelectedAlbum = nextSelectedAlbum
+    LaunchedEffect(albumListChange) {
+        withContext(Dispatchers.IO) {
+            viewModel.menuItemsFlow.collect { value ->
+                val nextSelectedAlbum = updateSelectedValue(value)
+                withContext(Dispatchers.Main) {
+                    menuItemsEntity = value
+                    currentSelectedAlbum = nextSelectedAlbum
+                    if (value.isEmpty()) {
+                        drawerState.snapTo(DrawerValue.Open)
                     }
                 }
             }
         }
     }
 
-    LaunchedEffect(dataChanged) {
-        if (drawerState.isOpen && dataChanged) {
-            withContext(Dispatchers.IO) {
-                viewModel.menuItemsFlow.collect { value ->
-                    val nextSelectedAlbum = updateSelectedValue(value)
-                    withContext(Dispatchers.Main) {
-                        menuItemsEntity = value
-                        dataChanged = false
-                        currentSelectedAlbum = nextSelectedAlbum
-                    }
-                }
-            }
-        }
-    }
-
-    viewModel.albumListChange.composeObserve {
-        dataChanged = true
-    }
 
     ModalNavigationDrawer(
         {
@@ -186,7 +170,8 @@ fun Main() {
             }
         },
         Modifier.fillMaxSize(),
-        drawerState = drawerState
+        drawerState = drawerState,
+        gesturesEnabled = menuItemsEntity.isNotEmpty()
     ) {
         Gallery(currentSelectedAlbum)
     }
