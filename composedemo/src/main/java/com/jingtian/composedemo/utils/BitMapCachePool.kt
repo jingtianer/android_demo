@@ -18,6 +18,10 @@ object BitMapCachePool {
         return imagePool.getOrPut(id) { ArrayList() }
     }
 
+    fun invalid(id: Long) {
+        imagePool[id]?.clear()
+    }
+
     fun get(id: Long, scaleFactor: Int = -1): Bitmap? {
         val queue = getQueue(id)
         synchronized(queue) {

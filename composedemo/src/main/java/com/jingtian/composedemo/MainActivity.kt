@@ -210,11 +210,18 @@ fun LabelFilter(showFilter: Boolean , album: Album, onCheckStateChange: (List<St
     fun notifyCheckChanged() {
         onCheckStateChange(labelList.mapNotNull { checkInfo -> checkInfo.label.takeIf { checkInfo.isChecked } })
     }
-    LazyHorizontalGrid(rows = GridCells.Fixed(2), Modifier.height((size + padding * 2) * 2).fillMaxWidth()) {
+    LazyHorizontalGrid(rows = GridCells.Fixed(2),
+        Modifier
+            .height((size + padding * 2) * 2)
+            .fillMaxWidth()) {
         items(labelList.size) { index ->
             val item = labelList[index]
             var checked by remember { mutableStateOf(item.isChecked) }
-            Row(Modifier.height(size).fillMaxWidth().padding(padding), verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                Modifier
+                    .height(size)
+                    .fillMaxWidth()
+                    .padding(padding), verticalAlignment = Alignment.CenterVertically) {
                 Checkbox(checked, onCheckedChange = { value: Boolean->
                     checked = value
                 }, modifier = Modifier.size(size))
@@ -398,7 +405,10 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, size: Dp, padding: Dp) {
         }
     }
 
-    Column(Modifier.width(size).padding(padding)) {
+    Column(
+        Modifier
+            .width(size)
+            .padding(padding)) {
         val currentPickedImage = imageBitmap
         Box {
             if (currentPickedImage == null) {
@@ -756,20 +766,17 @@ fun DrawerHeader(drawerState: DrawerState) {
     val avatarSize = 150.dp
 
     val scope = rememberCoroutineScope()
-    var editIconJob by remember { mutableStateOf<Job?>(null) }
-    var imageValid by remember { mutableStateOf(false) }
     var editUserInfoJob by remember { mutableStateOf<Job?>(null) }
 
-    LaunchedEffect(imageValid, drawerState.isClosed, drawerState.isOpen) {
-        editIconJob?.cancel()
-        if (!imageValid && (!drawerState.isClosed || drawerState.isOpen)) {
-            editIconJob = scope.launch(Dispatchers.IO) {
+    LaunchedEffect(drawerState.isClosed, drawerState.isOpen) {
+        if (!drawerState.isClosed || drawerState.isOpen) {
+            withContext(Dispatchers.IO) {
                 val innerUserInfo = UserStorage.userInstance
+                val fileInfo = innerUserInfo.userAvatar
                 withContext(Dispatchers.Main) {
                     userName = innerUserInfo.userName
                     userDesc = innerUserInfo.userDesc
                 }
-                val fileInfo = innerUserInfo.userAvatar
                 val (_, image) = BitMapCachePool.loadImage(
                     fileInfo,
                     avatarSize.dpValue.toInt(),
@@ -777,17 +784,14 @@ fun DrawerHeader(drawerState: DrawerState) {
                 )
                 withContext(Dispatchers.Main) {
                     userAvatarImage = image?.asImageBitmap()
-                    imageValid = true
                 }
             }
         }
     }
 
-    var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
     val multipleImagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
         onResult = { uri: Uri? ->
-            selectedImageUri = uri
             uri ?: return@rememberLauncherForActivityResult
             scope.launch(Dispatchers.IO) {
                 val imageStorage = FileStorageUtils.getStorage(FileType.IMAGE) ?: return@launch
@@ -795,6 +799,7 @@ fun DrawerHeader(drawerState: DrawerState) {
                 val currentImageId =
                     currentUser.userAvatar.storageId.takeIf { it != DataBase.INVALID_ID }
                 val nextId = if (currentImageId != null) {
+                    BitMapCachePool.invalid(currentImageId)
                     imageStorage.asyncStore(currentImageId, uri)
                 } else {
                     imageStorage.asyncStore(uri)
@@ -803,8 +808,13 @@ fun DrawerHeader(drawerState: DrawerState) {
                 currentUser.userAvatar.fileType = FileType.IMAGE
                 currentUser.userAvatar.uri = uri
                 UserStorage.userInstance = currentUser
+                val (_, image) = BitMapCachePool.loadImage(
+                    currentUser.userAvatar,
+                    avatarSize.dpValue.toInt(),
+                    avatarSize.dpValue.toInt()
+                )
                 withContext(Dispatchers.Main) {
-                    imageValid = false
+                    userAvatarImage = image?.asImageBitmap()
                 }
             }
         }
