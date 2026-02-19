@@ -36,10 +36,12 @@ enum class FileType(val value: Int, val mimeType: String) {
     RegularFile(0, "*/*"),
     IMAGE(1, "image/*"),
     VIDEO(2, "video/*"),
+    AUDIO(3, "audio/*"),
     ;
 
     companion object {
         private val valueMap = mutableMapOf(*entries.map { it.value to it }.toTypedArray())
+        val mimes = entries.map { it.mimeType }.toTypedArray()
         fun fromValue(value: Int): FileType? {
             return valueMap.get(value)
         }

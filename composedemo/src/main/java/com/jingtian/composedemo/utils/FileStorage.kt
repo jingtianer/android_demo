@@ -173,6 +173,7 @@ object FileStorageUtils {
             mimeType?.startsWith("image/") == true -> FileType.IMAGE
             // 判断是否为视频
             mimeType?.startsWith("video/") == true -> FileType.VIDEO
+            mimeType?.startsWith("audio/") == true -> FileType.AUDIO
             // 方式2：兜底方案（通过文件扩展名判断，防止ContentResolver获取失败）
             else -> {
                 val extension = MimeTypeMap.getFileExtensionFromUrl(uri.toString())
@@ -180,6 +181,7 @@ object FileStorageUtils {
                 when {
                     fallbackMimeType?.startsWith("image/") == true -> FileType.IMAGE
                     fallbackMimeType?.startsWith("video/") == true -> FileType.VIDEO
+                    fallbackMimeType?.startsWith("audio/") == true -> FileType.AUDIO
                     else -> FileType.RegularFile
                 }
             }

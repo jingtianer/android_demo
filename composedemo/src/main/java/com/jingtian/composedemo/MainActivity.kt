@@ -358,6 +358,9 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, size: Dp, padding: Dp) {
                         imageBitmap = bitmap?.asImageBitmap()
                     }
                 }
+                FileType.AUDIO -> {
+                    imageResource = R.drawable.music
+                }
                 FileType.RegularFile -> {
                     imageResource = R.drawable.file
                 }
@@ -400,7 +403,12 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, size: Dp, padding: Dp) {
                     painter = painterResource(imageResource),
                     contentDescription = "上传照片",
                     Modifier
-                        .clickable { scope.launch(Dispatchers.IO) { fetchImage() } }
+                        .clickable {
+                            scope.launch(Dispatchers.IO) {
+                                fetchImage()
+                            }
+                            context.startActivity(playIntent)
+                        }
                         .fillMaxWidth()
                         .wrapContentHeight()
                         .align(Alignment.Center),
@@ -528,7 +536,7 @@ fun AddImageDialog(album: Album, onDismiss: () -> Unit) {
             }
 
             val multipleImagePickerLauncher = rememberLauncherForActivityResult(
-                contract = ActivityResultContracts.PickVisualMedia(),
+                contract = ActivityResultContracts.OpenDocument(),
                 onResult = { uri: Uri? ->
                     uri ?: return@rememberLauncherForActivityResult
                     when (FileStorageUtils.getMediaType(uri)) {
@@ -547,6 +555,10 @@ fun AddImageDialog(album: Album, onDismiss: () -> Unit) {
                             }
                         }
 
+                        FileType.AUDIO -> {
+                            imageResource = R.drawable.music
+                        }
+
                         FileType.RegularFile -> {
                             imageResource = R.drawable.file
                         }
@@ -556,11 +568,7 @@ fun AddImageDialog(album: Album, onDismiss: () -> Unit) {
             )
 
             fun pickImage() {
-                multipleImagePickerLauncher.launch(
-                    PickVisualMediaRequest.Builder()
-                        .setMediaType(ActivityResultContracts.PickVisualMedia.ImageAndVideo)
-                        .build()
-                )
+                multipleImagePickerLauncher.launch(FileType.mimes)
             }
 
             val currentPickedImage = pickedImage
