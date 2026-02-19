@@ -21,6 +21,12 @@ class RankTypeChooser @JvmOverloads constructor(
 ): HorizontalScrollView(context, attributeSet, defStyleAttr, defStyleRes)  {
     private val binding = WidgetRankChooserBinding.inflate(LayoutInflater.from(context), this, true)
     var onRankChange = OnRankTypeChange {  }
+        set(value) {
+            field = value
+            binding.root.setOnCheckedChangeListener { group, checkedId ->
+                value.onRankTypeChange(getRankType(checkedId))
+            }
+        }
     init {
         val apply : View.(ItemRank) -> Unit = { itemRank ->
             val selected = createBg(itemRank)
@@ -39,7 +45,7 @@ class RankTypeChooser @JvmOverloads constructor(
         binding.rank4.apply(ItemRank.NPC)
         binding.rank5.apply(ItemRank.史)
         binding.root.setOnCheckedChangeListener { group, checkedId ->
-            this.onRankChange.onRankTypeChange(getRankType())
+            this.onRankChange.onRankTypeChange(getRankType(checkedId))
         }
     }
     companion object {
@@ -69,8 +75,8 @@ class RankTypeChooser @JvmOverloads constructor(
     }
 
 
-    fun getRankType(): ItemRank {
-        return when(binding.root.checkedRadioButtonId) {
+    fun getRankType(checkedId:Int = binding.root.checkedRadioButtonId): ItemRank {
+        return when(checkedId) {
             binding.rank1.id -> {
                 ItemRank.夯
             }

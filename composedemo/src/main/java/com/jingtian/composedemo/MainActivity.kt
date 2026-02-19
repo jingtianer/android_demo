@@ -13,6 +13,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -67,6 +69,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -253,12 +256,16 @@ fun Gallery(album: IndexedValue<Album>?) {
     val viewModel: AlbumViewModel = viewModel()
     var filterLabels by remember { mutableStateOf<Set<String>>(emptySet()) }
     var showLabelFilter by remember { mutableStateOf(false) }
+    var dataInvalid by remember { mutableStateOf(true) }
     val coroutine = rememberCoroutineScope()
-    LaunchedEffect(Unit) {
-        withContext(Dispatchers.IO) {
-            viewModel.getAllAlbumItem(album.value).collect {
-                withContext(Dispatchers.Main) {
-                    itemList = it
+    LaunchedEffect(dataInvalid) {
+        if (dataInvalid) {
+            withContext(Dispatchers.IO) {
+                viewModel.getAllAlbumItem(album.value).collect {
+                    withContext(Dispatchers.Main) {
+                        itemList = it
+                        dataInvalid = false
+                    }
                 }
             }
         }
@@ -315,36 +322,36 @@ fun Gallery(album: IndexedValue<Album>?) {
             } else {
                 filteredItemList
             }
-            items(
-                finalItemList.size,
-                key = { index: Int ->
-                    finalItemList[index].albumItem.itemId ?: DataBase.INVALID_ID
-                }) { index: Int ->
-                AlbumItemView(finalItemList[index], size, padding)
+            items(finalItemList.size, key = { index-> finalItemList[index].hashCode() }) { index: Int ->
+                AlbumItemView(finalItemList[index], size, padding) {
+                    dataInvalid = true
+                }
             }
         }
     }
 
     if (addImageDialogState) {
-        AddImageDialog(album.value) {
+        AddImageDialog(album.value) { dataChange->
             addImageDialogState = false
+            dataInvalid = dataChange
         }
     }
 }
 
 @Composable
-fun AlbumItemView(albumItemRelation: AlbumItemRelation, size: Dp, padding: Dp) {
+fun AlbumItemView(albumItemRelation: AlbumItemRelation, size: Dp, padding: Dp, onDataInvalid: () -> Unit) {
     var imageBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
 
     var itemName by remember { mutableStateOf(albumItemRelation.albumItem.itemName) }
     var itemDesc by remember { mutableStateOf(albumItemRelation.albumItem.desc) }
     var itemRank by remember { mutableStateOf(albumItemRelation.albumItem.rank) }
     var itemScore by remember { mutableStateOf(albumItemRelation.albumItem.score) }
-    val itemLabel by remember { mutableStateOf(albumItemRelation.labelInfos.toMutableList()) }
+    var itemLabel by remember { mutableStateOf(albumItemRelation.labelInfos.toMutableList()) }
     var itemLabelSize by remember { mutableStateOf(albumItemRelation.labelInfos.size) }
 
     val scope = rememberCoroutineScope()
     var imageResource by remember { mutableStateOf(R.drawable.load_failed) }
+    imageResource = R.drawable.load_failed
     suspend fun fetchImage() {
         withContext(Dispatchers.IO) {
             val uri = albumItemRelation.fileInfo?.getFileUri() ?: return@withContext
@@ -405,10 +412,19 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, size: Dp, padding: Dp) {
         }
     }
 
+    var showEditDialog by remember { mutableStateOf(false) }
+
     Column(
         Modifier
             .width(size)
-            .padding(padding)) {
+            .padding(padding)
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onLongPress = {
+                        showEditDialog = true
+                    }
+                )
+            }) {
         val currentPickedImage = imageBitmap
         Box {
             if (currentPickedImage == null) {
@@ -501,11 +517,272 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, size: Dp, padding: Dp) {
             }
         }
     }
+
+    if (showEditDialog) {
+        EditDialog(albumItemRelation) { dataInvalid->
+            showEditDialog = false
+            if (dataInvalid) {
+                onDataInvalid()
+            }
+        }
+    }
 }
 
 @Composable
-fun AddImageDialog(album: Album, onDismiss: () -> Unit) {
-    Dialog(onDismissRequest = { onDismiss() }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+fun EditDialog(albumItemRelation: AlbumItemRelation, onDismiss: (Boolean)->Unit) {
+    val album = albumItemRelation.albumItem
+    Dialog(onDismissRequest = { onDismiss(false) }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Column(
+            Modifier
+                .fillMaxWidth(LocalAppUIConstants.current.dialogaxPercent)
+                .verticalScroll(rememberScrollState())
+                .background(LocalAppPalette.current.dialogBg)
+                .padding(12.dp)
+                .clip(RectangleShape)
+                .wrapContentHeight()
+        ) {
+            var pickedImage by remember { mutableStateOf<ImageBitmap?>(null) }
+            var itemName by remember { mutableStateOf(album.itemName) }
+            var itemDesc by remember { mutableStateOf(album.desc) }
+            var itemRank by remember { mutableStateOf(album.rank) }
+            var itemScore by remember { mutableStateOf(album.score) }
+            val itemLabel by remember { mutableStateOf(albumItemRelation.labelInfos.toMutableList()) }
+            var itemLabelSize by remember { mutableStateOf(albumItemRelation.labelInfos.size) }
+
+            var selectedUri by remember { mutableStateOf(albumItemRelation.fileInfo?.getFileUri()) }
+            var selectedFileType by remember { mutableStateOf(albumItemRelation.fileInfo?.fileType) }
+            val scope = rememberCoroutineScope()
+            var imageResource by remember { mutableStateOf(R.drawable.upload_to_cloud) }
+
+            fun saveItem() {
+                val albumId = album.albumId
+                val uri = selectedUri ?: return
+                val mediaType = selectedFileType ?: return
+                val itemName = itemName.takeIf { !it.isNullOrBlank() } ?: return
+                val oldUri = albumItemRelation.fileInfo?.getFileUri()
+
+                CoroutineUtils.runIOTask({
+                    val nextId = if (uri != oldUri) {
+                        val storage = FileStorageUtils.getStorage(mediaType)
+                        if (oldUri != null) {
+                            val oldMediaType = albumItemRelation.fileInfo.fileType
+                            if (oldMediaType == FileType.IMAGE) {
+                                BitMapCachePool.invalid(albumItemRelation.fileInfo.storageId)
+                            }
+                            if (mediaType == oldMediaType) {
+                                if (albumItemRelation.fileInfo.storageId != DataBase.INVALID_ID) {
+                                    storage?.asyncStore(albumItemRelation.fileInfo.storageId, uri)
+                                } else {
+                                    storage?.asyncStore(uri)
+                                }
+                            } else {
+                                val oldStorage = FileStorageUtils.getStorage(oldMediaType)
+                                oldStorage?.delete(albumItemRelation.fileInfo.storageId)
+                                storage?.asyncStore(uri)
+                            }
+                        } else {
+                            storage?.asyncStore(uri)
+                        }
+                    } else {
+                        albumItemRelation.fileInfo.storageId
+                    } ?: DataBase.INVALID_ID
+                    val file = FileInfo(id = albumItemRelation.fileInfo?.id, uri = uri, storageId = nextId, fileType = mediaType)
+                    DataBase.dbImpl.getFileInfoDao().updateFileInfo(file)
+                    val albumItemId = albumItemRelation.albumItem.itemId ?: DataBase.INVALID_ID
+                    val fileId = albumItemRelation.fileInfo?.id ?: DataBase.INVALID_ID
+                    val albumItem = AlbumItem(
+                        itemName = itemName,
+                        rank = itemRank,
+                        desc = itemDesc,
+                        score = itemScore,
+                        albumId = albumId,
+                        fileId = fileId,
+                        itemId = albumItemId,
+                    )
+                    DataBase.dbImpl.getAlbumItemDao().updateAlbumItem(albumItem)
+                    itemLabel.forEach { it.albumItemId = albumItemId }
+                    DataBase.dbImpl.getLabelInfoDao().deleteAllLabel(albumItemId)
+                    DataBase.dbImpl.getLabelInfoDao().insertAllLabel(itemLabel)
+                }) {
+                    onDismiss(true)
+                }
+            }
+
+            fun updateImage(uri: Uri, fileType: FileType) {
+                when (fileType) {
+                    FileType.IMAGE -> {
+                        scope.launch(Dispatchers.IO) {
+                            val bitmap = BitMapCachePool.toBitMap(uri).second?.asImageBitmap()
+                            withContext(Dispatchers.Main) {
+                                pickedImage = bitmap
+                            }
+                        }
+                    }
+
+                    FileType.VIDEO -> {
+                        FileStorageUtils.getVideoThumbnail(scope, uri) { bitmap: Bitmap? ->
+                            pickedImage = bitmap?.asImageBitmap()
+                        }
+                    }
+
+                    FileType.AUDIO -> {
+                        imageResource = R.drawable.music
+                        pickedImage = null
+                    }
+
+                    FileType.RegularFile -> {
+                        imageResource = R.drawable.file
+                        pickedImage = null
+                    }
+                }
+            }
+
+            LaunchedEffect(selectedUri) {
+                val uri = selectedUri
+                val fileType = selectedFileType
+                if (uri != null && fileType != null) {
+                    updateImage(uri, fileType)
+                } else {
+                    imageResource = R.drawable.load_failed
+                }
+            }
+
+            val multipleImagePickerLauncher = rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.OpenDocument(),
+                onResult = { uri: Uri? ->
+                    uri ?: return@rememberLauncherForActivityResult
+                    selectedFileType = FileStorageUtils.getMediaType(uri)
+                    selectedUri = uri
+                }
+            )
+
+            fun pickImage() {
+                multipleImagePickerLauncher.launch(FileType.mimes)
+            }
+
+            val currentPickedImage = pickedImage
+            if (currentPickedImage == null) {
+                Image(
+                    painter = painterResource(imageResource),
+                    contentDescription = "上传照片",
+                    Modifier
+                        .clickable {
+                            pickImage()
+                        }
+                        .fillMaxWidth()
+                        .wrapContentHeight(),
+                    contentScale = ContentScale.Fit
+                )
+            } else {
+                Image(
+                    bitmap = currentPickedImage,
+                    contentDescription = "上传照片",
+                    Modifier
+                        .clickable {
+                            pickImage()
+                        }
+                        .fillMaxWidth()
+                        .wrapContentHeight(),
+                    contentScale = ContentScale.Fit
+                )
+            }
+
+            AppThemeTextField(itemName, { value->
+                itemName = value
+            }, modifier = Modifier.fillMaxWidth(), label = {
+                AppThemeText("文件名称")
+            }, maxLines = Int.MAX_VALUE)
+
+            AppThemeTextField(itemDesc, { value->
+                itemDesc = value
+            }, modifier = Modifier.fillMaxWidth(), label = {
+                AppThemeText("文件描述")
+            }, maxLines = Int.MAX_VALUE)
+
+            AndroidView({ context ->
+                StarRateView(context).commonEditableConfig().apply {
+                    onScoreChange = StarRateView.Companion.OnScoreChange { score: Float ->
+                        itemScore = score
+                    }
+                    layoutParams = ViewGroup.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT
+                    )
+                }
+            },
+                Modifier
+                    .fillMaxWidth()
+                    .height(30.dp),
+                update = {
+                    it.setScore(itemScore)
+                })
+
+            AndroidView({ context ->
+                RankTypeChooser(context).apply {
+                    layoutParams = ViewGroup.LayoutParams(
+                        ViewGroup.LayoutParams.WRAP_CONTENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                    )
+                    onRankChange = RankTypeChooser.Companion.OnRankTypeChange { value ->
+                        itemRank = value
+                    }
+                }
+            },
+                Modifier
+                    .wrapContentWidth()
+                    .height(30.dp),
+                update = {
+                    it.setRankType(itemRank)
+                })
+
+            LazyRow {
+                items(itemLabelSize + 1, key = { index: Int ->
+                    if (index == 0) {
+                        "null"
+                    } else {
+                        itemLabel[index - 1].label
+                    }
+                }, contentType = { index->
+                    if (index == 0) {
+                        0
+                    } else {
+                        1
+                    }
+                }) { index: Int ->
+                    if (index == 0) {
+                        EditLabelView {
+                            itemLabel.add(LabelInfo(label = it))
+                            itemLabelSize = itemLabel.size
+                        }
+                    } else {
+                        LabelView(itemLabel[index - 1]) {
+                            itemLabel.removeAt(index - 1)
+                            itemLabelSize = itemLabel.size
+                        }
+                    }
+                }
+            }
+
+            Row {
+                Button({
+                    onDismiss(false)
+                }) {
+                    Text("取消")
+                }
+                Button({
+                    saveItem()
+                }) {
+                    Text("确认")
+                }
+            }
+
+        }
+    }
+}
+
+@Composable
+fun AddImageDialog(album: Album, onDismiss: (Boolean) -> Unit) {
+    Dialog(onDismissRequest = { onDismiss(false) }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Column(
             Modifier
                 .fillMaxWidth(LocalAppUIConstants.current.dialogaxPercent)
@@ -549,6 +826,7 @@ fun AddImageDialog(album: Album, onDismiss: () -> Unit) {
                     itemLabel.forEach { it.albumItemId = albumItemId }
                     DataBase.dbImpl.getLabelInfoDao().insertAllLabel(itemLabel)
                 }) {
+                    onDismiss(true)
                 }
             }
 
@@ -693,13 +971,12 @@ fun AddImageDialog(album: Album, onDismiss: () -> Unit) {
 
             Row {
                 Button({
-                    onDismiss()
+                    onDismiss(false)
                 }) {
                     Text("取消")
                 }
                 Button({
                     saveItem()
-                    onDismiss()
                 }) {
                     Text("确认")
                 }

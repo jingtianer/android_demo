@@ -4,6 +4,7 @@ import androidx.annotation.FloatRange
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
+import androidx.room.PrimaryKey
 import com.jingtian.composedemo.dao.AlbumItemDao
 import com.jingtian.composedemo.dao.DataBase
 import org.jetbrains.annotations.Range
@@ -28,9 +29,9 @@ import java.util.Date
         ),
     ],
     indices = [Index(value = ["itemId", "albumId", "fileId"])],
-    primaryKeys = ["itemId"]
 )
 class AlbumItem(
+    @PrimaryKey(autoGenerate = true)
     var itemId: Long? = null,
     var createTime: Date = Date(),
     var itemName: String = "",

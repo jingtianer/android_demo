@@ -32,6 +32,6 @@ class ItemRankConverter {
 
     @TypeConverter
     fun fromRankItemImage(rankItemImage: ItemRank): Int {
-        return rankItemImage.ordinal
+        return rankItemImage.index
     }
 }
