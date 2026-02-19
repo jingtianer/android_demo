@@ -113,9 +113,9 @@ class AlbumViewModel : ViewModel() {
 
     fun updateItem(
         albumItemRelation: AlbumItemRelation,
-        selectedUri: Uri?,
-        selectedFileType: FileType?,
-        itemName: String?,
+        selectedUri: Uri,
+        selectedFileType: FileType,
+        itemName: String,
         itemRank: ItemRank,
         itemDesc: String,
         itemScore: Float,
@@ -123,9 +123,8 @@ class AlbumViewModel : ViewModel() {
     ) {
         val album = albumItemRelation.albumItem
         val albumId = album.albumId
-        val uri = selectedUri ?: return
-        val mediaType = selectedFileType ?: return
-        val itemName = itemName.takeIf { !it.isNullOrBlank() } ?: return
+        val uri = selectedUri
+        val mediaType = selectedFileType
         val oldUri = albumItemRelation.fileInfo?.getFileUri()
 
         CoroutineUtils.runIOTask({

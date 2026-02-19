@@ -4,9 +4,14 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.BasicTextField
@@ -28,6 +33,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorProducer
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextRange
@@ -113,7 +119,7 @@ fun AppThemeClickEditableText(
                     }
                     .clickable {
                         editable = !editable
-                   },
+                    },
             )
         }
         if (editable) {
@@ -265,37 +271,43 @@ fun AppThemeBasicTextField(
     cursorBrush: Brush = SolidColor(Color.Black),
     hint: String? = null,
     hintColor: Color = Color.Gray,
-) = BasicTextField(
-    value,
-    onValueChange,
-    modifier,
-    enabled,
-    readOnly,
-    textStyle,
-    keyboardOptions,
-    keyboardActions,
-    singleLine,
-    maxLines,
-    minLines,
-    visualTransformation,
-    onTextLayout,
-    interactionSource,
-    cursorBrush,
-    decorationBox = @Composable { innerTextField ->
-        // places leading icon, text field with label and placeholder, trailing icon
-
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.CenterStart
-        ) {
-            if (!hint.isNullOrEmpty() && value.isEmpty()) {
-                AppThemeText(hint, style = LocalTextStyle.current.copy(color = hintColor))
-            }
-
-            innerTextField()
+) {
+    Box(modifier.wrapContentSize()) {
+        val modifier = if (value.isNullOrBlank() && !hint.isNullOrBlank()) {
+            val focusRequester = remember { FocusRequester() }
+            val keyboardController = LocalSoftwareKeyboardController.current
+            AppThemeText(
+                text = hint,
+                modifier.clickable {
+                    focusRequester.requestFocus()
+                    keyboardController?.show()
+                }.padding(start = 3.dp),
+                style = LocalTextStyle.current.copy(color = hintColor),
+                maxLines = 1
+            )
+            Modifier.width(3.dp).focusRequester(focusRequester)
+        } else {
+            modifier.width(IntrinsicSize.Min)
         }
+        BasicTextField(
+            value,
+            onValueChange,
+            modifier,
+            enabled,
+            readOnly,
+            textStyle,
+            keyboardOptions,
+            keyboardActions,
+            singleLine,
+            maxLines,
+            minLines,
+            visualTransformation,
+            onTextLayout,
+            interactionSource,
+            cursorBrush,
+        )
     }
-)
+}
 
 @Composable
 fun AppThemeBasicTextField(

@@ -1,11 +1,13 @@
 package com.jingtian.composedemo
 
+import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -18,9 +20,11 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -35,6 +39,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.staggeredgrid.LazyHorizontalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
@@ -73,6 +78,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -93,7 +99,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.jingtian.composedemo.base.AppThemeBasicTextField
 import com.jingtian.composedemo.base.AppThemeClickEditableText
 import com.jingtian.composedemo.base.AppThemeText
-import com.jingtian.composedemo.base.AppThemeTextField
 import com.jingtian.composedemo.base.BaseActivity
 import com.jingtian.composedemo.dao.DataBase
 import com.jingtian.composedemo.dao.model.Album
@@ -220,22 +225,7 @@ fun LabelFilter(showFilter: Boolean , album: Album, onCheckStateChange: (List<St
         items(labelList.size) { index ->
             val item = labelList[index]
             var checked by remember { mutableStateOf(item.isChecked) }
-            Row(
-                Modifier
-                    .height(size)
-                    .fillMaxWidth()
-                    .padding(padding), verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(checked, onCheckedChange = { value: Boolean->
-                    checked = value
-                }, modifier = Modifier.size(size))
-                AppThemeText(text = item.label,
-                    Modifier
-                        .wrapContentWidth()
-                        .height(size)
-                        .clickable {
-                            checked = !checked
-                        })
-            }
+            CheckableLabelView(label = item.label, isChecked = checked, onCheckStateChange = { checked = it })
             LaunchedEffect(checked) {
                 item.isChecked = checked
                 notifyCheckChanged()
@@ -277,7 +267,7 @@ fun Gallery(album: IndexedValue<Album>?) {
                 .padding(horizontal = 16.dp, vertical = 8.dp)
                 .wrapContentHeight()
         ) {
-            AppThemeText(album.value.albumName, Modifier.align(Alignment.CenterStart))
+            AppThemeText(album.value.albumName, Modifier.align(Alignment.CenterStart), style = LocalTextStyle.current.copy(fontSize = 24.sp, fontWeight = FontWeight(600)))
 
             Row(
                 Modifier
@@ -357,7 +347,6 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, size: Dp, padding: Dp) {
                     val (_, bitmap) = BitMapCachePool.loadImage(
                         albumItemRelation.fileInfo,
                         size.dpValue.toInt(),
-                        size.dpValue.toInt()
                     )
                     withContext(Dispatchers.Main) {
                         imageBitmap = bitmap?.asImageBitmap()
@@ -421,6 +410,10 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, size: Dp, padding: Dp) {
                     }
                 )
             }) {
+
+
+        AppThemeText(itemName, modifier = Modifier.fillMaxWidth(), maxLines = Int.MAX_VALUE, style = LocalTextStyle.current.copy(textAlign = TextAlign.Center, fontSize = 16.sp))
+
         val currentPickedImage = imageBitmap
         Box {
             if (currentPickedImage == null) {
@@ -475,17 +468,13 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, size: Dp, padding: Dp) {
                 })
         }
 
-        OutlinedTextField(itemName, { value->
-            itemName = value
-        }, modifier = Modifier.fillMaxWidth(), label = {
-            AppThemeText("文件名称")
-        }, maxLines = Int.MAX_VALUE, enabled = false)
-
-        OutlinedTextField(itemDesc, { value->
-            itemDesc = value
-        }, modifier = Modifier.fillMaxWidth(), label = {
-            AppThemeText("文件描述")
-        }, maxLines = Int.MAX_VALUE, enabled = false)
+        if (!itemDesc.isNullOrBlank()) {
+            OutlinedTextField(itemDesc, { value->
+                itemDesc = value
+            }, modifier = Modifier.fillMaxWidth(), label = {
+                AppThemeText("文件描述")
+            }, maxLines = Int.MAX_VALUE, enabled = false)
+        }
 
         AndroidView({ context ->
             StarRateView(context).commonConfig().apply {
@@ -502,13 +491,18 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, size: Dp, padding: Dp) {
                 it.setScore(itemScore)
             })
 
-        LazyRow {
-            items(itemLabelSize, key = { index: Int ->
-                itemLabel[index].label
-            }) { index: Int ->
-                LabelView(itemLabel[index], editable = false) {
-                    itemLabel.removeAt(index)
-                    itemLabelSize = itemLabel.size
+        if (itemLabel.isNotEmpty()) {
+            LazyHorizontalStaggeredGrid(rows = StaggeredGridCells.Adaptive(24.dp),
+                Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)) {
+                items(itemLabelSize, key = { index: Int ->
+                    itemLabel[index].label
+                }) { index: Int ->
+                    LabelView(itemLabel[index], editable = false) {
+                        itemLabel.removeAt(index)
+                        itemLabelSize = itemLabel.size
+                    }
                 }
             }
         }
@@ -551,7 +545,14 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, onDismiss: ()->Unit) {
             fun deleteItem() {
                 viewModel.deleteItem(albumItemRelation)
             }
-            fun saveItem() {
+            fun saveItem(context: Context) {
+                val selectedUri = selectedUri
+                val selectedFileType = selectedFileType
+                if (selectedUri == null || selectedFileType == null || itemName.isNullOrBlank()) {
+                    Toast.makeText(context, "数据不合法，缺少文件或标题", Toast.LENGTH_SHORT).show()
+                    return
+                }
+                onDismiss()
                 viewModel.updateItem(
                     albumItemRelation,
                     selectedUri,
@@ -643,13 +644,13 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, onDismiss: ()->Unit) {
                 )
             }
 
-            AppThemeTextField(itemName, { value->
+            OutlinedTextField(itemName, { value->
                 itemName = value
             }, modifier = Modifier.fillMaxWidth(), label = {
                 AppThemeText("文件名称")
             }, maxLines = Int.MAX_VALUE)
 
-            AppThemeTextField(itemDesc, { value->
+            OutlinedTextField(itemDesc, { value->
                 itemDesc = value
             }, modifier = Modifier.fillMaxWidth(), label = {
                 AppThemeText("文件描述")
@@ -690,34 +691,24 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, onDismiss: ()->Unit) {
                 update = {
                     it.setRankType(itemRank)
                 })
-
-            LazyRow {
-                items(itemLabelSize + 1, key = { index: Int ->
-                    if (index == 0) {
-                        "null"
-                    } else {
-                        itemLabel[index - 1].label
-                    }
-                }, contentType = { index->
-                    if (index == 0) {
-                        0
-                    } else {
-                        1
-                    }
-                }) { index: Int ->
-                    if (index == 0) {
-                        EditLabelView {
-                            itemLabel.add(LabelInfo(label = it))
-                            itemLabelSize = itemLabel.size
-                        }
-                    } else {
-                        LabelView(itemLabel[index - 1]) {
-                            itemLabel.removeAt(index - 1)
+            Column {
+                EditLabelView {
+                    itemLabel.add(0, LabelInfo(label = it))
+                    itemLabelSize = itemLabel.size
+                }
+                LazyRow {
+                    items(itemLabelSize, key = { index: Int ->
+                        itemLabel[index].label
+                    }) { index: Int ->
+                        LabelView(itemLabel[index]) {
+                            itemLabel.removeAt(index)
                             itemLabelSize = itemLabel.size
                         }
                     }
                 }
             }
+
+            val context = LocalContext.current
 
             Row {
                 Button({
@@ -732,8 +723,7 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, onDismiss: ()->Unit) {
                     Text("删除")
                 }
                 Button({
-                    saveItem()
-                    onDismiss()
+                    saveItem(context)
                 }) {
                     Text("确认")
                 }
@@ -767,7 +757,12 @@ fun AddImageDialog(album: Album, onDismiss: () -> Unit) {
             var imageResource by remember { mutableStateOf(R.drawable.upload_to_cloud) }
             val viewModel: AlbumViewModel = viewModel()
 
-            fun saveItem() {
+            fun saveItem(context: Context) {
+                if (selectedUri == null || itemName.isNullOrBlank()) {
+                    Toast.makeText(context, "数据不合法，缺少文件或标题", Toast.LENGTH_SHORT).show()
+                    return
+                }
+                onDismiss()
                 viewModel.addItem(album, selectedUri, itemName, itemRank, itemDesc, itemScore, itemLabel)
             }
 
@@ -831,13 +826,13 @@ fun AddImageDialog(album: Album, onDismiss: () -> Unit) {
                 )
             }
 
-            AppThemeTextField(itemName, { value->
+            OutlinedTextField(itemName, { value->
                 itemName = value
             }, modifier = Modifier.fillMaxWidth(), label = {
                 AppThemeText("文件名称")
             }, maxLines = Int.MAX_VALUE)
 
-            AppThemeTextField(itemDesc, { value->
+            OutlinedTextField(itemDesc, { value->
                 itemDesc = value
             }, modifier = Modifier.fillMaxWidth(), label = {
                 AppThemeText("文件描述")
@@ -879,34 +874,23 @@ fun AddImageDialog(album: Album, onDismiss: () -> Unit) {
                     it.setRankType(itemRank)
                 })
 
-            LazyRow {
-                items(itemLabelSize + 1, key = { index: Int ->
-                    if (index == 0) {
-                        "null"
-                    } else {
-                        itemLabel[index - 1].label
-                    }
-                }, contentType = { index->
-                    if (index == 0) {
-                        0
-                    } else {
-                        1
-                    }
-                }) { index: Int ->
-                    if (index == 0) {
-                        EditLabelView {
-                            itemLabel.add(LabelInfo(label = it))
-                            itemLabelSize = itemLabel.size
-                        }
-                    } else {
-                        LabelView(itemLabel[index - 1]) {
-                            itemLabel.removeAt(index - 1)
+            Column {
+                EditLabelView {
+                    itemLabel.add(0, LabelInfo(label = it))
+                    itemLabelSize = itemLabel.size
+                }
+                LazyRow {
+                    items(itemLabelSize, key = { index: Int ->
+                        itemLabel[index].label
+                    }) { index: Int ->
+                        LabelView(itemLabel[index]) {
+                            itemLabel.removeAt(index)
                             itemLabelSize = itemLabel.size
                         }
                     }
                 }
             }
-
+            val context = LocalContext.current
             Row {
                 Button({
                     onDismiss()
@@ -914,8 +898,7 @@ fun AddImageDialog(album: Album, onDismiss: () -> Unit) {
                     Text("取消")
                 }
                 Button({
-                    saveItem()
-                    onDismiss()
+                    saveItem(context)
                 }) {
                     Text("确认")
                 }
@@ -925,21 +908,53 @@ fun AddImageDialog(album: Album, onDismiss: () -> Unit) {
 }
 
 @Composable
+fun CheckableLabelView(label: String, isChecked:Boolean, onCheckStateChange: (Boolean) -> Unit) {
+    Box(
+        Modifier
+            .padding(2.dp)
+            .background(
+                color = if (isChecked) LocalAppPalette.current.labelChecked else LocalAppPalette.current.labelUnChecked,
+                shape = RoundedCornerShape(4.dp)
+            )
+            .wrapContentSize()
+            .clickable {
+                onCheckStateChange(!isChecked)
+            }, contentAlignment = Alignment.Center) {
+        AppThemeText(label,
+            Modifier
+                .padding(horizontal = 3.dp, vertical = 2.dp)
+                .wrapContentSize(), style = LocalTextStyle.current.copy(fontSize = 14.sp))
+    }
+}
+
+@Composable
 fun LabelView(label: LabelInfo, editable: Boolean = true, onRemove: ()->Unit) {
     if (editable) {
         Row(Modifier.wrapContentSize(), verticalAlignment = Alignment.CenterVertically) {
-            AppThemeText(label.label, Modifier.wrapContentSize(), style = LocalTextStyle.current.copy(fontSize = 10.sp))
+            AppThemeText(label.label, Modifier.wrapContentSize(), style = LocalTextStyle.current.copy(fontSize = 16.sp))
             Spacer(Modifier.padding(2.dp))
             Image(
                 painter = painterResource(R.drawable.close),
                 contentDescription = "删除标签",
                 Modifier
-                    .size(12.dp)
+                    .size(16.dp)
                     .clickable { onRemove() },
             )
         }
     } else {
-        AppThemeText(label.label, Modifier.wrapContentSize(), style = LocalTextStyle.current.copy(fontSize = 10.sp))
+        Box(
+            Modifier
+                .padding(2.dp)
+                .background(
+                    color = LocalAppPalette.current.dialogBg,
+                    shape = RoundedCornerShape(4.dp)
+                )
+                .wrapContentSize(), contentAlignment = Alignment.Center) {
+            AppThemeText(label.label,
+                Modifier
+                    .padding(horizontal = 3.dp, vertical = 2.dp)
+                    .wrapContentSize(), style = LocalTextStyle.current.copy(fontSize = 14.sp))
+        }
     }
 }
 
@@ -947,18 +962,18 @@ fun LabelView(label: LabelInfo, editable: Boolean = true, onRemove: ()->Unit) {
 fun EditLabelView(onAddLabel: (String)->Unit) {
     var labelText by remember { mutableStateOf("") }
     Row(Modifier.wrapContentSize(), verticalAlignment = Alignment.CenterVertically) {
-        CompositionLocalProvider(LocalTextStyle provides LocalTextStyle.current.copy(fontSize = 10.sp)) {
+        CompositionLocalProvider(LocalTextStyle provides LocalTextStyle.current.copy(fontSize = 24.sp)) {
             AppThemeBasicTextField(labelText, {value-> labelText = value},
                 Modifier
                     .wrapContentWidth()
-                    .height(13.dp), hint = "添加标签")
+                    .wrapContentHeight(), hint = "添加标签")
         }
         Spacer(Modifier.padding(2.dp))
         Image(
             painter = painterResource(R.drawable.add),
             contentDescription = "添加标签",
             Modifier
-                .size(12.dp)
+                .size(24.dp)
                 .clickable {
                     if (labelText.isNotBlank()) {
                         onAddLabel(labelText)
@@ -1129,8 +1144,10 @@ fun DrawerFunctionArea() {
                 .size(24.dp)
                 .align(Alignment.CenterVertically),
         )
-        Spacer(Modifier.padding(2.dp))
-        AppThemeText("添加相册", Modifier.align(Alignment.CenterVertically))
+        AppThemeText("添加相册",
+            Modifier
+                .align(Alignment.CenterVertically)
+                .padding(2.dp))
     }
 
     if (dialogState) {
@@ -1145,7 +1162,7 @@ fun DrawerFunctionArea() {
                     .fillMaxWidth(0.82f)
                     .padding(8.dp)
             ) {
-                AppThemeTextField(albumName, { value ->
+                OutlinedTextField(albumName, { value ->
                     albumName = value
                 }, label = {
                     AppThemeText("相册名称")
