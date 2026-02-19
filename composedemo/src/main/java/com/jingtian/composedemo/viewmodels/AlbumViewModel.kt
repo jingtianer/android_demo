@@ -19,6 +19,10 @@ class AlbumViewModel : ViewModel() {
     val menuItemsFlow: Flow<List<Album>>
         get() = albumDap.getAllAlbum()
 
+    fun getLabelList(album: Album): Flow<List<String>> {
+        return DataBase.dbImpl.getAlbumItemDao().getLabelList(album.albumId ?: return flow {  })
+    }
+
     fun getAllAlbumItem(album: Album): Flow<List<AlbumItemRelation>> {
         return albumItemDap.getAllAlbumItemWithExtra(albumId = album.albumId ?: return flow {  })
     }

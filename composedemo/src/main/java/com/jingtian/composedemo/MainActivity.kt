@@ -16,6 +16,7 @@ import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -30,12 +31,19 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.staggeredgrid.LazyHorizontalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.lazy.staggeredgrid.items
+import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.material3.DrawerValue
@@ -178,6 +186,52 @@ fun Main() {
 }
 
 @Composable
+fun LabelFilter(showFilter: Boolean , album: Album, onCheckStateChange: (List<String>)->Unit) {
+    class LabelCheckInfo(val label: String, var isChecked: Boolean = false)
+    val viewModel: AlbumViewModel = viewModel()
+    var labelList by remember { mutableStateOf<List<LabelCheckInfo>>(emptyList()) }
+    LaunchedEffect(album) {
+        withContext(Dispatchers.IO) {
+            viewModel.getLabelList(album).collect { value->
+                labelList = value.map { LabelCheckInfo(it, false) }
+            }
+        }
+    }
+
+    if (!showFilter) {
+        return
+    }
+
+    val size = 36.dp
+    val padding = 4.dp
+    fun notifyCheckChanged() {
+        onCheckStateChange(labelList.mapNotNull { checkInfo -> checkInfo.label.takeIf { checkInfo.isChecked } })
+    }
+    LazyHorizontalGrid(rows = GridCells.Fixed(2), Modifier.height((size + padding * 2) * 2).fillMaxWidth()) {
+        items(labelList.size) { index ->
+            val item = labelList[index]
+            var checked by remember { mutableStateOf(item.isChecked) }
+            Row(Modifier.height(size).fillMaxWidth().padding(padding), verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(checked, onCheckedChange = { value: Boolean->
+                    checked = value
+                }, modifier = Modifier.size(size))
+                AppThemeText(text = item.label,
+                    Modifier
+                        .wrapContentWidth()
+                        .height(size)
+                        .clickable {
+                            checked = !checked
+                        })
+            }
+            LaunchedEffect(checked) {
+                item.isChecked = checked
+                notifyCheckChanged()
+            }
+        }
+    }
+}
+
+@Composable
 fun Gallery(album: IndexedValue<Album>?) {
     if (album == null) {
         return
@@ -185,8 +239,11 @@ fun Gallery(album: IndexedValue<Album>?) {
 
     var addImageDialogState by remember { mutableStateOf(false) }
     var itemList by remember { mutableStateOf(emptyList<AlbumItemRelation>()) }
+    var filteredItemList by remember { mutableStateOf(emptyList<AlbumItemRelation>()) }
     val viewModel: AlbumViewModel = viewModel()
-
+    var filterLabels by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var showLabelFilter by remember { mutableStateOf(false) }
+    val coroutine = rememberCoroutineScope()
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
             viewModel.getAllAlbumItem(album.value).collect {
@@ -205,25 +262,52 @@ fun Gallery(album: IndexedValue<Album>?) {
                 .wrapContentHeight()
         ) {
             AppThemeText(album.value.albumName, Modifier.align(Alignment.CenterStart))
-            Image(
-                painter = painterResource(R.drawable.add),
-                contentDescription = "添加图片",
-                modifier = Modifier
-                    .size(32.dp)
+
+            Row(
+                Modifier
                     .align(Alignment.CenterEnd)
-                    .clickable { addImageDialogState = true }
-            )
+                    .wrapContentSize()) {
+                Image(
+                    painter = painterResource(R.drawable.add),
+                    contentDescription = "添加图片",
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clickable { addImageDialogState = true }
+                )
+                Image(
+                    painter = painterResource(R.drawable.filter),
+                    contentDescription = "过滤器",
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clickable { showLabelFilter = !showLabelFilter }
+                )
+            }
+        }
+        LabelFilter(showLabelFilter, album.value) { checkInfo->
+            val targetLabelSet = checkInfo.toSet()
+            coroutine.launch(Dispatchers.Default) {
+                val insersectList = itemList.filter { it.labelInfos.map { it.label }.toSet().intersect(targetLabelSet).isNotEmpty() }
+                withContext(Dispatchers.Main) {
+                    filterLabels = targetLabelSet
+                    filteredItemList = insersectList
+                }
+            }
         }
         LazyColumn(
             Modifier
                 .fillMaxSize()
                 .weight(1f)) {
+            val finalItemList = if (filterLabels.isEmpty()) {
+                itemList
+            } else {
+                filteredItemList
+            }
             items(
-                itemList.size,
+                finalItemList.size,
                 key = { index: Int ->
-                    itemList[index].albumItem.itemId ?: DataBase.INVALID_ID
+                    finalItemList[index].albumItem.itemId ?: DataBase.INVALID_ID
                 }) { index: Int ->
-                AlbumItemView(itemList[index])
+                AlbumItemView(finalItemList[index])
             }
         }
     }
@@ -339,7 +423,9 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation) {
                     layoutParams = ViewGroup.LayoutParams(bg.getWidth().toInt(), bg.getHeight().toInt())
                 }
             },
-                Modifier.wrapContentSize().align(Alignment.TopEnd),
+                Modifier
+                    .wrapContentSize()
+                    .align(Alignment.TopEnd),
                 update = {
                     val bg = createBg(itemRank)
                     it.background = bg
@@ -602,7 +688,9 @@ fun LabelView(label: LabelInfo, editable: Boolean = true, onRemove: ()->Unit) {
             Image(
                 painter = painterResource(R.drawable.close),
                 contentDescription = "删除标签",
-                Modifier.size(12.dp).clickable { onRemove() },
+                Modifier
+                    .size(12.dp)
+                    .clickable { onRemove() },
             )
         }
     } else {
@@ -615,18 +703,23 @@ fun EditLabelView(onAddLabel: (String)->Unit) {
     var labelText by remember { mutableStateOf("") }
     Row(Modifier.wrapContentSize(), verticalAlignment = Alignment.CenterVertically) {
         CompositionLocalProvider(LocalTextStyle provides LocalTextStyle.current.copy(fontSize = 10.sp)) {
-            AppThemeBasicTextField(labelText, {value-> labelText = value}, Modifier.wrapContentWidth().height(13.dp), hint = "添加标签")
+            AppThemeBasicTextField(labelText, {value-> labelText = value},
+                Modifier
+                    .wrapContentWidth()
+                    .height(13.dp), hint = "添加标签")
         }
         Spacer(Modifier.padding(2.dp))
         Image(
             painter = painterResource(R.drawable.add),
             contentDescription = "添加标签",
-            Modifier.size(12.dp).clickable {
-                if (labelText.isNotBlank()) {
-                    onAddLabel(labelText)
-                    labelText = ""
-                }
-            },
+            Modifier
+                .size(12.dp)
+                .clickable {
+                    if (labelText.isNotBlank()) {
+                        onAddLabel(labelText)
+                        labelText = ""
+                    }
+                },
         )
     }
 }

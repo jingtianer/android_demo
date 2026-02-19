@@ -7,6 +7,7 @@ import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
 import com.jingtian.composedemo.dao.model.AlbumItem
+import com.jingtian.composedemo.dao.model.LabelInfo
 import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
 import kotlinx.coroutines.flow.Flow
 
@@ -32,4 +33,7 @@ interface AlbumItemDao {
     @Transaction
     @Query("select * from $TABLE_NAME where albumId = :albumId")
     fun getAllAlbumItemWithExtra(albumId: Long): Flow<List<AlbumItemRelation>>
+
+    @Query("select distinct(label) from ${LabelInfoDao.TABLE_NAME} where albumItemId in (select albumItemId from $TABLE_NAME where albumId = :albumId)")
+    fun getLabelList(albumId: Long): Flow<List<String>>
 }
