@@ -259,11 +259,12 @@ fun Gallery(album: IndexedValue<Album>?) {
     val coroutine = rememberCoroutineScope()
     val albumItemDataChange by viewModel.albumItemListChange.observeAsState()
 
-    LaunchedEffect(albumItemDataChange) {
+    LaunchedEffect(albumItemDataChange, album) {
         withContext(Dispatchers.IO) {
             viewModel.getAllAlbumItem(album.value).collect {
                 withContext(Dispatchers.Main) {
                     itemList = it
+                    filteredItemList = it
                 }
             }
         }

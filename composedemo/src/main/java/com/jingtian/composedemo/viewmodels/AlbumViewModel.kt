@@ -38,6 +38,10 @@ class AlbumViewModel : ViewModel() {
     val albumListChange: MutableLiveData<Int> = MutableLiveData(0)
     val albumItemListChange: MutableLiveData<Int> = MutableLiveData(0)
 
+    fun notifyAlbumItemListChange() {
+        albumItemListChange.value = (albumItemListChange.value ?: 0) + 1
+    }
+
     fun addAlbum(album: Album) {
         CoroutineUtils.runIOTask({
             albumDao.insertAlbum(album)
