@@ -554,6 +554,20 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, onDismiss: (Boolean)->Unit)
             val scope = rememberCoroutineScope()
             var imageResource by remember { mutableStateOf(R.drawable.upload_to_cloud) }
 
+            fun deleteItem() {
+                CoroutineUtils.runIOTask({
+                    DataBase.dbImpl.getAlbumItemDao().deleteAllAlbumItem(album)
+                    albumItemRelation.fileInfo?.let {
+                        DataBase.dbImpl.getFileInfoDao().deleteFileInfo(it)
+                        FileStorageUtils.getStorage(it.fileType)?.delete(it.storageId)
+                    }
+                    album.itemId?.let {
+                        DataBase.dbImpl.getLabelInfoDao().deleteAllLabel(it)
+                    }
+                }) {
+                    onDismiss(true)
+                }
+            }
             fun saveItem() {
                 val albumId = album.albumId
                 val uri = selectedUri ?: return
@@ -768,6 +782,11 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, onDismiss: (Boolean)->Unit)
                     onDismiss(false)
                 }) {
                     Text("取消")
+                }
+                Button({
+                    deleteItem()
+                }) {
+                    Text("删除")
                 }
                 Button({
                     saveItem()
