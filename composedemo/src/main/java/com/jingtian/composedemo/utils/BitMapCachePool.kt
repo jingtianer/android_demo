@@ -4,9 +4,14 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.util.Log
+import androidx.compose.ui.graphics.asImageBitmap
 import com.jingtian.composedemo.base.app
 import com.jingtian.composedemo.dao.DataBase
 import com.jingtian.composedemo.dao.model.FileInfo
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.lang.ref.SoftReference
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.max
@@ -92,7 +97,14 @@ object BitMapCachePool {
         }
         return max(1,  max(widthScaleFactor,heightScaleFactor) / 2)
     }
-
+    fun toBitMap(scope: CoroutineScope, uri: Uri, maxWidth: Int = -1, maxHeight: Int = -1, onImageResult: (Int, Bitmap?)->Unit) {
+        scope.launch(Dispatchers.IO) {
+            val (scaleFactor, bitmap) = BitMapCachePool.toBitMap(uri, maxWidth, maxHeight)
+            withContext(Dispatchers.Main) {
+                onImageResult(scaleFactor, bitmap)
+            }
+        }
+    }
     fun toBitMap(image: Uri, maxWidth: Int = -1, maxHeight: Int = -1): Pair<Int, Bitmap?> {
         val options = BitmapFactory.Options().apply {
             inJustDecodeBounds = true // 只获取尺寸，不加载像素

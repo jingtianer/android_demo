@@ -256,16 +256,14 @@ fun Gallery(album: IndexedValue<Album>?) {
     val viewModel: AlbumViewModel = viewModel()
     var filterLabels by remember { mutableStateOf<Set<String>>(emptySet()) }
     var showLabelFilter by remember { mutableStateOf(false) }
-    var dataInvalid by remember { mutableStateOf(true) }
     val coroutine = rememberCoroutineScope()
-    LaunchedEffect(dataInvalid) {
-        if (dataInvalid) {
-            withContext(Dispatchers.IO) {
-                viewModel.getAllAlbumItem(album.value).collect {
-                    withContext(Dispatchers.Main) {
-                        itemList = it
-                        dataInvalid = false
-                    }
+    val albumItemDataChange by viewModel.albumItemListChange.observeAsState()
+
+    LaunchedEffect(albumItemDataChange) {
+        withContext(Dispatchers.IO) {
+            viewModel.getAllAlbumItem(album.value).collect {
+                withContext(Dispatchers.Main) {
+                    itemList = it
                 }
             }
         }
@@ -323,23 +321,20 @@ fun Gallery(album: IndexedValue<Album>?) {
                 filteredItemList
             }
             items(finalItemList.size, key = { index-> finalItemList[index].hashCode() }) { index: Int ->
-                AlbumItemView(finalItemList[index], size, padding) {
-                    dataInvalid = true
-                }
+                AlbumItemView(finalItemList[index], size, padding)
             }
         }
     }
 
     if (addImageDialogState) {
-        AddImageDialog(album.value) { dataChange->
+        AddImageDialog(album.value) {
             addImageDialogState = false
-            dataInvalid = dataChange
         }
     }
 }
 
 @Composable
-fun AlbumItemView(albumItemRelation: AlbumItemRelation, size: Dp, padding: Dp, onDataInvalid: () -> Unit) {
+fun AlbumItemView(albumItemRelation: AlbumItemRelation, size: Dp, padding: Dp) {
     var imageBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
 
     var itemName by remember { mutableStateOf(albumItemRelation.albumItem.itemName) }
@@ -519,19 +514,17 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, size: Dp, padding: Dp, o
     }
 
     if (showEditDialog) {
-        EditDialog(albumItemRelation) { dataInvalid->
+        EditDialog(albumItemRelation) {
             showEditDialog = false
-            if (dataInvalid) {
-                onDataInvalid()
-            }
         }
     }
 }
 
 @Composable
-fun EditDialog(albumItemRelation: AlbumItemRelation, onDismiss: (Boolean)->Unit) {
+fun EditDialog(albumItemRelation: AlbumItemRelation, onDismiss: ()->Unit) {
     val album = albumItemRelation.albumItem
-    Dialog(onDismissRequest = { onDismiss(false) }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+    val viewModel : AlbumViewModel = viewModel()
+    Dialog(onDismissRequest = { onDismiss() }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Column(
             Modifier
                 .fillMaxWidth(LocalAppUIConstants.current.dialogaxPercent)
@@ -555,71 +548,19 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, onDismiss: (Boolean)->Unit)
             var imageResource by remember { mutableStateOf(R.drawable.upload_to_cloud) }
 
             fun deleteItem() {
-                CoroutineUtils.runIOTask({
-                    DataBase.dbImpl.getAlbumItemDao().deleteAllAlbumItem(album)
-                    albumItemRelation.fileInfo?.let {
-                        DataBase.dbImpl.getFileInfoDao().deleteFileInfo(it)
-                        FileStorageUtils.getStorage(it.fileType)?.delete(it.storageId)
-                    }
-                    album.itemId?.let {
-                        DataBase.dbImpl.getLabelInfoDao().deleteAllLabel(it)
-                    }
-                }) {
-                    onDismiss(true)
-                }
+                viewModel.deleteItem(albumItemRelation)
             }
             fun saveItem() {
-                val albumId = album.albumId
-                val uri = selectedUri ?: return
-                val mediaType = selectedFileType ?: return
-                val itemName = itemName.takeIf { !it.isNullOrBlank() } ?: return
-                val oldUri = albumItemRelation.fileInfo?.getFileUri()
-
-                CoroutineUtils.runIOTask({
-                    val nextId = if (uri != oldUri) {
-                        val storage = FileStorageUtils.getStorage(mediaType)
-                        if (oldUri != null) {
-                            val oldMediaType = albumItemRelation.fileInfo.fileType
-                            if (oldMediaType == FileType.IMAGE) {
-                                BitMapCachePool.invalid(albumItemRelation.fileInfo.storageId)
-                            }
-                            if (mediaType == oldMediaType) {
-                                if (albumItemRelation.fileInfo.storageId != DataBase.INVALID_ID) {
-                                    storage?.asyncStore(albumItemRelation.fileInfo.storageId, uri)
-                                } else {
-                                    storage?.asyncStore(uri)
-                                }
-                            } else {
-                                val oldStorage = FileStorageUtils.getStorage(oldMediaType)
-                                oldStorage?.delete(albumItemRelation.fileInfo.storageId)
-                                storage?.asyncStore(uri)
-                            }
-                        } else {
-                            storage?.asyncStore(uri)
-                        }
-                    } else {
-                        albumItemRelation.fileInfo.storageId
-                    } ?: DataBase.INVALID_ID
-                    val file = FileInfo(id = albumItemRelation.fileInfo?.id, uri = uri, storageId = nextId, fileType = mediaType)
-                    DataBase.dbImpl.getFileInfoDao().updateFileInfo(file)
-                    val albumItemId = albumItemRelation.albumItem.itemId ?: DataBase.INVALID_ID
-                    val fileId = albumItemRelation.fileInfo?.id ?: DataBase.INVALID_ID
-                    val albumItem = AlbumItem(
-                        itemName = itemName,
-                        rank = itemRank,
-                        desc = itemDesc,
-                        score = itemScore,
-                        albumId = albumId,
-                        fileId = fileId,
-                        itemId = albumItemId,
-                    )
-                    DataBase.dbImpl.getAlbumItemDao().updateAlbumItem(albumItem)
-                    itemLabel.forEach { it.albumItemId = albumItemId }
-                    DataBase.dbImpl.getLabelInfoDao().deleteAllLabel(albumItemId)
-                    DataBase.dbImpl.getLabelInfoDao().insertAllLabel(itemLabel)
-                }) {
-                    onDismiss(true)
-                }
+                viewModel.updateItem(
+                    albumItemRelation,
+                    selectedUri,
+                    selectedFileType,
+                    itemName,
+                    itemRank,
+                    itemDesc,
+                    itemScore,
+                    itemLabel,
+                )
             }
 
             fun updateImage(uri: Uri, fileType: FileType) {
@@ -634,7 +575,7 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, onDismiss: (Boolean)->Unit)
                     }
 
                     FileType.VIDEO -> {
-                        FileStorageUtils.getVideoThumbnail(scope, uri) { bitmap: Bitmap? ->
+                        getVideoThumbnail(scope, uri) { bitmap: Bitmap? ->
                             pickedImage = bitmap?.asImageBitmap()
                         }
                     }
@@ -665,7 +606,7 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, onDismiss: (Boolean)->Unit)
                 contract = ActivityResultContracts.OpenDocument(),
                 onResult = { uri: Uri? ->
                     uri ?: return@rememberLauncherForActivityResult
-                    selectedFileType = FileStorageUtils.getMediaType(uri)
+                    selectedFileType = getMediaType(uri)
                     selectedUri = uri
                 }
             )
@@ -779,29 +720,30 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, onDismiss: (Boolean)->Unit)
 
             Row {
                 Button({
-                    onDismiss(false)
+                    onDismiss()
                 }) {
                     Text("取消")
                 }
                 Button({
                     deleteItem()
+                    onDismiss()
                 }) {
                     Text("删除")
                 }
                 Button({
                     saveItem()
+                    onDismiss()
                 }) {
                     Text("确认")
                 }
             }
-
         }
     }
 }
 
 @Composable
-fun AddImageDialog(album: Album, onDismiss: (Boolean) -> Unit) {
-    Dialog(onDismissRequest = { onDismiss(false) }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+fun AddImageDialog(album: Album, onDismiss: () -> Unit) {
+    Dialog(onDismissRequest = { onDismiss() }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Column(
             Modifier
                 .fillMaxWidth(LocalAppUIConstants.current.dialogaxPercent)
@@ -822,49 +764,25 @@ fun AddImageDialog(album: Album, onDismiss: (Boolean) -> Unit) {
             var selectedUri by remember { mutableStateOf<Uri?>(null) }
             val scope = rememberCoroutineScope()
             var imageResource by remember { mutableStateOf(R.drawable.upload_to_cloud) }
+            val viewModel: AlbumViewModel = viewModel()
 
             fun saveItem() {
-                val albumId = album.albumId ?: return
-                val uri = selectedUri ?: return
-                CoroutineUtils.runIOTask({
-                    val mediaType = FileStorageUtils.getMediaType(uri)
-                    val imageStorage =
-                        FileStorageUtils.getStorage(mediaType) ?: return@runIOTask
-                    val nextId = imageStorage.asyncStore(uri)
-                    val file = FileInfo(uri = uri, storageId = nextId, fileType = mediaType)
-                    val fileId = DataBase.dbImpl.getFileInfoDao().insertFileInfo(file)
-                    val albumItem = AlbumItem(
-                        itemName = itemName,
-                        rank = itemRank,
-                        desc = itemDesc,
-                        score = itemScore,
-                        albumId = albumId,
-                        fileId = fileId
-                    )
-                    val albumItemId = DataBase.dbImpl.getAlbumItemDao().insertAlbumItem(albumItem)
-                    itemLabel.forEach { it.albumItemId = albumItemId }
-                    DataBase.dbImpl.getLabelInfoDao().insertAllLabel(itemLabel)
-                }) {
-                    onDismiss(true)
-                }
+                viewModel.addItem(album, selectedUri, itemName, itemRank, itemDesc, itemScore, itemLabel)
             }
 
             val multipleImagePickerLauncher = rememberLauncherForActivityResult(
                 contract = ActivityResultContracts.OpenDocument(),
                 onResult = { uri: Uri? ->
                     uri ?: return@rememberLauncherForActivityResult
-                    when (FileStorageUtils.getMediaType(uri)) {
+                    when (getMediaType(uri)) {
                         FileType.IMAGE -> {
-                            scope.launch(Dispatchers.IO) {
-                                val bitmap = BitMapCachePool.toBitMap(uri).second?.asImageBitmap()
-                                withContext(Dispatchers.Main) {
-                                    pickedImage = bitmap
-                                }
+                            BitMapCachePool.toBitMap(scope, uri) { _, bitmap->
+                                pickedImage = bitmap?.asImageBitmap()
                             }
                         }
 
                         FileType.VIDEO -> {
-                            FileStorageUtils.getVideoThumbnail(scope, uri) { bitmap: Bitmap? ->
+                            getVideoThumbnail(scope, uri) { bitmap: Bitmap? ->
                                 pickedImage = bitmap?.asImageBitmap()
                             }
                         }
@@ -990,17 +908,17 @@ fun AddImageDialog(album: Album, onDismiss: (Boolean) -> Unit) {
 
             Row {
                 Button({
-                    onDismiss(false)
+                    onDismiss()
                 }) {
                     Text("取消")
                 }
                 Button({
                     saveItem()
+                    onDismiss()
                 }) {
                     Text("确认")
                 }
             }
-
         }
     }
 }
