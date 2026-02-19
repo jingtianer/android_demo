@@ -35,6 +35,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.staggeredgrid.LazyHorizontalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
@@ -72,6 +73,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.TextUnitType
 import androidx.compose.ui.unit.dp
@@ -293,7 +296,10 @@ fun Gallery(album: IndexedValue<Album>?) {
                 }
             }
         }
-        LazyColumn(
+        val size = 160.dp
+        val padding = 4.dp
+        LazyVerticalStaggeredGrid(
+            columns = StaggeredGridCells.Adaptive((size + padding*2)),
             Modifier
                 .fillMaxSize()
                 .weight(1f)) {
@@ -307,7 +313,7 @@ fun Gallery(album: IndexedValue<Album>?) {
                 key = { index: Int ->
                     finalItemList[index].albumItem.itemId ?: DataBase.INVALID_ID
                 }) { index: Int ->
-                AlbumItemView(finalItemList[index])
+                AlbumItemView(finalItemList[index], size, padding)
             }
         }
     }
@@ -320,8 +326,7 @@ fun Gallery(album: IndexedValue<Album>?) {
 }
 
 @Composable
-fun AlbumItemView(albumItemRelation: AlbumItemRelation) {
-    val size = 160.dp
+fun AlbumItemView(albumItemRelation: AlbumItemRelation, size: Dp, padding: Dp) {
     var imageBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
 
     var itemName by remember { mutableStateOf(albumItemRelation.albumItem.itemName) }
@@ -387,7 +392,7 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation) {
         }
     }
 
-    Column(Modifier.width(size)) {
+    Column(Modifier.width(size).padding(padding)) {
         val currentPickedImage = imageBitmap
         Box {
             if (currentPickedImage == null) {
