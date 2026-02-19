@@ -31,7 +31,7 @@ interface AlbumItemDao {
     fun updateAlbumItem(albumItem: AlbumItem)
 
     @Transaction
-    @Query("select * from $TABLE_NAME where albumId = :albumId")
+    @Query("select * from $TABLE_NAME where albumId = :albumId order by score desc")
     fun getAllAlbumItemWithExtra(albumId: Long): Flow<List<AlbumItemRelation>>
 
     @Query("select distinct(label) from ${LabelInfoDao.TABLE_NAME} where albumItemId in (select albumItemId from $TABLE_NAME where albumId = :albumId)")
