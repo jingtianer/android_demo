@@ -54,7 +54,6 @@ import androidx.compose.material3.DrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.OutlinedTextField
@@ -72,7 +71,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.asImageBitmap
@@ -88,7 +86,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.unit.times
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -227,6 +224,27 @@ fun Main() {
 }
 
 @Composable
+fun FileTypeFilter(showFilter: Boolean, onCheckStateChange: (List<FileType>)->Unit) {
+    class LabelCheckInfo(val label: FileType, var isChecked: Boolean = false)
+    val fileTypeList = FileType.entries.map { LabelCheckInfo(it, false) }
+    if (!showFilter) {
+        return
+    }
+    LazyRow {
+        items(fileTypeList.size) { index->
+            val item = fileTypeList[index]
+            var checked by remember { mutableStateOf(item.isChecked) }
+            CheckableLabelView(label = FileType.entries[index].name, isChecked = checked, onCheckStateChange = { checked = it })
+            LaunchedEffect(checked) {
+                item.isChecked = checked
+                onCheckStateChange(fileTypeList.mapNotNull { checkInfo -> checkInfo.label.takeIf { checkInfo.isChecked } })
+            }
+        }
+    }
+
+}
+
+@Composable
 fun LabelFilter(showFilter: Boolean , album: Album, onCheckStateChange: (List<String>)->Unit) {
     class LabelCheckInfo(val label: String, var isChecked: Boolean = false)
     val viewModel: AlbumViewModel = viewModel()
@@ -239,18 +257,17 @@ fun LabelFilter(showFilter: Boolean , album: Album, onCheckStateChange: (List<St
         }
     }
 
-    if (!showFilter) {
+    if (!showFilter || labelList.isEmpty()) {
         return
     }
 
     val size = 28.dp
-    val padding = 4.dp
     fun notifyCheckChanged() {
         onCheckStateChange(labelList.mapNotNull { checkInfo -> checkInfo.label.takeIf { checkInfo.isChecked } })
     }
-    LazyHorizontalGrid(rows = GridCells.Fixed(2),
+    LazyHorizontalGrid(rows = GridCells.Fixed(1),
         Modifier
-            .height((size + padding * 2) * 2)
+            .height(size)
             .fillMaxWidth()) {
         items(labelList.size) { index ->
             val item = labelList[index]
@@ -275,6 +292,7 @@ fun Gallery(album: IndexedValue<Album>?) {
     var filteredItemList by remember { mutableStateOf(emptyList<AlbumItemRelation>()) }
     val viewModel: AlbumViewModel = viewModel()
     var filterLabels by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var filterFileTypes by remember { mutableStateOf<List<FileType>>(emptyList()) }
     var showLabelFilter by remember { mutableStateOf(false) }
     val coroutine = rememberCoroutineScope()
     val albumItemDataChange by viewModel.albumItemListChange.observeAsState()
@@ -336,11 +354,20 @@ fun Gallery(album: IndexedValue<Album>?) {
         }
         LabelFilter(showLabelFilter, album.value) { checkInfo->
             val targetLabelSet = checkInfo.toSet()
+            filterLabels = targetLabelSet
+
+        }
+        FileTypeFilter(showLabelFilter) { checkedFileType->
+            filterFileTypes = checkedFileType
+        }
+        LaunchedEffect(filterFileTypes, filterLabels) {
             coroutine.launch(Dispatchers.Default) {
-                val insersectList = itemList.filter { it.labelInfos.map { it.label }.toSet().intersect(targetLabelSet).isNotEmpty() }
+                val intersectList = itemList.filter {
+                    (filterLabels.isEmpty() || it.labelInfos.map { it.label }.toSet().intersect(filterLabels).isNotEmpty())
+                            && (filterFileTypes.isEmpty() || (it.fileInfo?.let { fileInfo -> filterFileTypes.contains(fileInfo.fileType) } ?: true))
+                }
                 withContext(Dispatchers.Main) {
-                    filterLabels = targetLabelSet
-                    filteredItemList = insersectList
+                    filteredItemList = intersectList
                 }
             }
         }
@@ -351,13 +378,8 @@ fun Gallery(album: IndexedValue<Album>?) {
             Modifier
                 .fillMaxSize()
                 .weight(1f)) {
-            val finalItemList = if (filterLabels.isEmpty()) {
-                itemList
-            } else {
-                filteredItemList
-            }
-            items(finalItemList.size, key = { index-> finalItemList[index].hashCode() }) { index: Int ->
-                AlbumItemView(finalItemList[index], size, padding)
+            items(filteredItemList.size, key = { index-> filteredItemList[index].hashCode() }) { index: Int ->
+                AlbumItemView(filteredItemList[index], size, padding)
             }
         }
     }
@@ -461,14 +483,14 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, size: Dp, padding: Dp) {
             )) {
 
 
-        AppThemeText(itemName, modifier = Modifier.fillMaxWidth(), maxLines = Int.MAX_VALUE, style = LocalTextStyle.current.copy(textAlign = TextAlign.Center, fontSize = 16.sp))
+        AppThemeText(itemName, modifier = Modifier.fillMaxWidth(), maxLines = 2, style = LocalTextStyle.current.copy(textAlign = TextAlign.Center, fontSize = 16.sp), overflow = TextOverflow.Ellipsis)
 
         val currentPickedImage = imageBitmap
         Box {
             if (currentPickedImage == null) {
                 Image(
                     painter = painterResource(imageResource),
-                    contentDescription = "上传照片",
+                    contentDescription = "文件缩略图",
                     Modifier
                         .clickable {
                             scope.launch(Dispatchers.IO) {
@@ -486,7 +508,7 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, size: Dp, padding: Dp) {
             } else {
                 Image(
                     bitmap = currentPickedImage,
-                    contentDescription = "上传照片",
+                    contentDescription = "文件缩略图",
                     Modifier
                         .clickable {
                             if (playIntent != null) {
@@ -527,26 +549,27 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, size: Dp, padding: Dp) {
             }, maxLines = Int.MAX_VALUE, enabled = false)
         }
 
-        AndroidView({ context ->
-            StarRateView(context).commonConfig().apply {
-                layoutParams = ViewGroup.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.MATCH_PARENT
-                )
-            }
-        },
-            Modifier
-                .fillMaxWidth()
-                .height(30.dp),
-            update = {
-                it.setScore(itemScore)
-            })
+        Box(Modifier.fillMaxWidth().wrapContentHeight()) {
+            AndroidView({ context ->
+                StarRateView(context).commonConfig().apply {
+                    layoutParams = ViewGroup.LayoutParams(
+                        ViewGroup.LayoutParams.WRAP_CONTENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT
+                    )
+                }
+            },
+                Modifier
+                    .wrapContentWidth()
+                    .height(30.dp)
+                    .align(Alignment.Center),
+                update = {
+                    it.setScore(itemScore)
+                })
+        }
 
         if (itemLabel.isNotEmpty()) {
-            LazyHorizontalStaggeredGrid(rows = StaggeredGridCells.Adaptive(24.dp),
-                Modifier
-                    .fillMaxWidth()
-                    .height(48.dp)) {
+            LazyRow(Modifier
+                    .fillMaxWidth()) {
                 items(itemLabelSize, key = { index: Int ->
                     itemLabel[index].label
                 }) { index: Int ->
