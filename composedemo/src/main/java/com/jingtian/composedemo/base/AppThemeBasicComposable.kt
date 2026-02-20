@@ -1,10 +1,16 @@
 package com.jingtian.composedemo.base
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -35,14 +41,20 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.constraintlayout.compose.ConstraintLayout
 import com.jingtian.composedemo.R
 import com.jingtian.composedemo.ui.theme.LocalAppPalette
+import com.jingtian.composedemo.ui.theme.LocalAppUIConstants
+import com.jingtian.composedemo.ui.theme.LocalMiddleButtonConfig
 
 
 enum class AppThemeClickEditableTextArrange {
@@ -304,9 +316,12 @@ fun AppThemeBasicTextField(
             )
             Modifier
                 .width(3.dp)
-                .focusRequester(focusRequester).align(Alignment.TopStart)
+                .focusRequester(focusRequester)
+                .align(Alignment.TopStart)
         } else {
-            modifier.width(IntrinsicSize.Min).align(Alignment.TopStart)
+            modifier
+                .width(IntrinsicSize.Min)
+                .align(Alignment.TopStart)
         }
         BasicTextField(
             value,
@@ -395,4 +410,93 @@ fun AppThemeHorizontalDivider(
     color: Color = LocalAppPalette.current.dividerColor
 ) {
     HorizontalDivider(modifier, thickness, color)
+}
+
+@Composable
+fun AppThemeConfirmDialog(
+    title: String? = null,
+    titleTextStyle: TextStyle = LocalTextStyle.current.copy(
+        fontSize = 18.sp,
+        fontWeight = FontWeight(600)
+    ),
+    properties: DialogProperties = DialogProperties(),
+    onNegative: () -> Unit = {},
+    onPositive: () -> Unit = {},
+    onDismissRequest: () -> Unit = {},
+    content: @Composable () -> Unit = {}
+) {
+    AppThemeDialog(
+        title = title,
+        titleTextStyle = titleTextStyle,
+        properties = properties,
+        onNegative = onNegative,
+        onMiddleClick = null,
+        onPositive = onPositive,
+        onDismissRequest = onDismissRequest
+    ) { header, actionButton ->
+        header()
+        content()
+        actionButton()
+    }
+}
+
+@Composable
+fun AppThemeDialog(
+    modifier: Modifier = Modifier
+        .fillMaxWidth(LocalAppUIConstants.current.dialogPercent)
+        .background(LocalAppPalette.current.dialogBg)
+        .padding(horizontal = 8.dp),
+    title: String? = null,
+    titleTextStyle: TextStyle = LocalTextStyle.current.copy(
+        fontSize = 18.sp,
+        fontWeight = FontWeight(600)
+    ),
+    properties: DialogProperties = DialogProperties(),
+    onNegative: () -> Unit = {},
+    onMiddleClick: (() -> Unit)? = null,
+    onPositive: () -> Unit = {},
+    onDismissRequest: () -> Unit = onNegative,
+    content: @Composable (
+        header: @Composable () -> Unit,
+        actionButton: @Composable () -> Unit
+    ) -> Unit
+) {
+    Dialog(onDismissRequest = onDismissRequest, properties = properties) {
+        Column(modifier) {
+            content(
+                header = {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    if (!title.isNullOrBlank()) {
+                        AppThemeText(title, style = titleTextStyle)
+                        Spacer(modifier = Modifier.height(2.dp))
+                        AppThemeHorizontalDivider(
+                            modifier = Modifier
+                                .height(1.dp)
+                                .align(Alignment.CenterHorizontally)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                },
+                actionButton = {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(Modifier.align(Alignment.End)) {
+                        Button(onClick = onNegative) {
+                            AppThemeText("取消")
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        if (onMiddleClick != null) {
+                            Button(onClick = onMiddleClick, colors = LocalMiddleButtonConfig.current.colors) {
+                                AppThemeText(LocalMiddleButtonConfig.current.text)
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
+                        Button(onClick = onPositive) {
+                            AppThemeText("确认")
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+            )
+        }
+    }
 }

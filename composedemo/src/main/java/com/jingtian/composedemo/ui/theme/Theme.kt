@@ -72,9 +72,35 @@ private val liteAppPalette = AppPalette(
     strokeColor = color686868,
 )
 
+
+val darkButtonColors = ButtonColors(
+    containerColor = Purple80,
+    contentColor = colorC8c8c8,
+    disabledContainerColor = colorC8c8c8,
+    disabledContentColor = colorF8f8f8
+)
+val liteButtonColors = ButtonColors(
+    containerColor = Purple40,
+    contentColor = colorBlack,
+    disabledContainerColor = color686868,
+    disabledContentColor = colorF8f8f8,
+)
+data class MiddleButtonConfig(
+    val colors: ButtonColors,
+    val text: String = "",
+)
+
+private val darkMiddleButtonConfig = MiddleButtonConfig(
+    colors = darkButtonColors
+)
+private val liteMiddleButtonConfig = MiddleButtonConfig(
+    colors = liteButtonColors
+)
+
 val LocalAppPalette = compositionLocalOf(structuralEqualityPolicy()) { liteAppPalette }
 val LocalAppUIConstants = compositionLocalOf(structuralEqualityPolicy()) { AppUIConstants() }
 val LocalSecondaryTextStyle = compositionLocalOf(structuralEqualityPolicy()) { TextStyle.Default }
+val LocalMiddleButtonConfig = compositionLocalOf(structuralEqualityPolicy()) { liteMiddleButtonConfig }
 
 @Composable
 fun DemoAppTheme(
@@ -104,6 +130,11 @@ fun DemoAppTheme(
     } else {
         liteAppPalette
     }
+    val middleButtonConfig = if (darkTheme) {
+        darkMiddleButtonConfig
+    } else {
+        liteMiddleButtonConfig
+    }
     MaterialTheme(
         colorScheme = colorScheme,
         typography = Typography,
@@ -114,6 +145,7 @@ fun DemoAppTheme(
                 LocalAppUIConstants provides AppUIConstants(),
                 LocalContentColor provides Color.Unspecified,
                 LocalSecondaryTextStyle provides customSecondaryTextStyle,
+                LocalMiddleButtonConfig provides middleButtonConfig,
                 content = content
             )
         }

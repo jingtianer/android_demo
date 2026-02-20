@@ -71,6 +71,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.asImageBitmap
@@ -94,6 +95,8 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.jingtian.composedemo.base.AppThemeBasicTextField
 import com.jingtian.composedemo.base.AppThemeClickEditableText
+import com.jingtian.composedemo.base.AppThemeConfirmDialog
+import com.jingtian.composedemo.base.AppThemeDialog
 import com.jingtian.composedemo.base.AppThemeHorizontalDivider
 import com.jingtian.composedemo.base.AppThemeText
 import com.jingtian.composedemo.base.BaseActivity
@@ -107,6 +110,7 @@ import com.jingtian.composedemo.dao.model.LabelInfo
 import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
 import com.jingtian.composedemo.ui.theme.LocalAppPalette
 import com.jingtian.composedemo.ui.theme.LocalAppUIConstants
+import com.jingtian.composedemo.ui.theme.LocalMiddleButtonConfig
 import com.jingtian.composedemo.ui.theme.LocalSecondaryTextStyle
 import com.jingtian.composedemo.ui.widget.RankTypeChooser
 import com.jingtian.composedemo.ui.widget.RankTypeChooser.Companion.createBg
@@ -377,14 +381,17 @@ fun Gallery(album: IndexedValue<Album>?) {
                         itemRankFilter = checkedItemRank
                     }
                 }
-                Image(painter = painterResource(R.drawable.trash_bin), contentDescription = "清空筛选", Modifier.size(24.dp).clickable {
-                    filterLabels = emptySet()
-                    filterFileTypes = emptyList()
-                    itemRankFilter = emptyList()
-                    labelFilterCheckedInfo.forEach { it.isChecked.value = false }
-                    fileTypeCheckState.forEach { it.isChecked.value = false }
-                    itemRankTypeCheckState.forEach { it.isChecked.value = false }
-                })
+                Image(painter = painterResource(R.drawable.trash_bin), contentDescription = "清空筛选",
+                    Modifier
+                        .size(24.dp)
+                        .clickable {
+                            filterLabels = emptySet()
+                            filterFileTypes = emptyList()
+                            itemRankFilter = emptyList()
+                            labelFilterCheckedInfo.forEach { it.isChecked.value = false }
+                            fileTypeCheckState.forEach { it.isChecked.value = false }
+                            itemRankTypeCheckState.forEach { it.isChecked.value = false }
+                        })
             }
         }
         LaunchedEffect(filterFileTypes, filterLabels, itemRankFilter) {
@@ -512,7 +519,10 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, size: Dp, padding: Dp) {
             )) {
 
 
-        AppThemeText(itemName, modifier = Modifier.wrapContentWidth().padding(bottom = 4.dp, start = padding, end = padding).align(Alignment.CenterHorizontally), maxLines = 2, style = LocalTextStyle.current.copy(textAlign = TextAlign.Start, fontSize = 16.sp), overflow = TextOverflow.Ellipsis)
+        AppThemeText(itemName, modifier = Modifier
+            .wrapContentWidth()
+            .padding(bottom = 4.dp, start = padding, end = padding)
+            .align(Alignment.CenterHorizontally), maxLines = 2, style = LocalTextStyle.current.copy(textAlign = TextAlign.Start, fontSize = 16.sp), overflow = TextOverflow.Ellipsis)
 
         val currentPickedImage = imageBitmap
         Box {
@@ -576,12 +586,17 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, size: Dp, padding: Dp) {
         if (!itemDesc.isNullOrBlank()) {
             OutlinedTextField(itemDesc, { value->
                 itemDesc = value
-            }, modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp, start = padding, end = padding), label = {
+            }, modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 4.dp, start = padding, end = padding), label = {
                 AppThemeText("评论")
             }, maxLines = Int.MAX_VALUE, enabled = false)
         }
 
-        Box(Modifier.fillMaxWidth().wrapContentHeight()) {
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .wrapContentHeight()) {
             AndroidView({ context ->
                 StarRateView(context).commonConfig().apply {
                     layoutParams = ViewGroup.LayoutParams(
@@ -601,9 +616,10 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, size: Dp, padding: Dp) {
         }
 
         if (itemLabel.isNotEmpty()) {
-            LazyRow(Modifier
-                .fillMaxWidth()
-                .padding(bottom = 4.dp, start = padding, end = padding)) {
+            LazyRow(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 4.dp, start = padding, end = padding)) {
                 items(itemLabelSize, key = { index: Int ->
                     itemLabel[index].label
                 }) { index: Int ->
@@ -627,187 +643,222 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, size: Dp, padding: Dp) {
 fun EditDialog(albumItemRelation: AlbumItemRelation, onDismiss: ()->Unit) {
     val album = albumItemRelation.albumItem
     val viewModel : AlbumViewModel = viewModel()
-    Dialog(onDismissRequest = { onDismiss() }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Column(
+
+    var pickedImage by remember { mutableStateOf<ImageBitmap?>(null) }
+    var itemName by remember { mutableStateOf(album.itemName) }
+    var itemDesc by remember { mutableStateOf(album.desc) }
+    var itemRank by remember { mutableStateOf(album.rank) }
+    var itemScore by remember { mutableStateOf(album.score) }
+    val itemLabel by remember { mutableStateOf(albumItemRelation.labelInfos.toMutableList()) }
+    var itemLabelSize by remember { mutableStateOf(albumItemRelation.labelInfos.size) }
+
+    var selectedUri by remember { mutableStateOf(albumItemRelation.fileInfo?.getFileUri()) }
+    var selectedFileType by remember { mutableStateOf(albumItemRelation.fileInfo?.fileType) }
+    val scope = rememberCoroutineScope()
+    var imageResource by remember { mutableStateOf(R.drawable.upload_to_cloud) }
+
+    fun deleteItem() {
+        viewModel.deleteItem(albumItemRelation)
+    }
+    fun saveItem(context: Context) {
+        val selectedUri = selectedUri
+        val selectedFileType = selectedFileType
+        if (selectedUri == null || selectedFileType == null || itemName.isNullOrBlank()) {
+            Toast.makeText(context, "数据不合法，缺少文件或标题", Toast.LENGTH_SHORT).show()
+            return
+        }
+        onDismiss()
+        viewModel.updateItem(
+            albumItemRelation,
+            selectedUri,
+            selectedFileType,
+            itemName,
+            itemRank,
+            itemDesc,
+            itemScore,
+            itemLabel,
+        )
+    }
+
+    fun updateImage(uri: Uri, fileType: FileType) {
+        when (fileType) {
+            FileType.IMAGE -> {
+                scope.launch(Dispatchers.IO) {
+                    val bitmap = BitMapCachePool.toBitMap(uri).second?.asImageBitmap()
+                    withContext(Dispatchers.Main) {
+                        pickedImage = bitmap
+                    }
+                }
+            }
+
+            FileType.VIDEO -> {
+                getVideoThumbnail(scope, uri) { bitmap: Bitmap? ->
+                    pickedImage = bitmap?.asImageBitmap()
+                }
+            }
+
+            FileType.AUDIO -> {
+                imageResource = R.drawable.music
+                pickedImage = null
+            }
+
+            FileType.RegularFile -> {
+                imageResource = R.drawable.file
+                pickedImage = null
+            }
+        }
+    }
+
+    LaunchedEffect(selectedUri) {
+        val uri = selectedUri
+        val fileType = selectedFileType
+        if (uri != null && fileType != null) {
+            updateImage(uri, fileType)
+        } else {
+            imageResource = R.drawable.load_failed
+        }
+        if (itemName.isNullOrBlank() && uri != null) {
+            itemName = getFileNameFromUri(uri) ?:""
+        }
+    }
+
+    val multipleImagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument(),
+        onResult = { uri: Uri? ->
+            uri ?: return@rememberLauncherForActivityResult
+            selectedFileType = getMediaType(uri)
+            selectedUri = uri
+        }
+    )
+
+    fun pickImage() {
+        multipleImagePickerLauncher.launch(FileType.mimes)
+    }
+
+    val context = LocalContext.current
+    CompositionLocalProvider(
+        LocalMiddleButtonConfig provides LocalMiddleButtonConfig.current.copy(
+            text = "删除",
+            colors = LocalMiddleButtonConfig.current.colors.copy(containerColor = Color.Red)
+        )
+    ) {
+        AppThemeDialog(
             Modifier
                 .fillMaxWidth(LocalAppUIConstants.current.dialogPercent)
-                .verticalScroll(rememberScrollState())
-                .background(LocalAppPalette.current.dialogBg)
-                .padding(12.dp)
-                .clip(RectangleShape)
-                .wrapContentHeight()
-        ) {
-            var pickedImage by remember { mutableStateOf<ImageBitmap?>(null) }
-            var itemName by remember { mutableStateOf(album.itemName) }
-            var itemDesc by remember { mutableStateOf(album.desc) }
-            var itemRank by remember { mutableStateOf(album.rank) }
-            var itemScore by remember { mutableStateOf(album.score) }
-            val itemLabel by remember { mutableStateOf(albumItemRelation.labelInfos.toMutableList()) }
-            var itemLabelSize by remember { mutableStateOf(albumItemRelation.labelInfos.size) }
-
-            var selectedUri by remember { mutableStateOf(albumItemRelation.fileInfo?.getFileUri()) }
-            var selectedFileType by remember { mutableStateOf(albumItemRelation.fileInfo?.fileType) }
-            val scope = rememberCoroutineScope()
-            var imageResource by remember { mutableStateOf(R.drawable.upload_to_cloud) }
-
-            fun deleteItem() {
-                viewModel.deleteItem(albumItemRelation)
-            }
-            fun saveItem(context: Context) {
-                val selectedUri = selectedUri
-                val selectedFileType = selectedFileType
-                if (selectedUri == null || selectedFileType == null || itemName.isNullOrBlank()) {
-                    Toast.makeText(context, "数据不合法，缺少文件或标题", Toast.LENGTH_SHORT).show()
-                    return
-                }
+                .background(LocalAppPalette.current.dialogBg),
+            onNegative = onDismiss,
+            onMiddleClick = {
+                deleteItem()
                 onDismiss()
-                viewModel.updateItem(
-                    albumItemRelation,
-                    selectedUri,
-                    selectedFileType,
-                    itemName,
-                    itemRank,
-                    itemDesc,
-                    itemScore,
-                    itemLabel,
-                )
-            }
+            },
+            onPositive = {
+                saveItem(context)
+            },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) { _, actionButtons->
+            Column(
+                Modifier
+//                    .fillMaxWidth(LocalAppUIConstants.current.dialogPercent)
+                    .verticalScroll(rememberScrollState())
+                    .background(LocalAppPalette.current.dialogBg)
+//                    .padding(12.dp)
+                    .clip(RectangleShape)
+                    .wrapContentHeight()
+            ) {
 
-            fun updateImage(uri: Uri, fileType: FileType) {
-                when (fileType) {
-                    FileType.IMAGE -> {
-                        scope.launch(Dispatchers.IO) {
-                            val bitmap = BitMapCachePool.toBitMap(uri).second?.asImageBitmap()
-                            withContext(Dispatchers.Main) {
-                                pickedImage = bitmap
+                val currentPickedImage = pickedImage
+                if (currentPickedImage == null) {
+                    Image(
+                        painter = painterResource(imageResource),
+                        contentDescription = "上传照片",
+                        Modifier
+                            .clickable {
+                                pickImage()
                             }
-                        }
-                    }
-
-                    FileType.VIDEO -> {
-                        getVideoThumbnail(scope, uri) { bitmap: Bitmap? ->
-                            pickedImage = bitmap?.asImageBitmap()
-                        }
-                    }
-
-                    FileType.AUDIO -> {
-                        imageResource = R.drawable.music
-                        pickedImage = null
-                    }
-
-                    FileType.RegularFile -> {
-                        imageResource = R.drawable.file
-                        pickedImage = null
-                    }
-                }
-            }
-
-            LaunchedEffect(selectedUri) {
-                val uri = selectedUri
-                val fileType = selectedFileType
-                if (uri != null && fileType != null) {
-                    updateImage(uri, fileType)
+                            .fillMaxWidth()
+                            .wrapContentHeight(),
+                        contentScale = ContentScale.Fit
+                    )
                 } else {
-                    imageResource = R.drawable.load_failed
-                }
-                if (itemName.isNullOrBlank() && uri != null) {
-                    itemName = getFileNameFromUri(uri) ?:""
-                }
-            }
-
-            val multipleImagePickerLauncher = rememberLauncherForActivityResult(
-                contract = ActivityResultContracts.OpenDocument(),
-                onResult = { uri: Uri? ->
-                    uri ?: return@rememberLauncherForActivityResult
-                    selectedFileType = getMediaType(uri)
-                    selectedUri = uri
-                }
-            )
-
-            fun pickImage() {
-                multipleImagePickerLauncher.launch(FileType.mimes)
-            }
-
-            val currentPickedImage = pickedImage
-            if (currentPickedImage == null) {
-                Image(
-                    painter = painterResource(imageResource),
-                    contentDescription = "上传照片",
-                    Modifier
-                        .clickable {
-                            pickImage()
-                        }
-                        .fillMaxWidth()
-                        .wrapContentHeight(),
-                    contentScale = ContentScale.Fit
-                )
-            } else {
-                Image(
-                    bitmap = currentPickedImage,
-                    contentDescription = "上传照片",
-                    Modifier
-                        .clickable {
-                            pickImage()
-                        }
-                        .fillMaxWidth()
-                        .wrapContentHeight(),
-                    contentScale = ContentScale.Fit
-                )
-            }
-
-            OutlinedTextField(itemName, { value->
-                itemName = value
-            }, modifier = Modifier.fillMaxWidth(), label = {
-                AppThemeText("文件名称")
-            }, maxLines = Int.MAX_VALUE)
-
-            OutlinedTextField(itemDesc, { value->
-                itemDesc = value
-            }, modifier = Modifier.fillMaxWidth(), label = {
-                AppThemeText("文件描述")
-            }, maxLines = Int.MAX_VALUE)
-
-            AndroidView({ context ->
-                StarRateView(context).commonEditableConfig().apply {
-                    onScoreChange = StarRateView.Companion.OnScoreChange { score: Float ->
-                        itemScore = score
-                    }
-                    layoutParams = ViewGroup.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.MATCH_PARENT
+                    Image(
+                        bitmap = currentPickedImage,
+                        contentDescription = "上传照片",
+                        Modifier
+                            .clickable {
+                                pickImage()
+                            }
+                            .fillMaxWidth()
+                            .wrapContentHeight(),
+                        contentScale = ContentScale.Fit
                     )
                 }
-            },
-                Modifier
+
+                OutlinedTextField(itemName, { value->
+                    itemName = value
+                }, modifier = Modifier
                     .fillMaxWidth()
-                    .height(30.dp),
-                update = {
-                    it.setScore(itemScore)
-                })
+                    .padding(horizontal = 6.dp), label = {
+                    AppThemeText("文件名称")
+                }, maxLines = Int.MAX_VALUE)
 
-            AndroidView({ context ->
-                RankTypeChooser(context).apply {
-                    layoutParams = ViewGroup.LayoutParams(
-                        ViewGroup.LayoutParams.WRAP_CONTENT,
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                    )
-                    onRankChange = RankTypeChooser.Companion.OnRankTypeChange { value ->
-                        itemRank = value
+                OutlinedTextField(itemDesc, { value->
+                    itemDesc = value
+                }, modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 6.dp), label = {
+                    AppThemeText("文件描述")
+                }, maxLines = Int.MAX_VALUE)
+
+                Spacer(Modifier.height(4.dp))
+
+                AndroidView({ context ->
+                    StarRateView(context).commonEditableConfig().apply {
+                        onScoreChange = StarRateView.Companion.OnScoreChange { score: Float ->
+                            itemScore = score
+                        }
+                        layoutParams = ViewGroup.LayoutParams(
+                            ViewGroup.LayoutParams.WRAP_CONTENT,
+                            ViewGroup.LayoutParams.MATCH_PARENT
+                        )
                     }
-                }
-            },
-                Modifier
-                    .wrapContentWidth()
-                    .height(30.dp),
-                update = {
-                    it.setRankType(itemRank)
-                })
-            Column {
+                },
+                    Modifier
+                        .wrapContentWidth()
+                        .height(30.dp)
+                        .align(Alignment.CenterHorizontally),
+                    update = {
+                        it.setScore(itemScore)
+                    })
+                Spacer(Modifier.height(4.dp))
+
+                AndroidView({ context ->
+                    RankTypeChooser(context).apply {
+                        layoutParams = ViewGroup.LayoutParams(
+                            ViewGroup.LayoutParams.WRAP_CONTENT,
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                        )
+                        onRankChange = RankTypeChooser.Companion.OnRankTypeChange { value ->
+                            itemRank = value
+                        }
+                    }
+                },
+                    Modifier
+                        .wrapContentWidth()
+                        .height(30.dp)
+                        .align(Alignment.CenterHorizontally),
+                    update = {
+                        it.setRankType(itemRank)
+                    })
+
+                Spacer(Modifier.height(4.dp))
+
                 EditLabelView {
                     itemLabel.add(0, LabelInfo(label = it))
                     itemLabelSize = itemLabel.size
                 }
-                LazyRow {
+                Spacer(Modifier.height(4.dp))
+
+                LazyRow(Modifier.padding(horizontal = 6.dp)) {
                     items(itemLabelSize, key = { index: Int ->
                         itemLabel[index].label
                     }) { index: Int ->
@@ -817,26 +868,8 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, onDismiss: ()->Unit) {
                         }
                     }
                 }
-            }
-
-            val context = LocalContext.current
-
-            Row {
-                Button({
-                    onDismiss()
-                }) {
-                    Text("取消")
-                }
-                Button({
-                    deleteItem()
-                    onDismiss()
-                }) {
-                    Text("删除")
-                }
-                Button({
-                    saveItem(context)
-                }) {
-                    Text("确认")
+                Column(Modifier.padding(horizontal = 6.dp)) {
+                    actionButtons()
                 }
             }
         }
@@ -845,74 +878,80 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, onDismiss: ()->Unit) {
 
 @Composable
 fun AddItemDialog(album: Album, onDismiss: () -> Unit) {
-    Dialog(onDismissRequest = { onDismiss() }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+
+    var pickedImage by remember { mutableStateOf<ImageBitmap?>(null) }
+    var itemName by remember { mutableStateOf("") }
+    var itemDesc by remember { mutableStateOf("") }
+    var itemRank by remember { mutableStateOf(ItemRank.NONE) }
+    var itemScore by remember { mutableStateOf(0.0f) }
+    val itemLabel by remember { mutableStateOf<MutableList<LabelInfo>>(mutableListOf()) }
+    var itemLabelSize by remember { mutableStateOf<Int>(0) }
+
+    var selectedUri by remember { mutableStateOf<Uri?>(null) }
+    val scope = rememberCoroutineScope()
+    var imageResource by remember { mutableStateOf(R.drawable.upload_to_cloud) }
+    val viewModel: AlbumViewModel = viewModel()
+
+    fun saveItem(context: Context) {
+        if (selectedUri == null || itemName.isNullOrBlank()) {
+            Toast.makeText(context, "数据不合法，缺少文件或标题", Toast.LENGTH_SHORT).show()
+            return
+        }
+        onDismiss()
+        viewModel.addItem(album, selectedUri, itemName, itemRank, itemDesc, itemScore, itemLabel)
+    }
+
+    val multipleImagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument(),
+        onResult = { uri: Uri? ->
+            uri ?: return@rememberLauncherForActivityResult
+            when (getMediaType(uri)) {
+                FileType.IMAGE -> {
+                    BitMapCachePool.toBitMap(scope, uri) { _, bitmap->
+                        pickedImage = bitmap?.asImageBitmap()
+                    }
+                }
+
+                FileType.VIDEO -> {
+                    getVideoThumbnail(scope, uri) { bitmap: Bitmap? ->
+                        pickedImage = bitmap?.asImageBitmap()
+                    }
+                }
+
+                FileType.AUDIO -> {
+                    imageResource = R.drawable.music
+                }
+
+                FileType.RegularFile -> {
+                    imageResource = R.drawable.file
+                }
+            }
+            if (itemName.isNullOrBlank()) {
+                itemName = getFileNameFromUri(uri) ?:""
+            }
+            selectedUri = uri
+        }
+    )
+
+    fun pickImage() {
+        multipleImagePickerLauncher.launch(FileType.mimes)
+    }
+
+    val context = LocalContext.current
+    AppThemeDialog(
+        Modifier
+            .fillMaxWidth(LocalAppUIConstants.current.dialogPercent)
+            .background(LocalAppPalette.current.dialogBg)
+            .clip(RectangleShape)
+            .wrapContentHeight(),
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+        onNegative = onDismiss,
+        onPositive = { saveItem(context) }) { _, actionButton ->
         Column(
             Modifier
-                .fillMaxWidth(LocalAppUIConstants.current.dialogPercent)
                 .verticalScroll(rememberScrollState())
-                .background(LocalAppPalette.current.dialogBg)
-                .padding(12.dp)
-                .clip(RectangleShape)
-                .wrapContentHeight()
         ) {
-            var pickedImage by remember { mutableStateOf<ImageBitmap?>(null) }
-            var itemName by remember { mutableStateOf("") }
-            var itemDesc by remember { mutableStateOf("") }
-            var itemRank by remember { mutableStateOf(ItemRank.NONE) }
-            var itemScore by remember { mutableStateOf(0.0f) }
-            val itemLabel by remember { mutableStateOf<MutableList<LabelInfo>>(mutableListOf()) }
-            var itemLabelSize by remember { mutableStateOf<Int>(0) }
-
-            var selectedUri by remember { mutableStateOf<Uri?>(null) }
-            val scope = rememberCoroutineScope()
-            var imageResource by remember { mutableStateOf(R.drawable.upload_to_cloud) }
-            val viewModel: AlbumViewModel = viewModel()
-
-            fun saveItem(context: Context) {
-                if (selectedUri == null || itemName.isNullOrBlank()) {
-                    Toast.makeText(context, "数据不合法，缺少文件或标题", Toast.LENGTH_SHORT).show()
-                    return
-                }
-                onDismiss()
-                viewModel.addItem(album, selectedUri, itemName, itemRank, itemDesc, itemScore, itemLabel)
-            }
-
-            val multipleImagePickerLauncher = rememberLauncherForActivityResult(
-                contract = ActivityResultContracts.OpenDocument(),
-                onResult = { uri: Uri? ->
-                    uri ?: return@rememberLauncherForActivityResult
-                    when (getMediaType(uri)) {
-                        FileType.IMAGE -> {
-                            BitMapCachePool.toBitMap(scope, uri) { _, bitmap->
-                                pickedImage = bitmap?.asImageBitmap()
-                            }
-                        }
-
-                        FileType.VIDEO -> {
-                            getVideoThumbnail(scope, uri) { bitmap: Bitmap? ->
-                                pickedImage = bitmap?.asImageBitmap()
-                            }
-                        }
-
-                        FileType.AUDIO -> {
-                            imageResource = R.drawable.music
-                        }
-
-                        FileType.RegularFile -> {
-                            imageResource = R.drawable.file
-                        }
-                    }
-                    if (itemName.isNullOrBlank()) {
-                        itemName = getFileNameFromUri(uri) ?:""
-                    }
-                    selectedUri = uri
-                }
-            )
-
-            fun pickImage() {
-                multipleImagePickerLauncher.launch(FileType.mimes)
-            }
-
             val currentPickedImage = pickedImage
             if (currentPickedImage == null) {
                 Image(
@@ -942,13 +981,17 @@ fun AddItemDialog(album: Album, onDismiss: () -> Unit) {
 
             OutlinedTextField(itemName, { value->
                 itemName = value
-            }, modifier = Modifier.fillMaxWidth(), label = {
+            }, modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 6.dp), label = {
                 AppThemeText("文件名称")
             }, maxLines = Int.MAX_VALUE)
 
             OutlinedTextField(itemDesc, { value->
                 itemDesc = value
-            }, modifier = Modifier.fillMaxWidth(), label = {
+            }, modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 6.dp), label = {
                 AppThemeText("文件描述")
             }, maxLines = Int.MAX_VALUE)
 
@@ -958,14 +1001,16 @@ fun AddItemDialog(album: Album, onDismiss: () -> Unit) {
                         itemScore = score
                     }
                     layoutParams = ViewGroup.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT,
                         ViewGroup.LayoutParams.MATCH_PARENT
                     )
                 }
             },
                 Modifier
-                    .fillMaxWidth()
-                    .height(30.dp),
+                    .wrapContentWidth()
+                    .height(30.dp)
+                    .padding(horizontal = 6.dp)
+                    .align(Alignment.CenterHorizontally),
                 update = {
                     it.setScore(itemScore)
                 })
@@ -983,39 +1028,29 @@ fun AddItemDialog(album: Album, onDismiss: () -> Unit) {
             },
                 Modifier
                     .wrapContentWidth()
-                    .height(30.dp),
+                    .height(30.dp)
+                    .padding(horizontal = 6.dp)
+                    .align(Alignment.CenterHorizontally),
                 update = {
                     it.setRankType(itemRank)
                 })
 
-            Column {
-                EditLabelView {
-                    itemLabel.add(0, LabelInfo(label = it))
-                    itemLabelSize = itemLabel.size
-                }
-                LazyRow {
-                    items(itemLabelSize, key = { index: Int ->
-                        itemLabel[index].label
-                    }) { index: Int ->
-                        LabelView(itemLabel[index]) {
-                            itemLabel.removeAt(index)
-                            itemLabelSize = itemLabel.size
-                        }
+            EditLabelView {
+                itemLabel.add(0, LabelInfo(label = it))
+                itemLabelSize = itemLabel.size
+            }
+            LazyRow(Modifier.padding(horizontal = 6.dp)) {
+                items(itemLabelSize, key = { index: Int ->
+                    itemLabel[index].label
+                }) { index: Int ->
+                    LabelView(itemLabel[index]) {
+                        itemLabel.removeAt(index)
+                        itemLabelSize = itemLabel.size
                     }
                 }
             }
-            val context = LocalContext.current
-            Row {
-                Button({
-                    onDismiss()
-                }) {
-                    Text("取消")
-                }
-                Button({
-                    saveItem(context)
-                }) {
-                    Text("确认")
-                }
+            Column(Modifier.padding(horizontal = 6.dp)) {
+                actionButton()
             }
         }
     }
@@ -1085,7 +1120,10 @@ fun LabelView(label: LabelInfo, editable: Boolean = true, onRemove: ()->Unit) {
 @Composable
 fun EditLabelView(onAddLabel: (String)->Unit) {
     var labelText by remember { mutableStateOf("") }
-    Row(Modifier.wrapContentSize(), verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        Modifier
+            .wrapContentSize()
+            .padding(horizontal = 6.dp), verticalAlignment = Alignment.CenterVertically) {
         CompositionLocalProvider(LocalTextStyle provides LocalTextStyle.current.copy(fontSize = 24.sp)) {
             AppThemeBasicTextField(labelText, {value-> labelText = value},
                 Modifier
@@ -1302,34 +1340,22 @@ fun DrawerFunctionArea() {
         val viewModel: AlbumViewModel = viewModel()
         var albumName by remember { mutableStateOf("") }
         val focusRequester = remember { FocusRequester() }
-        Dialog(
+        AppThemeDialog(
             onDismissRequest = { dialogState = false },
-        ) {
-            Column(
-                Modifier
-                    .background(LocalAppPalette.current.dialogBg)
-                    .fillMaxWidth(0.82f)
-                    .padding(8.dp)
-            ) {
-
+            onNegative = { dialogState = false },
+            onPositive = {
+                dialogState = false
+                viewModel.addAlbum(Album(albumName = albumName))
+            }
+        ) { _, actionButtons->
+            Column(Modifier.padding(horizontal = 8.dp)) {
+                Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(albumName, { value ->
                     albumName = value
                 }, label = {
                     AppThemeText("相册名称")
                 }, modifier = Modifier.focusRequester(focusRequester))
-                Row {
-                    Button({
-                        dialogState = false
-                    }) {
-                        AppThemeText("取消")
-                    }
-                    Button({
-                        dialogState = false
-                        viewModel.addAlbum(Album(albumName = albumName))
-                    }) {
-                        AppThemeText("确认")
-                    }
-                }
+                actionButtons()
             }
         }
         LaunchedEffect(dialogState) {
@@ -1452,47 +1478,13 @@ fun DrawerMenuItem(
     }
 
     if (deleteConfirmDialogState) {
-        ConfirmDialog("确认删除相册: ${item.albumName}", properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnClickOutside = false), onNegative = {
+        AppThemeConfirmDialog("确认删除相册: ${item.albumName}", properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnClickOutside = false), onNegative = {
             deleteConfirmDialogState = false
         }, onPositive = {
             deleteConfirmDialogState = false
             viewModel.deleteAlbum(item)
+        }, onDismissRequest = {
+            deleteConfirmDialogState = false
         }, content = {})
-    }
-}
-
-@Composable
-fun ConfirmDialog(title: String, titleTextStyle: TextStyle = LocalTextStyle.current.copy(
-    fontSize = 22.sp,
-    fontWeight = FontWeight(600)
-), properties: DialogProperties = DialogProperties(), onNegative: () -> Unit, onPositive: () -> Unit, content: @Composable ()->Unit) {
-    Dialog(onDismissRequest = onNegative, properties = properties) {
-        Column(
-            Modifier
-                .fillMaxWidth(0.9f)
-                .background(LocalAppPalette.current.dialogBg)
-                .padding(horizontal = 8.dp)) {
-            Spacer(modifier = Modifier.height(8.dp))
-            AppThemeText(title, style = titleTextStyle)
-            Spacer(modifier = Modifier.height(2.dp))
-            AppThemeHorizontalDivider(
-                modifier = Modifier
-                    .height(1.dp)
-                    .align(Alignment.CenterHorizontally)
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            content()
-            Spacer(modifier = Modifier.height(8.dp))
-            Row(Modifier.align(Alignment.End)) {
-                Button(onClick = onNegative) {
-                    AppThemeText("取消")
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-                Button(onClick = onPositive) {
-                    AppThemeText("确认")
-                }
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-        }
     }
 }
