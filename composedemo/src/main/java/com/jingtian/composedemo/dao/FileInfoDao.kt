@@ -19,9 +19,15 @@ interface FileInfoDao {
     @Delete
     fun deleteFileInfo(fileInfo: FileInfo)
 
+    @Delete
+    fun deleteAllFileInfo(fileIdList: List<FileInfo>)
+
     @Update
     fun updateFileInfo(fileInfo: FileInfo)
 
     @Insert
     fun insertFileInfo(fileInfo: FileInfo): Long
+
+    @Insert
+    fun insertAllFileInfo(fileInfo: List<FileInfo>): List<Long>
 }

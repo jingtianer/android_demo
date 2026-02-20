@@ -2,9 +2,12 @@ package com.jingtian.composedemo.utils
 
 import android.content.ContentResolver
 import android.content.Context
+import android.database.Cursor
 import android.graphics.Bitmap
 import android.media.MediaMetadataRetriever
 import android.net.Uri
+import android.provider.DocumentsContract
+import android.provider.MediaStore
 import android.webkit.MimeTypeMap
 import androidx.core.net.toUri
 import com.jingtian.composedemo.base.app
@@ -27,6 +30,35 @@ object FileStorageUtils {
     private const val RANK_IMAGE_STORE_PREFIX = "file_"
 
     private val storage = ConcurrentHashMap<FileType, SoftReference<FileStorage>>()
+
+    fun getFileNameFromUri(uri: Uri): String? {
+        // 方案1：直接通过ContentResolver查询DISPLAY_NAME
+        val projection = arrayOf(MediaStore.MediaColumns.DISPLAY_NAME)
+        val cursor: Cursor? = app.contentResolver.query(uri, projection, null, null, null)
+
+        cursor?.use {
+            if (it.moveToFirst()) {
+                val nameIndex = it.getColumnIndex(MediaStore.MediaColumns.DISPLAY_NAME)
+                if (nameIndex != -1) {
+                    return it.getString(nameIndex)
+                }
+            }
+        }
+
+        // 方案2：如果上面的方式失败，尝试从Uri路径中提取
+        return runCatching {
+            when {
+                // 处理DocumentProvider
+                DocumentsContract.isDocumentUri(app, uri) -> {
+                    val docId = DocumentsContract.getDocumentId(uri)
+                    val split = docId.split(":")
+                    if (split.size >= 2) split[1] else null
+                }
+                // 处理普通Uri
+                else -> uri.lastPathSegment
+            }
+        }.getOrNull()
+    }
 
     fun checkRootDir() {
         val storeDir = File(app.filesDir, RANK_IMAGE_STORE_ROOT_DIR)

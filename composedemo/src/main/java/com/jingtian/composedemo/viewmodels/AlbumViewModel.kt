@@ -2,8 +2,11 @@ package com.jingtian.composedemo.viewmodels
 
 import android.net.Uri
 import android.util.Log
+import androidx.core.net.toUri
+import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import com.jingtian.composedemo.base.app
 import com.jingtian.composedemo.dao.DataBase
 import com.jingtian.composedemo.dao.model.Album
 import com.jingtian.composedemo.dao.model.AlbumItem
@@ -15,8 +18,15 @@ import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
 import com.jingtian.composedemo.utils.BitMapCachePool
 import com.jingtian.composedemo.utils.CoroutineUtils
 import com.jingtian.composedemo.utils.FileStorageUtils
+import com.jingtian.composedemo.utils.FileStorageUtils.getFileNameFromUri
+import com.jingtian.composedemo.utils.FileStorageUtils.getMediaType
+import com.jingtian.composedemo.utils.FileStorageUtils.safeToFile
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.flatMapConcat
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
+import java.io.File
 
 class AlbumViewModel : ViewModel() {
     companion object {
@@ -52,9 +62,17 @@ class AlbumViewModel : ViewModel() {
         }
     }
     fun deleteAlbum(album: Album) {
+        val albumId = album.albumId ?: return
         CoroutineUtils.runIOTask({
+            val itemInfoList = albumItemDao.getAllAlbumItemListWithExtra(albumId)
+            val files = itemInfoList.mapNotNull { it.fileInfo }
+            files.forEach {
+                FileStorageUtils.getStorage(it.fileType)?.delete(it.storageId)
+            }
+            DataBase.dbImpl.getFileInfoDao().deleteAllFileInfo(files)
+            val albumItemIds = itemInfoList.mapNotNull { it.albumItem.itemId }
+            DataBase.dbImpl.getLabelInfoDao().deleteAllLabelOfAlbumItemIdList(albumItemIds)
             albumDao.deleteAlbum(album)
-            albumDao.getAllAlbum().collect { Log.d(TAG, "addAlbum: ${it.map { "${it.albumId}, ${it.albumName}, ${it.createTime}" }.joinToString { "," }}") }
             Log.d(TAG, "addAlbum: ${album.albumName}")
         }) {
             albumListChange.value = (albumListChange.value ?: 0) + 1
@@ -108,6 +126,43 @@ class AlbumViewModel : ViewModel() {
             DataBase.dbImpl.getLabelInfoDao().insertAllLabel(itemLabel)
         }) {
             albumItemListChange.value = 1 + (albumItemListChange.value ?: 0)
+        }
+    }
+
+    fun importFiles(album: Album, uri: Uri) {
+        CoroutineUtils.runIOTask({
+            val documentFile = DocumentFile.fromTreeUri(app, uri)
+            Log.d(TAG, "importFiles: $documentFile")
+            documentFile ?: return@runIOTask
+            val fileInfoList: MutableList<Pair<FileInfo, AlbumItem>> = mutableListOf()
+            traverseUri(documentFile, album, fileInfoList)
+            val idList = DataBase.dbImpl.getFileInfoDao().insertAllFileInfo(fileInfoList.map { it.first })
+            val albumItemList = fileInfoList.mapIndexed { index: Int, pair: Pair<FileInfo, AlbumItem> ->
+                pair.second.also {
+                    it.fileId = idList[index]
+                }
+            }
+            DataBase.dbImpl.getAlbumItemDao().insertAllAlbumItem(albumItemList)
+        }) {
+            albumItemListChange.value = 1 + (albumItemListChange.value ?: 0)
+        }
+    }
+
+    fun traverseUri(documentFile: DocumentFile, album: Album, fileInfoList: MutableList<Pair<FileInfo, AlbumItem>>) {
+        if (documentFile.isDirectory) {
+            documentFile.listFiles()?.forEach {file->
+                Log.d(TAG, "treavourseUri: ${file.name}")
+                traverseUri(file, album, fileInfoList)
+            }
+        } else {
+            val uri = documentFile.uri
+            val type = getMediaType(uri)
+            val fileName = getFileNameFromUri(uri) ?: ""
+            val fileStorageId = FileStorageUtils.getStorage(type)?.asyncStore(uri) ?: DataBase.INVALID_ID
+            val fileInfo = FileInfo(uri = uri, storageId = fileStorageId, fileType = type)
+            val albumItem = AlbumItem(itemName = fileName, albumId = album.albumId ?: DataBase.INVALID_ID)
+            Log.d(TAG, "treavourseUri2: $type. $fileName, $fileStorageId, $uri")
+            fileInfoList.add(fileInfo to albumItem)
         }
     }
 

@@ -14,17 +14,11 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -39,19 +33,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.staggeredgrid.LazyHorizontalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
-import androidx.compose.foundation.lazy.staggeredgrid.items
-import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.material3.DrawerValue
@@ -62,7 +51,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.*
@@ -83,18 +71,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.DpSize
-import androidx.compose.ui.unit.TextUnit
-import androidx.compose.ui.unit.TextUnitType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.times
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
-import androidx.core.net.toFile
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.jingtian.composedemo.base.AppThemeBasicTextField
 import com.jingtian.composedemo.base.AppThemeClickEditableText
@@ -102,10 +85,8 @@ import com.jingtian.composedemo.base.AppThemeText
 import com.jingtian.composedemo.base.BaseActivity
 import com.jingtian.composedemo.dao.DataBase
 import com.jingtian.composedemo.dao.model.Album
-import com.jingtian.composedemo.dao.model.AlbumItem
 import com.jingtian.composedemo.dao.model.DEFAULT_DESC
 import com.jingtian.composedemo.dao.model.DEFAULT_USER_NAME
-import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.FileType
 import com.jingtian.composedemo.dao.model.ItemRank
 import com.jingtian.composedemo.dao.model.LabelInfo
@@ -115,10 +96,10 @@ import com.jingtian.composedemo.ui.theme.LocalAppUIConstants
 import com.jingtian.composedemo.ui.widget.RankTypeChooser
 import com.jingtian.composedemo.ui.widget.RankTypeChooser.Companion.createBg
 import com.jingtian.composedemo.ui.widget.StarRateView
-import com.jingtian.composedemo.ui.widget.StarRateView.Companion.OnScoreChange
 import com.jingtian.composedemo.utils.BitMapCachePool
 import com.jingtian.composedemo.utils.CoroutineUtils
 import com.jingtian.composedemo.utils.FileStorageUtils
+import com.jingtian.composedemo.utils.FileStorageUtils.getFileNameFromUri
 import com.jingtian.composedemo.utils.FileStorageUtils.getMediaType
 import com.jingtian.composedemo.utils.FileStorageUtils.getVideoThumbnail
 import com.jingtian.composedemo.utils.FileStorageUtils.safeToFile
@@ -126,7 +107,6 @@ import com.jingtian.composedemo.utils.UserStorage
 import com.jingtian.composedemo.utils.ViewUtils.commonConfig
 import com.jingtian.composedemo.utils.ViewUtils.commonEditableConfig
 import com.jingtian.composedemo.utils.ViewUtils.dpValue
-import com.jingtian.composedemo.utils.composeObserve
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -213,7 +193,7 @@ fun LabelFilter(showFilter: Boolean , album: Album, onCheckStateChange: (List<St
         return
     }
 
-    val size = 36.dp
+    val size = 28.dp
     val padding = 4.dp
     fun notifyCheckChanged() {
         onCheckStateChange(labelList.mapNotNull { checkInfo -> checkInfo.label.takeIf { checkInfo.isChecked } })
@@ -260,6 +240,13 @@ fun Gallery(album: IndexedValue<Album>?) {
         }
     }
 
+    val importDirLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocumentTree(),
+    ) {uri: Uri? ->
+        uri ?: return@rememberLauncherForActivityResult
+        viewModel.importFiles(album.value, uri)
+    }
+
     Column(Modifier.fillMaxSize()) {
         Box(
             Modifier
@@ -279,6 +266,15 @@ fun Gallery(album: IndexedValue<Album>?) {
                     modifier = Modifier
                         .size(32.dp)
                         .clickable { addImageDialogState = true }
+                )
+                Image(
+                    painter = painterResource(R.drawable.resource_import),
+                    contentDescription = "批量导入",
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clickable {
+                            importDirLauncher.launch(null)
+                        }
                 )
                 Image(
                     painter = painterResource(R.drawable.filter),
@@ -318,7 +314,7 @@ fun Gallery(album: IndexedValue<Album>?) {
     }
 
     if (addImageDialogState) {
-        AddImageDialog(album.value) {
+        AddItemDialog(album.value) {
             addImageDialogState = false
         }
     }
@@ -602,6 +598,9 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, onDismiss: ()->Unit) {
                 } else {
                     imageResource = R.drawable.load_failed
                 }
+                if (itemName.isNullOrBlank() && uri != null) {
+                    itemName = getFileNameFromUri(uri) ?:""
+                }
             }
 
             val multipleImagePickerLauncher = rememberLauncherForActivityResult(
@@ -733,7 +732,7 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, onDismiss: ()->Unit) {
 }
 
 @Composable
-fun AddImageDialog(album: Album, onDismiss: () -> Unit) {
+fun AddItemDialog(album: Album, onDismiss: () -> Unit) {
     Dialog(onDismissRequest = { onDismiss() }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Column(
             Modifier
@@ -790,6 +789,9 @@ fun AddImageDialog(album: Album, onDismiss: () -> Unit) {
                         FileType.RegularFile -> {
                             imageResource = R.drawable.file
                         }
+                    }
+                    if (itemName.isNullOrBlank()) {
+                        itemName = getFileNameFromUri(uri) ?:""
                     }
                     selectedUri = uri
                 }

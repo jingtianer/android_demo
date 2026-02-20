@@ -27,12 +27,20 @@ interface AlbumItemDao {
     @Insert
     fun insertAlbumItem(albumItem: AlbumItem): Long
 
+    @Insert
+    fun insertAllAlbumItem(albumItem: List<AlbumItem>)
+
     @Update
     fun updateAlbumItem(albumItem: AlbumItem)
 
     @Transaction
     @Query("select * from $TABLE_NAME where albumId = :albumId order by score desc")
     fun getAllAlbumItemWithExtra(albumId: Long): Flow<List<AlbumItemRelation>>
+
+
+    @Transaction
+    @Query("select * from $TABLE_NAME where albumId = :albumId order by score desc")
+    fun getAllAlbumItemListWithExtra(albumId: Long): List<AlbumItemRelation>
 
     @Query("select distinct `label` from ${LabelInfoDao.TABLE_NAME} A left join ${AlbumItemDao.TABLE_NAME} B on A.albumItemId = B.itemId where albumId = :albumId")
     fun getLabelList(albumId: Long): Flow<List<String>>
