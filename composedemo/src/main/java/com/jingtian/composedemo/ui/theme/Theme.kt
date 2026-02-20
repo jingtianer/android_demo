@@ -47,25 +47,28 @@ class AppPalette(
     val labelUnChecked: Color,
     val dividerColor: Color,
     val cardBg: Color,
+    val galleryCardBg: Color,
     val strokeColor: Color,
 )
 
 private val darkAppPalette = AppPalette(
     drawerBg = color282828,
     dialogBg = color282828,
-    labelChecked = Purple80,
-    labelUnChecked = Color.Gray,
+    labelChecked = Purple40,
+    labelUnChecked = color484848,
     dividerColor = colorA8A8A8,
     cardBg = color686868,
+    galleryCardBg = color282828,
     strokeColor = color484848
 )
 private val liteAppPalette = AppPalette(
     drawerBg = colorA8A8A8,
     dialogBg = colorA8A8A8,
-    labelChecked = Purple40,
-    labelUnChecked = Color.Gray,
+    labelChecked = Purple80,
+    labelUnChecked = colorA8A8A8,
     dividerColor = color282828,
     cardBg = colorC8c8c8,
+    galleryCardBg = colorC8c8c8_a0,
     strokeColor = color686868,
 )
 

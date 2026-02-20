@@ -42,7 +42,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
-import androidx.compose.foundation.lazy.staggeredgrid.LazyHorizontalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.rememberScrollState
@@ -318,7 +317,7 @@ fun Gallery(album: IndexedValue<Album>?) {
         Box(
             Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .padding(horizontal = 8.dp, vertical = 8.dp)
                 .wrapContentHeight()
         ) {
             AppThemeText(album.value.albumName, Modifier.align(Alignment.CenterStart), style = LocalTextStyle.current.copy(fontSize = 24.sp, fontWeight = FontWeight(600)))
@@ -352,13 +351,15 @@ fun Gallery(album: IndexedValue<Album>?) {
                 )
             }
         }
-        LabelFilter(showLabelFilter, album.value) { checkInfo->
-            val targetLabelSet = checkInfo.toSet()
-            filterLabels = targetLabelSet
+        Column(Modifier.padding(horizontal = 8.dp)) {
+            LabelFilter(showLabelFilter, album.value) { checkInfo->
+                val targetLabelSet = checkInfo.toSet()
+                filterLabels = targetLabelSet
 
-        }
-        FileTypeFilter(showLabelFilter) { checkedFileType->
-            filterFileTypes = checkedFileType
+            }
+            FileTypeFilter(showLabelFilter) { checkedFileType->
+                filterFileTypes = checkedFileType
+            }
         }
         LaunchedEffect(filterFileTypes, filterLabels) {
             coroutine.launch(Dispatchers.Default) {
@@ -372,14 +373,15 @@ fun Gallery(album: IndexedValue<Album>?) {
             }
         }
         val size = 160.dp
-        val padding = 4.dp
+        val galleryItemPadding = 4.dp
         LazyVerticalStaggeredGrid(
-            columns = StaggeredGridCells.Adaptive((size + padding*2)),
+            columns = StaggeredGridCells.Adaptive((size + galleryItemPadding*2)),
             Modifier
                 .fillMaxSize()
-                .weight(1f)) {
+                .weight(1f)
+                .padding(horizontal = galleryItemPadding)) {
             items(filteredItemList.size, key = { index-> filteredItemList[index].hashCode() }) { index: Int ->
-                AlbumItemView(filteredItemList[index], size, padding)
+                AlbumItemView(filteredItemList[index], size, galleryItemPadding)
             }
         }
     }
@@ -478,12 +480,12 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, size: Dp, padding: Dp) {
                 )
             }
             .background(
-                color = LocalAppPalette.current.dialogBg,
+                color = LocalAppPalette.current.galleryCardBg,
                 shape = RoundedCornerShape(padding)
             )) {
 
 
-        AppThemeText(itemName, modifier = Modifier.fillMaxWidth(), maxLines = 2, style = LocalTextStyle.current.copy(textAlign = TextAlign.Center, fontSize = 16.sp), overflow = TextOverflow.Ellipsis)
+        AppThemeText(itemName, modifier = Modifier.wrapContentWidth().padding(bottom = 4.dp, start = padding, end = padding).align(Alignment.CenterHorizontally), maxLines = 2, style = LocalTextStyle.current.copy(textAlign = TextAlign.Start, fontSize = 16.sp), overflow = TextOverflow.Ellipsis)
 
         val currentPickedImage = imageBitmap
         Box {
@@ -502,7 +504,8 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, size: Dp, padding: Dp) {
                         }
                         .fillMaxWidth()
                         .wrapContentHeight()
-                        .align(Alignment.Center),
+                        .align(Alignment.Center)
+                        .padding(bottom = 4.dp),
                     contentScale = ContentScale.Fit
                 )
             } else {
@@ -517,7 +520,8 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, size: Dp, padding: Dp) {
                         }
                         .fillMaxWidth()
                         .wrapContentHeight()
-                        .align(Alignment.Center),
+                        .align(Alignment.Center)
+                        .padding(bottom = 4.dp),
                     contentScale = ContentScale.FillWidth
                 )
             }
@@ -532,7 +536,8 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, size: Dp, padding: Dp) {
                 },
                     Modifier
                         .wrapContentSize()
-                        .align(Alignment.TopEnd),
+                        .align(Alignment.TopEnd)
+                        .padding(bottom = 4.dp),
                     update = {
                         val bg = createBg(itemRank)
                         it.background = bg
@@ -544,7 +549,7 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, size: Dp, padding: Dp) {
         if (!itemDesc.isNullOrBlank()) {
             OutlinedTextField(itemDesc, { value->
                 itemDesc = value
-            }, modifier = Modifier.fillMaxWidth(), label = {
+            }, modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp, start = padding, end = padding), label = {
                 AppThemeText("评论")
             }, maxLines = Int.MAX_VALUE, enabled = false)
         }
@@ -561,7 +566,8 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, size: Dp, padding: Dp) {
                 Modifier
                     .wrapContentWidth()
                     .height(30.dp)
-                    .align(Alignment.Center),
+                    .align(Alignment.Center)
+                    .padding(bottom = 4.dp, start = padding, end = padding),
                 update = {
                     it.setScore(itemScore)
                 })
@@ -569,7 +575,8 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, size: Dp, padding: Dp) {
 
         if (itemLabel.isNotEmpty()) {
             LazyRow(Modifier
-                    .fillMaxWidth()) {
+                .fillMaxWidth()
+                .padding(bottom = 4.dp, start = padding, end = padding)) {
                 items(itemLabelSize, key = { index: Int ->
                     itemLabel[index].label
                 }) { index: Int ->
@@ -1002,7 +1009,7 @@ fun CheckableLabelView(label: String, isChecked:Boolean, onCheckStateChange: (Bo
             }, contentAlignment = Alignment.Center) {
         AppThemeText(label,
             Modifier
-                .padding(horizontal = 3.dp, vertical = 2.dp)
+                .padding(horizontal = 4.dp, vertical = 2.dp)
                 .wrapContentSize(), style = LocalTextStyle.current.copy(fontSize = 14.sp))
     }
 }
@@ -1010,8 +1017,18 @@ fun CheckableLabelView(label: String, isChecked:Boolean, onCheckStateChange: (Bo
 @Composable
 fun LabelView(label: LabelInfo, editable: Boolean = true, onRemove: ()->Unit) {
     if (editable) {
-        Row(Modifier.wrapContentSize(), verticalAlignment = Alignment.CenterVertically) {
-            AppThemeText(label.label, Modifier.wrapContentSize(), style = LocalTextStyle.current.copy(fontSize = 16.sp))
+        Row(
+            Modifier
+                .padding(2.dp)
+                .background(
+                    color = LocalAppPalette.current.labelUnChecked,
+                    shape = RoundedCornerShape(4.dp)
+                )
+                .padding(horizontal = 4.dp, vertical = 2.dp)
+                .wrapContentSize(), verticalAlignment = Alignment.CenterVertically) {
+            AppThemeText(label.label,
+                Modifier
+                    .wrapContentSize(), style = LocalTextStyle.current.copy(fontSize = 16.sp))
             Spacer(Modifier.padding(2.dp))
             Image(
                 painter = painterResource(R.drawable.close),
@@ -1026,13 +1043,13 @@ fun LabelView(label: LabelInfo, editable: Boolean = true, onRemove: ()->Unit) {
             Modifier
                 .padding(2.dp)
                 .background(
-                    color = LocalAppPalette.current.dialogBg,
+                    color = LocalAppPalette.current.labelUnChecked,
                     shape = RoundedCornerShape(4.dp)
                 )
                 .wrapContentSize(), contentAlignment = Alignment.Center) {
             AppThemeText(label.label,
                 Modifier
-                    .padding(horizontal = 3.dp, vertical = 2.dp)
+                    .padding(horizontal = 4.dp, vertical = 2.dp)
                     .wrapContentSize(), style = LocalTextStyle.current.copy(fontSize = 14.sp))
         }
     }
