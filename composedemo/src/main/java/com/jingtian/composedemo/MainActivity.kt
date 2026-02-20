@@ -29,14 +29,21 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredWidth
+import androidx.compose.foundation.layout.safeContent
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.layout.wrapContentWidth
@@ -56,6 +63,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -78,6 +86,7 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
@@ -137,7 +146,9 @@ import kotlinx.coroutines.withContext
 
 class MainActivity : BaseActivity() {
     @Composable
-    override fun content() = Main()
+    override fun Content() = Main()
+
+    override fun shouldFitSystemBars(): Boolean = false
 }
 
 @Preview
@@ -207,10 +218,55 @@ fun Main() {
             showSnackBarAnim = false
         }
         showSnackBar = !snackBarMessage.isNullOrBlank()
-        Log.d("jingtian", "Main: $snackBarMessage")
     }
 
     val scope = rememberCoroutineScope()
+//    ModalNavigationDrawer(
+//        {
+//            ModalDrawerSheet {
+//                MainDrawer(menuItemsEntity) { index, album ->
+//                    currentSelectedAlbum = IndexedValue(index, album)
+//                    scope.launch {
+//                        drawerState.close()
+//                    }
+//                }
+//            }
+//        },
+//        Modifier.fillMaxSize(),
+//        drawerState = drawerState,
+//        gesturesEnabled = menuItemsEntity.isNotEmpty()
+//    ) {
+//        Gallery(currentSelectedAlbum)
+//    }
+//    Box(Modifier.fillMaxSize()) {
+//        ModalNavigationDrawer(
+//            {
+//                MainDrawer(menuItemsEntity) { index, album ->
+//                    currentSelectedAlbum = IndexedValue(index, album)
+//                    scope.launch {
+//                        drawerState.close()
+//                    }
+//                }
+//            },
+//            Modifier.fillMaxSize(),
+//            drawerState = drawerState,
+//            gesturesEnabled = menuItemsEntity.isNotEmpty()
+//        ) {
+//            Gallery(currentSelectedAlbum)
+//        }
+//        AnimatedVisibility(
+//            visible = showSnackBar,
+//            modifier = Modifier.align(Alignment.BottomCenter),
+//            enter = if(showSnackBarAnim) fadeIn() + expandIn() else EnterTransition.None,
+//            exit = if(showSnackBarAnim) shrinkOut() + fadeOut() else ExitTransition.None,
+//        ) {
+//            Snackbar(
+//                modifier = Modifier.padding(8.dp)
+//            ) {
+//                AppThemeText(snackBarMessage ?: "", style = LocalTextStyle.current.copy(color = LocalAppPalette.current.dialogBg), maxLines = 1)
+//            }
+//        }
+//    }
 
     Scaffold(
         snackbarHost = {
@@ -228,16 +284,17 @@ fun Main() {
         }
     ) { _->
         ModalNavigationDrawer(
-            {
-                MainDrawer(menuItemsEntity) { index, album ->
-                    currentSelectedAlbum = IndexedValue(index, album)
-                    scope.launch {
-                        drawerState.close()
+            drawerContent = {
+                ModalDrawerSheet(drawerContainerColor = LocalAppPalette.current.drawerBg) {
+                    MainDrawer(menuItemsEntity) { index, album ->
+                        currentSelectedAlbum = IndexedValue(index, album)
+                        scope.launch {
+                            drawerState.close()
+                        }
                     }
                 }
             },
-            Modifier
-                .fillMaxSize(),
+            Modifier.fillMaxSize(),
             drawerState = drawerState,
             gesturesEnabled = menuItemsEntity.isNotEmpty()
         ) {
@@ -361,7 +418,7 @@ fun Gallery(album: IndexedValue<Album>?) {
         viewModel.importFiles(album.value, uri)
     }
 
-    Column(Modifier.fillMaxSize()) {
+    Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.systemBars)) {
         Box(
             Modifier
                 .fillMaxWidth()
@@ -881,18 +938,28 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
                         AppThemeText("文件描述")
                     }, maxLines = Int.MAX_VALUE)
 
-
-                    AppThemeText("选择合集: ${currentSelectedAlbum.albumName}", Modifier.fillMaxWidth().clickable {
-                        openAlbumList = !openAlbumList
-                    }.padding(horizontal = 6.dp, vertical = 10.dp))
+                    AppThemeText("选择合集: ${currentSelectedAlbum.albumName}",
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                openAlbumList = !openAlbumList
+                            }
+                            .padding(horizontal = 6.dp, vertical = 10.dp))
                 }
 
                 if (openAlbumList) {
                     items(
                         albumData.size,
-                        key = { index: Int -> albumData[index].albumId ?: DataBase.INVALID_ID }) { index ->
+                        key = { index: Int ->
+                            albumData[index].albumId ?: DataBase.INVALID_ID
+                        }) { index ->
                         val item = albumData[index]
-                        DrawerMenuItem(item) {
+                        ImmutableDrawerMenuItem(
+                            item,
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 6.dp, vertical = 10.dp)
+                        ) {
                             currentSelectedAlbum = item
                             openAlbumList = false
                         }
@@ -1478,7 +1545,6 @@ fun MainDrawer(
         Modifier
             .fillMaxHeight()
             .fillMaxWidth(LocalAppUIConstants.current.drawerMaxPercent)
-            .background(LocalAppPalette.current.drawerBg)
     ) {
         DrawerHeader()
         AppThemeHorizontalDivider(modifier = Modifier
@@ -1495,6 +1561,20 @@ fun MainDrawer(
                 }
             }
         }
+    }
+}
+
+@Composable
+fun ImmutableDrawerMenuItem(
+    item: Album,
+    modifier: Modifier,
+    onItemClick: () -> Unit
+) {
+    Box(
+        Modifier
+            .wrapContentSize()
+            .clickable { onItemClick() }) {
+        AppThemeText(item.albumName, modifier)
     }
 }
 

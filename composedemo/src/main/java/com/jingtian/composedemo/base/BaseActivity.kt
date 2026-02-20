@@ -15,16 +15,26 @@ abstract class BaseActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             DemoAppTheme {
-                content()
+                Content()
             }
         }
+        if (shouldFitSystemBars()) {
+            fitSystemBars()
+        }
+    }
+
+    @Composable
+    abstract fun Content()
+
+    open fun shouldFitSystemBars(): Boolean {
+        return true
+    }
+
+    open fun fitSystemBars() {
         ViewCompat.setOnApplyWindowInsetsListener(window.decorView) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
     }
-
-    @Composable
-    abstract fun content()
 }
