@@ -1,18 +1,17 @@
 package com.jingtian.composedemo
 
-import android.content.ClipData.Item
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
-import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.DrawableRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
@@ -35,11 +34,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.requiredWidth
-import androidx.compose.foundation.layout.safeContent
-import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
@@ -57,8 +52,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.DrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -70,7 +63,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
-import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.*
@@ -86,10 +78,8 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -98,7 +88,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.FileProvider
 import androidx.lifecycle.MutableLiveData
@@ -140,7 +129,6 @@ import com.jingtian.composedemo.utils.ViewUtils.dpValue
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -219,55 +207,7 @@ fun Main() {
         }
         showSnackBar = !snackBarMessage.isNullOrBlank()
     }
-
     val scope = rememberCoroutineScope()
-//    ModalNavigationDrawer(
-//        {
-//            ModalDrawerSheet {
-//                MainDrawer(menuItemsEntity) { index, album ->
-//                    currentSelectedAlbum = IndexedValue(index, album)
-//                    scope.launch {
-//                        drawerState.close()
-//                    }
-//                }
-//            }
-//        },
-//        Modifier.fillMaxSize(),
-//        drawerState = drawerState,
-//        gesturesEnabled = menuItemsEntity.isNotEmpty()
-//    ) {
-//        Gallery(currentSelectedAlbum)
-//    }
-//    Box(Modifier.fillMaxSize()) {
-//        ModalNavigationDrawer(
-//            {
-//                MainDrawer(menuItemsEntity) { index, album ->
-//                    currentSelectedAlbum = IndexedValue(index, album)
-//                    scope.launch {
-//                        drawerState.close()
-//                    }
-//                }
-//            },
-//            Modifier.fillMaxSize(),
-//            drawerState = drawerState,
-//            gesturesEnabled = menuItemsEntity.isNotEmpty()
-//        ) {
-//            Gallery(currentSelectedAlbum)
-//        }
-//        AnimatedVisibility(
-//            visible = showSnackBar,
-//            modifier = Modifier.align(Alignment.BottomCenter),
-//            enter = if(showSnackBarAnim) fadeIn() + expandIn() else EnterTransition.None,
-//            exit = if(showSnackBarAnim) shrinkOut() + fadeOut() else ExitTransition.None,
-//        ) {
-//            Snackbar(
-//                modifier = Modifier.padding(8.dp)
-//            ) {
-//                AppThemeText(snackBarMessage ?: "", style = LocalTextStyle.current.copy(color = LocalAppPalette.current.dialogBg), maxLines = 1)
-//            }
-//        }
-//    }
-
     Scaffold(
         snackbarHost = {
             AnimatedVisibility(
@@ -393,10 +333,17 @@ fun Gallery(album: IndexedValue<Album>?) {
     var labelFilterCheckedInfo by remember { mutableStateOf<List<LabelCheckInfo<String>>>(emptyList()) }
     val fileTypeCheckState by remember { mutableStateOf(FileType.entries.map { LabelCheckInfo(it) }) }
     val itemRankTypeCheckState by remember { mutableStateOf(ItemRank.entries.map { LabelCheckInfo(it) }) }
+
+    var albumName by remember { mutableStateOf(album.value.albumName) }
+
+    var editAlbumDialogState by remember { mutableStateOf(false) }
     LaunchedEffect(album) {
         withContext(Dispatchers.IO) {
             viewModel.getLabelList(album.value).collect { value->
-                labelFilterCheckedInfo = value.map { LabelCheckInfo(it) }
+                withContext(Dispatchers.Main) {
+                    albumName = album.value.albumName
+                    labelFilterCheckedInfo = value.map { LabelCheckInfo(it) }
+                }
             }
         }
     }
@@ -411,6 +358,17 @@ fun Gallery(album: IndexedValue<Album>?) {
             }
         }
     }
+
+    val albumNameChange by viewModel.albumNameChange.observeAsState()
+
+    LaunchedEffect(albumNameChange) {
+        withContext(Dispatchers.IO) {
+            val newAlbum = viewModel.getAlbumName(album.value.albumId ?: return@withContext)
+            album.value.albumName = newAlbum.albumName
+            albumName = newAlbum.albumName
+        }
+    }
+
     val importDirLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree(),
     ) {uri: Uri? ->
@@ -418,19 +376,29 @@ fun Gallery(album: IndexedValue<Album>?) {
         viewModel.importFiles(album.value, uri)
     }
 
-    Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.systemBars)) {
+    Column(
+        Modifier
+            .fillMaxSize()
+            .windowInsetsPadding(WindowInsets.systemBars)) {
         Box(
             Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 8.dp, vertical = 8.dp)
                 .wrapContentHeight()
         ) {
-            AppThemeText(album.value.albumName, Modifier.align(Alignment.CenterStart), style = LocalTextStyle.current.copy(fontSize = 24.sp, fontWeight = FontWeight(600)))
+            AppThemeText(albumName, Modifier.align(Alignment.CenterStart), style = LocalTextStyle.current.copy(fontSize = 24.sp, fontWeight = FontWeight(600)))
 
             Row(
                 Modifier
                     .align(Alignment.CenterEnd)
                     .wrapContentSize()) {
+                Image(
+                    painter = painterResource(R.drawable.edit),
+                    contentDescription = "编辑名称",
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clickable { editAlbumDialogState = true }
+                )
                 Image(
                     painter = painterResource(R.drawable.add),
                     contentDescription = "添加图片",
@@ -512,6 +480,12 @@ fun Gallery(album: IndexedValue<Album>?) {
     if (addImageDialogState) {
         AddItemDialog(album.value) {
             addImageDialogState = false
+        }
+    }
+
+    if (editAlbumDialogState) {
+        AddOrEditAlbumDialog(album.value) {
+            editAlbumDialogState = false
         }
     }
 }
@@ -1476,91 +1450,125 @@ fun DrawerHeader() {
 }
 
 @Composable
-fun DrawerFunctionArea() {
-    var dialogState by remember { mutableStateOf(false) }
+fun DrawerFunctionView(onClick: () -> Unit, @DrawableRes drawableId: Int, text: String) {
     Row(
         Modifier
             .fillMaxWidth()
-            .clickable {
-                dialogState = true
-            }
+            .clickable(onClick = onClick)
             .padding(vertical = 8.dp, horizontal = 8.dp)
     ) {
         Image(
-            painter = painterResource(R.drawable.add),
-            contentDescription = "添加按钮",
+            painter = painterResource(drawableId),
+            contentDescription = "leadingIcon",
             Modifier
                 .size(26.dp)
                 .align(Alignment.CenterVertically),
         )
-        AppThemeText("添加相册",
+        AppThemeText(text,
             Modifier
                 .align(Alignment.CenterVertically)
                 .padding(horizontal = 6.dp),
             style = LocalTextStyle.current.copy(fontSize = 16.sp)
         )
     }
+}
+
+@Composable
+fun DrawerFunctionArea() {
+    var dialogState by remember { mutableStateOf(false) }
+    DrawerFunctionView(
+        onClick = {
+            dialogState = true
+        },
+        drawableId = R.drawable.add,
+        text = "添加相册",
+    )
 
     if (dialogState) {
-        val viewModel: AlbumViewModel = viewModel()
-        var albumName by remember { mutableStateOf("") }
-        val focusRequester = remember { FocusRequester() }
-        AppThemeDialog(
-            Modifier
-                .fillMaxWidth(LocalAppUIConstants.current.dialogPercent)
-                .wrapContentHeight()
-                .clip(RoundedCornerShape(4.dp))
-                .background(LocalAppPalette.current.dialogBg),
-            onDismissRequest = { dialogState = false },
-            onNegative = { dialogState = false },
-            onPositive = {
-                dialogState = false
+        AddOrEditAlbumDialog {
+            dialogState = false
+        }
+    }
+}
+
+@Composable
+fun AddOrEditAlbumDialog(album: Album? = null, onDismiss: () -> Unit) {
+    val viewModel: AlbumViewModel = viewModel()
+    var albumName by remember { mutableStateOf(album?.albumName ?: "") }
+    val focusRequester = remember { FocusRequester() }
+    AppThemeDialog(
+        Modifier
+            .fillMaxWidth(LocalAppUIConstants.current.dialogPercent)
+            .wrapContentHeight()
+            .clip(RoundedCornerShape(4.dp))
+            .background(LocalAppPalette.current.dialogBg),
+        onDismissRequest = onDismiss,
+        onNegative = onDismiss,
+        onPositive = onPositive@ {
+            if (albumName.isNullOrBlank()) {
+                viewModel.sendMessage("添加/编辑失败: 合集名称不能为空")
+                return@onPositive
+            }
+            onDismiss()
+            if (album != null) {
+                viewModel.editAlbum(Album(albumName = albumName, albumId = album.albumId))
+            } else {
                 viewModel.addAlbum(Album(albumName = albumName))
             }
-        ) { _, actionButtons->
-            Column(Modifier.padding(horizontal = 8.dp)) {
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(albumName, { value ->
-                    albumName = value
-                }, label = {
-                    AppThemeText("相册名称")
-                }, modifier = Modifier.focusRequester(focusRequester))
-                actionButtons()
-            }
         }
-        LaunchedEffect(dialogState) {
-            if (dialogState) {
-                focusRequester.requestFocus()
-            }
+    ) { _, actionButtons->
+        Column(Modifier.padding(horizontal = 8.dp)) {
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedTextField(albumName, { value ->
+                albumName = value
+            }, label = {
+                AppThemeText("相册名称")
+            }, modifier = Modifier.focusRequester(focusRequester))
+            actionButtons()
         }
+    }
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
     }
 }
 
 @Composable
 fun MainDrawer(
     albumData: List<Album>,
-    onAlbumSelected: (Int, Album) -> Unit
+    onAlbumSelected: (Int, Album) -> Unit,
 ) {
+    val enableEdit = false
+//    var enableEdit by remember { mutableStateOf(false) }
     Column(
         Modifier
             .fillMaxHeight()
             .fillMaxWidth(LocalAppUIConstants.current.drawerMaxPercent)
     ) {
-        DrawerHeader()
-        AppThemeHorizontalDivider(modifier = Modifier
-            .height(1.dp)
-            .fillMaxWidth(0.95f)
-            .align(Alignment.CenterHorizontally))
-        LazyColumn(Modifier.fillMaxSize()) {
+        LazyColumn(
+            Modifier
+                .fillMaxSize()
+                .weight(1f)) {
+            item {
+                DrawerHeader()
+            }
+            item {
+                Box {
+                    AppThemeHorizontalDivider(modifier = Modifier
+                        .height(1.dp)
+                        .fillMaxWidth(0.95f)
+                        .align(Alignment.Center))
+                }
+            }
             items(
                 albumData.size,
-                key = { index: Int -> albumData[index].albumId ?: DataBase.INVALID_ID }) { index ->
+                key = { index: Int -> (albumData[index].albumId ?: DataBase.INVALID_ID) to albumData[index].albumName }) { index ->
                 val item = albumData[index]
-                DrawerMenuItem(item) {
+                DrawerMenuItem(item, enableEdit) {
                     onAlbumSelected(index, item)
                 }
             }
         }
+//        DrawerFunctionView(onClick = { enableEdit = !enableEdit }, R.drawable.edit, "编辑合集")
     }
 }
 
@@ -1582,13 +1590,13 @@ fun ImmutableDrawerMenuItem(
 @Composable
 fun DrawerMenuItem(
     item: Album,
-    onItemClick: () -> Unit
+    enableEdit: Boolean,
+    onItemClick: () -> Unit,
 ) {
     var deleteConfirmDialogState by remember { mutableStateOf(false) }
     var albumName by remember { mutableStateOf(item.albumName) }
     var changeNameJob by remember { mutableStateOf<Job?>(null) }
     val viewModel: AlbumViewModel = viewModel()
-    val editSize = 14.dp
     val size = 36.dp
     val modifier = Modifier
         .fillMaxWidth()
@@ -1626,28 +1634,23 @@ fun DrawerMenuItem(
                     )
                 }
             }) {
-            Box(
-                Modifier
-                    .align(Alignment.CenterVertically)
-                    .fillMaxHeight()
+            AppThemeBasicTextField(
+                value = albumName,
+                enabled = enableEdit,
+                modifier = Modifier
                     .fillMaxWidth()
                     .background(LocalAppPalette.current.drawerBg)
-                    .padding(vertical = 8.dp, horizontal = 8.dp),
-            ) {
-                AppThemeClickEditableText(
-                    editSize = editSize,
-                    value = albumName,
-                    modifier = Modifier.align(Alignment.CenterStart),
-                    onValueChange = { value, _ ->
-                        albumName = value
-                        item.albumName = value
-                        changeNameJob?.cancel()
-                        changeNameJob = CoroutineUtils.runIOTask({
-                            DataBase.dbImpl.getAlbumDao().updateAlbum(item)
-                        })
-                    },
-                )
-            }
+                    .fillMaxHeight()
+                    .padding(8.dp),
+                onValueChange = { value ->
+                    albumName = value
+                    item.albumName = value
+                    changeNameJob?.cancel()
+                    changeNameJob = CoroutineUtils.runIOTask({
+                        DataBase.dbImpl.getAlbumDao().updateAlbum(item)
+                    })
+                },
+            )
         }
     }
 

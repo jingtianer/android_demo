@@ -59,19 +59,35 @@ class AlbumViewModel : ViewModel() {
     }
 
     val albumListChange: MutableLiveData<Int> = MutableLiveData(0)
+    val albumNameChange: MutableLiveData<Int> = MutableLiveData(0)
     val albumItemListChange: MutableLiveData<Int> = MutableLiveData(0)
 
-    fun notifyAlbumItemListChange() {
-        albumItemListChange.value = (albumItemListChange.value ?: 0) + 1
+    fun MutableLiveData<Int>.notifyChange() {
+        this.value = (this.value ?: 0) + 1
+    }
+
+    fun getAlbumName(albumId: Long): Album {
+        return albumDao.getAlbum(albumId)
     }
 
     fun addAlbum(album: Album) {
         CoroutineUtils.runIOTask({
             albumDao.insertAlbum(album)
-            albumDao.getAllAlbum().collect { Log.d(TAG, "addAlbum: ${it.map { "${it.albumId}, ${it.albumName}, ${it.createTime}" }.joinToString { "," }}") }
-            Log.d(TAG, "addAlbum: ${album.albumName}")
+//            albumDao.getAllAlbum().collect { Log.d(TAG, "addAlbum: ${it.map { "${it.albumId}, ${it.albumName}, ${it.createTime}" }.joinToString { "," }}") }
+//            Log.d(TAG, "addAlbum: ${album.albumName}")
         }) {
-            albumListChange.value = (albumListChange.value ?: 0) + 1
+            albumListChange.notifyChange()
+            sendMessage("添加相册: ${album.albumName} 成功!")
+        }
+    }
+
+    fun editAlbum(album: Album) {
+        CoroutineUtils.runIOTask({
+            albumDao.updateAlbum(album)
+//            albumDao.getAllAlbum().collect { Log.d(TAG, "addAlbum: ${it.map { "${it.albumId}, ${it.albumName}, ${it.createTime}" }.joinToString { "," }}") }
+//            Log.d(TAG, "addAlbum: ${album.albumName}")
+        }) {
+            albumNameChange.notifyChange()
             sendMessage("添加相册: ${album.albumName} 成功!")
         }
     }
@@ -91,38 +107,6 @@ class AlbumViewModel : ViewModel() {
         }
     }
 
-    private fun innerMoveToAlbum(albumItem: AlbumItem, album: Album) {
-        albumItem.albumId = album.albumId ?: throw RuntimeException("albumId for ${album.albumName} is null")
-        albumItemDao.updateAlbumItem(albumItem)
-    }
-
-    private fun innerCreateAlbumAndMoveToAlbum(albumItem: AlbumItem, album: Album) {
-        DataBase.dbImpl.runInTransaction {
-            albumDao.insertAlbum(album)
-            innerMoveToAlbum(albumItem, album)
-        }
-    }
-
-     fun mveToAlbum(albumItem: AlbumItem, album: Album) {
-         CoroutineUtils.runIOTask({
-             innerMoveToAlbum(albumItem, album)
-         }, onFailure = {
-             sendMessage("文件 ${albumItem.itemName} 移动失败")
-         }) {
-             sendMessage("文件 ${albumItem.itemName} 移动到了 ${album.albumName}")
-         }
-    }
-
-    fun createAlbumAndMoveToAlbum(albumItem: AlbumItem, album: Album) {
-        CoroutineUtils.runIOTask({
-            innerCreateAlbumAndMoveToAlbum(albumItem, album)
-        }, onFailure = {
-            sendMessage("文件 ${albumItem.itemName} 移动失败")
-        }) {
-            sendMessage("文件 ${albumItem.itemName} 移动到了 ${album.albumName}")
-        }
-    }
-
     fun deleteAlbum(album: Album) {
         val albumId = album.albumId ?: return
         CoroutineUtils.runIOTask({
@@ -138,7 +122,7 @@ class AlbumViewModel : ViewModel() {
             DataBase.dbImpl.getLabelInfoDao().deleteAllLabelOfAlbumItemIdList(albumItemIds)
             albumDao.deleteAlbum(album)
         }) {
-            albumListChange.value = (albumListChange.value ?: 0) + 1
+            albumListChange.notifyChange()
             sendMessage("删除相册: ${album.albumName} 成功!")
         }
     }
@@ -155,7 +139,7 @@ class AlbumViewModel : ViewModel() {
                 DataBase.dbImpl.getLabelInfoDao().deleteAllLabel(it)
             }
         }) {
-            albumItemListChange.value = 1 + (albumItemListChange.value ?: 0)
+            albumItemListChange.notifyChange()
             sendMessage("删除文件: ${album.itemName} 成功!")
         }
     }
@@ -197,7 +181,7 @@ class AlbumViewModel : ViewModel() {
             itemLabel.forEach { it.albumItemId = albumItemId }
             DataBase.dbImpl.getLabelInfoDao().insertAllLabel(itemLabel)
         }) {
-            albumItemListChange.value = 1 + (albumItemListChange.value ?: 0)
+            albumItemListChange.notifyChange()
             sendMessage("添加文件 ${album.albumName} 成功!")
         }
     }
@@ -217,7 +201,7 @@ class AlbumViewModel : ViewModel() {
             }
             DataBase.dbImpl.getAlbumItemDao().insertAllAlbumItem(albumItemList)
         }) {
-            albumItemListChange.value = 1 + (albumItemListChange.value ?: 0)
+            albumItemListChange.notifyChange()
             sendMessage("批量导入 ${documentFile?.name} 成功!")
         }
     }
@@ -302,7 +286,7 @@ class AlbumViewModel : ViewModel() {
             DataBase.dbImpl.getLabelInfoDao().deleteAllLabel(albumItemId)
             DataBase.dbImpl.getLabelInfoDao().insertAllLabel(itemLabel)
         }) {
-            albumItemListChange.value = 1 + (albumItemListChange.value ?: 0)
+            albumItemListChange.notifyChange()
             sendMessage("更新文件 ${album.itemName} 成功!")
         }
     }

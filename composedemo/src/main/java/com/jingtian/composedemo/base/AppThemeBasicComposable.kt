@@ -297,7 +297,7 @@ fun AppThemeBasicTextField(
     hint: String? = null,
     hintColor: Color = Color.Gray,
 ) {
-    Box(modifier.wrapContentSize()) {
+    Box(Modifier.wrapContentSize()) {
         val modifier = if (value.isNullOrBlank() && !hint.isNullOrBlank()) {
             val focusRequester = remember { FocusRequester() }
             val keyboardController = LocalSoftwareKeyboardController.current

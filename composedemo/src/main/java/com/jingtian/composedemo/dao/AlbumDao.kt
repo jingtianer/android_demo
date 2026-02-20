@@ -31,6 +31,9 @@ interface AlbumDao {
     @Query("select * from $TABLE_NAME")
     fun getAllAlbum(): Flow<List<Album>>
 
+    @Query("select * from $TABLE_NAME where albumId = :albumId")
+    fun getAlbum(albumId: Long): Album
+
     @Update
     fun updateAlbum(album: Album)
 
