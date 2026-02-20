@@ -1,5 +1,6 @@
 package com.jingtian.composedemo
 
+import android.content.ClipData.Item
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
@@ -89,6 +90,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.FileProvider
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.jingtian.composedemo.base.AppThemeBasicTextField
 import com.jingtian.composedemo.base.AppThemeClickEditableText
@@ -222,47 +224,46 @@ fun Main() {
 
 }
 
+class LabelCheckInfo<T>(val label: T, var isChecked: MutableLiveData<Boolean> = MutableLiveData(false))
+
 @Composable
-fun FileTypeFilter(showFilter: Boolean, onCheckStateChange: (List<FileType>)->Unit) {
-    class LabelCheckInfo(val label: FileType, var isChecked: Boolean = false)
-    val fileTypeList = FileType.entries.map { LabelCheckInfo(it, false) }
-    if (!showFilter) {
-        return
-    }
+fun FileTypeFilter(checkedList: List<LabelCheckInfo<FileType>>, onCheckStateChange: (List<FileType>)->Unit) {
     LazyRow {
-        items(fileTypeList.size) { index->
-            val item = fileTypeList[index]
-            var checked by remember { mutableStateOf(item.isChecked) }
-            CheckableLabelView(label = FileType.entries[index].name, isChecked = checked, onCheckStateChange = { checked = it })
-            LaunchedEffect(checked) {
-                item.isChecked = checked
-                onCheckStateChange(fileTypeList.mapNotNull { checkInfo -> checkInfo.label.takeIf { checkInfo.isChecked } })
-            }
+        items(checkedList.size) { index->
+            val item = checkedList[index]
+            val checked by item.isChecked.observeAsState()
+            CheckableLabelView(label = item.label.name, isChecked = checked ?: false, onCheckStateChange = { checked->
+                item.isChecked.value = checked
+                onCheckStateChange(checkedList.mapNotNull { checkdInfo-> checkdInfo.label.takeIf { checkdInfo.isChecked.value ?: false } })
+            })
         }
     }
-
 }
 
 @Composable
-fun LabelFilter(showFilter: Boolean , album: Album, onCheckStateChange: (List<String>)->Unit) {
-    class LabelCheckInfo(val label: String, var isChecked: Boolean = false)
-    val viewModel: AlbumViewModel = viewModel()
-    var labelList by remember { mutableStateOf<List<LabelCheckInfo>>(emptyList()) }
-    LaunchedEffect(album) {
-        withContext(Dispatchers.IO) {
-            viewModel.getLabelList(album).collect { value->
-                labelList = value.map { LabelCheckInfo(it, false) }
-            }
+fun ItemRankFilter(checkedList: List<LabelCheckInfo<ItemRank>>,onCheckStateChange: (List<ItemRank>)->Unit) {
+    LazyRow {
+        items(checkedList.size) { index->
+            val item = checkedList[index]
+            val checked by item.isChecked.observeAsState()
+            CheckableLabelView(label = item.label.name, isChecked = checked ?: false, onCheckStateChange = { checked->
+                item.isChecked.value = checked
+                onCheckStateChange(checkedList.mapNotNull { checkdInfo-> checkdInfo.label.takeIf { checkdInfo.isChecked.value ?: false } })
+            })
         }
     }
+}
 
-    if (!showFilter || labelList.isEmpty()) {
+@Composable
+fun LabelFilter(labelList: List<LabelCheckInfo<String>>, onCheckStateChange: (List<String>)->Unit) {
+
+    if (labelList.isEmpty()) {
         return
     }
 
     val size = 28.dp
     fun notifyCheckChanged() {
-        onCheckStateChange(labelList.mapNotNull { checkInfo -> checkInfo.label.takeIf { checkInfo.isChecked } })
+        onCheckStateChange(labelList.mapNotNull { checkInfo -> checkInfo.label.takeIf { checkInfo.isChecked.value ?: false } })
     }
     LazyHorizontalGrid(rows = GridCells.Fixed(1),
         Modifier
@@ -270,10 +271,9 @@ fun LabelFilter(showFilter: Boolean , album: Album, onCheckStateChange: (List<St
             .fillMaxWidth()) {
         items(labelList.size) { index ->
             val item = labelList[index]
-            var checked by remember { mutableStateOf(item.isChecked) }
-            CheckableLabelView(label = item.label, isChecked = checked, onCheckStateChange = { checked = it })
+            val checked by item.isChecked.observeAsState()
+            CheckableLabelView(label = item.label, isChecked = checked ?: false, onCheckStateChange = { item.isChecked.value = it })
             LaunchedEffect(checked) {
-                item.isChecked = checked
                 notifyCheckChanged()
             }
         }
@@ -292,9 +292,21 @@ fun Gallery(album: IndexedValue<Album>?) {
     val viewModel: AlbumViewModel = viewModel()
     var filterLabels by remember { mutableStateOf<Set<String>>(emptySet()) }
     var filterFileTypes by remember { mutableStateOf<List<FileType>>(emptyList()) }
+    var itemRankFilter by remember { mutableStateOf<List<ItemRank>>(emptyList()) }
     var showLabelFilter by remember { mutableStateOf(false) }
     val coroutine = rememberCoroutineScope()
     val albumItemDataChange by viewModel.albumItemListChange.observeAsState()
+
+    var labelFilterCheckedInfo by remember { mutableStateOf<List<LabelCheckInfo<String>>>(emptyList()) }
+    val fileTypeCheckState by remember { mutableStateOf(FileType.entries.map { LabelCheckInfo(it) }) }
+    val itemRankTypeCheckState by remember { mutableStateOf(ItemRank.entries.map { LabelCheckInfo(it) }) }
+    LaunchedEffect(album) {
+        withContext(Dispatchers.IO) {
+            viewModel.getLabelList(album.value).collect { value->
+                labelFilterCheckedInfo = value.map { LabelCheckInfo(it) }
+            }
+        }
+    }
 
     LaunchedEffect(albumItemDataChange, album) {
         withContext(Dispatchers.IO) {
@@ -351,21 +363,36 @@ fun Gallery(album: IndexedValue<Album>?) {
                 )
             }
         }
-        Column(Modifier.padding(horizontal = 8.dp)) {
-            LabelFilter(showLabelFilter, album.value) { checkInfo->
-                val targetLabelSet = checkInfo.toSet()
-                filterLabels = targetLabelSet
-
-            }
-            FileTypeFilter(showLabelFilter) { checkedFileType->
-                filterFileTypes = checkedFileType
+        Row(Modifier.padding(horizontal = 8.dp)) {
+            if (showLabelFilter) {
+                Column(Modifier.weight(1f)) {
+                    LabelFilter(labelFilterCheckedInfo) { checkInfo->
+                        val targetLabelSet = checkInfo.toSet()
+                        filterLabels = targetLabelSet
+                    }
+                    FileTypeFilter(fileTypeCheckState) { checkedFileType->
+                        filterFileTypes = checkedFileType
+                    }
+                    ItemRankFilter(itemRankTypeCheckState) { checkedItemRank->
+                        itemRankFilter = checkedItemRank
+                    }
+                }
+                Image(painter = painterResource(R.drawable.trash_bin), contentDescription = "清空筛选", Modifier.size(24.dp).clickable {
+                    filterLabels = emptySet()
+                    filterFileTypes = emptyList()
+                    itemRankFilter = emptyList()
+                    labelFilterCheckedInfo.forEach { it.isChecked.value = false }
+                    fileTypeCheckState.forEach { it.isChecked.value = false }
+                    itemRankTypeCheckState.forEach { it.isChecked.value = false }
+                })
             }
         }
-        LaunchedEffect(filterFileTypes, filterLabels) {
+        LaunchedEffect(filterFileTypes, filterLabels, itemRankFilter) {
             coroutine.launch(Dispatchers.Default) {
                 val intersectList = itemList.filter {
                     (filterLabels.isEmpty() || it.labelInfos.map { it.label }.toSet().intersect(filterLabels).isNotEmpty())
                             && (filterFileTypes.isEmpty() || (it.fileInfo?.let { fileInfo -> filterFileTypes.contains(fileInfo.fileType) } ?: true))
+                            && (itemRankFilter.isEmpty() || itemRankFilter.contains(it.albumItem.rank))
                 }
                 withContext(Dispatchers.Main) {
                     filteredItemList = intersectList
