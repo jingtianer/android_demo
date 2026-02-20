@@ -5,12 +5,20 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
+import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.expandIn
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -48,6 +56,11 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
@@ -160,20 +173,53 @@ fun Main() {
             }
         }
     }
+    val snackBarMessage by viewModel.currentBackgroundTask.observeAsState()
 
+    var showSnackBar by remember { mutableStateOf(snackBarMessage != null) }
+    var showSnackBarAnim by remember { mutableStateOf(true) }
 
-    ModalNavigationDrawer(
-        {
-            MainDrawer(drawerState, menuItemsEntity) { index, album ->
-                currentSelectedAlbum = IndexedValue(index, album)
-            }
-        },
-        Modifier.fillMaxSize(),
-        drawerState = drawerState,
-        gesturesEnabled = menuItemsEntity.isNotEmpty()
-    ) {
-        Gallery(currentSelectedAlbum)
+    LaunchedEffect(snackBarMessage) {
+        if (showSnackBar && snackBarMessage.isNullOrBlank()) {
+            showSnackBarAnim = true
+        } else if (!showSnackBar && !snackBarMessage.isNullOrBlank()) {
+            showSnackBarAnim = true
+        } else {
+            showSnackBarAnim = false
+        }
+        showSnackBar = !snackBarMessage.isNullOrBlank()
+        Log.d("jingtian", "Main: $snackBarMessage")
     }
+
+    Scaffold(
+        snackbarHost = {
+            AnimatedVisibility(
+                visible = showSnackBar,
+                enter = if(showSnackBarAnim) fadeIn() + expandIn() else EnterTransition.None,
+                exit = if(showSnackBarAnim) shrinkOut() + fadeOut() else ExitTransition.None,
+            ) {
+                Snackbar(
+                    modifier = Modifier.padding(8.dp)
+                ) {
+                    AppThemeText(snackBarMessage ?: "", style = LocalTextStyle.current.copy(color = LocalAppPalette.current.dialogBg), maxLines = 1)
+                }
+            }
+        }
+    ) { innerPadding->
+        ModalNavigationDrawer(
+            {
+                MainDrawer(drawerState, menuItemsEntity) { index, album ->
+                    currentSelectedAlbum = IndexedValue(index, album)
+                }
+            },
+            Modifier
+                .fillMaxSize(),
+            drawerState = drawerState,
+            gesturesEnabled = menuItemsEntity.isNotEmpty()
+        ) {
+            Gallery(currentSelectedAlbum)
+        }
+    }
+
 }
 
 @Composable
@@ -239,7 +285,6 @@ fun Gallery(album: IndexedValue<Album>?) {
             }
         }
     }
-
     val importDirLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree(),
     ) {uri: Uri? ->
@@ -405,7 +450,11 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, size: Dp, padding: Dp) {
                         showEditDialog = true
                     }
                 )
-            }) {
+            }
+            .background(
+                color = LocalAppPalette.current.dialogBg,
+                shape = RoundedCornerShape(padding)
+            )) {
 
 
         AppThemeText(itemName, modifier = Modifier.fillMaxWidth(), maxLines = Int.MAX_VALUE, style = LocalTextStyle.current.copy(textAlign = TextAlign.Center, fontSize = 16.sp))
@@ -443,32 +492,34 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, size: Dp, padding: Dp) {
                         .fillMaxWidth()
                         .wrapContentHeight()
                         .align(Alignment.Center),
-                    contentScale = ContentScale.Fit
+                    contentScale = ContentScale.FillWidth
                 )
             }
 
-            AndroidView({ context ->
-                View(context).apply {
-                    val bg = createBg(itemRank)
-                    background = bg
-                    layoutParams = ViewGroup.LayoutParams(bg.getWidth().toInt(), bg.getHeight().toInt())
-                }
-            },
-                Modifier
-                    .wrapContentSize()
-                    .align(Alignment.TopEnd),
-                update = {
-                    val bg = createBg(itemRank)
-                    it.background = bg
-                    it.layoutParams = ViewGroup.LayoutParams(bg.getWidth().toInt(), bg.getHeight().toInt())
-                })
+            if (itemRank != null && itemRank != ItemRank.NONE) {
+                AndroidView({ context ->
+                    View(context).apply {
+                        val bg = createBg(itemRank)
+                        background = bg
+                        layoutParams = ViewGroup.LayoutParams(bg.getWidth().toInt(), bg.getHeight().toInt())
+                    }
+                },
+                    Modifier
+                        .wrapContentSize()
+                        .align(Alignment.TopEnd),
+                    update = {
+                        val bg = createBg(itemRank)
+                        it.background = bg
+                        it.layoutParams = ViewGroup.LayoutParams(bg.getWidth().toInt(), bg.getHeight().toInt())
+                    })
+            }
         }
 
         if (!itemDesc.isNullOrBlank()) {
             OutlinedTextField(itemDesc, { value->
                 itemDesc = value
             }, modifier = Modifier.fillMaxWidth(), label = {
-                AppThemeText("文件描述")
+                AppThemeText("评论")
             }, maxLines = Int.MAX_VALUE, enabled = false)
         }
 

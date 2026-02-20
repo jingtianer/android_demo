@@ -6,6 +6,7 @@ import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.jingtian.composedemo.base.app
 import com.jingtian.composedemo.dao.DataBase
 import com.jingtian.composedemo.dao.model.Album
@@ -21,11 +22,17 @@ import com.jingtian.composedemo.utils.FileStorageUtils
 import com.jingtian.composedemo.utils.FileStorageUtils.getFileNameFromUri
 import com.jingtian.composedemo.utils.FileStorageUtils.getMediaType
 import com.jingtian.composedemo.utils.FileStorageUtils.safeToFile
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.flatMapConcat
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 
 class AlbumViewModel : ViewModel() {
@@ -59,23 +66,43 @@ class AlbumViewModel : ViewModel() {
             Log.d(TAG, "addAlbum: ${album.albumName}")
         }) {
             albumListChange.value = (albumListChange.value ?: 0) + 1
+            sendMessage("添加相册: ${album.albumName} 成功!")
         }
     }
+
+    private var currentMessageDelayJob: Job? = null
+    val currentBackgroundTask = MutableLiveData<String?>(null)
+
+    fun sendMessage(message: String) {
+        currentMessageDelayJob?.cancel()
+        currentMessageDelayJob = viewModelScope.launch(Dispatchers.Main) {
+            currentBackgroundTask.value = message
+            withContext(Dispatchers.IO) {
+                delay(2000)
+            }
+            currentBackgroundTask.value = null
+            currentMessageDelayJob = null
+        }
+    }
+
+
     fun deleteAlbum(album: Album) {
         val albumId = album.albumId ?: return
         CoroutineUtils.runIOTask({
             val itemInfoList = albumItemDao.getAllAlbumItemListWithExtra(albumId)
-            val files = itemInfoList.mapNotNull { it.fileInfo }
+            val files = itemInfoList.mapNotNull { it.albumItem.itemName to (it.fileInfo ?: return@mapNotNull null) }
             files.forEach {
-                FileStorageUtils.getStorage(it.fileType)?.delete(it.storageId)
+                FileStorageUtils.getStorage(it.second.fileType)?.delete(it.second.storageId)
+                sendMessage("正在删除文件: ${it.first}")
             }
-            DataBase.dbImpl.getFileInfoDao().deleteAllFileInfo(files)
+            sendMessage("正在删除数据库记录")
+            DataBase.dbImpl.getFileInfoDao().deleteAllFileInfo(files.map { it.second })
             val albumItemIds = itemInfoList.mapNotNull { it.albumItem.itemId }
             DataBase.dbImpl.getLabelInfoDao().deleteAllLabelOfAlbumItemIdList(albumItemIds)
             albumDao.deleteAlbum(album)
-            Log.d(TAG, "addAlbum: ${album.albumName}")
         }) {
             albumListChange.value = (albumListChange.value ?: 0) + 1
+            sendMessage("删除相册: ${album.albumName} 成功!")
         }
     }
 
@@ -92,6 +119,7 @@ class AlbumViewModel : ViewModel() {
             }
         }) {
             albumItemListChange.value = 1 + (albumItemListChange.value ?: 0)
+            sendMessage("删除文件: ${album.itemName} 成功!")
         }
     }
 
@@ -126,16 +154,17 @@ class AlbumViewModel : ViewModel() {
             DataBase.dbImpl.getLabelInfoDao().insertAllLabel(itemLabel)
         }) {
             albumItemListChange.value = 1 + (albumItemListChange.value ?: 0)
+            sendMessage("添加文件 ${album.albumName} 成功!")
         }
     }
 
     fun importFiles(album: Album, uri: Uri) {
+        val documentFile = DocumentFile.fromTreeUri(app, uri)
         CoroutineUtils.runIOTask({
-            val documentFile = DocumentFile.fromTreeUri(app, uri)
-            Log.d(TAG, "importFiles: $documentFile")
             documentFile ?: return@runIOTask
             val fileInfoList: MutableList<Pair<FileInfo, AlbumItem>> = mutableListOf()
             traverseUri(documentFile, album, fileInfoList)
+            sendMessage("批量导入: 正在写入数据库")
             val idList = DataBase.dbImpl.getFileInfoDao().insertAllFileInfo(fileInfoList.map { it.first })
             val albumItemList = fileInfoList.mapIndexed { index: Int, pair: Pair<FileInfo, AlbumItem> ->
                 pair.second.also {
@@ -145,13 +174,14 @@ class AlbumViewModel : ViewModel() {
             DataBase.dbImpl.getAlbumItemDao().insertAllAlbumItem(albumItemList)
         }) {
             albumItemListChange.value = 1 + (albumItemListChange.value ?: 0)
+            sendMessage("批量导入 ${documentFile?.name} 成功!")
         }
     }
 
-    fun traverseUri(documentFile: DocumentFile, album: Album, fileInfoList: MutableList<Pair<FileInfo, AlbumItem>>) {
+    private fun traverseUri(documentFile: DocumentFile, album: Album, fileInfoList: MutableList<Pair<FileInfo, AlbumItem>>) {
         if (documentFile.isDirectory) {
-            documentFile.listFiles()?.forEach {file->
-                Log.d(TAG, "treavourseUri: ${file.name}")
+            sendMessage("导入目录: ${documentFile.name}")
+            documentFile.listFiles().forEach {file->
                 traverseUri(file, album, fileInfoList)
             }
         } else {
@@ -161,7 +191,7 @@ class AlbumViewModel : ViewModel() {
             val fileStorageId = FileStorageUtils.getStorage(type)?.asyncStore(uri) ?: DataBase.INVALID_ID
             val fileInfo = FileInfo(uri = uri, storageId = fileStorageId, fileType = type)
             val albumItem = AlbumItem(itemName = fileName, albumId = album.albumId ?: DataBase.INVALID_ID)
-            Log.d(TAG, "treavourseUri2: $type. $fileName, $fileStorageId, $uri")
+            sendMessage("正在导入: ${documentFile.name}")
             fileInfoList.add(fileInfo to albumItem)
         }
     }
@@ -226,6 +256,7 @@ class AlbumViewModel : ViewModel() {
             DataBase.dbImpl.getLabelInfoDao().insertAllLabel(itemLabel)
         }) {
             albumItemListChange.value = 1 + (albumItemListChange.value ?: 0)
+            sendMessage("更新文件 ${album.itemName} 成功!")
         }
     }
 }
