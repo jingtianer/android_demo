@@ -868,7 +868,7 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, onDismiss: ()->Unit) {
                         }
                     }
                 }
-                Column(Modifier.padding(horizontal = 6.dp)) {
+                Column(Modifier.padding(horizontal = 6.dp).fillMaxWidth()) {
                     actionButtons()
                 }
             }
@@ -1049,7 +1049,7 @@ fun AddItemDialog(album: Album, onDismiss: () -> Unit) {
                     }
                 }
             }
-            Column(Modifier.padding(horizontal = 6.dp)) {
+            Column(Modifier.padding(horizontal = 6.dp).fillMaxWidth()) {
                 actionButton()
             }
         }
