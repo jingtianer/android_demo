@@ -9,4 +9,4 @@ import com.jingtian.composedemo.DrawerHeader
 
 @Preview
 @Composable
-fun PreviewDrawerHead() = DrawerHeader(DrawerState(DrawerValue.Open))
+fun PreviewDrawerHead() = DrawerHeader()

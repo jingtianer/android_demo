@@ -143,9 +143,20 @@ class MainActivity : BaseActivity() {
 @Preview
 @Composable
 fun Main() {
-    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val viewModel: AlbumViewModel = viewModel()
     var menuItemsEntity by remember { mutableStateOf(emptyList<Album>()) }
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed, confirmStateChange = { drawerValue: DrawerValue ->
+        when(drawerValue) {
+            DrawerValue.Closed -> {
+                val canClose = !menuItemsEntity.isEmpty()
+                if (!canClose) {
+                    viewModel.sendMessage("没有任何相册，先创建相册吧")
+                }
+                canClose
+            }
+            DrawerValue.Open -> true
+        }
+    })
 //    val rememberScope = rememberCoroutineScope()
     var currentSelectedAlbum by remember { mutableStateOf<IndexedValue<Album>?>(null) }
     val albumListChange by viewModel.albumListChange.observeAsState()
@@ -175,9 +186,9 @@ fun Main() {
                 withContext(Dispatchers.Main) {
                     menuItemsEntity = value
                     currentSelectedAlbum = nextSelectedAlbum
-                    if (value.isEmpty()) {
-                        drawerState.snapTo(DrawerValue.Open)
-                    }
+                }
+                if (value.isEmpty()) {
+                    drawerState.snapTo(DrawerValue.Open)
                 }
             }
         }
@@ -199,6 +210,8 @@ fun Main() {
         Log.d("jingtian", "Main: $snackBarMessage")
     }
 
+    val scope = rememberCoroutineScope()
+
     Scaffold(
         snackbarHost = {
             AnimatedVisibility(
@@ -213,11 +226,14 @@ fun Main() {
                 }
             }
         }
-    ) { innerPadding->
+    ) { _->
         ModalNavigationDrawer(
             {
-                MainDrawer(drawerState, menuItemsEntity) { index, album ->
+                MainDrawer(menuItemsEntity) { index, album ->
                     currentSelectedAlbum = IndexedValue(index, album)
+                    scope.launch {
+                        drawerState.close()
+                    }
                 }
             },
             Modifier
@@ -781,6 +797,9 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, onDismiss: ()->Unit) {
         AppThemeDialog(
             Modifier
                 .fillMaxWidth(LocalAppUIConstants.current.dialogPercent)
+                .fillMaxHeight(LocalAppUIConstants.current.dialogPercent)
+                .wrapContentHeight()
+                .clip(RoundedCornerShape(4.dp))
                 .background(LocalAppPalette.current.dialogBg),
             onNegative = onDismiss,
             onMiddleClick = {
@@ -980,9 +999,10 @@ fun AddItemDialog(album: Album, onDismiss: () -> Unit) {
     AppThemeDialog(
         Modifier
             .fillMaxWidth(LocalAppUIConstants.current.dialogPercent)
-            .background(LocalAppPalette.current.dialogBg)
-            .clip(RectangleShape)
-            .wrapContentHeight(),
+            .fillMaxHeight(LocalAppUIConstants.current.dialogPercent)
+            .wrapContentHeight()
+            .clip(RoundedCornerShape(4.dp))
+            .background(LocalAppPalette.current.dialogBg),
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false),
         onNegative = onDismiss,
@@ -1189,10 +1209,7 @@ fun EditLabelView(onAddLabel: (String)->Unit) {
 }
 
 @Composable
-fun DrawerHeader(drawerState: DrawerState) {
-    if (drawerState.isClosed) {
-        return
-    }
+fun DrawerHeader() {
     var userName by remember { mutableStateOf(DEFAULT_USER_NAME) }
     var userDesc by remember { mutableStateOf(DEFAULT_DESC) }
     var userAvatarImage by remember { mutableStateOf<ImageBitmap?>(null) }
@@ -1202,8 +1219,8 @@ fun DrawerHeader(drawerState: DrawerState) {
     val scope = rememberCoroutineScope()
     var editUserInfoJob by remember { mutableStateOf<Job?>(null) }
 
-    LaunchedEffect(drawerState.isClosed, drawerState.isOpen) {
-        if (!drawerState.isClosed || drawerState.isOpen) {
+    LaunchedEffect(Unit) {
+        if (true) {
             withContext(Dispatchers.IO) {
                 val innerUserInfo = UserStorage.userInstance
                 val fileInfo = innerUserInfo.userAvatar
@@ -1383,6 +1400,11 @@ fun DrawerFunctionArea() {
         var albumName by remember { mutableStateOf("") }
         val focusRequester = remember { FocusRequester() }
         AppThemeDialog(
+            Modifier
+                .fillMaxWidth(LocalAppUIConstants.current.dialogPercent)
+                .wrapContentHeight()
+                .clip(RoundedCornerShape(4.dp))
+                .background(LocalAppPalette.current.dialogBg),
             onDismissRequest = { dialogState = false },
             onNegative = { dialogState = false },
             onPositive = {
@@ -1410,21 +1432,16 @@ fun DrawerFunctionArea() {
 
 @Composable
 fun MainDrawer(
-    drawerState: DrawerState,
     albumData: List<Album>,
     onAlbumSelected: (Int, Album) -> Unit
 ) {
-    if (drawerState.isClosed) {
-        return
-    }
-    val rememberScope = rememberCoroutineScope()
     Column(
         Modifier
             .fillMaxHeight()
             .fillMaxWidth(LocalAppUIConstants.current.drawerMaxPercent)
             .background(LocalAppPalette.current.drawerBg)
     ) {
-        DrawerHeader(drawerState)
+        DrawerHeader()
         AppThemeHorizontalDivider(modifier = Modifier
             .height(1.dp)
             .fillMaxWidth(0.95f)
@@ -1434,11 +1451,8 @@ fun MainDrawer(
                 albumData.size,
                 key = { index: Int -> albumData[index].albumId ?: DataBase.INVALID_ID }) { index ->
                 val item = albumData[index]
-                DrawerMenuItem(item, drawerState) {
-                    rememberScope.launch {
-                        onAlbumSelected(index, item)
-                        drawerState.close()
-                    }
+                DrawerMenuItem(item) {
+                    onAlbumSelected(index, item)
                 }
             }
         }
@@ -1449,7 +1463,6 @@ fun MainDrawer(
 @Composable
 fun DrawerMenuItem(
     item: Album,
-    drawerState: DrawerState,
     onItemClick: () -> Unit
 ) {
     var deleteConfirmDialogState by remember { mutableStateOf(false) }
@@ -1462,6 +1475,7 @@ fun DrawerMenuItem(
         .fillMaxWidth()
         .clip(RectangleShape)
         .height(size)
+        .clickable { onItemClick() }
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically
@@ -1498,7 +1512,6 @@ fun DrawerMenuItem(
                     .align(Alignment.CenterVertically)
                     .fillMaxHeight()
                     .fillMaxWidth()
-                    .clickable { onItemClick() }
                     .background(LocalAppPalette.current.drawerBg)
                     .padding(vertical = 8.dp, horizontal = 8.dp),
             ) {
