@@ -34,6 +34,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
@@ -52,6 +53,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.DrawerDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -93,7 +95,6 @@ import androidx.core.content.FileProvider
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.jingtian.composedemo.base.AppThemeBasicTextField
-import com.jingtian.composedemo.base.AppThemeClickEditableText
 import com.jingtian.composedemo.base.AppThemeConfirmDialog
 import com.jingtian.composedemo.base.AppThemeDialog
 import com.jingtian.composedemo.base.AppThemeHorizontalDivider
@@ -131,6 +132,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.math.sqrt
 
 class MainActivity : BaseActivity() {
     @Composable
@@ -1294,7 +1296,10 @@ fun DrawerHeader() {
     var userDesc by remember { mutableStateOf(DEFAULT_DESC) }
     var userAvatarImage by remember { mutableStateOf<ImageBitmap?>(null) }
 
-    val avatarSize = 150.dp
+    val goldenRatio = 2f / (sqrt(5f) + 1)
+    val avatarSize = DrawerDefaults.MaximumDrawerWidth * (1 - goldenRatio)
+    val borderSize = avatarSize / 25f
+    val iconSize = avatarSize / 8f
 
     val scope = rememberCoroutineScope()
     var editUserInfoJob by remember { mutableStateOf<Job?>(null) }
@@ -1351,26 +1356,57 @@ fun DrawerHeader() {
         }
     )
 
+    var enableEdit by remember { mutableStateOf(false) }
+
+    fun onUserNameChange(value: String) {
+        val userInstance = UserStorage.userInstance
+        userInstance.userName = value
+        userName = value
+        editUserInfoJob?.cancel()
+        editUserInfoJob = CoroutineUtils.runIOTask({
+            UserStorage.userInstance = userInstance
+        })
+    }
+
+    fun onUserDescChange(value: String) {
+        val userInstance = UserStorage.userInstance
+        userInstance.userDesc = value
+        userDesc = value
+        editUserInfoJob?.cancel()
+        editUserInfoJob = CoroutineUtils.runIOTask({
+            UserStorage.userInstance = userInstance
+        })
+    }
+
+    fun pickImage() {
+        if (enableEdit) {
+            multipleImagePickerLauncher.launch(
+                PickVisualMediaRequest
+                    .Builder()
+                    .setMediaType(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                    .build()
+            )
+        }
+    }
+
+    fun circleOffset(R: Dp, r: Dp, halfBorder: Dp) : Dp {
+        return R * (1 - sqrt(.5f)) - r + halfBorder * sqrt(0.5f)
+    }
+
     Column(
         Modifier.fillMaxWidth()
     ) {
         val currentUserAvatarImage = userAvatarImage
 
         val imageModifier = Modifier
-            .padding(end = 8.dp)
             .size(avatarSize, avatarSize)
             .clip(CircleShape)
-            .border(4.dp, LocalAppPalette.current.strokeColor, CircleShape)
+            .border(borderSize, LocalAppPalette.current.strokeColor, CircleShape)
             .clickable {
-                multipleImagePickerLauncher.launch(
-                    PickVisualMediaRequest
-                        .Builder()
-                        .setMediaType(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                        .build()
-                )
+                pickImage()
             }
 
-        Row(
+        Box(
             Modifier
                 .fillMaxWidth()
                 .padding(start = 6.dp, top = 6.dp, end = 6.dp)
@@ -1381,69 +1417,106 @@ fun DrawerHeader() {
                 .align(Alignment.CenterHorizontally)
                 .padding(vertical = 6.dp, horizontal = 6.dp)
         ) {
-            if (currentUserAvatarImage == null) {
-                Image(
-                    painter = painterResource(R.drawable.user),
-                    contentDescription = "头像",
-                    modifier = imageModifier,
-                    contentScale = ContentScale.Crop,
-                )
-            } else {
-                Image(
-                    bitmap = currentUserAvatarImage,
-                    contentDescription = "头像",
-                    modifier = imageModifier,
-                    contentScale = ContentScale.Crop,
-                )
-            }
-            val editSize = 14.dp
-            Column(Modifier.align(Alignment.CenterVertically)) {
-                CompositionLocalProvider(LocalTextStyle provides LocalTextStyle.current.copy(
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight(600),
-                )) {
-                    AppThemeClickEditableText(
-                        editSize = editSize,
-                        userName,
-                        { value, editable ->
-                            val userInstance = UserStorage.userInstance
-                            userInstance.userName = value
-                            userName = value
-                            editUserInfoJob?.cancel()
-                            editUserInfoJob = CoroutineUtils.runIOTask({
-                                UserStorage.userInstance = userInstance
-                            })
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        overflow = TextOverflow.Ellipsis,
-                        maxLines = 2,
-                        hint = "输入用户名",
-                    )
+            Row {
+                Box {
+                    if (currentUserAvatarImage == null) {
+                        Image(
+                            painter = painterResource(R.drawable.user),
+                            contentDescription = "头像",
+                            modifier = imageModifier,
+                            contentScale = ContentScale.Crop,
+                        )
+                    } else {
+                        Image(
+                            bitmap = currentUserAvatarImage,
+                            contentDescription = "头像",
+                            modifier = imageModifier,
+                            contentScale = ContentScale.Crop,
+                        )
+                    }
+                    if (enableEdit) {
+                        Image(
+                            painter = painterResource(
+                                R.drawable.edit
+                            ),
+                            contentDescription = "编辑用户信息",
+                            Modifier.size(iconSize, iconSize).clickable {
+                                enableEdit = !enableEdit
+                            }.align(Alignment.BottomEnd).clickable {
+                                pickImage()
+                            }.offset(-circleOffset(avatarSize / 2f, iconSize / 2f, borderSize / 2f), -circleOffset(avatarSize / 2f, iconSize / 2f, borderSize / 2f))
+                        )
+                    }
                 }
-                Spacer(modifier = Modifier.height(4.dp))
-                CompositionLocalProvider(LocalTextStyle provides LocalSecondaryTextStyle.current.copy(
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight(600),
-                )) {
-                    AppThemeClickEditableText(
-                        editSize = editSize,
-                        value = userDesc,
-                        { value, editable ->
-                            val userInstance = UserStorage.userInstance
-                            userInstance.userDesc = value
-                            userDesc = value
-                            editUserInfoJob?.cancel()
-                            editUserInfoJob = CoroutineUtils.runIOTask({
-                                UserStorage.userInstance = userInstance
-                            })
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        overflow = TextOverflow.Ellipsis,
-                        maxLines = 2,
-                        hint = "输入个性签名",
-                    )
+                Spacer(Modifier.width(8.dp))
+                Column(Modifier.align(Alignment.CenterVertically)) {
+                    CompositionLocalProvider(LocalTextStyle provides LocalTextStyle.current.copy(
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight(600),
+                    )) {
+                        if (enableEdit) {
+                            AppThemeBasicTextField(
+                                value = userName,
+                                onValueChange = { value->
+                                    onUserNameChange(value)
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                overflow = TextOverflow.Ellipsis,
+                                maxLines = 2,
+                                hint = "输入用户名",
+                            )
+                        } else {
+                            AppThemeText(
+                                text = userName,
+                                modifier = Modifier.fillMaxWidth(),
+                                overflow = TextOverflow.Ellipsis,
+                                maxLines = 2,
+                                hint = "输入用户名",
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    CompositionLocalProvider(LocalTextStyle provides LocalSecondaryTextStyle.current.copy(
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight(600),
+                    )) {
+
+                        if (enableEdit) {
+                            AppThemeBasicTextField(
+                                value = userDesc,
+                                onValueChange = { value->
+                                    onUserDescChange(value)
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                overflow = TextOverflow.Ellipsis,
+                                maxLines = 2,
+                                hint = "输入个性签名",
+                            )
+                        } else {
+                            AppThemeText(
+                                text = userDesc,
+                                modifier = Modifier.fillMaxWidth(),
+                                overflow = TextOverflow.Ellipsis,
+                                maxLines = 2,
+                                hint = "输入个性签名",
+                            )
+                        }
+                    }
                 }
             }
+            Image(
+                painter = painterResource(
+                    if (enableEdit) {
+                        R.drawable.close
+                    } else {
+                        R.drawable.edit
+                    }
+                ),
+                contentDescription = "编辑用户信息",
+                Modifier.size(16.dp).clickable {
+                    enableEdit = !enableEdit
+                }.align(Alignment.BottomEnd)
+            )
         }
         DrawerFunctionArea()
     }
@@ -1542,7 +1615,8 @@ fun MainDrawer(
     Column(
         Modifier
             .fillMaxHeight()
-            .fillMaxWidth(LocalAppUIConstants.current.drawerMaxPercent)
+            .fillMaxWidth()
+//            .fillMaxWidth(LocalAppUIConstants.current.drawerMaxPercent)
     ) {
         LazyColumn(
             Modifier
@@ -1600,8 +1674,8 @@ fun DrawerMenuItem(
     val size = 36.dp
     val modifier = Modifier
         .fillMaxWidth()
+        .wrapContentHeight()
         .clip(RectangleShape)
-        .height(size)
         .clickable { onItemClick() }
     Row(
         modifier = modifier,
@@ -1634,22 +1708,14 @@ fun DrawerMenuItem(
                     )
                 }
             }) {
-            AppThemeBasicTextField(
-                value = albumName,
-                enabled = enableEdit,
+            AppThemeText(
+                text = albumName,
+                style = LocalTextStyle.current.copy(fontSize = 16.sp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(LocalAppPalette.current.drawerBg)
                     .fillMaxHeight()
                     .padding(8.dp),
-                onValueChange = { value ->
-                    albumName = value
-                    item.albumName = value
-                    changeNameJob?.cancel()
-                    changeNameJob = CoroutineUtils.runIOTask({
-                        DataBase.dbImpl.getAlbumDao().updateAlbum(item)
-                    })
-                },
             )
         }
     }
