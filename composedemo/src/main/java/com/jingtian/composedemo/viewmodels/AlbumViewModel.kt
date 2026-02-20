@@ -47,6 +47,9 @@ class AlbumViewModel : ViewModel() {
     val menuItemsFlow: Flow<List<Album>>
         get() = albumDao.getAllAlbum()
 
+    val editDialogAlbum = MutableLiveData<Album?>(null)
+    val editDialogAlbumItem = MutableLiveData<AlbumItemRelation?>(null)
+
     fun getLabelList(album: Album): Flow<List<String>> {
         return DataBase.dbImpl.getAlbumItemDao().getLabelList(album.albumId ?: return flow {  })
     }
@@ -88,6 +91,37 @@ class AlbumViewModel : ViewModel() {
         }
     }
 
+    private fun innerMoveToAlbum(albumItem: AlbumItem, album: Album) {
+        albumItem.albumId = album.albumId ?: throw RuntimeException("albumId for ${album.albumName} is null")
+        albumItemDao.updateAlbumItem(albumItem)
+    }
+
+    private fun innerCreateAlbumAndMoveToAlbum(albumItem: AlbumItem, album: Album) {
+        DataBase.dbImpl.runInTransaction {
+            albumDao.insertAlbum(album)
+            innerMoveToAlbum(albumItem, album)
+        }
+    }
+
+     fun mveToAlbum(albumItem: AlbumItem, album: Album) {
+         CoroutineUtils.runIOTask({
+             innerMoveToAlbum(albumItem, album)
+         }, onFailure = {
+             sendMessage("文件 ${albumItem.itemName} 移动失败")
+         }) {
+             sendMessage("文件 ${albumItem.itemName} 移动到了 ${album.albumName}")
+         }
+    }
+
+    fun createAlbumAndMoveToAlbum(albumItem: AlbumItem, album: Album) {
+        CoroutineUtils.runIOTask({
+            innerCreateAlbumAndMoveToAlbum(albumItem, album)
+        }, onFailure = {
+            sendMessage("文件 ${albumItem.itemName} 移动失败")
+        }) {
+            sendMessage("文件 ${albumItem.itemName} 移动到了 ${album.albumName}")
+        }
+    }
 
     fun deleteAlbum(album: Album) {
         val albumId = album.albumId ?: return
@@ -216,9 +250,10 @@ class AlbumViewModel : ViewModel() {
         itemDesc: String,
         itemScore: Float,
         itemLabel: List<LabelInfo>,
+        targetAlbumId: Long?,
     ) {
         val album = albumItemRelation.albumItem
-        val albumId = album.albumId
+        val albumId = targetAlbumId ?: album.albumId
         val uri = selectedUri
         val mediaType = selectedFileType
         val oldUri = albumItemRelation.fileInfo?.getFileUri()
