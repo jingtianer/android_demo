@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -104,6 +105,7 @@ import com.jingtian.composedemo.dao.DataBase
 import com.jingtian.composedemo.dao.model.Album
 import com.jingtian.composedemo.dao.model.DEFAULT_DESC
 import com.jingtian.composedemo.dao.model.DEFAULT_USER_NAME
+import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.FileType
 import com.jingtian.composedemo.dao.model.ItemRank
 import com.jingtian.composedemo.dao.model.LabelInfo
@@ -129,6 +131,7 @@ import com.jingtian.composedemo.utils.ViewUtils.dpValue
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -441,6 +444,25 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, size: Dp, padding: Dp) {
     val scope = rememberCoroutineScope()
     var imageResource by remember { mutableStateOf(R.drawable.load_failed) }
     imageResource = R.drawable.load_failed
+
+    fun FileInfo.aspectRatio(): Float? {
+        return (this.intrinsicWidth.toFloat() / this.intrinsicHeight.toFloat()).takeIf {
+            this.intrinsicHeight > 0 && this.intrinsicWidth > 0
+        }
+    }
+
+    fun ImageBitmap.aspectRatio(): Float? {
+        return (this.width.toFloat() / this.height.toFloat()).takeIf {
+            this.width > 0 && this.height > 0
+        }
+    }
+
+    var intrinsicRatio by remember {
+        mutableStateOf(
+            albumItemRelation.fileInfo?.aspectRatio()
+        )
+    }
+
     suspend fun fetchImage() {
         withContext(Dispatchers.IO) {
             val uri = albumItemRelation.fileInfo?.getFileUri() ?: return@withContext
@@ -453,11 +475,17 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, size: Dp, padding: Dp) {
                     )
                     withContext(Dispatchers.Main) {
                         imageBitmap = bitmap?.asImageBitmap()
+                        imageBitmap?.aspectRatio()?.let {
+                            intrinsicRatio = it
+                        }
                     }
                 }
                 FileType.VIDEO -> {
                     getVideoThumbnail(scope, uri) { bitmap->
                         imageBitmap = bitmap?.asImageBitmap()
+                        imageBitmap?.aspectRatio()?.let {
+                            intrinsicRatio = it
+                        }
                     }
                 }
                 FileType.AUDIO -> {
@@ -525,6 +553,15 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, size: Dp, padding: Dp) {
             .align(Alignment.CenterHorizontally), maxLines = 2, style = LocalTextStyle.current.copy(textAlign = TextAlign.Start, fontSize = 16.sp), overflow = TextOverflow.Ellipsis)
 
         val currentPickedImage = imageBitmap
+
+        fun Modifier.aspectRatioOrNull(intrinsicRatio: Float?): Modifier {
+            return if (intrinsicRatio != null) {
+                aspectRatio(intrinsicRatio)
+            } else {
+                this
+            }
+        }
+
         Box {
             if (currentPickedImage == null) {
                 Image(
@@ -540,10 +577,10 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, size: Dp, padding: Dp) {
                             }
                         }
                         .fillMaxWidth()
-                        .wrapContentHeight()
+                        .aspectRatioOrNull(intrinsicRatio)
                         .align(Alignment.Center)
                         .padding(bottom = 4.dp),
-                    contentScale = ContentScale.Fit
+                    contentScale = ContentScale.FillWidth
                 )
             } else {
                 Image(
@@ -556,7 +593,7 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, size: Dp, padding: Dp) {
                             }
                         }
                         .fillMaxWidth()
-                        .wrapContentHeight()
+                        .aspectRatioOrNull(intrinsicRatio)
                         .align(Alignment.Center)
                         .padding(bottom = 4.dp),
                     contentScale = ContentScale.FillWidth
@@ -868,7 +905,10 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, onDismiss: ()->Unit) {
                         }
                     }
                 }
-                Column(Modifier.padding(horizontal = 6.dp).fillMaxWidth()) {
+                Column(
+                    Modifier
+                        .padding(horizontal = 6.dp)
+                        .fillMaxWidth()) {
                     actionButtons()
                 }
             }
@@ -1049,7 +1089,10 @@ fun AddItemDialog(album: Album, onDismiss: () -> Unit) {
                     }
                 }
             }
-            Column(Modifier.padding(horizontal = 6.dp).fillMaxWidth()) {
+            Column(
+                Modifier
+                    .padding(horizontal = 6.dp)
+                    .fillMaxWidth()) {
                 actionButton()
             }
         }

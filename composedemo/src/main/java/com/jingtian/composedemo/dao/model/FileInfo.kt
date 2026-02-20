@@ -20,6 +20,8 @@ class FileInfo(
     var uri: Uri? = null,
     var storageId: Long = DataBase.INVALID_ID,
     var fileType: FileType = FileType.RegularFile,
+    var intrinsicWidth: Int = -1,
+    var intrinsicHeight: Int = -1,
 ) {
     var extension: String? = uri?.extension()
     fun getFileUri(): Uri? {

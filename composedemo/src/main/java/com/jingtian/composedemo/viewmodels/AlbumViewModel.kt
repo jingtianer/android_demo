@@ -19,8 +19,11 @@ import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
 import com.jingtian.composedemo.utils.BitMapCachePool
 import com.jingtian.composedemo.utils.CoroutineUtils
 import com.jingtian.composedemo.utils.FileStorageUtils
+import com.jingtian.composedemo.utils.FileStorageUtils.getFileIntrinsicSize
 import com.jingtian.composedemo.utils.FileStorageUtils.getFileNameFromUri
 import com.jingtian.composedemo.utils.FileStorageUtils.getMediaType
+import com.jingtian.composedemo.utils.FileStorageUtils.getVideoThumbnail
+import com.jingtian.composedemo.utils.FileStorageUtils.getVideoThumbnailIntrinsicSize
 import com.jingtian.composedemo.utils.FileStorageUtils.safeToFile
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -139,7 +142,14 @@ class AlbumViewModel : ViewModel() {
             val imageStorage =
                 FileStorageUtils.getStorage(mediaType) ?: return@runIOTask
             val nextId = imageStorage.asyncStore(uri)
-            val file = FileInfo(uri = uri, storageId = nextId, fileType = mediaType)
+            val (width, height) = getFileIntrinsicSize(uri, mediaType)
+            val file = FileInfo(
+                uri = uri,
+                storageId = nextId,
+                fileType = mediaType,
+                intrinsicWidth = width,
+                intrinsicHeight = height,
+            )
             val fileId = DataBase.dbImpl.getFileInfoDao().insertFileInfo(file)
             val albumItem = AlbumItem(
                 itemName = itemName,
@@ -178,7 +188,7 @@ class AlbumViewModel : ViewModel() {
         }
     }
 
-    private fun traverseUri(documentFile: DocumentFile, album: Album, fileInfoList: MutableList<Pair<FileInfo, AlbumItem>>) {
+    private suspend fun traverseUri(documentFile: DocumentFile, album: Album, fileInfoList: MutableList<Pair<FileInfo, AlbumItem>>) {
         if (documentFile.isDirectory) {
             sendMessage("导入目录: ${documentFile.name}")
             documentFile.listFiles().forEach {file->
@@ -189,7 +199,8 @@ class AlbumViewModel : ViewModel() {
             val type = getMediaType(uri)
             val fileName = getFileNameFromUri(uri) ?: ""
             val fileStorageId = FileStorageUtils.getStorage(type)?.asyncStore(uri) ?: DataBase.INVALID_ID
-            val fileInfo = FileInfo(uri = uri, storageId = fileStorageId, fileType = type)
+            val (width, height) = getFileIntrinsicSize(uri, type)
+            val fileInfo = FileInfo(uri = uri, storageId = fileStorageId, fileType = type, intrinsicWidth = width, intrinsicHeight = height)
             val albumItem = AlbumItem(itemName = fileName, albumId = album.albumId ?: DataBase.INVALID_ID)
             sendMessage("正在导入: ${documentFile.name}")
             fileInfoList.add(fileInfo to albumItem)
@@ -237,7 +248,8 @@ class AlbumViewModel : ViewModel() {
             } else {
                 albumItemRelation.fileInfo.storageId
             } ?: DataBase.INVALID_ID
-            val file = FileInfo(id = albumItemRelation.fileInfo?.id, uri = uri, storageId = nextId, fileType = mediaType)
+            val (width, height) = getFileIntrinsicSize(uri, mediaType)
+            val file = FileInfo(id = albumItemRelation.fileInfo?.id, uri = uri, storageId = nextId, fileType = mediaType, intrinsicWidth = width, intrinsicHeight = height)
             DataBase.dbImpl.getFileInfoDao().updateFileInfo(file)
             val albumItemId = albumItemRelation.albumItem.itemId ?: DataBase.INVALID_ID
             val fileId = albumItemRelation.fileInfo?.id ?: DataBase.INVALID_ID

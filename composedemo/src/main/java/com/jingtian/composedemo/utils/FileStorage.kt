@@ -235,22 +235,59 @@ object FileStorageUtils {
         videoUri: Uri,
         onLoadBitmap: (Bitmap?)->Unit
     ): Job = coroutineScope.launch(Dispatchers.IO) {
-        val retriever = MediaMetadataRetriever()
-        val bitmap =  try {
-            retriever.setDataSource(app, videoUri)
-            // 获取第一帧作为封面
-            retriever.frameAtTime
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        } finally {
-            try {
-                retriever.release()
-            } catch (e: Exception) {
-            }
-        }
+        val bitmap = getVideoThumbnail(videoUri)
         withContext(Dispatchers.Main) {
             onLoadBitmap(bitmap)
         }
+    }
+
+    suspend fun getVideoThumbnail(videoUri: Uri): Bitmap? {
+        return withContext(Dispatchers.IO) {
+            val retriever = MediaMetadataRetriever()
+            return@withContext try {
+                retriever.setDataSource(app, videoUri)
+                // 获取第一帧作为封面
+                retriever.frameAtTime
+            } catch (e: Exception) {
+                e.printStackTrace()
+                null
+            } finally {
+                try {
+                    retriever.release()
+                } catch (e: Exception) {
+                }
+            }
+        }
+    }
+
+    suspend fun getVideoThumbnailIntrinsicSize(videoUri: Uri): Pair<Int, Int> {
+        return withContext(Dispatchers.IO) {
+            val retriever = MediaMetadataRetriever()
+            return@withContext try {
+                retriever.setDataSource(app, videoUri)
+                // 获取第一帧作为封面
+                retriever.frameAtTime
+            } catch (e: Exception) {
+                e.printStackTrace()
+                null
+            } finally {
+                try {
+                    retriever.release()
+                } catch (e: Exception) {
+                }
+            }
+        }?.let {
+            it.width to it.height
+        } ?: (-1 to -1)
+    }
+
+    suspend fun getFileIntrinsicSize(uri: Uri, mediaType: FileType) = when(mediaType) {
+        FileType.IMAGE -> {
+            BitMapCachePool.getImageRatio(uri)
+        }
+        FileType.VIDEO -> {
+            getVideoThumbnailIntrinsicSize(uri)
+        }
+        else -> -1 to -1
     }
 }

@@ -23,6 +23,18 @@ object BitMapCachePool {
         return imagePool.getOrPut(id) { ArrayList() }
     }
 
+    fun getImageRatio(uri: Uri): Pair<Int, Int> {
+        val options = BitmapFactory.Options().apply {
+            inJustDecodeBounds = true // 只获取尺寸，不加载像素
+        }
+        val (width, height) =  app.contentResolver.openInputStream(uri)?.use { `is`->
+            // 第一步：仅解码边界，获取图片原始宽高
+            BitmapFactory.decodeStream(`is`, null, options)
+            options.outWidth to options.outHeight
+        } ?: (-1 to -1)
+        return width to height
+    }
+
     fun invalid(id: Long) {
         imagePool[id]?.clear()
     }
