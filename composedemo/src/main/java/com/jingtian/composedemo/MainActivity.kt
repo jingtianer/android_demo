@@ -21,6 +21,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
@@ -53,14 +54,12 @@ import androidx.compose.material3.DrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
-import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
@@ -71,6 +70,8 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.RectangleShape
@@ -79,6 +80,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -94,6 +96,7 @@ import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.jingtian.composedemo.base.AppThemeBasicTextField
 import com.jingtian.composedemo.base.AppThemeClickEditableText
+import com.jingtian.composedemo.base.AppThemeHorizontalDivider
 import com.jingtian.composedemo.base.AppThemeText
 import com.jingtian.composedemo.base.BaseActivity
 import com.jingtian.composedemo.dao.DataBase
@@ -106,6 +109,7 @@ import com.jingtian.composedemo.dao.model.LabelInfo
 import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
 import com.jingtian.composedemo.ui.theme.LocalAppPalette
 import com.jingtian.composedemo.ui.theme.LocalAppUIConstants
+import com.jingtian.composedemo.ui.theme.LocalSecondaryTextStyle
 import com.jingtian.composedemo.ui.widget.RankTypeChooser
 import com.jingtian.composedemo.ui.widget.RankTypeChooser.Companion.createBg
 import com.jingtian.composedemo.ui.widget.StarRateView
@@ -569,7 +573,7 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, onDismiss: ()->Unit) {
     Dialog(onDismissRequest = { onDismiss() }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Column(
             Modifier
-                .fillMaxWidth(LocalAppUIConstants.current.dialogaxPercent)
+                .fillMaxWidth(LocalAppUIConstants.current.dialogPercent)
                 .verticalScroll(rememberScrollState())
                 .background(LocalAppPalette.current.dialogBg)
                 .padding(12.dp)
@@ -787,7 +791,7 @@ fun AddItemDialog(album: Album, onDismiss: () -> Unit) {
     Dialog(onDismissRequest = { onDismiss() }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Column(
             Modifier
-                .fillMaxWidth(LocalAppUIConstants.current.dialogaxPercent)
+                .fillMaxWidth(LocalAppUIConstants.current.dialogPercent)
                 .verticalScroll(rememberScrollState())
                 .background(LocalAppPalette.current.dialogBg)
                 .padding(12.dp)
@@ -1104,15 +1108,15 @@ fun DrawerHeader(drawerState: DrawerState) {
     )
 
     Column(
-        Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp)
+        Modifier.fillMaxWidth()
     ) {
         val currentUserAvatarImage = userAvatarImage
 
         val imageModifier = Modifier
+            .padding(end = 8.dp)
             .size(avatarSize, avatarSize)
             .clip(CircleShape)
+            .border(4.dp, LocalAppPalette.current.strokeColor, CircleShape)
             .clickable {
                 multipleImagePickerLauncher.launch(
                     PickVisualMediaRequest
@@ -1121,8 +1125,17 @@ fun DrawerHeader(drawerState: DrawerState) {
                         .build()
                 )
             }
+
         Row(
-            Modifier.fillMaxWidth()
+            Modifier
+                .fillMaxWidth()
+                .padding(start = 6.dp, top = 6.dp, end = 6.dp)
+                .background(
+                    color = LocalAppPalette.current.cardBg,
+                    shape = RoundedCornerShape(4.dp)
+                )
+                .align(Alignment.CenterHorizontally)
+                .padding(vertical = 6.dp, horizontal = 6.dp)
         ) {
             if (currentUserAvatarImage == null) {
                 Image(
@@ -1139,43 +1152,55 @@ fun DrawerHeader(drawerState: DrawerState) {
                     contentScale = ContentScale.Crop,
                 )
             }
-            Spacer(Modifier.padding(12.dp))
             val editSize = 14.dp
             Column(Modifier.align(Alignment.CenterVertically)) {
-                AppThemeClickEditableText(
-                    editSize = editSize,
-                    userName,
-                    { value, editable ->
-                        val userInstance = UserStorage.userInstance
-                        userInstance.userName = value
-                        userName = value
-                        editUserInfoJob?.cancel()
-                        editUserInfoJob = CoroutineUtils.runIOTask({
-                            UserStorage.userInstance = userInstance
-                        })
-                    },
-                    overflow = TextOverflow.Ellipsis,
-                    verticalOffset = 2 * editSize / 3
-                )
-                Spacer(Modifier.padding(4.dp))
-                AppThemeClickEditableText(
-                    editSize = editSize,
-                    value = userDesc,
-                    { value, editable ->
-                        val userInstance = UserStorage.userInstance
-                        userInstance.userDesc = value
-                        userDesc = value
-                        editUserInfoJob?.cancel()
-                        editUserInfoJob = CoroutineUtils.runIOTask({
-                            UserStorage.userInstance = userInstance
-                        })
-                    },
-                    overflow = TextOverflow.Ellipsis,
-                    verticalOffset = 2 * editSize / 3
-                )
+                CompositionLocalProvider(LocalTextStyle provides LocalTextStyle.current.copy(
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight(600),
+                )) {
+                    AppThemeClickEditableText(
+                        editSize = editSize,
+                        userName,
+                        { value, editable ->
+                            val userInstance = UserStorage.userInstance
+                            userInstance.userName = value
+                            userName = value
+                            editUserInfoJob?.cancel()
+                            editUserInfoJob = CoroutineUtils.runIOTask({
+                                UserStorage.userInstance = userInstance
+                            })
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        overflow = TextOverflow.Ellipsis,
+                        maxLines = 2,
+                        hint = "输入用户名",
+                    )
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                CompositionLocalProvider(LocalTextStyle provides LocalSecondaryTextStyle.current.copy(
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight(600),
+                )) {
+                    AppThemeClickEditableText(
+                        editSize = editSize,
+                        value = userDesc,
+                        { value, editable ->
+                            val userInstance = UserStorage.userInstance
+                            userInstance.userDesc = value
+                            userDesc = value
+                            editUserInfoJob?.cancel()
+                            editUserInfoJob = CoroutineUtils.runIOTask({
+                                UserStorage.userInstance = userInstance
+                            })
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        overflow = TextOverflow.Ellipsis,
+                        maxLines = 2,
+                        hint = "输入个性签名",
+                    )
+                }
             }
         }
-        Spacer(Modifier.padding(8.dp))
         DrawerFunctionArea()
     }
 }
@@ -1189,23 +1214,27 @@ fun DrawerFunctionArea() {
             .clickable {
                 dialogState = true
             }
+            .padding(vertical = 8.dp, horizontal = 8.dp)
     ) {
         Image(
             painter = painterResource(R.drawable.add),
             contentDescription = "添加按钮",
             Modifier
-                .size(24.dp)
+                .size(26.dp)
                 .align(Alignment.CenterVertically),
         )
         AppThemeText("添加相册",
             Modifier
                 .align(Alignment.CenterVertically)
-                .padding(2.dp))
+                .padding(horizontal = 6.dp),
+            style = LocalTextStyle.current.copy(fontSize = 16.sp)
+        )
     }
 
     if (dialogState) {
         val viewModel: AlbumViewModel = viewModel()
         var albumName by remember { mutableStateOf("") }
+        val focusRequester = remember { FocusRequester() }
         Dialog(
             onDismissRequest = { dialogState = false },
         ) {
@@ -1215,11 +1244,12 @@ fun DrawerFunctionArea() {
                     .fillMaxWidth(0.82f)
                     .padding(8.dp)
             ) {
+
                 OutlinedTextField(albumName, { value ->
                     albumName = value
                 }, label = {
                     AppThemeText("相册名称")
-                })
+                }, modifier = Modifier.focusRequester(focusRequester))
                 Row {
                     Button({
                         dialogState = false
@@ -1233,6 +1263,11 @@ fun DrawerFunctionArea() {
                         AppThemeText("确认")
                     }
                 }
+            }
+        }
+        LaunchedEffect(dialogState) {
+            if (dialogState) {
+                focusRequester.requestFocus()
             }
         }
     }
@@ -1255,7 +1290,10 @@ fun MainDrawer(
             .background(LocalAppPalette.current.drawerBg)
     ) {
         DrawerHeader(drawerState)
-        Spacer(modifier = Modifier.height(16.dp))
+        AppThemeHorizontalDivider(modifier = Modifier
+            .height(1.dp)
+            .fillMaxWidth(0.95f)
+            .align(Alignment.CenterHorizontally))
         LazyColumn(Modifier.fillMaxSize()) {
             items(
                 albumData.size,
@@ -1279,6 +1317,7 @@ fun DrawerMenuItem(
     drawerState: DrawerState,
     onItemClick: () -> Unit
 ) {
+    var deleteConfirmDialogState by remember { mutableStateOf(false) }
     var albumName by remember { mutableStateOf(item.albumName) }
     var changeNameJob by remember { mutableStateOf<Job?>(null) }
     val viewModel: AlbumViewModel = viewModel()
@@ -1295,8 +1334,8 @@ fun DrawerMenuItem(
         val swipeToDismissBoxState = rememberSwipeToDismissBoxState(confirmValueChange = { value ->
             when (value) {
                 SwipeToDismissBoxValue.StartToEnd -> {
-                    viewModel.deleteAlbum(item)
-                    true
+                    deleteConfirmDialogState = true
+                    false
                 }
 
                 else -> false
@@ -1315,7 +1354,7 @@ fun DrawerMenuItem(
                             .size(size)
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(size))
-                            .background(Color.Red),
+                            .padding(4.dp),
                     )
                 }
             }) {
@@ -1325,7 +1364,8 @@ fun DrawerMenuItem(
                     .fillMaxHeight()
                     .fillMaxWidth()
                     .clickable { onItemClick() }
-                    .background(LocalAppPalette.current.drawerBg),
+                    .background(LocalAppPalette.current.drawerBg)
+                    .padding(vertical = 8.dp, horizontal = 8.dp),
             ) {
                 AppThemeClickEditableText(
                     editSize = editSize,
@@ -1339,9 +1379,53 @@ fun DrawerMenuItem(
                             DataBase.dbImpl.getAlbumDao().updateAlbum(item)
                         })
                     },
-                    verticalOffset = 2 * editSize / 3
                 )
             }
+        }
+    }
+
+    if (deleteConfirmDialogState) {
+        ConfirmDialog("确认删除相册: ${item.albumName}", properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnClickOutside = false), onNegative = {
+            deleteConfirmDialogState = false
+        }, onPositive = {
+            deleteConfirmDialogState = false
+            viewModel.deleteAlbum(item)
+        }, content = {})
+    }
+}
+
+@Composable
+fun ConfirmDialog(title: String, titleTextStyle: TextStyle = LocalTextStyle.current.copy(
+    fontSize = 22.sp,
+    fontWeight = FontWeight(600)
+), properties: DialogProperties = DialogProperties(), onNegative: () -> Unit, onPositive: () -> Unit, content: @Composable ()->Unit) {
+    Dialog(onDismissRequest = onNegative, properties = properties) {
+        Column(
+            Modifier
+                .fillMaxWidth(0.9f)
+                .background(LocalAppPalette.current.dialogBg)
+                .padding(horizontal = 8.dp)) {
+            Spacer(modifier = Modifier.height(8.dp))
+            AppThemeText(title, style = titleTextStyle)
+            Spacer(modifier = Modifier.height(2.dp))
+            AppThemeHorizontalDivider(
+                modifier = Modifier
+                    .height(1.dp)
+                    .align(Alignment.CenterHorizontally)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            content()
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(Modifier.align(Alignment.End)) {
+                Button(onClick = onNegative) {
+                    AppThemeText("取消")
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Button(onClick = onPositive) {
+                    AppThemeText("确认")
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
         }
     }
 }

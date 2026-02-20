@@ -5,9 +5,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -45,6 +42,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
 import com.jingtian.composedemo.R
+import com.jingtian.composedemo.ui.theme.LocalAppPalette
 
 
 enum class AppThemeClickEditableTextArrange {
@@ -81,6 +79,8 @@ fun AppThemeClickEditableText(
     initEditable: Boolean = false,
     horizontalOffset: Dp = 0.dp,
     verticalOffset: Dp = 0.dp,
+    hint: String? = null,
+    hintColor: Color = Color.Gray,
 ) {
     var editable by remember { mutableStateOf(initEditable) }
     ConstraintLayout(modifier) {
@@ -97,23 +97,23 @@ fun AppThemeClickEditableText(
                         val target = if (editable) editTextRef else textRef
                         when (editAlignment) {
                             AppThemeClickEditableTextArrange.TOP_START -> {
-                                bottom.linkTo(target.top, -verticalOffset)
-                                end.linkTo(target.start, -horizontalOffset)
+                                top.linkTo(target.top, verticalOffset)
+                                end.linkTo(target.start, horizontalOffset)
                             }
 
                             AppThemeClickEditableTextArrange.BOTTOM_START -> {
-                                top.linkTo(target.bottom, -verticalOffset)
-                                end.linkTo(target.start, -horizontalOffset)
+                                bottom.linkTo(target.bottom, verticalOffset)
+                                end.linkTo(target.start, horizontalOffset)
                             }
 
                             AppThemeClickEditableTextArrange.TOP_END -> {
-                                bottom.linkTo(target.top, -verticalOffset)
-                                start.linkTo(target.end, -horizontalOffset)
+                                top.linkTo(target.top, verticalOffset)
+                                start.linkTo(target.end, horizontalOffset)
                             }
 
                             AppThemeClickEditableTextArrange.BOTTOM_END -> {
-                                top.linkTo(target.bottom, -verticalOffset)
-                                start.linkTo(target.end, -horizontalOffset)
+                                bottom.linkTo(target.bottom, verticalOffset)
+                                start.linkTo(target.end, horizontalOffset)
                             }
                         }
                     }
@@ -141,8 +141,7 @@ fun AppThemeClickEditableText(
                     .focusRequester(focusRequester)
                     .clickable {
                         onValueChange(value, editable)
-                    }
-                    .wrapContentWidth(),
+                    },
                 enabled,
                 readOnly,
                 textStyle,
@@ -155,9 +154,13 @@ fun AppThemeClickEditableText(
                 onTextLayout,
                 interactionSource,
                 cursorBrush,
+                hint,
+                hintColor,
             )
-            LaunchedEffect(Unit) {
-                focusRequester.requestFocus()
+            LaunchedEffect(editable) {
+                if (editable) {
+                    focusRequester.requestFocus()
+                }
             }
         } else {
             AppThemeText(
@@ -177,7 +180,10 @@ fun AppThemeClickEditableText(
                 overflow,
                 softWrap,
                 maxLines,
-                minLines
+                minLines,
+                color = null,
+                hint,
+                hintColor,
             )
         }
         EditImage()
@@ -195,10 +201,20 @@ fun AppThemeText(
     softWrap: Boolean = true,
     maxLines: Int = Int.MAX_VALUE,
     minLines: Int = 1,
-    color: ColorProducer? = null
-) = BasicText(
-    text, modifier, style, onTextLayout, overflow, softWrap, maxLines, minLines, color
-)
+    color: ColorProducer? = null,
+    hint: String? = null,
+    hintColor: Color = Color.Gray,
+) {
+    if (text.isNullOrBlank() && hint != null) {
+        BasicText(
+            hint, modifier, style.copy(hintColor), onTextLayout, overflow, softWrap, maxLines, minLines, color
+        )
+    } else {
+        BasicText(
+            text, modifier, style, onTextLayout, overflow, softWrap, maxLines, minLines, color
+        )
+
+    }}
 
 @Composable
 fun AppThemeTextField(
@@ -278,16 +294,19 @@ fun AppThemeBasicTextField(
             val keyboardController = LocalSoftwareKeyboardController.current
             AppThemeText(
                 text = hint,
-                modifier.clickable {
-                    focusRequester.requestFocus()
-                    keyboardController?.show()
-                }.padding(start = 3.dp),
+                modifier
+                    .clickable {
+                        focusRequester.requestFocus()
+                        keyboardController?.show()
+                    },
                 style = LocalTextStyle.current.copy(color = hintColor),
                 maxLines = 1
             )
-            Modifier.width(3.dp).focusRequester(focusRequester)
+            Modifier
+                .width(3.dp)
+                .focusRequester(focusRequester).align(Alignment.TopStart)
         } else {
-            modifier.width(IntrinsicSize.Min)
+            modifier.width(IntrinsicSize.Min).align(Alignment.TopStart)
         }
         BasicTextField(
             value,
@@ -328,27 +347,52 @@ fun AppThemeBasicTextField(
     cursorBrush: Brush = SolidColor(Color.Black),
     hint: String? = null,
     hintColor: Color = Color.Gray,
-) = BasicTextField(
-    value,
-    onValueChange,
-    modifier,
-    enabled,
-    readOnly,
-    textStyle,
-    keyboardOptions,
-    keyboardActions,
-    singleLine,
-    maxLines,
-    minLines,
-    visualTransformation,
-    onTextLayout,
-    interactionSource,
-    cursorBrush,
-    decorationBox = @Composable { innerTextField ->
-        // places leading icon, text field with label and placeholder, trailing icon
-        if (!hint.isNullOrEmpty() && value.text.isEmpty()) {
-            AppThemeText(hint, modifier, style = LocalTextStyle.current.copy(color = hintColor))
+) {
+    Box(modifier.wrapContentSize()) {
+        val modifier = if (value.text.isNullOrBlank() && !hint.isNullOrBlank()) {
+            val focusRequester = remember { FocusRequester() }
+            val keyboardController = LocalSoftwareKeyboardController.current
+            AppThemeText(
+                text = hint,
+                modifier
+                    .clickable {
+                        focusRequester.requestFocus()
+                        keyboardController?.show()
+                    },
+                style = LocalTextStyle.current.copy(color = hintColor),
+                maxLines = 1
+            )
+            Modifier
+                .width(3.dp)
+                .focusRequester(focusRequester)
+        } else {
+            modifier.width(IntrinsicSize.Min)
         }
-        innerTextField()
+        BasicTextField(
+            value,
+            onValueChange,
+            modifier,
+            enabled,
+            readOnly,
+            textStyle,
+            keyboardOptions,
+            keyboardActions,
+            singleLine,
+            maxLines,
+            minLines,
+            visualTransformation,
+            onTextLayout,
+            interactionSource,
+            cursorBrush,
+        )
     }
-)
+}
+
+@Composable
+fun AppThemeHorizontalDivider(
+    modifier: Modifier = Modifier,
+    thickness: Dp = DividerDefaults.Thickness,
+    color: Color = LocalAppPalette.current.dividerColor
+) {
+    HorizontalDivider(modifier, thickness, color)
+}

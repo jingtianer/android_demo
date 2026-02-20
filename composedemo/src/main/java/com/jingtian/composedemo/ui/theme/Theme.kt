@@ -9,6 +9,8 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.structuralEqualityPolicy
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontStyle
 
 private val DarkColorScheme = darkColorScheme(
     primary = Purple80,
@@ -35,7 +37,7 @@ private val LightColorScheme = lightColorScheme(
 
 data class AppUIConstants(
     val drawerMaxPercent: Float = 0.8f,
-    val dialogaxPercent: Float = 0.9f,
+    val dialogPercent: Float = 0.9f,
 )
 
 class AppPalette(
@@ -43,6 +45,9 @@ class AppPalette(
     val dialogBg: Color,
     val labelChecked: Color,
     val labelUnChecked: Color,
+    val dividerColor: Color,
+    val cardBg: Color,
+    val strokeColor: Color,
 )
 
 private val darkAppPalette = AppPalette(
@@ -50,16 +55,23 @@ private val darkAppPalette = AppPalette(
     dialogBg = color282828,
     labelChecked = Purple80,
     labelUnChecked = Color.Gray,
+    dividerColor = colorA8A8A8,
+    cardBg = color686868,
+    strokeColor = color484848
 )
 private val liteAppPalette = AppPalette(
     drawerBg = colorA8A8A8,
     dialogBg = colorA8A8A8,
     labelChecked = Purple40,
     labelUnChecked = Color.Gray,
+    dividerColor = color282828,
+    cardBg = colorC8c8c8,
+    strokeColor = color686868,
 )
 
 val LocalAppPalette = compositionLocalOf(structuralEqualityPolicy()) { liteAppPalette }
 val LocalAppUIConstants = compositionLocalOf(structuralEqualityPolicy()) { AppUIConstants() }
+val LocalSecondaryTextStyle = compositionLocalOf(structuralEqualityPolicy()) { TextStyle.Default }
 
 @Composable
 fun DemoAppTheme(
@@ -80,6 +92,10 @@ fun DemoAppTheme(
     val customTextStyle = LocalTextStyle.current.copy(
         color = if (darkTheme) colorF8f8f8 else colorBlack
     )
+    val customSecondaryTextStyle = LocalTextStyle.current.copy(
+        color = if (darkTheme) colorA8A8A8 else color282828,
+        fontStyle = FontStyle.Italic
+    )
     val appPalette = if (darkTheme) {
         darkAppPalette
     } else {
@@ -94,6 +110,7 @@ fun DemoAppTheme(
                 LocalAppPalette provides appPalette,
                 LocalAppUIConstants provides AppUIConstants(),
                 LocalContentColor provides Color.Unspecified,
+                LocalSecondaryTextStyle provides customSecondaryTextStyle,
                 content = content
             )
         }
