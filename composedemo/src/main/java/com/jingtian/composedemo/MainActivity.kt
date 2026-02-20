@@ -443,7 +443,6 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, size: Dp, padding: Dp) {
 
     val scope = rememberCoroutineScope()
     var imageResource by remember { mutableStateOf(R.drawable.load_failed) }
-    imageResource = R.drawable.load_failed
 
     fun FileInfo.aspectRatio(): Float? {
         return (this.intrinsicWidth.toFloat() / this.intrinsicHeight.toFloat()).takeIf {
