@@ -247,9 +247,7 @@ class AlbumViewModel : ViewModel() {
                 val storage = FileStorageUtils.getStorage(mediaType)
                 if (oldUri != null) {
                     val oldMediaType = albumItemRelation.fileInfo.fileType
-                    if (oldMediaType == FileType.IMAGE) {
-                        BitMapCachePool.invalid(albumItemRelation.fileInfo.storageId)
-                    }
+                    BitMapCachePool.invalid(albumItemRelation.fileInfo.storageId, oldMediaType)
                     if (mediaType == oldMediaType) {
                         if (albumItemRelation.fileInfo.storageId != DataBase.INVALID_ID) {
                             storage?.asyncStore(albumItemRelation.fileInfo.storageId, uri)

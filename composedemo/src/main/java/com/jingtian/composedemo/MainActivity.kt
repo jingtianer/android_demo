@@ -3,9 +3,9 @@ package com.jingtian.composedemo
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
-import android.graphics.drawable.shapes.RoundRectShape
 import android.net.Uri
 import android.os.Build
+import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
@@ -724,7 +724,11 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, size: Dp, 
                     }
                 }
                 FileType.VIDEO -> {
-                    getVideoThumbnail(scope, uri) { bitmap->
+                    getVideoThumbnail(
+                        albumItemRelation.fileInfo,
+                        scope, uri,
+                        maxWidth = size.dpValue.toInt(),
+                    ) { bitmap->
                         imageBitmap = bitmap?.asImageBitmap()
                         imageBitmap?.aspectRatio()?.let {
                             intrinsicRatio = it
@@ -1518,7 +1522,7 @@ fun DrawerHeader() {
                 val currentImageId =
                     currentUser.userAvatar.storageId.takeIf { it != DataBase.INVALID_ID }
                 val nextId = if (currentImageId != null) {
-                    BitMapCachePool.invalid(currentImageId)
+                    BitMapCachePool.invalid(currentImageId, FileType.IMAGE)
                     imageStorage.asyncStore(currentImageId, uri)
                 } else {
                     imageStorage.asyncStore(uri)

@@ -21,7 +21,6 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.InputStream
 import java.lang.ref.SoftReference
-import java.lang.ref.WeakReference
 import java.util.concurrent.ConcurrentHashMap
 
 object FileStorageUtils {
@@ -241,21 +240,39 @@ object FileStorageUtils {
         }
     }
 
-    suspend fun getVideoThumbnail(videoUri: Uri): Bitmap? {
-        return withContext(Dispatchers.IO) {
-            val retriever = MediaMetadataRetriever()
-            return@withContext try {
-                retriever.setDataSource(app, videoUri)
-                // 获取第一帧作为封面
-                retriever.frameAtTime
+    fun getVideoThumbnail(
+        fileInfo: FileInfo,
+        coroutineScope: CoroutineScope,
+        videoUri: Uri,
+        maxWidth: Int = -1,
+        maxHeight: Int = -1,
+        onLoadBitmap: (Bitmap?)->Unit
+    ): Job = coroutineScope.launch(Dispatchers.IO) {
+        BitMapCachePool.loadImage(fileInfo, maxWidth, maxHeight) { getVideoThumbnail(videoUri) }.second?.let {
+            withContext(Dispatchers.Main) {
+                onLoadBitmap(it)
+            }
+            return@launch
+        }
+        val bitmap = getVideoThumbnail(videoUri)
+        withContext(Dispatchers.Main) {
+            onLoadBitmap(bitmap)
+        }
+    }
+
+    private fun getVideoThumbnail(videoUri: Uri): Bitmap? {
+        val retriever = MediaMetadataRetriever()
+        return try {
+            retriever.setDataSource(app, videoUri)
+            // 获取第一帧作为封面
+            retriever.frameAtTime
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        } finally {
+            try {
+                retriever.release()
             } catch (e: Exception) {
-                e.printStackTrace()
-                null
-            } finally {
-                try {
-                    retriever.release()
-                } catch (e: Exception) {
-                }
             }
         }
     }
