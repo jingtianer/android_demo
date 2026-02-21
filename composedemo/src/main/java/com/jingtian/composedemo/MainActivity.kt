@@ -969,11 +969,15 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
         )
     }
 
-    fun updateImage(uri: Uri, fileType: FileType) {
+    fun updateImage(uri: Uri, fileType: FileType, fileInfo: FileInfo?) {
         when (fileType) {
             FileType.IMAGE -> {
                 scope.launch(Dispatchers.IO) {
-                    val bitmap = BitMapCachePool.toBitMap(uri).second?.asImageBitmap()
+                    val bitmap = if (fileInfo != null) {
+                        BitMapCachePool.loadImage(fileInfo).second?.asImageBitmap()
+                    } else {
+                        BitMapCachePool.toBitMap(uri).second?.asImageBitmap()
+                    }
                     withContext(Dispatchers.Main) {
                         pickedImage = bitmap
                     }
@@ -981,8 +985,18 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
             }
 
             FileType.VIDEO -> {
-                getVideoThumbnail(scope, uri) { bitmap: Bitmap? ->
-                    pickedImage = bitmap?.asImageBitmap()
+                if (fileInfo != null) {
+                    getVideoThumbnail(fileInfo, scope, uri) { bitmap: Bitmap? ->
+                        withContext(Dispatchers.Main) {
+                            pickedImage = bitmap?.asImageBitmap()
+                        }
+                    }
+                } else {
+                    getVideoThumbnail(scope, uri) { bitmap: Bitmap? ->
+                        withContext(Dispatchers.Main) {
+                            pickedImage = bitmap?.asImageBitmap()
+                        }
+                    }
                 }
             }
 
@@ -998,11 +1012,24 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
         }
     }
 
-    LaunchedEffect(selectedUri) {
+    fun onSelectedUriChange() {
         val uri = selectedUri
         val fileType = selectedFileType
         if (uri != null && fileType != null) {
-            updateImage(uri, fileType)
+            updateImage(uri, fileType, null)
+        } else {
+            imageResource = R.drawable.load_failed
+        }
+        if (itemName.isNullOrBlank() && uri != null) {
+            itemName = getFileNameFromUri(uri) ?:""
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        val uri = selectedUri
+        val fileType = selectedFileType
+        if (uri != null && fileType != null) {
+            updateImage(uri, fileType, albumItemRelation.fileInfo)
         } else {
             imageResource = R.drawable.load_failed
         }
@@ -1017,6 +1044,7 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
             uri ?: return@rememberLauncherForActivityResult
             selectedFileType = getMediaType(uri)
             selectedUri = uri
+            onSelectedUriChange()
         }
     )
 

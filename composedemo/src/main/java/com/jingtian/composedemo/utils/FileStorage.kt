@@ -232,7 +232,7 @@ object FileStorageUtils {
     fun getVideoThumbnail(
         coroutineScope: CoroutineScope,
         videoUri: Uri,
-        onLoadBitmap: (Bitmap?)->Unit
+        onLoadBitmap: suspend (Bitmap?)->Unit
     ): Job = coroutineScope.launch(Dispatchers.IO) {
         val bitmap = getVideoThumbnail(videoUri)
         withContext(Dispatchers.Main) {
@@ -246,7 +246,7 @@ object FileStorageUtils {
         videoUri: Uri,
         maxWidth: Int = -1,
         maxHeight: Int = -1,
-        onLoadBitmap: (Bitmap?)->Unit
+        onLoadBitmap: suspend (Bitmap?)->Unit
     ): Job = coroutineScope.launch(Dispatchers.IO) {
         BitMapCachePool.loadImage(fileInfo, maxWidth, maxHeight) { getVideoThumbnail(videoUri) }.second?.let {
             withContext(Dispatchers.Main) {
