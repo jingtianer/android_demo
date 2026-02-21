@@ -38,8 +38,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
@@ -49,7 +51,9 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.staggeredgrid.LazyHorizontalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.rememberScrollState
@@ -72,6 +76,7 @@ import androidx.compose.material3.SheetState
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.rememberSwipeToDismissBoxState
@@ -103,6 +108,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.DialogProperties
+import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.core.content.FileProvider
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -146,6 +152,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.sqrt
+import kotlin.random.Random
 
 class MainActivity : BaseActivity() {
     @Composable
@@ -274,38 +281,17 @@ fun Main() {
 
 class LabelCheckInfo<T>(val label: T, val name: String, var isChecked: MutableLiveData<Boolean> = MutableLiveData(false))
 
-fun LazyListScope.fileTypeFilter(checkedList: List<LabelCheckInfo<FileType>>, onCheckStateChange: (List<FileType>)->Unit) {
+fun <T> LazyListScope.roundRectTabFilter(checkedList: List<LabelCheckInfo<T>>, onCheckStateChange: (List<T>)->Unit) {
     items(checkedList.size) { index->
-        val item = checkedList[index]
-        val checked by item.isChecked.observeAsState()
-        CheckableLabelView(label = item.label.name, isChecked = checked ?: false, onCheckStateChange = { checked->
-            item.isChecked.value = checked
-            onCheckStateChange(checkedList.mapNotNull { checkdInfo-> checkdInfo.label.takeIf { checkdInfo.isChecked.value ?: false } })
-        })
+        RoundRectCheckableLabel(
+            checkedList[index],
+            checkedList,
+            true,
+            onCheckStateChange
+        )
     }
 }
 
-fun LazyListScope.ItemRankFilter(checkedList: List<LabelCheckInfo<ItemRank>>,onCheckStateChange: (List<ItemRank>)->Unit) {
-    items(checkedList.size) { index->
-        val item = checkedList[index]
-        val checked by item.isChecked.observeAsState()
-        CheckableLabelView(label = item.label.name, isChecked = checked ?: false, onCheckStateChange = { checked->
-            item.isChecked.value = checked
-            onCheckStateChange(checkedList.mapNotNull { checkdInfo-> checkdInfo.label.takeIf { checkdInfo.isChecked.value ?: false } })
-        })
-    }
-}
-
-fun LazyListScope.LabelFilter(labelList: List<LabelCheckInfo<String>>, onCheckStateChange: (List<String>)->Unit) {
-    items(labelList.size) { index ->
-        val item = labelList[index]
-        val checked by item.isChecked.observeAsState()
-        CheckableLabelView(label = item.label, isChecked = checked ?: false, onCheckStateChange = { item.isChecked.value = it })
-        LaunchedEffect(checked) {
-            onCheckStateChange(labelList.mapNotNull { checkInfo -> checkInfo.label.takeIf { checkInfo.isChecked.value ?: false } })
-        }
-    }
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -326,7 +312,7 @@ fun Gallery(album: IndexedValue<Album>?) {
     val albumItemDataChange by viewModel.albumItemListChange.observeAsState()
 
     var labelFilterCheckedInfo by remember { mutableStateOf<List<LabelCheckInfo<String>>>(emptyList()) }
-    val fileTypeCheckState by remember { mutableStateOf(FileType.entries.map { LabelCheckInfo(it, it.name) }) }
+    val fileTypeCheckState by remember { mutableStateOf(FileType.entries.map { LabelCheckInfo(it, it.typeName) }) }
     val itemRankTypeCheckState by remember { mutableStateOf(ItemRank.entries.map { LabelCheckInfo(it, it.name) }) }
 
     var albumName by remember { mutableStateOf(album.value.albumName) }
@@ -412,37 +398,41 @@ fun Gallery(album: IndexedValue<Album>?) {
                 )
             }
         }
-        Row(Modifier.padding(horizontal = 8.dp)) {
-            LazyRow(Modifier.weight(1f)) {
-                LabelFilter(labelFilterCheckedInfo) { checkInfo->
+        Row(Modifier.padding(start = 4.dp, end = 8.dp)) {
+            LazyRow(
+                Modifier
+                    .wrapContentHeight()
+                    .weight(1f)) {
+                roundRectTabFilter(labelFilterCheckedInfo) { checkInfo->
                     val targetLabelSet = checkInfo.toSet()
                     filterLabels = targetLabelSet
                 }
-                fileTypeFilter(fileTypeCheckState) { checkedFileType->
+                roundRectTabFilter(fileTypeCheckState) { checkedFileType->
                     filterFileTypes = checkedFileType
                 }
-                ItemRankFilter(itemRankTypeCheckState) { checkedItemRank->
+                roundRectTabFilter(itemRankTypeCheckState) { checkedItemRank->
                     itemRankFilter = checkedItemRank
                 }
             }
-            Image(painter = painterResource(R.drawable.trash_bin),
-                contentDescription = "清空筛选",
-                Modifier
-                    .size(24.dp)
-                    .clickable {
-                        filterLabels = emptySet()
-                        filterFileTypes = emptyList()
-                        itemRankFilter = emptyList()
-                        labelFilterCheckedInfo.forEach { it.isChecked.value = false }
-                        fileTypeCheckState.forEach { it.isChecked.value = false }
-                        itemRankTypeCheckState.forEach { it.isChecked.value = false }
-                    })
+//            Image(painter = painterResource(R.drawable.trash_bin),
+//                contentDescription = "清空筛选",
+//                Modifier
+//                    .size(24.dp)
+//                    .clickable {
+//                        filterLabels = emptySet()
+//                        filterFileTypes = emptyList()
+//                        itemRankFilter = emptyList()
+//                        labelFilterCheckedInfo.forEach { it.isChecked.value = false }
+//                        fileTypeCheckState.forEach { it.isChecked.value = false }
+//                        itemRankTypeCheckState.forEach { it.isChecked.value = false }
+//                    })
 
             Image(
                 painter = painterResource(R.drawable.filter),
                 contentDescription = "过滤器",
                 modifier = Modifier
-                    .size(24.dp)
+                    .size(LocalAppUIConstants.current.filterLabelHeight)
+                    .align(Alignment.CenterVertically)
                     .clickable { showLabelFilter = !showLabelFilter }
             )
         }
@@ -531,8 +521,8 @@ fun FilterPanel(
     onLabelCheckStateChange: (List<String>)->Unit,
     onDismiss: () -> Unit,
 ) {
-    val horizontalPadding = LocalAppUIConstants.current.filterBottomSheetPadding
-    val horizontalInnerPadding = LocalAppUIConstants.current.filterBottomSheetInnerPadding
+    val horizontalPadding = 0.dp//4.dp
+    val horizontalInnerPadding = LocalAppUIConstants.current.filterLabelPaddings[2]
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -540,65 +530,66 @@ fun FilterPanel(
         modifier = Modifier
             .fillMaxWidth()
             .fillMaxHeight(
-                sqrt(goldenRatio)
+                sqrt(1 - goldenRatio)
             )
     ) {
-        val minSize = LocalConfiguration.current.screenWidthDp.dp / 4
         val scope = rememberCoroutineScope()
-        LazyVerticalGrid(GridCells.Adaptive(minSize - horizontalPadding - horizontalInnerPadding),
-            Modifier
+
+
+        LazyVerticalGrid(
+            columns = GridCells.Adaptive(LocalAppUIConstants.current.filterLabelHeight * LocalAppUIConstants.current.filterLabelAspectRatio),
+            modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxHeight()
-                .weight(1f)
+                .wrapContentHeight()
                 .padding(horizontal = horizontalPadding)
         ) {
-            item(span = {
-                GridItemSpan(this.maxCurrentLineSpan)
-            }) {
-                AppThemeText(text = "类型筛选", Modifier.padding(horizontal = horizontalPadding))
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                AppThemeText(text = "类型筛选", Modifier.padding(horizontal = horizontalInnerPadding), style = LocalTextStyle.current.copy(fontWeight = FontWeight(600), fontSize = 14.sp))
             }
             items(fileTypeCheckStateList.size) { index ->
-                val item = fileTypeCheckStateList[index]
                 RoundRectCheckableLabel(
-                    item,
+                    fileTypeCheckStateList[index],
                     fileTypeCheckStateList,
-                    minSize - horizontalPadding * 2,
+                    false,
                     onFileTypeCheckStateChange
                 )
             }
-            item(span = {
-                GridItemSpan(this.maxLineSpan)
-            }) {
-                AppThemeText(text = "排行筛选", Modifier.padding(horizontal = horizontalPadding + horizontalInnerPadding))
+            item(span = { GridItemSpan(this.maxLineSpan) }) {
+                AppThemeText(text = "排行筛选", Modifier.padding(horizontal =horizontalInnerPadding), style = LocalTextStyle.current.copy(fontWeight = FontWeight(600), fontSize = 14.sp))
             }
             items(itemRankCheckStateList.size) { index ->
-                val item = itemRankCheckStateList[index]
                 RoundRectCheckableLabel(
-                    item,
+                    itemRankCheckStateList[index],
                     itemRankCheckStateList,
-                    minSize - horizontalPadding * 2,
+                    false,
                     onItemRankCheckStateChange
                 )
             }
-            item(span = {
-                GridItemSpan(this.maxLineSpan)
-            }) {
-                AppThemeText(text = "标签筛选", Modifier.padding(horizontal = horizontalPadding + horizontalInnerPadding))
+            if (labelCheckStateList.isNotEmpty()) {
+                item(span = { GridItemSpan(this.maxLineSpan) }) {
+                    AppThemeText(text = "标签筛选", Modifier.padding(horizontal = horizontalInnerPadding), style = LocalTextStyle.current.copy(fontWeight = FontWeight(600), fontSize = 14.sp))
+                }
             }
+        }
+
+        LazyHorizontalStaggeredGrid(
+            StaggeredGridCells.Adaptive(LocalAppUIConstants.current.filterLabelHeight + LocalAppUIConstants.current.filterLabelPaddings[1] + LocalAppUIConstants.current.filterLabelPaddings[3]),
+            Modifier
+                .fillMaxHeight()
+                .fillMaxWidth()
+                .weight(1f),
+        ) {
             items(labelCheckStateList.size) { index ->
                 val item = labelCheckStateList[index]
                 RoundRectCheckableLabel(
                     item,
                     labelCheckStateList,
-                    minSize - horizontalPadding * 2,
+                    true,
                     onLabelCheckStateChange
                 )
             }
-            item {
-                Spacer(Modifier.height(16.dp))
-            }
         }
-
+        Spacer(Modifier.height(16.dp))
         Row(
             Modifier
                 .fillMaxWidth()
@@ -637,32 +628,63 @@ fun FilterPanel(
             ) {
                 AppThemeText(text = "清空")
             }
+            Button(onClick = {
+                onDismiss()
+            },
+                modifier = Modifier
+                    .align(Alignment.CenterVertically)
+                    .weight(1f)
+                    .padding(horizontal = horizontalInnerPadding)
+            ) {
+                AppThemeText(text = "确认")
+            }
             Spacer(Modifier.height(16.dp))
         }
     }
 }
 
 @Composable
-fun <T> RoundRectCheckableLabel(item: LabelCheckInfo<T>, checkedList: List<LabelCheckInfo<T>>, size: Dp, onCheckStateChange: (List<T>)->Unit) {
+fun <T> RoundRectCheckableLabel(item: LabelCheckInfo<T>, checkedList: List<LabelCheckInfo<T>>, wrapContent: Boolean, onCheckStateChange: (List<T>)->Unit) {
     val checked by item.isChecked.observeAsState()
-    val horizontalPadding = LocalAppUIConstants.current.filterBottomSheetInnerPadding
-    val itemWidth = size - horizontalPadding * 2
-    val itemHeight = itemWidth * (1 - goldenRatio)
     val isChecked = checked ?: false
-    Box(
+    val paddings = LocalAppUIConstants.current.filterLabelPaddings
+    val paddingInnerHorizontal = paddings[0]
+    val paddingInnerVertical = paddings[1]
+    val paddingOuterHorizontal = paddings[2]
+    val paddingOuterVertical = paddings[3]
+    val modifier = if (wrapContent) {
         Modifier
-            .padding(vertical = horizontalPadding)
-            .size(width = itemWidth, height = itemHeight)
-            .padding(horizontal = horizontalPadding)
+            .padding(horizontal = paddingOuterHorizontal, vertical = paddingOuterVertical)
+            .wrapContentWidth()
+            .height(LocalAppUIConstants.current.filterLabelHeight)
             .background(
                 color = if (isChecked) LocalAppPalette.current.labelChecked else LocalAppPalette.current.labelUnChecked,
-                shape = RoundedCornerShape(itemHeight / 2)
+                shape = RoundedCornerShape(100)
             )
+            .widthIn(LocalAppUIConstants.current.filterLabelHeight * LocalAppUIConstants.current.filterLabelAspectRatio)
+            .clip(
+                RoundedCornerShape(100),
+            )
+    } else {
+        Modifier
+            .padding(horizontal = paddingOuterHorizontal, vertical = paddingOuterVertical)
+            .fillMaxWidth()
+            .height(LocalAppUIConstants.current.filterLabelHeight)
+            .background(
+                color = if (isChecked) LocalAppPalette.current.labelChecked else LocalAppPalette.current.labelUnChecked,
+                shape = RoundedCornerShape(100)
+            )
+            .clip(
+                RoundedCornerShape(100),
+            )
+    }
+    Box(
+        modifier
             .clickable {
                 item.isChecked.value = !isChecked
-                onCheckStateChange(checkedList.mapNotNull { checkdInfo ->
-                    checkdInfo.label.takeIf {
-                        checkdInfo.isChecked.value ?: false
+                onCheckStateChange(checkedList.mapNotNull { checkedInfo ->
+                    checkedInfo.label.takeIf {
+                        checkedInfo.isChecked.value ?: false
                     }
                 })
             }) {
@@ -671,6 +693,7 @@ fun <T> RoundRectCheckableLabel(item: LabelCheckInfo<T>, checkedList: List<Label
             Modifier
                 .wrapContentSize()
                 .align(Alignment.Center)
+                .padding(horizontal = paddingInnerHorizontal, vertical = paddingInnerVertical)
         )
     }
 }
@@ -790,7 +813,8 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, size: Dp, 
         }
         .background(
             color = LocalAppPalette.current.galleryCardBg, shape = RoundedCornerShape(padding)
-        ).clip(RoundedCornerShape(padding))) {
+        )
+        .clip(RoundedCornerShape(padding))) {
 
         val currentPickedImage = imageBitmap
 
@@ -802,7 +826,8 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, size: Dp, 
             }
         }
 
-        Box {
+        Box(Modifier
+            .clip(RoundedCornerShape(padding))) {
             if (currentPickedImage == null) {
                 Image(
                     painter = painterResource(imageResource),
@@ -856,33 +881,6 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, size: Dp, 
                         it.layoutParams = ViewGroup.LayoutParams(bg.getWidth().toInt(), bg.getHeight().toInt())
                     })
             }
-            val gradientBrush = Brush.verticalGradient(
-                colors = LocalAppPalette.current.gradientShadowMaskColors,
-            )
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .background(brush = gradientBrush)
-                    .padding(top = 16.dp)
-                    .wrapContentHeight()
-                    .align(Alignment.BottomCenter)) {
-                AndroidView({ context ->
-                    StarRateView(context).commonConfig().apply {
-                        layoutParams = ViewGroup.LayoutParams(
-                            ViewGroup.LayoutParams.WRAP_CONTENT,
-                            ViewGroup.LayoutParams.MATCH_PARENT
-                        )
-                    }
-                },
-                    Modifier
-                        .wrapContentWidth()
-                        .height(30.dp)
-                        .align(Alignment.Center)
-                        .padding(bottom = 4.dp, start = padding, end = padding),
-                    update = {
-                        it.setScore(itemScore)
-                    })
-            }
         }
 
         AppThemeText(
@@ -891,7 +889,7 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, size: Dp, 
                 .wrapContentWidth()
                 .padding(bottom = 4.dp, start = padding, end = padding)
                 .align(Alignment.CenterHorizontally),
-            maxLines = 2,
+            maxLines = 1,
             style = LocalTextStyle.current.copy(textAlign = TextAlign.Start, fontSize = 16.sp),
             overflow = TextOverflow.Ellipsis
         )
@@ -904,6 +902,30 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, size: Dp, 
                 .padding(bottom = 4.dp, start = padding, end = padding), label = {
                 AppThemeText("评论")
             }, maxLines = Int.MAX_VALUE, enabled = false)
+        }
+
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .padding(top = 4.dp)
+                .wrapContentHeight()
+                .align(Alignment.CenterHorizontally)) {
+            AndroidView({ context ->
+                StarRateView(context).commonConfig().apply {
+                    layoutParams = ViewGroup.LayoutParams(
+                        ViewGroup.LayoutParams.WRAP_CONTENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT
+                    )
+                }
+            },
+                Modifier
+                    .wrapContentWidth()
+                    .height(30.dp)
+                    .align(Alignment.Center)
+                    .padding(bottom = 4.dp, start = padding, end = padding),
+                update = {
+                    it.setScore(itemScore)
+                })
         }
 
         if (itemLabel.isNotEmpty()) {

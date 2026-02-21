@@ -34,11 +34,11 @@ class FileInfo(
     }
 }
 
-enum class FileType(val value: Int, val mimeType: String) {
-    RegularFile(0, "*/*"),
-    IMAGE(1, "image/*"),
-    VIDEO(2, "video/*"),
-    AUDIO(3, "audio/*"),
+enum class FileType(val value: Int, val mimeType: String, val typeName: String) {
+    IMAGE(1, "image/*", "图片"),
+    VIDEO(2, "video/*", "视频"),
+    AUDIO(3, "audio/*", "音频"),
+    RegularFile(0, "*/*", "其他"),
     ;
 
     companion object {

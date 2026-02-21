@@ -8,5 +8,5 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
     <color name="transparent">#00000000</color>
-    <color name="color_star_stroke">#585858</color>
+    <color name="color_star_stroke">#181818</color>
 </resources>

@@ -41,8 +41,9 @@ private val LightColorScheme = lightColorScheme(
 data class AppUIConstants(
     val drawerMaxPercent: Float = 0.8f,
     val dialogPercent: Float = 0.9f,
-    val filterBottomSheetPadding: Dp = 4.dp,
-    val filterBottomSheetInnerPadding: Dp = 4.dp
+    val filterLabelHeight: Dp = 38.dp,
+    val filterLabelAspectRatio: Float = 1 / (1 - goldenRatio),
+    val filterLabelPaddings: List<Dp> = listOf(8.dp, 0.dp, 4.dp, 4.dp)
 )
 
 class AppPalette(
@@ -61,7 +62,7 @@ private val darkAppPalette = AppPalette(
     drawerBg = color282828,
     dialogBg = color282828,
     labelChecked = Purple40,
-    labelUnChecked = color484848,
+    labelUnChecked = colorA8A8A8_7f,
     dividerColor = colorA8A8A8,
     cardBg = color686868,
     galleryCardBg = color282828,
@@ -71,7 +72,7 @@ private val liteAppPalette = AppPalette(
     drawerBg = colorA8A8A8,
     dialogBg = colorA8A8A8,
     labelChecked = Purple80,
-    labelUnChecked = colorA8A8A8,
+    labelUnChecked = colorA8A8A8_7f,
     dividerColor = color282828,
     cardBg = colorC8c8c8,
     galleryCardBg = colorC8c8c8_a0,
@@ -148,7 +149,7 @@ fun DemoAppTheme(
         typography = Typography,
         content = {
             CompositionLocalProvider(
-                LocalTextStyle provides customTextStyle,
+//                LocalTextStyle provides customTextStyle,
                 LocalAppPalette provides appPalette,
                 LocalAppUIConstants provides AppUIConstants(),
                 LocalContentColor provides Color.Unspecified,
