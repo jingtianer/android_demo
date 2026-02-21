@@ -3,6 +3,7 @@ package com.jingtian.composedemo
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
+import android.graphics.drawable.shapes.RoundRectShape
 import android.net.Uri
 import android.os.Build
 import android.view.View
@@ -81,6 +82,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.RectangleShape
@@ -483,15 +487,17 @@ fun Gallery(album: IndexedValue<Album>?) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
 
-    if (showLabelFilter) {
-        scope.launch {
-            sheetState.expand()
-        }
-    } else {
-        scope.launch {
-            sheetState.hide()
-        }
-    }
+   LaunchedEffect(showLabelFilter) {
+       if (showLabelFilter) {
+           scope.launch {
+               sheetState.expand()
+           }
+       } else {
+           scope.launch {
+               sheetState.hide()
+           }
+       }
+   }
 
     if (showLabelFilter) {
         FilterPanel(
@@ -539,7 +545,7 @@ fun FilterPanel(
     ) {
         val minSize = LocalConfiguration.current.screenWidthDp.dp / 4
         val scope = rememberCoroutineScope()
-        LazyVerticalGrid(GridCells.Adaptive(minSize),
+        LazyVerticalGrid(GridCells.Adaptive(minSize - horizontalPadding - horizontalInnerPadding),
             Modifier
                 .fillMaxWidth()
                 .fillMaxHeight()
@@ -780,13 +786,7 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, size: Dp, 
         }
         .background(
             color = LocalAppPalette.current.galleryCardBg, shape = RoundedCornerShape(padding)
-        )) {
-
-
-        AppThemeText(itemName, modifier = Modifier
-            .wrapContentWidth()
-            .padding(bottom = 4.dp, start = padding, end = padding)
-            .align(Alignment.CenterHorizontally), maxLines = 2, style = LocalTextStyle.current.copy(textAlign = TextAlign.Start, fontSize = 16.sp), overflow = TextOverflow.Ellipsis)
+        ).clip(RoundedCornerShape(padding))) {
 
         val currentPickedImage = imageBitmap
 
@@ -814,8 +814,7 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, size: Dp, 
                         }
                         .fillMaxWidth()
                         .aspectRatioOrNull(intrinsicRatio)
-                        .align(Alignment.Center)
-                        .padding(bottom = 4.dp),
+                        .align(Alignment.Center),
                     contentScale = ContentScale.FillWidth
                 )
             } else {
@@ -830,8 +829,7 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, size: Dp, 
                         }
                         .fillMaxWidth()
                         .aspectRatioOrNull(intrinsicRatio)
-                        .align(Alignment.Center)
-                        .padding(bottom = 4.dp),
+                        .align(Alignment.Center),
                     contentScale = ContentScale.FillWidth
                 )
             }
@@ -854,7 +852,45 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, size: Dp, 
                         it.layoutParams = ViewGroup.LayoutParams(bg.getWidth().toInt(), bg.getHeight().toInt())
                     })
             }
+            val gradientBrush = Brush.verticalGradient(
+                colors = LocalAppPalette.current.gradientShadowMaskColors,
+            )
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .background(brush = gradientBrush)
+                    .padding(top = 16.dp)
+                    .wrapContentHeight()
+                    .align(Alignment.BottomCenter)) {
+                AndroidView({ context ->
+                    StarRateView(context).commonConfig().apply {
+                        layoutParams = ViewGroup.LayoutParams(
+                            ViewGroup.LayoutParams.WRAP_CONTENT,
+                            ViewGroup.LayoutParams.MATCH_PARENT
+                        )
+                    }
+                },
+                    Modifier
+                        .wrapContentWidth()
+                        .height(30.dp)
+                        .align(Alignment.Center)
+                        .padding(bottom = 4.dp, start = padding, end = padding),
+                    update = {
+                        it.setScore(itemScore)
+                    })
+            }
         }
+
+        AppThemeText(
+            itemName,
+            modifier = Modifier
+                .wrapContentWidth()
+                .padding(bottom = 4.dp, start = padding, end = padding)
+                .align(Alignment.CenterHorizontally),
+            maxLines = 2,
+            style = LocalTextStyle.current.copy(textAlign = TextAlign.Start, fontSize = 16.sp),
+            overflow = TextOverflow.Ellipsis
+        )
 
         if (!itemDesc.isNullOrBlank()) {
             OutlinedTextField(itemDesc, { value->
@@ -864,28 +900,6 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, size: Dp, 
                 .padding(bottom = 4.dp, start = padding, end = padding), label = {
                 AppThemeText("评论")
             }, maxLines = Int.MAX_VALUE, enabled = false)
-        }
-
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .wrapContentHeight()) {
-            AndroidView({ context ->
-                StarRateView(context).commonConfig().apply {
-                    layoutParams = ViewGroup.LayoutParams(
-                        ViewGroup.LayoutParams.WRAP_CONTENT,
-                        ViewGroup.LayoutParams.MATCH_PARENT
-                    )
-                }
-            },
-                Modifier
-                    .wrapContentWidth()
-                    .height(30.dp)
-                    .align(Alignment.Center)
-                    .padding(bottom = 4.dp, start = padding, end = padding),
-                update = {
-                    it.setScore(itemScore)
-                })
         }
 
         if (itemLabel.isNotEmpty()) {

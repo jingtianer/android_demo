@@ -54,6 +54,7 @@ class AppPalette(
     val cardBg: Color,
     val galleryCardBg: Color,
     val strokeColor: Color,
+    val gradientShadowMaskColors: List<Color> = listOf(color181818_00, color181818_cf)
 )
 
 private val darkAppPalette = AppPalette(
