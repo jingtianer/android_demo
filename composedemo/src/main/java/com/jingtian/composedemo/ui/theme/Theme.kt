@@ -11,6 +11,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import kotlin.math.sqrt
 
 private val DarkColorScheme = darkColorScheme(
     primary = Purple80,
@@ -38,6 +41,8 @@ private val LightColorScheme = lightColorScheme(
 data class AppUIConstants(
     val drawerMaxPercent: Float = 0.8f,
     val dialogPercent: Float = 0.9f,
+    val filterBottomSheetPadding: Dp = 4.dp,
+    val filterBottomSheetInnerPadding: Dp = 4.dp
 )
 
 class AppPalette(
@@ -101,6 +106,8 @@ val LocalAppPalette = compositionLocalOf(structuralEqualityPolicy()) { liteAppPa
 val LocalAppUIConstants = compositionLocalOf(structuralEqualityPolicy()) { AppUIConstants() }
 val LocalSecondaryTextStyle = compositionLocalOf(structuralEqualityPolicy()) { TextStyle.Default }
 val LocalMiddleButtonConfig = compositionLocalOf(structuralEqualityPolicy()) { liteMiddleButtonConfig }
+
+val goldenRatio = 2f / (sqrt(5f) + 1)
 
 @Composable
 fun DemoAppTheme(

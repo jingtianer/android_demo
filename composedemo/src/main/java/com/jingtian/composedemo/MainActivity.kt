@@ -44,28 +44,35 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.BottomSheetScaffold
+import androidx.compose.material3.Button
 import androidx.compose.material3.DrawerDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SheetState
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.rememberDrawerState
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
@@ -80,6 +87,7 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -113,6 +121,7 @@ import com.jingtian.composedemo.ui.theme.LocalAppPalette
 import com.jingtian.composedemo.ui.theme.LocalAppUIConstants
 import com.jingtian.composedemo.ui.theme.LocalMiddleButtonConfig
 import com.jingtian.composedemo.ui.theme.LocalSecondaryTextStyle
+import com.jingtian.composedemo.ui.theme.goldenRatio
 import com.jingtian.composedemo.ui.widget.RankTypeChooser
 import com.jingtian.composedemo.ui.widget.RankTypeChooser.Companion.createBg
 import com.jingtian.composedemo.ui.widget.StarRateView
@@ -259,62 +268,42 @@ fun Main() {
 
 }
 
-class LabelCheckInfo<T>(val label: T, var isChecked: MutableLiveData<Boolean> = MutableLiveData(false))
+class LabelCheckInfo<T>(val label: T, val name: String, var isChecked: MutableLiveData<Boolean> = MutableLiveData(false))
 
-@Composable
-fun FileTypeFilter(checkedList: List<LabelCheckInfo<FileType>>, onCheckStateChange: (List<FileType>)->Unit) {
-    LazyRow {
-        items(checkedList.size) { index->
-            val item = checkedList[index]
-            val checked by item.isChecked.observeAsState()
-            CheckableLabelView(label = item.label.name, isChecked = checked ?: false, onCheckStateChange = { checked->
-                item.isChecked.value = checked
-                onCheckStateChange(checkedList.mapNotNull { checkdInfo-> checkdInfo.label.takeIf { checkdInfo.isChecked.value ?: false } })
-            })
+fun LazyListScope.fileTypeFilter(checkedList: List<LabelCheckInfo<FileType>>, onCheckStateChange: (List<FileType>)->Unit) {
+    items(checkedList.size) { index->
+        val item = checkedList[index]
+        val checked by item.isChecked.observeAsState()
+        CheckableLabelView(label = item.label.name, isChecked = checked ?: false, onCheckStateChange = { checked->
+            item.isChecked.value = checked
+            onCheckStateChange(checkedList.mapNotNull { checkdInfo-> checkdInfo.label.takeIf { checkdInfo.isChecked.value ?: false } })
+        })
+    }
+}
+
+fun LazyListScope.ItemRankFilter(checkedList: List<LabelCheckInfo<ItemRank>>,onCheckStateChange: (List<ItemRank>)->Unit) {
+    items(checkedList.size) { index->
+        val item = checkedList[index]
+        val checked by item.isChecked.observeAsState()
+        CheckableLabelView(label = item.label.name, isChecked = checked ?: false, onCheckStateChange = { checked->
+            item.isChecked.value = checked
+            onCheckStateChange(checkedList.mapNotNull { checkdInfo-> checkdInfo.label.takeIf { checkdInfo.isChecked.value ?: false } })
+        })
+    }
+}
+
+fun LazyListScope.LabelFilter(labelList: List<LabelCheckInfo<String>>, onCheckStateChange: (List<String>)->Unit) {
+    items(labelList.size) { index ->
+        val item = labelList[index]
+        val checked by item.isChecked.observeAsState()
+        CheckableLabelView(label = item.label, isChecked = checked ?: false, onCheckStateChange = { item.isChecked.value = it })
+        LaunchedEffect(checked) {
+            onCheckStateChange(labelList.mapNotNull { checkInfo -> checkInfo.label.takeIf { checkInfo.isChecked.value ?: false } })
         }
     }
 }
 
-@Composable
-fun ItemRankFilter(checkedList: List<LabelCheckInfo<ItemRank>>,onCheckStateChange: (List<ItemRank>)->Unit) {
-    LazyRow {
-        items(checkedList.size) { index->
-            val item = checkedList[index]
-            val checked by item.isChecked.observeAsState()
-            CheckableLabelView(label = item.label.name, isChecked = checked ?: false, onCheckStateChange = { checked->
-                item.isChecked.value = checked
-                onCheckStateChange(checkedList.mapNotNull { checkdInfo-> checkdInfo.label.takeIf { checkdInfo.isChecked.value ?: false } })
-            })
-        }
-    }
-}
-
-@Composable
-fun LabelFilter(labelList: List<LabelCheckInfo<String>>, onCheckStateChange: (List<String>)->Unit) {
-
-    if (labelList.isEmpty()) {
-        return
-    }
-
-    val size = 28.dp
-    fun notifyCheckChanged() {
-        onCheckStateChange(labelList.mapNotNull { checkInfo -> checkInfo.label.takeIf { checkInfo.isChecked.value ?: false } })
-    }
-    LazyHorizontalGrid(rows = GridCells.Fixed(1),
-        Modifier
-            .height(size)
-            .fillMaxWidth()) {
-        items(labelList.size) { index ->
-            val item = labelList[index]
-            val checked by item.isChecked.observeAsState()
-            CheckableLabelView(label = item.label, isChecked = checked ?: false, onCheckStateChange = { item.isChecked.value = it })
-            LaunchedEffect(checked) {
-                notifyCheckChanged()
-            }
-        }
-    }
-}
-
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun Gallery(album: IndexedValue<Album>?) {
     if (album == null) {
@@ -333,8 +322,8 @@ fun Gallery(album: IndexedValue<Album>?) {
     val albumItemDataChange by viewModel.albumItemListChange.observeAsState()
 
     var labelFilterCheckedInfo by remember { mutableStateOf<List<LabelCheckInfo<String>>>(emptyList()) }
-    val fileTypeCheckState by remember { mutableStateOf(FileType.entries.map { LabelCheckInfo(it) }) }
-    val itemRankTypeCheckState by remember { mutableStateOf(ItemRank.entries.map { LabelCheckInfo(it) }) }
+    val fileTypeCheckState by remember { mutableStateOf(FileType.entries.map { LabelCheckInfo(it, it.name) }) }
+    val itemRankTypeCheckState by remember { mutableStateOf(ItemRank.entries.map { LabelCheckInfo(it, it.name) }) }
 
     var albumName by remember { mutableStateOf(album.value.albumName) }
 
@@ -344,7 +333,7 @@ fun Gallery(album: IndexedValue<Album>?) {
             viewModel.getLabelList(album.value).collect { value->
                 withContext(Dispatchers.Main) {
                     albumName = album.value.albumName
-                    labelFilterCheckedInfo = value.map { LabelCheckInfo(it) }
+                    labelFilterCheckedInfo = value.map { LabelCheckInfo(it, it) }
                 }
             }
         }
@@ -417,41 +406,41 @@ fun Gallery(album: IndexedValue<Album>?) {
                             importDirLauncher.launch(null)
                         }
                 )
-                Image(
-                    painter = painterResource(R.drawable.filter),
-                    contentDescription = "过滤器",
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clickable { showLabelFilter = !showLabelFilter }
-                )
             }
         }
         Row(Modifier.padding(horizontal = 8.dp)) {
-            if (showLabelFilter) {
-                Column(Modifier.weight(1f)) {
-                    LabelFilter(labelFilterCheckedInfo) { checkInfo->
-                        val targetLabelSet = checkInfo.toSet()
-                        filterLabels = targetLabelSet
-                    }
-                    FileTypeFilter(fileTypeCheckState) { checkedFileType->
-                        filterFileTypes = checkedFileType
-                    }
-                    ItemRankFilter(itemRankTypeCheckState) { checkedItemRank->
-                        itemRankFilter = checkedItemRank
-                    }
+            LazyRow(Modifier.weight(1f)) {
+                LabelFilter(labelFilterCheckedInfo) { checkInfo->
+                    val targetLabelSet = checkInfo.toSet()
+                    filterLabels = targetLabelSet
                 }
-                Image(painter = painterResource(R.drawable.trash_bin), contentDescription = "清空筛选",
-                    Modifier
-                        .size(24.dp)
-                        .clickable {
-                            filterLabels = emptySet()
-                            filterFileTypes = emptyList()
-                            itemRankFilter = emptyList()
-                            labelFilterCheckedInfo.forEach { it.isChecked.value = false }
-                            fileTypeCheckState.forEach { it.isChecked.value = false }
-                            itemRankTypeCheckState.forEach { it.isChecked.value = false }
-                        })
+                fileTypeFilter(fileTypeCheckState) { checkedFileType->
+                    filterFileTypes = checkedFileType
+                }
+                ItemRankFilter(itemRankTypeCheckState) { checkedItemRank->
+                    itemRankFilter = checkedItemRank
+                }
             }
+            Image(painter = painterResource(R.drawable.trash_bin),
+                contentDescription = "清空筛选",
+                Modifier
+                    .size(24.dp)
+                    .clickable {
+                        filterLabels = emptySet()
+                        filterFileTypes = emptyList()
+                        itemRankFilter = emptyList()
+                        labelFilterCheckedInfo.forEach { it.isChecked.value = false }
+                        fileTypeCheckState.forEach { it.isChecked.value = false }
+                        itemRankTypeCheckState.forEach { it.isChecked.value = false }
+                    })
+
+            Image(
+                painter = painterResource(R.drawable.filter),
+                contentDescription = "过滤器",
+                modifier = Modifier
+                    .size(24.dp)
+                    .clickable { showLabelFilter = !showLabelFilter }
+            )
         }
         LaunchedEffect(filterFileTypes, filterLabels, itemRankFilter) {
             coroutine.launch(Dispatchers.Default) {
@@ -490,8 +479,195 @@ fun Gallery(album: IndexedValue<Album>?) {
             editAlbumDialogState = false
         }
     }
+
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val scope = rememberCoroutineScope()
+
+    if (showLabelFilter) {
+        scope.launch {
+            sheetState.expand()
+        }
+    } else {
+        scope.launch {
+            sheetState.hide()
+        }
+    }
+
+    if (showLabelFilter) {
+        FilterPanel(
+            sheetState,
+            fileTypeCheckState,
+            { checkedFileType -> filterFileTypes = checkedFileType },
+            itemRankTypeCheckState,
+            { checkedItemRank ->
+                itemRankFilter = checkedItemRank
+            },
+            labelFilterCheckedInfo,
+            { checkInfo ->
+                val targetLabelSet = checkInfo.toSet()
+                filterLabels = targetLabelSet
+            }
+        ) {
+            showLabelFilter = false
+        }
+    }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FilterPanel(
+    sheetState: SheetState,
+    fileTypeCheckStateList: List<LabelCheckInfo<FileType>>,
+    onFileTypeCheckStateChange: (List<FileType>)->Unit,
+    itemRankCheckStateList: List<LabelCheckInfo<ItemRank>>,
+    onItemRankCheckStateChange: (List<ItemRank>)->Unit,
+    labelCheckStateList: List<LabelCheckInfo<String>>,
+    onLabelCheckStateChange: (List<String>)->Unit,
+    onDismiss: () -> Unit,
+) {
+    val horizontalPadding = LocalAppUIConstants.current.filterBottomSheetPadding
+    val horizontalInnerPadding = LocalAppUIConstants.current.filterBottomSheetInnerPadding
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        modifier = Modifier
+            .fillMaxWidth()
+            .fillMaxHeight(
+                sqrt(goldenRatio)
+            )
+    ) {
+        val minSize = LocalConfiguration.current.screenWidthDp.dp / 4
+        val scope = rememberCoroutineScope()
+        LazyVerticalGrid(GridCells.Adaptive(minSize),
+            Modifier
+                .fillMaxWidth()
+                .fillMaxHeight()
+                .weight(1f)
+                .padding(horizontal = horizontalPadding)
+        ) {
+            item(span = {
+                GridItemSpan(this.maxCurrentLineSpan)
+            }) {
+                AppThemeText(text = "类型筛选", Modifier.padding(horizontal = horizontalPadding))
+            }
+            items(fileTypeCheckStateList.size) { index ->
+                val item = fileTypeCheckStateList[index]
+                RoundRectCheckableLabel(
+                    item,
+                    fileTypeCheckStateList,
+                    minSize - horizontalPadding * 2,
+                    onFileTypeCheckStateChange
+                )
+            }
+            item(span = {
+                GridItemSpan(this.maxLineSpan)
+            }) {
+                AppThemeText(text = "排行筛选", Modifier.padding(horizontal = horizontalPadding + horizontalInnerPadding))
+            }
+            items(itemRankCheckStateList.size) { index ->
+                val item = itemRankCheckStateList[index]
+                RoundRectCheckableLabel(
+                    item,
+                    itemRankCheckStateList,
+                    minSize - horizontalPadding * 2,
+                    onItemRankCheckStateChange
+                )
+            }
+            item(span = {
+                GridItemSpan(this.maxLineSpan)
+            }) {
+                AppThemeText(text = "标签筛选", Modifier.padding(horizontal = horizontalPadding + horizontalInnerPadding))
+            }
+            items(labelCheckStateList.size) { index ->
+                val item = labelCheckStateList[index]
+                RoundRectCheckableLabel(
+                    item,
+                    labelCheckStateList,
+                    minSize - horizontalPadding * 2,
+                    onLabelCheckStateChange
+                )
+            }
+            item {
+                Spacer(Modifier.height(16.dp))
+            }
+        }
+
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = horizontalPadding)) {
+            Button(onClick = {
+                scope.launch {
+                    fileTypeCheckStateList.forEach { it.isChecked.value = !(it.isChecked.value ?: false) }
+                    itemRankCheckStateList.forEach { it.isChecked.value = !(it.isChecked.value ?: false) }
+                    labelCheckStateList.forEach { it.isChecked.value = !(it.isChecked.value ?: false) }
+                    onFileTypeCheckStateChange(emptyList())
+                    onItemRankCheckStateChange(emptyList())
+                    onLabelCheckStateChange(emptyList())
+                }
+            },
+                modifier = Modifier
+                    .align(Alignment.CenterVertically)
+                    .weight(1f)
+                    .padding(horizontal = horizontalInnerPadding)
+            ) {
+                AppThemeText(text = "反转")
+            }
+            Button(onClick = {
+                scope.launch {
+                    fileTypeCheckStateList.forEach { it.isChecked.value = false }
+                    itemRankCheckStateList.forEach { it.isChecked.value = false }
+                    labelCheckStateList.forEach { it.isChecked.value = false }
+                    onFileTypeCheckStateChange(emptyList())
+                    onItemRankCheckStateChange(emptyList())
+                    onLabelCheckStateChange(emptyList())
+                }
+            },
+                modifier = Modifier
+                    .align(Alignment.CenterVertically)
+                    .weight(1f)
+                    .padding(horizontal = horizontalInnerPadding)
+            ) {
+                AppThemeText(text = "清空")
+            }
+            Spacer(Modifier.height(16.dp))
+        }
+    }
+}
+
+@Composable
+fun <T> RoundRectCheckableLabel(item: LabelCheckInfo<T>, checkedList: List<LabelCheckInfo<T>>, size: Dp, onCheckStateChange: (List<T>)->Unit) {
+    val checked by item.isChecked.observeAsState()
+    val horizontalPadding = LocalAppUIConstants.current.filterBottomSheetInnerPadding
+    val itemWidth = size - horizontalPadding * 2
+    val itemHeight = itemWidth * (1 - goldenRatio)
+    val isChecked = checked ?: false
+    Box(
+        Modifier
+            .padding(vertical = horizontalPadding)
+            .size(width = itemWidth, height = itemHeight)
+            .padding(horizontal = horizontalPadding)
+            .background(
+                color = if (isChecked) LocalAppPalette.current.labelChecked else LocalAppPalette.current.labelUnChecked,
+                shape = RoundedCornerShape(itemHeight / 2)
+            )
+            .clickable {
+                item.isChecked.value = !isChecked
+                onCheckStateChange(checkedList.mapNotNull { checkdInfo ->
+                    checkdInfo.label.takeIf {
+                        checkdInfo.isChecked.value ?: false
+                    }
+                })
+            }) {
+        AppThemeText(
+            text = item.name,
+            Modifier
+                .wrapContentSize()
+                .align(Alignment.Center)
+        )
+    }
+}
 @Composable
 fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, size: Dp, padding: Dp) {
     var imageBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
@@ -592,23 +768,19 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, size: Dp, 
     var showEditDialog by remember { mutableStateOf(false) }
     val viewModel: AlbumViewModel = viewModel()
 
-    Column(
-        Modifier
-            .width(size)
-            .padding(padding)
-            .pointerInput(Unit) {
-                detectTapGestures(
-                    onLongPress = {
-                        showEditDialog = true
-                        viewModel.editDialogAlbumItem.value = albumItemRelation
-                        viewModel.editDialogAlbum.value = album
-                    }
-                )
-            }
-            .background(
-                color = LocalAppPalette.current.galleryCardBg,
-                shape = RoundedCornerShape(padding)
-            )) {
+    Column(Modifier
+        .width(size)
+        .padding(padding)
+        .pointerInput(Unit) {
+            detectTapGestures(onLongPress = {
+                showEditDialog = true
+                viewModel.editDialogAlbumItem.value = albumItemRelation
+                viewModel.editDialogAlbum.value = album
+            })
+        }
+        .background(
+            color = LocalAppPalette.current.galleryCardBg, shape = RoundedCornerShape(padding)
+        )) {
 
 
         AppThemeText(itemName, modifier = Modifier
@@ -1227,8 +1399,7 @@ fun LabelView(label: LabelInfo, editable: Boolean = true, onRemove: ()->Unit) {
             Modifier
                 .padding(2.dp)
                 .background(
-                    color = LocalAppPalette.current.labelUnChecked,
-                    shape = RoundedCornerShape(4.dp)
+                    color = LocalAppPalette.current.labelUnChecked, shape = RoundedCornerShape(4.dp)
                 )
                 .padding(horizontal = 4.dp, vertical = 2.dp)
                 .wrapContentSize(), verticalAlignment = Alignment.CenterVertically) {
@@ -1249,8 +1420,7 @@ fun LabelView(label: LabelInfo, editable: Boolean = true, onRemove: ()->Unit) {
             Modifier
                 .padding(2.dp)
                 .background(
-                    color = LocalAppPalette.current.labelUnChecked,
-                    shape = RoundedCornerShape(4.dp)
+                    color = LocalAppPalette.current.labelUnChecked, shape = RoundedCornerShape(4.dp)
                 )
                 .wrapContentSize(), contentAlignment = Alignment.Center) {
             AppThemeText(label.label,
@@ -1296,7 +1466,6 @@ fun DrawerHeader() {
     var userDesc by remember { mutableStateOf(DEFAULT_DESC) }
     var userAvatarImage by remember { mutableStateOf<ImageBitmap?>(null) }
 
-    val goldenRatio = 2f / (sqrt(5f) + 1)
     val avatarSize = DrawerDefaults.MaximumDrawerWidth * (1 - goldenRatio)
     val borderSize = avatarSize / 25f
     val iconSize = avatarSize / 8f
@@ -1411,8 +1580,7 @@ fun DrawerHeader() {
                 .fillMaxWidth()
                 .padding(start = 6.dp, top = 6.dp, end = 6.dp)
                 .background(
-                    color = LocalAppPalette.current.cardBg,
-                    shape = RoundedCornerShape(4.dp)
+                    color = LocalAppPalette.current.cardBg, shape = RoundedCornerShape(4.dp)
                 )
                 .align(Alignment.CenterHorizontally)
                 .padding(vertical = 6.dp, horizontal = 6.dp)
@@ -1440,11 +1608,21 @@ fun DrawerHeader() {
                                 R.drawable.edit
                             ),
                             contentDescription = "编辑用户信息",
-                            Modifier.size(iconSize, iconSize).clickable {
-                                enableEdit = !enableEdit
-                            }.align(Alignment.BottomEnd).clickable {
-                                pickImage()
-                            }.offset(-circleOffset(avatarSize / 2f, iconSize / 2f, borderSize / 2f), -circleOffset(avatarSize / 2f, iconSize / 2f, borderSize / 2f))
+                            Modifier
+                                .size(iconSize, iconSize)
+                                .clickable {
+                                    enableEdit = !enableEdit
+                                }
+                                .align(Alignment.BottomEnd)
+                                .clickable {
+                                    pickImage()
+                                }
+                                .offset(
+                                    -circleOffset(
+                                        avatarSize / 2f, iconSize / 2f, borderSize / 2f
+                                    ),
+                                    -circleOffset(avatarSize / 2f, iconSize / 2f, borderSize / 2f)
+                                )
                         )
                     }
                 }
@@ -1513,9 +1691,12 @@ fun DrawerHeader() {
                     }
                 ),
                 contentDescription = "编辑用户信息",
-                Modifier.size(16.dp).clickable {
-                    enableEdit = !enableEdit
-                }.align(Alignment.BottomEnd)
+                Modifier
+                    .size(16.dp)
+                    .clickable {
+                        enableEdit = !enableEdit
+                    }
+                    .align(Alignment.BottomEnd)
             )
         }
         DrawerFunctionArea()
