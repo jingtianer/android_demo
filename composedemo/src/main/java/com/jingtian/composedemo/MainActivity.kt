@@ -5,7 +5,6 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
-import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
@@ -24,10 +23,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.ScrollableState
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -38,10 +34,10 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
@@ -54,7 +50,6 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
-import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.staggeredgrid.LazyHorizontalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
@@ -63,7 +58,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.Button
 import androidx.compose.material3.DrawerDefaults
 import androidx.compose.runtime.Composable
@@ -80,7 +74,6 @@ import androidx.compose.material3.SheetState
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
-import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.rememberSwipeToDismissBoxState
@@ -91,9 +84,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.RoundRect
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.RectangleShape
@@ -103,7 +94,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -113,7 +103,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.DialogProperties
-import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.core.content.FileProvider
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -136,6 +125,8 @@ import com.jingtian.composedemo.ui.theme.LocalAppPalette
 import com.jingtian.composedemo.ui.theme.LocalAppUIConstants
 import com.jingtian.composedemo.ui.theme.LocalMiddleButtonConfig
 import com.jingtian.composedemo.ui.theme.LocalSecondaryTextStyle
+import com.jingtian.composedemo.ui.theme.appBackground
+import com.jingtian.composedemo.ui.theme.drawerBackground
 import com.jingtian.composedemo.ui.theme.goldenRatio
 import com.jingtian.composedemo.ui.widget.RankTypeChooser
 import com.jingtian.composedemo.ui.widget.RankTypeChooser.Companion.createBg
@@ -156,8 +147,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.math.max
+import kotlin.math.roundToInt
 import kotlin.math.sqrt
-import kotlin.random.Random
 
 class MainActivity : BaseActivity() {
     @Composable
@@ -252,7 +244,7 @@ fun Main() {
     ) { _->
         ModalNavigationDrawer(
             drawerContent = {
-                ModalDrawerSheet(drawerContainerColor = LocalAppPalette.current.drawerBg) {
+                ModalDrawerSheet(drawerContainerColor = LocalAppPalette.current.drawerBg, windowInsets = WindowInsets.navigationBars) {
                     MainDrawer(menuItemsEntity) { index, album ->
                         currentSelectedAlbum = IndexedValue(index, album)
                         scope.launch {
@@ -373,6 +365,7 @@ fun Gallery(album: IndexedValue<Album>?, openDrawer: ()->Unit) {
     Column(
         Modifier
             .fillMaxSize()
+            .appBackground()
             .windowInsetsPadding(WindowInsets.systemBars)) {
         Row(
             Modifier
@@ -904,21 +897,24 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, size: Dp, 
             }
 
             if (itemRank != null && itemRank != ItemRank.NONE) {
+                fun View.initRankView(): View {
+                    val bg = createBg(itemRank)
+                    val paddingHorizontal = 4.dp.dpValue.roundToInt()
+                    val width = max(bg.getWidth(), bg.getHeight()).roundToInt() + paddingHorizontal + paddingHorizontal
+                    layoutParams = ViewGroup.LayoutParams(width, bg.getHeight().roundToInt())
+                    setPadding(paddingHorizontal, 0, paddingHorizontal, 0)
+                    background = bg
+                    return this
+                }
                 AndroidView({ context ->
-                    View(context).apply {
-                        val bg = createBg(itemRank)
-                        background = bg
-                        layoutParams = ViewGroup.LayoutParams(bg.getWidth().toInt(), bg.getHeight().toInt())
-                    }
+                    View(context).initRankView()
                 },
                     Modifier
                         .wrapContentSize()
                         .align(Alignment.TopEnd)
-                        .padding(bottom = 4.dp),
+                    ,
                     update = {
-                        val bg = createBg(itemRank)
-                        it.background = bg
-                        it.layoutParams = ViewGroup.LayoutParams(bg.getWidth().toInt(), bg.getHeight().toInt())
+                        it.initRankView()
                     })
             }
         }
@@ -927,7 +923,7 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, size: Dp, 
             itemName,
             modifier = Modifier
                 .wrapContentWidth()
-                .padding(bottom = 4.dp, start = padding * 2, end = padding * 2),
+                .padding(bottom = 4.dp, start = padding * 2, end = padding * 2, top = padding),
             maxLines = 2,
             style = LocalTextStyle.current.copy(textAlign = TextAlign.Start, fontSize = 16.sp, fontWeight = FontWeight(700)),
             overflow = TextOverflow.Ellipsis
@@ -1916,12 +1912,15 @@ fun MainDrawer(
             .fillMaxHeight()
             .fillMaxWidth()
             .background(LocalAppPalette.current.drawerBg)
+            .drawerBackground()
+            .windowInsetsPadding(WindowInsets.systemBars)
 //            .fillMaxWidth(LocalAppUIConstants.current.drawerMaxPercent)
     ) {
         LazyColumn(
             Modifier
                 .fillMaxSize()
-                .weight(1f)) {
+                .weight(1f)
+        ) {
             item {
                 DrawerHeader()
             }

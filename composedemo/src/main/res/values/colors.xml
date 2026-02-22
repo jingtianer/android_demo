@@ -12,4 +12,8 @@
     <color name="color_star_fill">#FFED7A</color>
     <color name="rank_text_color">#000000</color>
     <color name="rank_text_stroke_color">#ffffff</color>
+    <color name="app_bg_color">#fff8fe</color>
+    <color name="app_gradient_start_color">#5FF6D5F7</color>
+    <color name="app_gradient_middle_color">#5FF6D5F7</color>
+    <color name="app_gradient_end_color">#5FFBE9D7</color>
 </resources>
