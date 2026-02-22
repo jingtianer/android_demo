@@ -16,14 +16,14 @@ import androidx.compose.ui.unit.dp
 import kotlin.math.sqrt
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
+    primary = Color(0xff09476F),
     secondary = PurpleGrey80,
     tertiary = Pink80,
 
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
+    primary = Color(0x6f90CCE5),
     secondary = PurpleGrey40,
     tertiary = Pink40,
 
@@ -55,28 +55,36 @@ class AppPalette(
     val cardBg: Color,
     val galleryCardBg: Color,
     val strokeColor: Color,
-    val gradientShadowMaskColors: List<Color> = listOf(color181818_00, color181818_cf)
+    val bottomSheetBackgroundColor: Color,
+    val labelTextColor: Color,
+    val deleteButtonColor: Color,
 )
 
 private val darkAppPalette = AppPalette(
-    drawerBg = color282828,
-    dialogBg = color282828,
-    labelChecked = Purple40,
-    labelUnChecked = colorA8A8A8_7f,
+    drawerBg = Color(red = 28, green = 27, blue = 31),
+    dialogBg = Color(red = 28, green = 27, blue = 31),
+    labelChecked = Color(0xff09476F),
+    labelUnChecked = colorD8D8D8_2f,
     dividerColor = colorA8A8A8,
-    cardBg = color686868,
+    cardBg = colorA8A8A8_7f,
     galleryCardBg = color282828,
-    strokeColor = color484848
+    strokeColor = color484848,
+    bottomSheetBackgroundColor = Color(red = 28, green = 27, blue = 31),
+    labelTextColor = colorA8A8A8,
+    deleteButtonColor = Color(0xffFF5959),
 )
 private val liteAppPalette = AppPalette(
-    drawerBg = colorA8A8A8,
-    dialogBg = colorA8A8A8,
-    labelChecked = Purple80,
+    drawerBg = Color(red = 255, green = 251, blue = 254),
+    dialogBg = Color(red = 255, green = 251, blue = 254),
+    labelChecked = Color(0x4f90CCE5),
     labelUnChecked = colorA8A8A8_7f,
     dividerColor = color282828,
-    cardBg = colorC8c8c8,
+    cardBg = colorA8A8A8_7f,
     galleryCardBg = colorC8c8c8_a0,
     strokeColor = color686868,
+    bottomSheetBackgroundColor = Color(red = 255, green = 251, blue = 254),
+    labelTextColor = color686868,
+    deleteButtonColor = Color(0xffFF5959),
 )
 
 
@@ -119,11 +127,6 @@ fun DemoAppTheme(
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
     }
@@ -131,7 +134,7 @@ fun DemoAppTheme(
         color = if (darkTheme) colorF8f8f8 else colorBlack
     )
     val customSecondaryTextStyle = LocalTextStyle.current.copy(
-        color = if (darkTheme) colorA8A8A8 else color282828,
+        color = if (darkTheme) colorA8A8A8 else color686868,
         fontStyle = FontStyle.Italic
     )
     val appPalette = if (darkTheme) {
@@ -144,15 +147,20 @@ fun DemoAppTheme(
     } else {
         liteMiddleButtonConfig
     }
+    val contentColor = if (darkTheme) {
+        Color.Black
+    } else {
+        Color.White
+    }
     MaterialTheme(
         colorScheme = colorScheme,
         typography = Typography,
         content = {
             CompositionLocalProvider(
-//                LocalTextStyle provides customTextStyle,
+                LocalTextStyle provides customTextStyle,
                 LocalAppPalette provides appPalette,
                 LocalAppUIConstants provides AppUIConstants(),
-                LocalContentColor provides Color.Unspecified,
+                LocalContentColor provides contentColor,
                 LocalSecondaryTextStyle provides customSecondaryTextStyle,
                 LocalMiddleButtonConfig provides middleButtonConfig,
                 content = content

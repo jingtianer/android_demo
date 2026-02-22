@@ -6,6 +6,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -304,7 +305,7 @@ fun AppThemeDialog(
     onMiddleClick: (() -> Unit)? = null,
     onPositive: () -> Unit = {},
     onDismissRequest: () -> Unit = onNegative,
-    content: @Composable (
+    content: @Composable ColumnScope.(
         header: @Composable () -> Unit,
         actionButton: @Composable () -> Unit
     ) -> Unit
@@ -334,7 +335,7 @@ fun AppThemeDialog(
                         Spacer(modifier = Modifier.width(8.dp))
                         if (onMiddleClick != null) {
                             Button(onClick = onMiddleClick, colors = LocalMiddleButtonConfig.current.colors) {
-                                AppThemeText(LocalMiddleButtonConfig.current.text)
+                                Text(LocalMiddleButtonConfig.current.text, style = LocalTextStyle.current.copy(color = LocalMiddleButtonConfig.current.colors.contentColor))
                             }
                             Spacer(modifier = Modifier.width(8.dp))
                         }

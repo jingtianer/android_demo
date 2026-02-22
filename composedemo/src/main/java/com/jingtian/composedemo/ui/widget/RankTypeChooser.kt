@@ -8,6 +8,9 @@ import android.view.LayoutInflater
 import android.view.View
 import android.widget.HorizontalScrollView
 import androidx.compose.ui.unit.dp
+import androidx.core.content.res.ResourcesCompat
+import com.jingtian.composedemo.R
+import com.jingtian.composedemo.base.app
 import com.jingtian.composedemo.dao.model.ItemRank
 import com.jingtian.composedemo.databinding.WidgetRankChooserBinding
 import com.jingtian.composedemo.utils.ViewUtils.dpValue
@@ -59,9 +62,9 @@ class RankTypeChooser @JvmOverloads constructor(
                 rankType.a, rankType.r, rankType.g, rankType.b
             )).apply {
                 setText(rankType.name)
-                setStrokeColor(Color.WHITE, 2.dp.dpValue)
+                setStrokeColor(ResourcesCompat.getColor(app.resources, R.color.rank_text_stroke_color, null), 2.dp.dpValue)
                 setTextSize(24.dp.dpValue)
-                setTextColor(Color.BLACK)
+                setTextColor(ResourcesCompat.getColor(app.resources, R.color.rank_text_color, null))
             }
         }
         fun createUnselectedBg(rankType: ItemRank) : StrokeTextDrawable {
@@ -69,7 +72,7 @@ class RankTypeChooser @JvmOverloads constructor(
                 setText(rankType.name)
                 setStrokeColor(Color.TRANSPARENT, 0f.dp.dpValue)
                 setTextSize(24.dp.dpValue)
-                setTextColor(Color.BLACK)
+                setTextColor(ResourcesCompat.getColor(app.resources, R.color.rank_text_color, null))
             }
         }
     }

@@ -24,7 +24,10 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.ScrollableState
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -66,6 +69,7 @@ import androidx.compose.material3.DrawerDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ModalDrawerSheet
@@ -99,6 +103,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -260,22 +265,30 @@ fun Main() {
             drawerState = drawerState,
             gesturesEnabled = menuItemsEntity.isNotEmpty()
         ) {
-            Gallery(currentSelectedAlbum)
-        }
-    }
+            Gallery(currentSelectedAlbum) {
+                scope.launch {
+                    if (drawerState.isOpen) {
+                        drawerState.close()
+                    } else {
+                        drawerState.open()
+                    }
+                }
+            }
+            val editDialogAlbum by viewModel.editDialogAlbum.observeAsState()
+            val editDialogAlbumItem by viewModel.editDialogAlbumItem.observeAsState()
 
-    val editDialogAlbum by viewModel.editDialogAlbum.observeAsState()
-    val editDialogAlbumItem by viewModel.editDialogAlbumItem.observeAsState()
-
-    editDialogAlbumItem?.let { editDialogAlbumItem->
-        editDialogAlbum?.let { editDialogAlbum->
-            EditDialog(editDialogAlbumItem, editDialogAlbum, menuItemsEntity) {
-                viewModel.editDialogAlbum.value = null
-                viewModel.editDialogAlbumItem.value = null
+            editDialogAlbumItem?.let { editDialogAlbumItem->
+                editDialogAlbum?.let { editDialogAlbum->
+                    EditDialog(editDialogAlbumItem, editDialogAlbum, menuItemsEntity) {
+                        viewModel.editDialogAlbum.value = null
+                        viewModel.editDialogAlbumItem.value = null
+                    }
+                }
             }
         }
-
     }
+
+
 
 }
 
@@ -295,7 +308,7 @@ fun <T> LazyListScope.roundRectTabFilter(checkedList: List<LabelCheckInfo<T>>, o
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun Gallery(album: IndexedValue<Album>?) {
+fun Gallery(album: IndexedValue<Album>?, openDrawer: ()->Unit) {
     if (album == null) {
         return
     }
@@ -361,40 +374,63 @@ fun Gallery(album: IndexedValue<Album>?) {
         Modifier
             .fillMaxSize()
             .windowInsetsPadding(WindowInsets.systemBars)) {
-        Box(
+        Row(
             Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 8.dp, vertical = 8.dp)
                 .wrapContentHeight()
         ) {
-            AppThemeText(albumName, Modifier.align(Alignment.CenterStart), style = LocalTextStyle.current.copy(fontSize = 24.sp, fontWeight = FontWeight(600)))
-
+            Icon(
+                painter = painterResource(R.drawable.drawer),
+                contentDescription = "打开drawer",
+                modifier = Modifier
+                    .align(Alignment.CenterVertically)
+                    .size(LocalAppUIConstants.current.filterLabelHeight)
+                    .background(LocalAppPalette.current.labelUnChecked, shape = CircleShape)
+                    .clickable { openDrawer() }
+                    .padding(4.dp)
+            )
+            Spacer(Modifier.width(12.dp))
+            AppThemeText(albumName,
+                Modifier
+                    .align(Alignment.CenterVertically)
+                    .fillMaxWidth()
+                    .weight(1f), style = LocalTextStyle.current.copy(fontSize = 24.sp, fontWeight = FontWeight(600)))
+            Spacer(Modifier.width(6.dp))
             Row(
                 Modifier
-                    .align(Alignment.CenterEnd)
-                    .wrapContentSize()) {
-                Image(
-                    painter = painterResource(R.drawable.edit),
+                    .wrapContentSize()
+                    .align(Alignment.CenterVertically)) {
+                Icon(
+                    painter = painterResource(R.drawable.edit_normal),
                     contentDescription = "编辑名称",
                     modifier = Modifier
-                        .size(32.dp)
+                        .size(LocalAppUIConstants.current.filterLabelHeight)
+                        .background(LocalAppPalette.current.labelUnChecked, shape = CircleShape)
                         .clickable { editAlbumDialogState = true }
+                        .padding(4.dp)
                 )
-                Image(
+                Spacer(Modifier.width(6.dp))
+                Icon(
                     painter = painterResource(R.drawable.add),
                     contentDescription = "添加图片",
                     modifier = Modifier
-                        .size(32.dp)
+                        .size(LocalAppUIConstants.current.filterLabelHeight)
+                        .background(LocalAppPalette.current.labelUnChecked, shape = CircleShape)
                         .clickable { addImageDialogState = true }
+                        .padding(4.dp)
                 )
-                Image(
-                    painter = painterResource(R.drawable.resource_import),
+                Spacer(Modifier.width(6.dp))
+                Icon(
+                    painter = painterResource(R.drawable.import_icon),
                     contentDescription = "批量导入",
                     modifier = Modifier
-                        .size(32.dp)
+                        .size(LocalAppUIConstants.current.filterLabelHeight)
+                        .background(LocalAppPalette.current.labelUnChecked, shape = CircleShape)
                         .clickable {
                             importDirLauncher.launch(null)
                         }
+                        .padding(4.dp)
                 )
             }
         }
@@ -427,13 +463,15 @@ fun Gallery(album: IndexedValue<Album>?) {
 //                        itemRankTypeCheckState.forEach { it.isChecked.value = false }
 //                    })
 
-            Image(
-                painter = painterResource(R.drawable.filter),
+            Icon(
+                painter = painterResource(R.drawable.down),
                 contentDescription = "过滤器",
                 modifier = Modifier
                     .size(LocalAppUIConstants.current.filterLabelHeight)
-                    .align(Alignment.CenterVertically)
+                    .background(LocalAppPalette.current.labelUnChecked, shape = CircleShape)
                     .clickable { showLabelFilter = !showLabelFilter }
+                    .padding(4.dp)
+                    .align(Alignment.CenterVertically)
             )
         }
         LaunchedEffect(filterFileTypes, filterLabels, itemRankFilter) {
@@ -521,7 +559,8 @@ fun FilterPanel(
     onLabelCheckStateChange: (List<String>)->Unit,
     onDismiss: () -> Unit,
 ) {
-    val horizontalPadding = 0.dp//4.dp
+    val horizontalPadding = 6.dp
+    val verticalPadding = 6.dp
     val horizontalInnerPadding = LocalAppUIConstants.current.filterLabelPaddings[2]
 
     ModalBottomSheet(
@@ -531,7 +570,8 @@ fun FilterPanel(
             .fillMaxWidth()
             .fillMaxHeight(
                 sqrt(1 - goldenRatio)
-            )
+            ),
+        containerColor = LocalAppPalette.current.bottomSheetBackgroundColor
     ) {
         val scope = rememberCoroutineScope()
 
@@ -544,7 +584,7 @@ fun FilterPanel(
                 .padding(horizontal = horizontalPadding)
         ) {
             item(span = { GridItemSpan(maxLineSpan) }) {
-                AppThemeText(text = "类型筛选", Modifier.padding(horizontal = horizontalInnerPadding), style = LocalTextStyle.current.copy(fontWeight = FontWeight(600), fontSize = 14.sp))
+                AppThemeText(text = "类型筛选", Modifier.padding(horizontal = horizontalInnerPadding, vertical = verticalPadding), style = LocalTextStyle.current.copy(fontWeight = FontWeight(600), fontSize = 16.sp))
             }
             items(fileTypeCheckStateList.size) { index ->
                 RoundRectCheckableLabel(
@@ -555,7 +595,7 @@ fun FilterPanel(
                 )
             }
             item(span = { GridItemSpan(this.maxLineSpan) }) {
-                AppThemeText(text = "排行筛选", Modifier.padding(horizontal =horizontalInnerPadding), style = LocalTextStyle.current.copy(fontWeight = FontWeight(600), fontSize = 14.sp))
+                AppThemeText(text = "排行筛选", Modifier.padding(horizontal = horizontalInnerPadding, vertical = verticalPadding), style = LocalTextStyle.current.copy(fontWeight = FontWeight(600), fontSize = 16.sp))
             }
             items(itemRankCheckStateList.size) { index ->
                 RoundRectCheckableLabel(
@@ -567,7 +607,7 @@ fun FilterPanel(
             }
             if (labelCheckStateList.isNotEmpty()) {
                 item(span = { GridItemSpan(this.maxLineSpan) }) {
-                    AppThemeText(text = "标签筛选", Modifier.padding(horizontal = horizontalInnerPadding), style = LocalTextStyle.current.copy(fontWeight = FontWeight(600), fontSize = 14.sp))
+                    AppThemeText(text = "标签筛选", Modifier.padding(horizontal = horizontalInnerPadding, vertical = verticalPadding), style = LocalTextStyle.current.copy(fontWeight = FontWeight(600), fontSize = 16.sp))
                 }
             }
         }
@@ -887,10 +927,9 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, size: Dp, 
             itemName,
             modifier = Modifier
                 .wrapContentWidth()
-                .padding(bottom = 4.dp, start = padding, end = padding)
-                .align(Alignment.CenterHorizontally),
-            maxLines = 1,
-            style = LocalTextStyle.current.copy(textAlign = TextAlign.Start, fontSize = 16.sp),
+                .padding(bottom = 4.dp, start = padding * 2, end = padding * 2),
+            maxLines = 2,
+            style = LocalTextStyle.current.copy(textAlign = TextAlign.Start, fontSize = 16.sp, fontWeight = FontWeight(700)),
             overflow = TextOverflow.Ellipsis
         )
 
@@ -901,7 +940,7 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, size: Dp, 
                 .fillMaxWidth()
                 .padding(bottom = 4.dp, start = padding, end = padding), label = {
                 AppThemeText("评论")
-            }, maxLines = Int.MAX_VALUE, enabled = false)
+            }, maxLines = Int.MAX_VALUE, enabled = false, textStyle = LocalSecondaryTextStyle.current)
         }
 
         Box(
@@ -1078,16 +1117,16 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
     CompositionLocalProvider(
         LocalMiddleButtonConfig provides LocalMiddleButtonConfig.current.copy(
             text = "删除",
-            colors = LocalMiddleButtonConfig.current.colors.copy(containerColor = Color.Red)
+            colors = LocalMiddleButtonConfig.current.colors.copy(containerColor = LocalAppPalette.current.deleteButtonColor, contentColor = Color.White),
         )
     ) {
         AppThemeDialog(
             Modifier
                 .fillMaxWidth(LocalAppUIConstants.current.dialogPercent)
                 .fillMaxHeight(LocalAppUIConstants.current.dialogPercent)
-                .wrapContentHeight()
                 .clip(RoundedCornerShape(4.dp))
-                .background(LocalAppPalette.current.dialogBg),
+                .background(LocalAppPalette.current.dialogBg)
+                .wrapContentHeight(),
             onNegative = onDismiss,
             onMiddleClick = {
                 deleteItem()
@@ -1096,23 +1135,25 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
             onPositive = {
                 saveItem(context)
             },
+            onDismissRequest = {},
             properties = DialogProperties(usePlatformDefaultWidth = false)
         ) { _, actionButtons->
             var openAlbumList by remember { mutableStateOf(false) }
 
             LazyColumn(
                 Modifier
-//                    .fillMaxWidth(LocalAppUIConstants.current.dialogPercent)
+                    .fillMaxWidth()
 //                    .verticalScroll(rememberScrollState())
+                    .wrapContentHeight()
                     .background(LocalAppPalette.current.dialogBg)
 //                    .padding(12.dp)
                     .clip(RectangleShape)
-                    .wrapContentHeight()
             ) {
 
                 item {
                     val currentPickedImage = pickedImage
                     if (currentPickedImage == null) {
+                        Spacer(Modifier.height(12.dp))
                         Image(
                             painter = painterResource(imageResource),
                             contentDescription = "上传照片",
@@ -1325,16 +1366,20 @@ fun AddItemDialog(album: Album, onDismiss: () -> Unit) {
             .wrapContentHeight()
             .clip(RoundedCornerShape(4.dp))
             .background(LocalAppPalette.current.dialogBg),
-        onDismissRequest = onDismiss,
+        onDismissRequest = {},
         properties = DialogProperties(usePlatformDefaultWidth = false),
         onNegative = onDismiss,
-        onPositive = { saveItem(context) }) { _, actionButton ->
+        onPositive = { saveItem(context) }
+    ) { _, actionButton ->
         Column(
             Modifier
                 .verticalScroll(rememberScrollState())
+                .fillMaxWidth()
+                .wrapContentHeight()
         ) {
             val currentPickedImage = pickedImage
             if (currentPickedImage == null) {
+                Spacer(Modifier.height(12.dp))
                 Image(
                     painter = painterResource(imageResource),
                     contentDescription = "上传照片",
@@ -1360,6 +1405,7 @@ fun AddItemDialog(album: Album, onDismiss: () -> Unit) {
                 )
             }
 
+
             OutlinedTextField(itemName, { value->
                 itemName = value
             }, modifier = Modifier
@@ -1376,6 +1422,7 @@ fun AddItemDialog(album: Album, onDismiss: () -> Unit) {
                 AppThemeText("文件描述")
             }, maxLines = Int.MAX_VALUE)
 
+            Spacer(Modifier.height(4.dp))
             AndroidView({ context ->
                 StarRateView(context).commonEditableConfig().apply {
                     onScoreChange = StarRateView.Companion.OnScoreChange { score: Float ->
@@ -1396,6 +1443,7 @@ fun AddItemDialog(album: Album, onDismiss: () -> Unit) {
                     it.setScore(itemScore)
                 })
 
+            Spacer(Modifier.height(4.dp))
             AndroidView({ context ->
                 RankTypeChooser(context).apply {
                     layoutParams = ViewGroup.LayoutParams(
@@ -1416,6 +1464,7 @@ fun AddItemDialog(album: Album, onDismiss: () -> Unit) {
                     it.setRankType(itemRank)
                 })
 
+            Spacer(Modifier.height(4.dp))
             EditLabelView {
                 itemLabel.add(0, LabelInfo(label = it))
                 itemLabelSize = itemLabel.size
@@ -1430,12 +1479,13 @@ fun AddItemDialog(album: Album, onDismiss: () -> Unit) {
                     }
                 }
             }
-            Column(
-                Modifier
-                    .padding(horizontal = 6.dp)
-                    .fillMaxWidth()) {
-                actionButton()
-            }
+        }
+        Column(
+            Modifier
+                .padding(horizontal = 6.dp)
+                .wrapContentHeight()
+                .fillMaxWidth()) {
+            actionButton()
         }
     }
 }
@@ -1473,7 +1523,7 @@ fun LabelView(label: LabelInfo, editable: Boolean = true, onRemove: ()->Unit) {
                 .wrapContentSize(), verticalAlignment = Alignment.CenterVertically) {
             AppThemeText(label.label,
                 Modifier
-                    .wrapContentSize(), style = LocalTextStyle.current.copy(fontSize = 16.sp))
+                    .wrapContentSize(), style = LocalTextStyle.current.copy(fontSize = 16.sp, color = LocalAppPalette.current.labelTextColor))
             Spacer(Modifier.padding(2.dp))
             Image(
                 painter = painterResource(R.drawable.close),
@@ -1494,7 +1544,7 @@ fun LabelView(label: LabelInfo, editable: Boolean = true, onRemove: ()->Unit) {
             AppThemeText(label.label,
                 Modifier
                     .padding(horizontal = 4.dp, vertical = 2.dp)
-                    .wrapContentSize(), style = LocalTextStyle.current.copy(fontSize = 14.sp))
+                    .wrapContentSize(), style = LocalTextStyle.current.copy(fontSize = 14.sp, color = LocalAppPalette.current.labelTextColor))
         }
     }
 }
@@ -1513,7 +1563,7 @@ fun EditLabelView(onAddLabel: (String)->Unit) {
                     .wrapContentHeight(), hint = "添加标签")
         }
         Spacer(Modifier.padding(2.dp))
-        Image(
+        Icon(
             painter = painterResource(R.drawable.add),
             contentDescription = "添加标签",
             Modifier
@@ -1779,7 +1829,7 @@ fun DrawerFunctionView(onClick: () -> Unit, @DrawableRes drawableId: Int, text: 
             .clickable(onClick = onClick)
             .padding(vertical = 8.dp, horizontal = 8.dp)
     ) {
-        Image(
+        Icon(
             painter = painterResource(drawableId),
             contentDescription = "leadingIcon",
             Modifier
@@ -1865,6 +1915,7 @@ fun MainDrawer(
         Modifier
             .fillMaxHeight()
             .fillMaxWidth()
+            .background(LocalAppPalette.current.drawerBg)
 //            .fillMaxWidth(LocalAppUIConstants.current.drawerMaxPercent)
     ) {
         LazyColumn(
