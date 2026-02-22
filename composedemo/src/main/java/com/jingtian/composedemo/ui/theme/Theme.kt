@@ -1,12 +1,26 @@
 package com.jingtian.composedemo.ui.theme
 
+import android.content.Context
+import android.util.Log
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.LayoutScopeMarker
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.structuralEqualityPolicy
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.drawBehind
@@ -19,6 +33,7 @@ import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.Dp
@@ -27,7 +42,10 @@ import androidx.core.content.res.ResourcesCompat
 import androidx.core.graphics.drawable.toBitmap
 import com.jingtian.composedemo.R
 import com.jingtian.composedemo.base.app
+import com.jingtian.composedemo.utils.AppTheme
 import com.jingtian.composedemo.utils.ViewUtils.dpValue
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
@@ -138,8 +156,9 @@ val LocalAppColorScheme = compositionLocalOf(structuralEqualityPolicy()) { Light
 
 val goldenRatio = 2f / (sqrt(5f) + 1)
 
-fun Modifier.appBackground(@DrawableRes resource: Int, widthScale: Float = 1f, heightScale : Float = 1-goldenRatio): Modifier {
-    val bg = ResourcesCompat.getDrawable(app.resources, resource, null) ?: return this
+fun Modifier.appBackground(context: Context, @DrawableRes resource: Int, widthScale: Float = 1f, heightScale : Float = 1-goldenRatio): Modifier {
+    val bg = ResourcesCompat.getDrawable(context.resources, resource, context.theme) ?: return this
+    Log.d("jingtian", "appBackground: theme=${context.theme}")
     val paint = Paint()
     return this.drawBehind {
         val width = this.size.width * widthScale
@@ -151,15 +170,27 @@ fun Modifier.appBackground(@DrawableRes resource: Int, widthScale: Float = 1f, h
     }
 }
 @Composable
-fun Modifier.appBackground() = appBackground(R.drawable.rectangle_16)
+fun Modifier.appBackground() = appBackground(LocalContext.current, R.drawable.rectangle_16)
 @Composable
 fun Modifier.drawerBackground() = this//appBackground(R.drawable.rectangle_16)
 
+@LayoutScopeMarker
+@Immutable
+interface AppThemeScope {
+    fun setAppTheme(appTheme: AppTheme)
+
+}
+
 @Composable
 fun DemoAppTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    content: @Composable () -> Unit
+    systemDarkTheme: Boolean = isSystemInDarkTheme(),
+    content: @Composable AppThemeScope.() -> Unit
 ) {
+    var darkTheme by remember { mutableStateOf(systemDarkTheme) }
+    LaunchedEffect(Unit) {
+        darkTheme = AppTheme.isDarkTheme(systemDarkTheme)
+    }
+    
     val colorScheme = when {
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
@@ -186,6 +217,17 @@ fun DemoAppTheme(
     } else {
         Color.White
     }
+
+    val scope = rememberCoroutineScope()
+
+    val appThemeScope = object : AppThemeScope {
+        override fun setAppTheme(appTheme: AppTheme) {
+            scope.launch(Dispatchers.Main) {
+                AppTheme.setAppTheme(appTheme)
+                darkTheme = AppTheme.isDarkTheme(systemDarkTheme)
+            }
+        }
+    }
     MaterialTheme(
         colorScheme = colorScheme,
         typography = Typography,
@@ -198,7 +240,7 @@ fun DemoAppTheme(
                 LocalContentColor provides contentColor,
                 LocalSecondaryTextStyle provides customSecondaryTextStyle,
                 LocalMiddleButtonConfig provides middleButtonConfig,
-                content = content
+                content = { appThemeScope.content() }
             )
         }
     )

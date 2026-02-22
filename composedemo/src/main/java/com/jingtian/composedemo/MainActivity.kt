@@ -84,14 +84,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -131,6 +129,7 @@ import com.jingtian.composedemo.ui.theme.goldenRatio
 import com.jingtian.composedemo.ui.widget.RankTypeChooser
 import com.jingtian.composedemo.ui.widget.RankTypeChooser.Companion.createBg
 import com.jingtian.composedemo.ui.widget.StarRateView
+import com.jingtian.composedemo.utils.AppTheme
 import com.jingtian.composedemo.utils.BitMapCachePool
 import com.jingtian.composedemo.utils.CoroutineUtils
 import com.jingtian.composedemo.utils.FileStorageUtils
@@ -143,6 +142,7 @@ import com.jingtian.composedemo.utils.ViewUtils.commonConfig
 import com.jingtian.composedemo.utils.ViewUtils.commonEditableConfig
 import com.jingtian.composedemo.utils.ViewUtils.dpValue
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
+import com.jingtian.composedemo.viewmodels.AppThemeViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -903,7 +903,7 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, size: Dp, 
 
             if (itemRank != null && itemRank != ItemRank.NONE) {
                 fun View.initRankView(): View {
-                    val bg = createBg(itemRank)
+                    val bg = createBg(itemRank, context)
                     val paddingHorizontal = 4.dp.dpValue.roundToInt()
                     val width = max(bg.getWidth(), bg.getHeight()).roundToInt() + paddingHorizontal + paddingHorizontal
                     layoutParams = ViewGroup.LayoutParams(width, bg.getHeight().roundToInt())
@@ -1961,7 +1961,72 @@ fun MainDrawer(
                 }
             }
         }
-//        DrawerFunctionView(onClick = { enableEdit = !enableEdit }, R.drawable.edit, "编辑合集")
+        AppThemeSwitcher()
+    }
+}
+
+@Composable
+fun AppThemeSwitcher() {
+    val viewModel: AppThemeViewModel = viewModel()
+    val currentTheme by viewModel.currentAppTheme.observeAsState()
+    @Composable
+    fun Modifier.modifier(appTheme: AppTheme):Modifier {
+        val modifier = this
+        return if (appTheme == (currentTheme ?: AppTheme.AUTO)) {
+            modifier.background(color = LocalAppPalette.current.labelChecked, shape = RoundedCornerShape(100)).padding(8.dp)
+        } else {
+            modifier.background(color = LocalAppPalette.current.labelUnChecked, shape = RoundedCornerShape(100)).padding(8.dp)
+        }
+            .clip(RoundedCornerShape(100))
+            .clickable {
+                viewModel.currentAppTheme.value = appTheme
+            }
+    }
+
+    val size = 42.dp
+    val autoWidth = size * 1.6464f
+
+    Box(
+        Modifier
+            .padding(horizontal = 8.dp, vertical = 4.dp)
+            .fillMaxWidth()
+            .wrapContentHeight()) {
+//        AppThemeText(
+//            "主题颜色",
+//            Modifier
+//                .wrapContentSize()
+//                .align(Alignment.CenterStart),
+//            style = LocalTextStyle.current.copy(fontSize = 16.sp)
+//        )
+        Row(
+            Modifier
+                .wrapContentSize()
+                .align(Alignment.CenterEnd)
+        ) {
+            Image(
+                painter = painterResource(R.drawable.app_theme_auto),
+                contentDescription = "自动",
+                Modifier
+                    .size(width = autoWidth, size)
+                    .modifier(AppTheme.AUTO)
+            )
+            Spacer(Modifier.width(8.dp))
+            Image(
+                painter = painterResource(R.drawable.app_theme_light),
+                contentDescription = "浅色",
+                Modifier
+                    .size(size)
+                    .modifier(AppTheme.Lite)
+            )
+            Spacer(Modifier.width(8.dp))
+            Image(
+                painter = painterResource(R.drawable.app_theme_night),
+                contentDescription = "深色",
+                Modifier
+                    .size(size)
+                    .modifier(AppTheme.Dark)
+            )
+        }
     }
 }
 

@@ -32,8 +32,8 @@ class RankTypeChooser @JvmOverloads constructor(
         }
     init {
         val apply : View.(ItemRank) -> Unit = { itemRank ->
-            val selected = createBg(itemRank)
-            val unselected = createUnselectedBg(itemRank)
+            val selected = createBg(itemRank, context)
+            val unselected = createUnselectedBg(itemRank, context)
 
             background = StateListDrawable().apply {
                 addState(intArrayOf(android.R.attr.state_checked), selected)
@@ -57,22 +57,22 @@ class RankTypeChooser @JvmOverloads constructor(
             fun onRankTypeChange(rankType: ItemRank)
         }
 
-        fun createBg(rankType: ItemRank) : StrokeTextDrawable {
+        fun createBg(rankType: ItemRank, context: Context) : StrokeTextDrawable {
             return StrokeTextDrawable(Color.argb(
                 rankType.a, rankType.r, rankType.g, rankType.b
             )).apply {
                 setText(rankType.name)
-                setStrokeColor(ResourcesCompat.getColor(app.resources, R.color.rank_text_stroke_color, null), 2.dp.dpValue)
+                setStrokeColor(ResourcesCompat.getColor(context.resources, R.color.rank_text_stroke_color, context.theme), 2.dp.dpValue)
                 setTextSize(24.dp.dpValue)
-                setTextColor(ResourcesCompat.getColor(app.resources, R.color.rank_text_color, null))
+                setTextColor(ResourcesCompat.getColor(context.resources, R.color.rank_text_color, context.theme))
             }
         }
-        fun createUnselectedBg(rankType: ItemRank) : StrokeTextDrawable {
+        fun createUnselectedBg(rankType: ItemRank, context: Context) : StrokeTextDrawable {
             return StrokeTextDrawable(Color.TRANSPARENT).apply {
                 setText(rankType.name)
                 setStrokeColor(Color.TRANSPARENT, 0f.dp.dpValue)
                 setTextSize(24.dp.dpValue)
-                setTextColor(ResourcesCompat.getColor(app.resources, R.color.rank_text_color, null))
+                setTextColor(ResourcesCompat.getColor(context.resources, R.color.rank_text_color, context.theme))
             }
         }
     }

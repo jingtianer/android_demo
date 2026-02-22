@@ -20,4 +20,19 @@ object UserStorage {
                 .create(),
         )
     )
+
+    private var _userAppThemeConfig by SharedPreferenceUtils.StorageLong<Any>(
+        app.getSharedPreferences(
+            "user_config",
+            Context.MODE_PRIVATE
+        ),
+        "theme_config",
+        AppTheme.AUTO.value,
+    )
+
+    var userAppThemeConfig : AppTheme
+        get() = AppTheme.parse(_userAppThemeConfig)
+        set(value) {
+            _userAppThemeConfig = value.value
+        }
 }
