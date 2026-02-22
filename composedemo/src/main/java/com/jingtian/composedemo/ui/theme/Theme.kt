@@ -86,7 +86,7 @@ private val darkAppPalette = AppPalette(
     dividerColor = colorA8A8A8,
     cardBg = colorA8A8A8_7f,
     galleryCardBg = colorD8D8D8_2f,
-    strokeColor = color484848,
+    strokeColor = colorC8c8c8,
     bottomSheetBackgroundColor = Color(red = 28, green = 27, blue = 31),
     labelTextColor = colorA8A8A8,
     deleteButtonColor = Color(0xffFF5959),

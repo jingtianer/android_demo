@@ -730,6 +730,32 @@ fun <T> RoundRectCheckableLabel(item: LabelCheckInfo<T>, checkedList: List<Label
         )
     }
 }
+
+fun playIntent(context: Context, fileInfo: FileInfo): Intent? {
+    val mediaType = fileInfo.fileType.mimeType
+    val originFileUri = fileInfo.getFileUri()
+    val originFile = originFileUri?.safeToFile()
+    val mediaUri: Uri = if (originFile != null) {
+        FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            originFile
+        )
+    } else {
+        originFileUri
+    } ?: return null
+    return Intent(Intent.ACTION_VIEW).apply {
+        // 设置Uri和媒体类型
+        setDataAndType(mediaUri, mediaType)
+        // 关键：授予系统应用访问该Uri的权限
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        // 适配Android 12+的前台服务权限（可选，避免部分播放器启动失败）
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+    }
+}
+
 @Composable
 fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, size: Dp, padding: Dp) {
     var imageBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
@@ -807,28 +833,7 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, size: Dp, 
     val context = LocalContext.current
     val playIntent = remember(albumItemRelation) {
         val fileInfo = albumItemRelation.fileInfo ?: return@remember null
-        val mediaType = fileInfo.fileType.mimeType
-        val originFileUri = fileInfo.getFileUri()
-        val originFile = originFileUri?.safeToFile()
-        val mediaUri: Uri = if (originFile != null) {
-            FileProvider.getUriForFile(
-                context,
-                "${context.packageName}.fileprovider",
-                originFile
-            )
-        } else {
-            originFileUri
-        } ?: return@remember null
-        Intent(Intent.ACTION_VIEW).apply {
-            // 设置Uri和媒体类型
-            setDataAndType(mediaUri, mediaType)
-            // 关键：授予系统应用访问该Uri的权限
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            // 适配Android 12+的前台服务权限（可选，避免部分播放器启动失败）
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-        }
+        playIntent(context, fileInfo)
     }
 
     var showEditDialog by remember { mutableStateOf(false) }
@@ -1662,18 +1667,21 @@ fun DrawerHeader() {
     }
 
     fun pickImage() {
-        if (enableEdit) {
-            multipleImagePickerLauncher.launch(
-                PickVisualMediaRequest
-                    .Builder()
-                    .setMediaType(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                    .build()
-            )
-        }
+        multipleImagePickerLauncher.launch(
+            PickVisualMediaRequest
+                .Builder()
+                .setMediaType(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                .build()
+        )
     }
 
     fun circleOffset(R: Dp, r: Dp, halfBorder: Dp) : Dp {
         return R * (1 - sqrt(.5f)) - r + halfBorder * sqrt(0.5f)
+    }
+
+    val context = LocalContext.current
+    val playIntent = remember(UserStorage.userInstance) {
+        playIntent(context, UserStorage.userInstance.userAvatar)
     }
 
     Column(
@@ -1686,7 +1694,13 @@ fun DrawerHeader() {
             .clip(CircleShape)
             .border(borderSize, LocalAppPalette.current.strokeColor, CircleShape)
             .clickable {
-                pickImage()
+                if (enableEdit) {
+                    pickImage()
+                } else {
+                    if (playIntent != null) {
+                        context.startActivity(playIntent)
+                    }
+                }
             }
 
         Box(
@@ -1729,7 +1743,13 @@ fun DrawerHeader() {
                                 }
                                 .align(Alignment.BottomEnd)
                                 .clickable {
-                                    pickImage()
+                                    if (enableEdit) {
+                                        pickImage()
+                                    } else {
+                                        if (playIntent != null) {
+                                            context.startActivity(playIntent)
+                                        }
+                                    }
                                 }
                                 .offset(
                                     -circleOffset(
