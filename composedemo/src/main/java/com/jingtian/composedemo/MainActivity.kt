@@ -93,6 +93,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -1019,6 +1020,7 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
 
     val totalLabelList = remember { mutableStateListOf(*(totalLabelList.toSet() - albumItemRelation.labelInfos.map { it.label }.toSet()).map { LabelCheckInfo(it, it) }.toTypedArray()) }
 
+    val imageWidth = LocalConfiguration.current.screenWidthDp.dp * LocalAppUIConstants.current.dialogPercent
     fun deleteItem() {
         viewModel.deleteItem(albumItemRelation)
     }
@@ -1051,9 +1053,9 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
             FileType.IMAGE -> {
                 scope.launch(Dispatchers.IO) {
                     val bitmap = if (fileInfo != null) {
-                        BitMapCachePool.loadImage(fileInfo).second?.asImageBitmap()
+                        BitMapCachePool.loadImage(fileInfo, maxWidth = imageWidth.dpValue.toInt()).second?.asImageBitmap()
                     } else {
-                        BitMapCachePool.toBitMap(uri).second?.asImageBitmap()
+                        BitMapCachePool.toBitMap(uri, maxWidth = imageWidth.dpValue.toInt()).second?.asImageBitmap()
                     }
                     withContext(Dispatchers.Main) {
                         pickedImage = bitmap
@@ -1063,13 +1065,13 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
 
             FileType.VIDEO -> {
                 if (fileInfo != null) {
-                    getVideoThumbnail(fileInfo, scope, uri) { bitmap: Bitmap? ->
+                    getVideoThumbnail(fileInfo, scope, uri, maxWidth = imageWidth.dpValue.toInt()) { bitmap: Bitmap? ->
                         withContext(Dispatchers.Main) {
                             pickedImage = bitmap?.asImageBitmap()
                         }
                     }
                 } else {
-                    getVideoThumbnail(scope, uri) { bitmap: Bitmap? ->
+                    getVideoThumbnail(scope, uri, maxWidth = imageWidth.dpValue.toInt()) { bitmap: Bitmap? ->
                         withContext(Dispatchers.Main) {
                             pickedImage = bitmap?.asImageBitmap()
                         }
@@ -1349,6 +1351,7 @@ fun AddItemDialog(album: Album, labelList: List<LabelCheckInfo<String>>, onDismi
     val scope = rememberCoroutineScope()
     var imageResource by remember { mutableStateOf(R.drawable.upload_to_cloud) }
     val viewModel: AlbumViewModel = viewModel()
+    val imageWidth = LocalConfiguration.current.screenWidthDp.dp * LocalAppUIConstants.current.dialogPercent
 
     fun saveItem(context: Context) {
         if (selectedUri == null || itemName.isNullOrBlank()) {
@@ -1365,13 +1368,13 @@ fun AddItemDialog(album: Album, labelList: List<LabelCheckInfo<String>>, onDismi
             uri ?: return@rememberLauncherForActivityResult
             when (getMediaType(uri)) {
                 FileType.IMAGE -> {
-                    BitMapCachePool.toBitMap(scope, uri) { _, bitmap->
+                    BitMapCachePool.toBitMap(scope, uri, maxWidth = imageWidth.dpValue.toInt()) { _, bitmap->
                         pickedImage = bitmap?.asImageBitmap()
                     }
                 }
 
                 FileType.VIDEO -> {
-                    getVideoThumbnail(scope, uri) { bitmap: Bitmap? ->
+                    getVideoThumbnail(scope, uri, maxWidth = imageWidth.dpValue.toInt()) { bitmap: Bitmap? ->
                         pickedImage = bitmap?.asImageBitmap()
                     }
                 }

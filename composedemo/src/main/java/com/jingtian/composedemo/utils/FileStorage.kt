@@ -4,6 +4,7 @@ import android.content.ContentResolver
 import android.content.Context
 import android.database.Cursor
 import android.graphics.Bitmap
+import android.graphics.Matrix
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.provider.DocumentsContract
@@ -232,11 +233,38 @@ object FileStorageUtils {
     fun getVideoThumbnail(
         coroutineScope: CoroutineScope,
         videoUri: Uri,
+        maxWidth: Int = -1,
+        maxHeight: Int = -1,
         onLoadBitmap: suspend (Bitmap?)->Unit
     ): Job = coroutineScope.launch(Dispatchers.IO) {
         val bitmap = getVideoThumbnail(videoUri)
+        if (bitmap == null) {
+            withContext(Dispatchers.Main) {
+                onLoadBitmap(null)
+            }
+            return@launch
+        }
+        // 1. 计算缩放比例（保持宽高比）
+        val width = bitmap.width
+        val height = bitmap.height
+        val scaleWidth = maxWidth.toFloat() / width
+        val scaleHeight = maxHeight.toFloat() / height
+        val scale = minOf(scaleWidth, scaleHeight) // 取最小比例，避免拉伸
+
+        // 2. 创建缩放矩阵
+        val matrix = Matrix().apply {
+            postScale(scale, scale)
+        }
+
+        // 3. 压缩并返回新Bitmap（注意回收原始Bitmap避免内存泄漏）
+        val compressedBitmap = Bitmap.createBitmap(
+            bitmap, 0, 0, width, height, matrix, true
+        )
+        if (compressedBitmap != bitmap) {
+            bitmap.recycle() // 回收原始Bitmap
+        }
         withContext(Dispatchers.Main) {
-            onLoadBitmap(bitmap)
+            onLoadBitmap(compressedBitmap)
         }
     }
 
