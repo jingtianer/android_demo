@@ -35,6 +35,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -569,19 +570,17 @@ fun FilterPanel(
         sheetState = sheetState,
         modifier = Modifier
             .fillMaxWidth()
-            .fillMaxHeight(
-                sqrt(1 - goldenRatio)
-            ),
+            .fillMaxHeight(sqrt(goldenRatio)),
         containerColor = LocalAppPalette.current.bottomSheetBackgroundColor
     ) {
         val scope = rememberCoroutineScope()
-
 
         LazyVerticalGrid(
             columns = GridCells.Adaptive(LocalAppUIConstants.current.filterLabelHeight * LocalAppUIConstants.current.filterLabelAspectRatio),
             modifier = Modifier
                 .fillMaxWidth()
-                .wrapContentHeight()
+                .fillMaxHeight()
+                .weight(1f)
                 .padding(horizontal = horizontalPadding)
         ) {
             item(span = { GridItemSpan(maxLineSpan) }) {
@@ -611,25 +610,31 @@ fun FilterPanel(
                     AppThemeText(text = "标签筛选", Modifier.padding(horizontal = horizontalInnerPadding, vertical = verticalPadding), style = LocalTextStyle.current.copy(fontWeight = FontWeight(600), fontSize = 16.sp))
                 }
             }
-        }
 
-        LazyHorizontalStaggeredGrid(
-            StaggeredGridCells.Adaptive(LocalAppUIConstants.current.filterLabelHeight + LocalAppUIConstants.current.filterLabelPaddings[1] + LocalAppUIConstants.current.filterLabelPaddings[3]),
-            Modifier
-                .fillMaxHeight()
-                .fillMaxWidth()
-                .weight(1f),
-        ) {
-            items(labelCheckStateList.size) { index ->
-                val item = labelCheckStateList[index]
-                RoundRectCheckableLabel(
-                    item,
-                    labelCheckStateList,
-                    true,
-                    onLabelCheckStateChange
-                )
+            item(span = { GridItemSpan(this.maxLineSpan) }) {
+
+                val labelItemHeight = LocalAppUIConstants.current.filterLabelHeight + (LocalAppUIConstants.current.filterLabelPaddings[1] + LocalAppUIConstants.current.filterLabelPaddings[3]) * 2
+                LazyHorizontalStaggeredGrid(
+//            StaggeredGridCells.Adaptive(labelItemHeight),
+                    StaggeredGridCells.Fixed(3),
+                    Modifier
+                        .height(labelItemHeight * 3)
+                        .fillMaxWidth(),
+                    horizontalItemSpacing = horizontalInnerPadding,
+                ) {
+                    items(labelCheckStateList.size) { index ->
+                        val item = labelCheckStateList[index]
+                        RoundRectCheckableLabel(
+                            item,
+                            labelCheckStateList,
+                            true,
+                            onLabelCheckStateChange
+                        )
+                    }
+                }
             }
         }
+
         Spacer(Modifier.height(16.dp))
         Row(
             Modifier
