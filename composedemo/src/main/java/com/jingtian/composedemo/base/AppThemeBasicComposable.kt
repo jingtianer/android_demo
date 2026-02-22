@@ -10,12 +10,15 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.BasicTextField
@@ -48,6 +51,9 @@ import androidx.compose.ui.window.DialogProperties
 import com.jingtian.composedemo.ui.theme.LocalAppPalette
 import com.jingtian.composedemo.ui.theme.LocalAppUIConstants
 import com.jingtian.composedemo.ui.theme.LocalMiddleButtonConfig
+import com.jingtian.composedemo.ui.theme.appBackground
+import com.jingtian.composedemo.ui.theme.dialogBackground
+import com.jingtian.composedemo.ui.theme.drawerBackground
 
 
 @Composable
@@ -311,7 +317,8 @@ fun AppThemeDialog(
     ) -> Unit
 ) {
     Dialog(onDismissRequest = onDismissRequest, properties = properties) {
-        Column(modifier) {
+        Column(modifier
+            .dialogBackground()) {
             content(
                 header = {
                     Spacer(modifier = Modifier.height(8.dp))

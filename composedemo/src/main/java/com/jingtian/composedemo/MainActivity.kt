@@ -1686,6 +1686,8 @@ fun DrawerHeader() {
 
     Column(
         Modifier.fillMaxWidth()
+            .drawerBackground()
+            .windowInsetsPadding(WindowInsets.systemBars)
     ) {
         val currentUserAvatarImage = userAvatarImage
 
@@ -1932,8 +1934,6 @@ fun MainDrawer(
             .fillMaxHeight()
             .fillMaxWidth()
             .background(LocalAppPalette.current.drawerBg)
-            .drawerBackground()
-            .windowInsetsPadding(WindowInsets.systemBars)
 //            .fillMaxWidth(LocalAppUIConstants.current.drawerMaxPercent)
     ) {
         LazyColumn(

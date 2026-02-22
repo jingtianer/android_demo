@@ -172,7 +172,9 @@ fun Modifier.appBackground(context: Context, @DrawableRes resource: Int, widthSc
 @Composable
 fun Modifier.appBackground() = appBackground(LocalContext.current, R.drawable.rectangle_16)
 @Composable
-fun Modifier.drawerBackground() = this//appBackground(R.drawable.rectangle_16)
+fun Modifier.drawerBackground() = appBackground(LocalContext.current, R.drawable.rectangle_16, heightScale = 1f)
+@Composable
+fun Modifier.dialogBackground() = appBackground(LocalContext.current, R.drawable.rectangle_16, heightScale = goldenRatio)
 
 @LayoutScopeMarker
 @Immutable
