@@ -5,6 +5,7 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
+import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
@@ -90,6 +91,7 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -126,6 +128,7 @@ import com.jingtian.composedemo.ui.theme.LocalSecondaryTextStyle
 import com.jingtian.composedemo.ui.theme.appBackground
 import com.jingtian.composedemo.ui.theme.drawerBackground
 import com.jingtian.composedemo.ui.theme.goldenRatio
+import com.jingtian.composedemo.ui.widget.FollowTailLayout
 import com.jingtian.composedemo.ui.widget.RankTypeChooser
 import com.jingtian.composedemo.ui.widget.RankTypeChooser.Companion.createBg
 import com.jingtian.composedemo.ui.widget.StarRateView
@@ -141,6 +144,8 @@ import com.jingtian.composedemo.utils.UserStorage
 import com.jingtian.composedemo.utils.ViewUtils.commonConfig
 import com.jingtian.composedemo.utils.ViewUtils.commonEditableConfig
 import com.jingtian.composedemo.utils.ViewUtils.dpValue
+import com.jingtian.composedemo.utils.splitBy
+import com.jingtian.composedemo.utils.splitByWhiteSpace
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
 import com.jingtian.composedemo.viewmodels.AppThemeViewModel
 import kotlinx.coroutines.Dispatchers
@@ -257,7 +262,11 @@ fun Main() {
             drawerState = drawerState,
             gesturesEnabled = menuItemsEntity.isNotEmpty()
         ) {
-            Gallery(currentSelectedAlbum) {
+            val totalLabelList = remember { mutableStateListOf<String>() }
+            Gallery(currentSelectedAlbum, onAlbumTotalListInfoChanged = {
+                totalLabelList.clear()
+                totalLabelList.addAll(it)
+            }) {
                 scope.launch {
                     if (drawerState.isOpen) {
                         drawerState.close()
@@ -271,7 +280,7 @@ fun Main() {
 
             editDialogAlbumItem?.let { editDialogAlbumItem->
                 editDialogAlbum?.let { editDialogAlbum->
-                    EditDialog(editDialogAlbumItem, editDialogAlbum, menuItemsEntity) {
+                    EditDialog(editDialogAlbumItem, editDialogAlbum, menuItemsEntity, totalLabelList) {
                         viewModel.editDialogAlbum.value = null
                         viewModel.editDialogAlbumItem.value = null
                     }
@@ -279,8 +288,6 @@ fun Main() {
             }
         }
     }
-
-
 
 }
 
@@ -300,7 +307,7 @@ fun <T> LazyListScope.roundRectTabFilter(checkedList: List<LabelCheckInfo<T>>, o
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun Gallery(album: IndexedValue<Album>?, openDrawer: ()->Unit) {
+fun Gallery(album: IndexedValue<Album>?, onAlbumTotalListInfoChanged: (List<String>) -> Unit, openDrawer: ()->Unit) {
     if (album == null) {
         return
     }
@@ -329,6 +336,7 @@ fun Gallery(album: IndexedValue<Album>?, openDrawer: ()->Unit) {
                 withContext(Dispatchers.Main) {
                     albumName = album.value.albumName
                     labelFilterCheckedInfo = value.map { LabelCheckInfo(it, it) }
+                    onAlbumTotalListInfoChanged(value)
                 }
             }
         }
@@ -494,7 +502,7 @@ fun Gallery(album: IndexedValue<Album>?, openDrawer: ()->Unit) {
     }
 
     if (addImageDialogState) {
-        AddItemDialog(album.value) {
+        AddItemDialog(album.value, labelFilterCheckedInfo) {
             addImageDialogState = false
         }
     }
@@ -987,7 +995,7 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, size: Dp, 
 }
 
 @Composable
-fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumData: List<Album>, onDismiss: ()->Unit) {
+fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumData: List<Album>, totalLabelList: List<String>, onDismiss: ()->Unit) {
     val album = albumItemRelation.albumItem
     val viewModel : AlbumViewModel = viewModel()
 
@@ -1003,6 +1011,8 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
     var selectedFileType by remember { mutableStateOf(albumItemRelation.fileInfo?.fileType) }
     val scope = rememberCoroutineScope()
     var imageResource by remember { mutableStateOf(R.drawable.upload_to_cloud) }
+
+    val totalLabelList = remember { mutableStateListOf(*(totalLabelList.toSet() - albumItemRelation.labelInfos.map { it.label }.toSet()).map { LabelCheckInfo(it, it) }.toTypedArray()) }
 
     fun deleteItem() {
         viewModel.deleteItem(albumItemRelation)
@@ -1267,8 +1277,24 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
 
                         Spacer(Modifier.height(4.dp))
 
+                        LazyRow(Modifier.padding(horizontal = 6.dp)) {
+                            items(totalLabelList.size) { index->
+                                val item = totalLabelList[index]
+                                val isChecked by item.isChecked.observeAsState()
+                                CheckableLabelView(label = item.label, isChecked = isChecked ?: false) {
+                                    item.isChecked.value = it
+                                    if (it) {
+                                        itemLabel.add(LabelInfo(label = item.name))
+                                        itemLabelSize = itemLabel.size
+                                    } else {
+                                        itemLabel.removeIf { it.label == item.name }
+                                        itemLabelSize = itemLabel.size
+                                    }
+                                }
+                            }
+                        }
                         EditLabelView {
-                            itemLabel.add(0, LabelInfo(label = it))
+                            itemLabel.addAll(0, it.map { LabelInfo(label = it) })
                             itemLabelSize = itemLabel.size
                         }
                         Spacer(Modifier.height(4.dp))
@@ -1276,7 +1302,11 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
                 }
 
                 item {
-                    LazyRow(Modifier.padding(horizontal = 6.dp)) {
+
+                    LazyRow(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 6.dp)) {
                         items(itemLabelSize, key = { index: Int ->
                             itemLabel[index].label
                         }) { index: Int ->
@@ -1299,12 +1329,13 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
 }
 
 @Composable
-fun AddItemDialog(album: Album, onDismiss: () -> Unit) {
+fun AddItemDialog(album: Album, labelList: List<LabelCheckInfo<String>>, onDismiss: () -> Unit) {
 
     var pickedImage by remember { mutableStateOf<ImageBitmap?>(null) }
     var itemName by remember { mutableStateOf("") }
     var itemDesc by remember { mutableStateOf("") }
     var itemRank by remember { mutableStateOf(ItemRank.NONE) }
+    val totalLabelList = remember { mutableStateListOf(*labelList.map { LabelCheckInfo(it.label, it.name) }.toTypedArray()) }
     var itemScore by remember { mutableStateOf(0.0f) }
     val itemLabel by remember { mutableStateOf<MutableList<LabelInfo>>(mutableListOf()) }
     var itemLabelSize by remember { mutableStateOf<Int>(0) }
@@ -1466,8 +1497,24 @@ fun AddItemDialog(album: Album, onDismiss: () -> Unit) {
                 })
 
             Spacer(Modifier.height(4.dp))
+            LazyRow(Modifier.padding(horizontal = 6.dp)) {
+                items(totalLabelList.size) { index->
+                    val item = totalLabelList[index]
+                    val isChecked by item.isChecked.observeAsState()
+                    CheckableLabelView(label = item.label, isChecked = isChecked ?: false) {
+                        item.isChecked.value = it
+                        if (it) {
+                            itemLabel.add(LabelInfo(label = item.name))
+                            itemLabelSize = itemLabel.size
+                        } else {
+                            itemLabel.removeIf { it.label == item.name }
+                            itemLabelSize = itemLabel.size
+                        }
+                    }
+                }
+            }
             EditLabelView {
-                itemLabel.add(0, LabelInfo(label = it))
+                itemLabel.addAll(0, it.map { LabelInfo(label = it) })
                 itemLabelSize = itemLabel.size
             }
             LazyRow(Modifier.padding(horizontal = 6.dp)) {
@@ -1500,15 +1547,30 @@ fun CheckableLabelView(label: String, isChecked:Boolean, onCheckStateChange: (Bo
                 color = if (isChecked) LocalAppPalette.current.labelChecked else LocalAppPalette.current.labelUnChecked,
                 shape = RoundedCornerShape(4.dp)
             )
-            .wrapContentSize()
-            .clickable {
+            .padding(horizontal = 4.dp, vertical = 2.dp)
+            .wrapContentSize().clickable {
                 onCheckStateChange(!isChecked)
             }, contentAlignment = Alignment.Center) {
         AppThemeText(label,
             Modifier
-                .padding(horizontal = 4.dp, vertical = 2.dp)
-                .wrapContentSize(), style = LocalTextStyle.current.copy(fontSize = 14.sp))
+                .wrapContentSize(), style = LocalTextStyle.current.copy(fontSize = 16.sp, color = LocalAppPalette.current.labelTextColor))
     }
+//    Box(
+//        Modifier
+//            .padding(2.dp)
+//            .background(
+//                color = if (isChecked) LocalAppPalette.current.labelChecked else LocalAppPalette.current.labelUnChecked,
+//                shape = RoundedCornerShape(4.dp)
+//            )
+//            .wrapContentSize()
+//            .clickable {
+//                onCheckStateChange(!isChecked)
+//            }, contentAlignment = Alignment.Center) {
+//        AppThemeText(label,
+//            Modifier
+//                .padding(horizontal = 4.dp, vertical = 2.dp)
+//                .wrapContentSize(), style = LocalTextStyle.current.copy(fontSize = 14.sp))
+//    }
 }
 
 @Composable
@@ -1551,32 +1613,54 @@ fun LabelView(label: LabelInfo, editable: Boolean = true, onRemove: ()->Unit) {
 }
 
 @Composable
-fun EditLabelView(onAddLabel: (String)->Unit) {
+fun EditLabelView(onAddLabel: (List<String>)->Unit) {
     var labelText by remember { mutableStateOf("") }
-    Row(
-        Modifier
-            .wrapContentSize()
-            .padding(horizontal = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-        CompositionLocalProvider(LocalTextStyle provides LocalTextStyle.current.copy(fontSize = 24.sp)) {
-            AppThemeBasicTextField(labelText, {value-> labelText = value},
-                Modifier
-                    .wrapContentWidth()
-                    .wrapContentHeight(), hint = "添加标签")
-        }
-        Spacer(Modifier.padding(2.dp))
-        Icon(
-            painter = painterResource(R.drawable.add),
-            contentDescription = "添加标签",
-            Modifier
-                .size(24.dp)
-                .clickable {
-                    if (labelText.isNotBlank()) {
-                        onAddLabel(labelText)
-                        labelText = ""
-                    }
-                },
-        )
-    }
+    AndroidView(
+        factory = { context->
+            val followTailLayout = FollowTailLayout(context)
+            followTailLayout.orientation = Gravity.LEFT // right不行
+            val headView = ComposeView(context)
+            headView.setContent {
+                CompositionLocalProvider(LocalTextStyle provides LocalTextStyle.current.copy(fontSize = 24.sp)) {
+                    AppThemeBasicTextField(labelText, onValueChange = {value-> labelText = value},
+                        Modifier.wrapContentSize(),
+                        hint = "添加标签",
+                    )
+                }
+            }
+
+            val tailView = ComposeView(context)
+            tailView.setContent {
+                Spacer(Modifier.width(2.dp))
+                Image(
+                    painter = painterResource(R.drawable.add_green),
+                    contentDescription = "添加标签",
+                    Modifier
+                        .size(24.dp)
+                        .clickable {
+                            if (labelText.isNotBlank()) {
+                                onAddLabel(
+                                    labelText
+                                        .trim()
+                                        .splitByWhiteSpace()
+                                )
+                                labelText = ""
+                            }
+                        },
+                )
+            }
+            tailView.layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            followTailLayout.addHead(headView, ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+            ))
+            followTailLayout.addTail(tailView)
+            followTailLayout
+        },
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(6.dp)
+    )
 }
 
 @Composable
@@ -1685,7 +1769,8 @@ fun DrawerHeader() {
     }
 
     Column(
-        Modifier.fillMaxWidth()
+        Modifier
+            .fillMaxWidth()
             .drawerBackground()
             .windowInsetsPadding(WindowInsets.systemBars)
     ) {
@@ -1973,9 +2058,15 @@ fun AppThemeSwitcher() {
     fun Modifier.modifier(appTheme: AppTheme):Modifier {
         val modifier = this
         return if (appTheme == (currentTheme ?: AppTheme.AUTO)) {
-            modifier.background(color = LocalAppPalette.current.labelChecked, shape = RoundedCornerShape(100))
+            modifier.background(
+                color = LocalAppPalette.current.labelChecked,
+                shape = RoundedCornerShape(100)
+            )
         } else {
-            modifier.background(color = LocalAppPalette.current.labelUnChecked, shape = RoundedCornerShape(100))
+            modifier.background(
+                color = LocalAppPalette.current.labelUnChecked,
+                shape = RoundedCornerShape(100)
+            )
         }
             .clip(RoundedCornerShape(100))
             .clickable {
@@ -2115,4 +2206,18 @@ fun DrawerMenuItem(
             deleteConfirmDialogState = false
         }, content = {})
     }
+}
+
+@Composable
+fun LabelEditView(albumItemId: Long, labelList: List<LabelInfo>, onAddLabel: (LabelInfo)->Unit, onRemoveLabel: (LabelInfo)->Unit) {
+    LazyHorizontalStaggeredGrid(
+        rows = StaggeredGridCells.Fixed(3)
+    ) {
+        items(labelList.size) { index->
+            LabelView(labelList[index]) {
+                onRemoveLabel(labelList[index])
+            }
+        }
+    }
+
 }

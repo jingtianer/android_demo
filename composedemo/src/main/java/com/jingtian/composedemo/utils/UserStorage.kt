@@ -27,7 +27,7 @@ object UserStorage {
             Context.MODE_PRIVATE
         ),
         "theme_config",
-        AppTheme.AUTO.value,
+        AppTheme.Dark.value,
     )
 
     var userAppThemeConfig : AppTheme

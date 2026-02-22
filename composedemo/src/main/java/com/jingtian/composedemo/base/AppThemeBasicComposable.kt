@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -54,6 +55,8 @@ import com.jingtian.composedemo.ui.theme.LocalMiddleButtonConfig
 import com.jingtian.composedemo.ui.theme.appBackground
 import com.jingtian.composedemo.ui.theme.dialogBackground
 import com.jingtian.composedemo.ui.theme.drawerBackground
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.contract
 
 
 @Composable
@@ -78,7 +81,6 @@ fun AppThemeText(
         BasicText(
             text, modifier, style, onTextLayout, overflow, softWrap, maxLines, minLines, color
         )
-
     }}
 
 @Composable
@@ -149,10 +151,11 @@ fun AppThemeBasicTextField(
     visualTransformation: VisualTransformation = VisualTransformation.None,
     onTextLayout: (TextLayoutResult) -> Unit = {},
     interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
-    cursorBrush: Brush = SolidColor(Color.Black),
+    cursorBrush: Brush = SolidColor(LocalTextStyle.current.color),
     overflow: TextOverflow = TextOverflow.Clip,
     hint: String? = null,
     hintColor: Color = Color.Gray,
+    decorationBox: @Composable (@Composable () -> Unit) -> Unit = { innerTextField -> innerTextField() }
 ) {
     Box(Modifier.wrapContentSize()) {
         val modifier = if (value.isNullOrBlank() && !hint.isNullOrBlank()) {
@@ -194,66 +197,7 @@ fun AppThemeBasicTextField(
             onTextLayout,
             interactionSource,
             cursorBrush,
-        )
-    }
-}
-
-@Composable
-fun AppThemeBasicTextField(
-    value: TextFieldValue,
-    onValueChange: (TextFieldValue) -> Unit,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-    readOnly: Boolean = false,
-    textStyle: TextStyle = TextStyle.Default,
-    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
-    keyboardActions: KeyboardActions = KeyboardActions.Default,
-    singleLine: Boolean = false,
-    maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE,
-    minLines: Int = 1,
-    visualTransformation: VisualTransformation = VisualTransformation.None,
-    onTextLayout: (TextLayoutResult) -> Unit = {},
-    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
-    cursorBrush: Brush = SolidColor(Color.Black),
-    hint: String? = null,
-    hintColor: Color = Color.Gray,
-) {
-    Box(modifier.wrapContentSize()) {
-        val modifier = if (value.text.isNullOrBlank() && !hint.isNullOrBlank()) {
-            val focusRequester = remember { FocusRequester() }
-            val keyboardController = LocalSoftwareKeyboardController.current
-            AppThemeText(
-                text = hint,
-                modifier
-                    .clickable {
-                        focusRequester.requestFocus()
-                        keyboardController?.show()
-                    },
-                style = LocalTextStyle.current.copy(color = hintColor),
-                maxLines = 1
-            )
-            Modifier
-                .width(3.dp)
-                .focusRequester(focusRequester)
-        } else {
-            modifier.width(IntrinsicSize.Min)
-        }
-        BasicTextField(
-            value,
-            onValueChange,
-            modifier,
-            enabled,
-            readOnly,
-            textStyle,
-            keyboardOptions,
-            keyboardActions,
-            singleLine,
-            maxLines,
-            minLines,
-            visualTransformation,
-            onTextLayout,
-            interactionSource,
-            cursorBrush,
+            decorationBox,
         )
     }
 }

@@ -5,6 +5,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Observer
+import java.util.function.Predicate
 
 @Composable
 inline fun <T> MutableLiveData<T>.composeObserve(crossinline onUpdate: (T?)->Unit) {
@@ -19,3 +20,26 @@ inline fun <T> MutableLiveData<T>.composeObserve(crossinline onUpdate: (T?)->Uni
         }
     }
 }
+
+
+fun CharSequence.splitBy(predicate: Predicate<Char>): List<String> {
+    val sb = StringBuilder()
+    val resultList = mutableListOf<String>()
+    for (char in this) {
+        if (predicate.test(char)) {
+            if (sb.isNotEmpty()) {
+                resultList.add(sb.toString())
+                sb.clear()
+            }
+            continue
+        } else {
+            sb.append(char)
+        }
+    }
+    if (sb.isNotEmpty()) {
+        resultList.add(sb.toString())
+    }
+    return resultList
+}
+
+fun CharSequence.splitByWhiteSpace() = splitBy(Char::isWhitespace)
