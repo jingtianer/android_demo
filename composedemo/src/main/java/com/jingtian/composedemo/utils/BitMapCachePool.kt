@@ -114,7 +114,7 @@ object BitMapCachePool {
     private fun File.ensureFile(): File {
         if (exists()) {
             if (isDirectory) {
-                delete()
+                deleteRecursively()
             }
         }
         return this
