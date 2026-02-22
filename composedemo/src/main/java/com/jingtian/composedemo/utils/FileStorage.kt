@@ -146,6 +146,7 @@ object FileStorageUtils {
                     oldId
                 }
             }
+            uriCache.remove(oldId)
             uriCache[id] = uri
             CoroutineUtils.runIOTask({
                 val storageFile = getStoreFile(id)

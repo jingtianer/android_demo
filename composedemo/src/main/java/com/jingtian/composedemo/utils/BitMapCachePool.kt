@@ -86,13 +86,17 @@ object BitMapCachePool {
         }
 
         fun clear(id: Long) {
-            getQueue(id).clear()
+            val queue = getQueue(id)
+            synchronized(queue) {
+                queue.clear()
+            }
+            getCacheDir(fileType.value, id).takeIf { it.exists() }?.deleteRecursively()
         }
     }
 
     private fun getCacheFile(fileType: Int, storageId: Long, scaleFactor: Int): File {
-        ensureCacheDir()
-        return File(app.cacheDir, "bitmap_cache/bitmap_${fileType}_${storageId}_${scaleFactor}").ensureFile()
+        ensureCacheDir(fileType, storageId)
+        return File(app.cacheDir, "bitmap_cache/bitmap_${fileType}/${storageId}/${scaleFactor}").ensureFile()
     }
 
     private fun File.ensureDir(): File {
@@ -116,8 +120,12 @@ object BitMapCachePool {
         return this
     }
 
-    private fun ensureCacheDir() {
-        File(app.cacheDir, "bitmap_cache").ensureDir()
+    private fun ensureCacheDir(fileType: Int, storageId: Long) {
+        File(app.cacheDir, "bitmap_cache/bitmap_${fileType}/${storageId}").ensureDir()
+    }
+
+    private fun getCacheDir(fileType: Int, storageId: Long): File {
+        return File(app.cacheDir, "bitmap_cache/bitmap_${fileType}/${storageId}")
     }
 
     fun getImageRatio(uri: Uri): Pair<Int, Int> {

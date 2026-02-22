@@ -610,27 +610,26 @@ fun FilterPanel(
                 item(span = { GridItemSpan(this.maxLineSpan) }) {
                     AppThemeText(text = "标签筛选", Modifier.padding(horizontal = horizontalInnerPadding, vertical = verticalPadding), style = LocalTextStyle.current.copy(fontWeight = FontWeight(600), fontSize = 16.sp))
                 }
-            }
+                item(span = { GridItemSpan(this.maxLineSpan) }) {
 
-            item(span = { GridItemSpan(this.maxLineSpan) }) {
-
-                val labelItemHeight = LocalAppUIConstants.current.filterLabelHeight + (LocalAppUIConstants.current.filterLabelPaddings[1] + LocalAppUIConstants.current.filterLabelPaddings[3]) * 2
-                LazyHorizontalStaggeredGrid(
+                    val labelItemHeight = LocalAppUIConstants.current.filterLabelHeight + (LocalAppUIConstants.current.filterLabelPaddings[1] + LocalAppUIConstants.current.filterLabelPaddings[3]) * 2
+                    LazyHorizontalStaggeredGrid(
 //            StaggeredGridCells.Adaptive(labelItemHeight),
-                    StaggeredGridCells.Fixed(3),
-                    Modifier
-                        .height(labelItemHeight * 3)
-                        .fillMaxWidth(),
-                    horizontalItemSpacing = horizontalInnerPadding,
-                ) {
-                    items(labelCheckStateList.size) { index ->
-                        val item = labelCheckStateList[index]
-                        RoundRectCheckableLabel(
-                            item,
-                            labelCheckStateList,
-                            true,
-                            onLabelCheckStateChange
-                        )
+                        StaggeredGridCells.Fixed(3),
+                        Modifier
+                            .height(labelItemHeight * 3)
+                            .fillMaxWidth(),
+                        horizontalItemSpacing = horizontalInnerPadding,
+                    ) {
+                        items(labelCheckStateList.size) { index ->
+                            val item = labelCheckStateList[index]
+                            RoundRectCheckableLabel(
+                                item,
+                                labelCheckStateList,
+                                true,
+                                onLabelCheckStateChange
+                            )
+                        }
                     }
                 }
             }
