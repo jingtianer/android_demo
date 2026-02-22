@@ -1973,14 +1973,15 @@ fun AppThemeSwitcher() {
     fun Modifier.modifier(appTheme: AppTheme):Modifier {
         val modifier = this
         return if (appTheme == (currentTheme ?: AppTheme.AUTO)) {
-            modifier.background(color = LocalAppPalette.current.labelChecked, shape = RoundedCornerShape(100)).padding(8.dp)
+            modifier.background(color = LocalAppPalette.current.labelChecked, shape = RoundedCornerShape(100))
         } else {
-            modifier.background(color = LocalAppPalette.current.labelUnChecked, shape = RoundedCornerShape(100)).padding(8.dp)
+            modifier.background(color = LocalAppPalette.current.labelUnChecked, shape = RoundedCornerShape(100))
         }
             .clip(RoundedCornerShape(100))
             .clickable {
                 viewModel.currentAppTheme.value = appTheme
             }
+            .padding(8.dp)
     }
 
     val size = 42.dp

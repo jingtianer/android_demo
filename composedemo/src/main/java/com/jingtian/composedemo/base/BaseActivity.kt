@@ -13,7 +13,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.ViewModelProvider
@@ -53,13 +56,16 @@ abstract class BaseActivity : AppCompatActivity() {
     fun AppThemeScope.AppThemeSwitcher() {
         val viewModel: AppThemeViewModel = viewModel()
         val currentAppTheme by viewModel.currentAppTheme.observeAsState()
+        var lastAppTheme by remember { mutableStateOf(currentAppTheme) }
         LaunchedEffect(currentAppTheme) {
             val appTheme = viewModel.currentAppTheme.value ?: return@LaunchedEffect
             if (AppTheme.currentAppTheme() == appTheme) {
                 return@LaunchedEffect
             }
             this@AppThemeSwitcher.setAppTheme(appTheme)
-            recreate()
+            if (AppTheme.isDarkTheme(isSystemDark(), lastAppTheme ?: AppTheme.AUTO) != AppTheme.isDarkTheme(isSystemDark(), appTheme)) {
+                recreate()
+            }
         }
     }
 
@@ -76,5 +82,20 @@ abstract class BaseActivity : AppCompatActivity() {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
+    }
+
+    private fun isDarkModeEnabled(): Boolean {
+        return when (AppCompatDelegate.getDefaultNightMode()) {
+            AppCompatDelegate.MODE_NIGHT_YES -> true // App强制深色
+            AppCompatDelegate.MODE_NIGHT_NO -> false  // App强制浅色
+            else -> {
+                isSystemDark()
+            }
+        }
+    }
+
+    private fun isSystemDark(): Boolean {
+        val uiMode = resources.configuration.uiMode
+        return (uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
     }
 }

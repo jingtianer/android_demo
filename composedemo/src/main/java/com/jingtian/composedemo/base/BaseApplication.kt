@@ -24,19 +24,4 @@ class BaseApplication : Application() {
         }
     }
 
-    private fun isDarkModeEnabled(): Boolean {
-        return when (AppCompatDelegate.getDefaultNightMode()) {
-            AppCompatDelegate.MODE_NIGHT_YES -> true // App强制深色
-            AppCompatDelegate.MODE_NIGHT_NO -> false  // App强制浅色
-            else -> {
-                isSystemDark()
-            }
-        }
-    }
-
-    private fun isSystemDark(): Boolean {
-        val uiMode = resources.configuration.uiMode
-        return (uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-    }
-
 }
