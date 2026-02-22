@@ -1875,7 +1875,7 @@ fun MainDrawer(
                 DrawerHeader()
             }
             item {
-                Box {
+                Box(Modifier.fillMaxWidth()) {
                     AppThemeHorizontalDivider(modifier = Modifier
                         .height(1.dp)
                         .fillMaxWidth(0.95f)
