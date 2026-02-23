@@ -492,7 +492,7 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
     }
 
     if (addImageDialogState) {
-        AddItemDialog(album.value, labelFilterCheckedInfo) {
+        AddItemDialog(album.value, labelFilterCheckedInfo, albumList) {
             addImageDialogState = false
         }
     }
@@ -1149,23 +1149,23 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
                     .wrapContentHeight()
                     .background(LocalAppPalette.current.dialogBg)
 //                    .padding(12.dp)
-                    .clip(RectangleShape)
+                    .clip(RectangleShape),
             ) {
 
                 item {
                     val currentPickedImage = pickedImage
                     if (currentPickedImage == null) {
-                        Spacer(Modifier.height(12.dp))
                         Image(
                             painter = painterResource(imageResource),
                             contentDescription = "上传照片",
                             Modifier
+                                .fillMaxWidth()
+                                .wrapContentHeight()
+                                .padding(12.dp)
                                 .clickable {
                                     pickImage()
-                                }
-                                .fillMaxWidth()
-                                .wrapContentHeight(),
-                            contentScale = ContentScale.Fit
+                                },
+                            contentScale = ContentScale.FillWidth
                         )
                     } else {
                         Image(
@@ -1177,7 +1177,7 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
                                 }
                                 .fillMaxWidth()
                                 .wrapContentHeight(),
-                            contentScale = ContentScale.Fit
+                            contentScale = ContentScale.FillWidth
                         )
                     }
 
@@ -1318,7 +1318,7 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
 }
 
 @Composable
-fun AddItemDialog(album: Album, labelList: List<LabelCheckInfo<String>>, onDismiss: () -> Unit) {
+fun AddItemDialog(album: Album, labelList: List<LabelCheckInfo<String>>, albumData: List<Album>, onDismiss: () -> Unit) {
 
     var pickedImage by remember { mutableStateOf<ImageBitmap?>(null) }
     var itemName by remember { mutableStateOf("") }
@@ -1334,6 +1334,7 @@ fun AddItemDialog(album: Album, labelList: List<LabelCheckInfo<String>>, onDismi
     var imageResource by remember { mutableStateOf(R.drawable.upload_to_cloud) }
     val viewModel: AlbumViewModel = viewModel()
     val imageWidth = LocalConfiguration.current.screenWidthDp.dp * LocalAppUIConstants.current.dialogPercent
+    var currentSelectedAlbum by remember { mutableStateOf(album) }
 
     fun saveItem(context: Context) {
         if (selectedUri == null || itemName.isNullOrBlank()) {
@@ -1341,7 +1342,7 @@ fun AddItemDialog(album: Album, labelList: List<LabelCheckInfo<String>>, onDismi
             return
         }
         onDismiss()
-        viewModel.addItem(album, selectedUri, itemName, itemRank, itemDesc, itemScore, itemLabelSet.keys)
+        viewModel.addItem(currentSelectedAlbum, selectedUri, itemName, itemRank, itemDesc, itemScore, itemLabelSet.keys)
     }
 
     val multipleImagePickerLauncher = rememberLauncherForActivityResult(
@@ -1393,138 +1394,177 @@ fun AddItemDialog(album: Album, labelList: List<LabelCheckInfo<String>>, onDismi
         properties = DialogProperties(usePlatformDefaultWidth = false),
         onNegative = onDismiss,
         onPositive = { saveItem(context) }
-    ) { _, actionButton ->
-        Column(
+    ) { _, actionButtons ->
+        var openAlbumList by remember { mutableStateOf(false) }
+        LazyColumn(
             Modifier
-                .verticalScroll(rememberScrollState())
                 .fillMaxWidth()
+//                    .verticalScroll(rememberScrollState())
                 .wrapContentHeight()
+                .background(LocalAppPalette.current.dialogBg)
+//                    .padding(12.dp)
+                .clip(RectangleShape)
         ) {
-            val currentPickedImage = pickedImage
-            if (currentPickedImage == null) {
-                Spacer(Modifier.height(12.dp))
-                Image(
-                    painter = painterResource(imageResource),
-                    contentDescription = "上传照片",
-                    Modifier
-                        .clickable {
-                            pickImage()
-                        }
-                        .fillMaxWidth()
-                        .wrapContentHeight(),
-                    contentScale = ContentScale.Fit
-                )
-            } else {
-                Image(
-                    bitmap = currentPickedImage,
-                    contentDescription = "上传照片",
-                    Modifier
-                        .clickable {
-                            pickImage()
-                        }
-                        .fillMaxWidth()
-                        .wrapContentHeight(),
-                    contentScale = ContentScale.Fit
-                )
-            }
 
-
-            OutlinedTextField(itemName, { value->
-                itemName = value
-            }, modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 6.dp), label = {
-                AppThemeText("文件名称")
-            }, maxLines = Int.MAX_VALUE)
-
-            OutlinedTextField(itemDesc, { value->
-                itemDesc = value
-            }, modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 6.dp), label = {
-                AppThemeText("文件描述")
-            }, maxLines = Int.MAX_VALUE)
-
-            Spacer(Modifier.height(4.dp))
-            AndroidView({ context ->
-                StarRateView(context).commonEditableConfig().apply {
-                    onScoreChange = StarRateView.Companion.OnScoreChange { score: Float ->
-                        itemScore = score
-                    }
-                    layoutParams = ViewGroup.LayoutParams(
-                        ViewGroup.LayoutParams.WRAP_CONTENT,
-                        ViewGroup.LayoutParams.MATCH_PARENT
+            item {
+                val currentPickedImage = pickedImage
+                if (currentPickedImage == null) {
+                    Image(
+                        painter = painterResource(imageResource),
+                        contentDescription = "上传照片",
+                        Modifier
+                            .fillMaxWidth()
+                            .wrapContentHeight()
+                            .padding(12.dp)
+                            .clickable {
+                                pickImage()
+                            },
+                        contentScale = ContentScale.FillWidth
+                    )
+                } else {
+                    Image(
+                        bitmap = currentPickedImage,
+                        contentDescription = "上传照片",
+                        Modifier
+                            .clickable {
+                                pickImage()
+                            }
+                            .fillMaxWidth()
+                            .wrapContentHeight(),
+                        contentScale = ContentScale.FillWidth
                     )
                 }
-            },
-                Modifier
-                    .wrapContentWidth()
-                    .height(30.dp)
-                    .padding(horizontal = 6.dp)
-                    .align(Alignment.CenterHorizontally),
-                update = {
-                    it.setScore(itemScore)
-                })
 
-            Spacer(Modifier.height(4.dp))
-            AndroidView({ context ->
-                RankTypeChooser(context).apply {
-                    layoutParams = ViewGroup.LayoutParams(
-                        ViewGroup.LayoutParams.WRAP_CONTENT,
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                    )
-                    onRankChange = RankTypeChooser.Companion.OnRankTypeChange { value ->
-                        itemRank = value
+                OutlinedTextField(itemName, { value->
+                    itemName = value
+                }, modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 6.dp), label = {
+                    AppThemeText("文件名称")
+                }, maxLines = Int.MAX_VALUE)
+
+                OutlinedTextField(itemDesc, { value->
+                    itemDesc = value
+                }, modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 6.dp), label = {
+                    AppThemeText("文件描述")
+                }, maxLines = Int.MAX_VALUE)
+
+                AppThemeText("选择合集: ${currentSelectedAlbum.albumName}",
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            openAlbumList = !openAlbumList
+                        }
+                        .padding(horizontal = 6.dp, vertical = 10.dp))
+            }
+
+            if (openAlbumList) {
+                items(albumData.size,
+                    key = { index: Int -> albumData[index].let { it.albumId ?: DataBase.INVALID_ID to it.albumName } }
+                ) { index ->
+                    val item = albumData[index]
+                    ImmutableDrawerMenuItem(
+                        item,
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 6.dp, vertical = 10.dp)
+                    ) {
+                        currentSelectedAlbum = item
+                        openAlbumList = false
                     }
                 }
-            },
-                Modifier
-                    .wrapContentWidth()
-                    .height(30.dp)
-                    .padding(horizontal = 6.dp)
-                    .align(Alignment.CenterHorizontally),
-                update = {
-                    it.setRankType(itemRank)
-                })
+            }
 
-            Spacer(Modifier.height(4.dp))
-            LazyRow(Modifier.padding(horizontal = 6.dp)) {
-                items(totalLabelList.size, { index-> totalLabelList[index].name }) { index->
-                    val item = totalLabelList[index]
-                    val isChecked by item.isChecked.observeAsState()
-                    CheckableLabelView(label = item.label, isChecked = isChecked ?: false) {
-                        item.isChecked.value = it
-                        if (it && !itemLabelSet.containsKey(item.name)) {
-                            itemLabelSet[item.name] = item.name
-                            itemLabel.add(0, item.name)
-                        } else if (!it && itemLabelSet.containsKey(item.name)) {
-                            itemLabelSet.remove(item.name)
-                            itemLabel.remove(item.name)
+            item {
+                Column(Modifier.fillMaxWidth()) {
+                    AndroidView({ context ->
+                        StarRateView(context).commonEditableConfig().apply {
+                            onScoreChange = StarRateView.Companion.OnScoreChange { score: Float ->
+                                itemScore = score
+                            }
+                            layoutParams = ViewGroup.LayoutParams(
+                                ViewGroup.LayoutParams.WRAP_CONTENT,
+                                ViewGroup.LayoutParams.MATCH_PARENT
+                            )
+                        }
+                    },
+                        Modifier
+                            .wrapContentWidth()
+                            .height(30.dp)
+                            .align(Alignment.CenterHorizontally),
+                        update = {
+                            it.setScore(itemScore)
+                        })
+                    Spacer(Modifier.height(4.dp))
+
+                    AndroidView({ context ->
+                        RankTypeChooser(context).apply {
+                            layoutParams = ViewGroup.LayoutParams(
+                                ViewGroup.LayoutParams.WRAP_CONTENT,
+                                ViewGroup.LayoutParams.MATCH_PARENT,
+                            )
+                            onRankChange = RankTypeChooser.Companion.OnRankTypeChange { value ->
+                                itemRank = value
+                            }
+                        }
+                    },
+                        Modifier
+                            .wrapContentWidth()
+                            .height(30.dp)
+                            .align(Alignment.CenterHorizontally),
+                        update = {
+                            it.setRankType(itemRank)
+                        })
+
+                    Spacer(Modifier.height(4.dp))
+
+                    LazyRow(Modifier.padding(horizontal = 6.dp)) {
+                        items(totalLabelList.size, key = { index-> totalLabelList[index].name }) { index->
+                            val item = totalLabelList[index]
+                            val isChecked by item.isChecked.observeAsState()
+                            CheckableLabelView(label = item.label, isChecked = isChecked ?: false) {
+                                item.isChecked.value = it
+                                if (it && !itemLabelSet.containsKey(item.label)) {
+                                    itemLabelSet[item.label] = item.label
+                                    itemLabel.add(0, item.label)
+                                } else if (!it && itemLabelSet.containsKey(item.label)) {
+                                    itemLabelSet.remove(item.label)
+                                    itemLabel.remove(item.label)
+                                }
+                            }
+                        }
+                    }
+                    EditLabelView {
+                        itemLabelSet.putAll(it.map { it to it })
+                        itemLabel.clear()
+                        itemLabel.addAll(itemLabelSet.keys)
+                    }
+                    Spacer(Modifier.height(4.dp))
+                }
+            }
+
+            item {
+
+                LazyRow(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 6.dp)) {
+                    items(itemLabel.size, key = { index: Int ->
+                        itemLabel[index]
+                    }) { index: Int ->
+                        LabelView(itemLabel[index]) {
+                            itemLabel.removeAt(index)
                         }
                     }
                 }
-            }
-            EditLabelView {
-                itemLabelSet.putAll(it.map { it to it })
-                itemLabel.clear()
-                itemLabel.addAll(itemLabelSet.keys)
-            }
-            LazyRow(Modifier.padding(horizontal = 6.dp)) {
-                items(itemLabel.size, key = { index: Int ->
-                    itemLabel[index]
-                }) { index: Int ->
-                    LabelView(itemLabel[index]) {
-                        itemLabel.removeAt(index)
-                        itemLabelSet.remove(itemLabel[index])
-                    }
+                Column(
+                    Modifier
+                        .padding(horizontal = 6.dp)
+                        .fillMaxWidth()) {
+                    actionButtons()
                 }
-            }
-            Column(
-                Modifier
-                    .padding(horizontal = 6.dp)
-                    .wrapContentHeight()
-                    .fillMaxWidth()) {
-                actionButton()
             }
         }
     }
