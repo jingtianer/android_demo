@@ -58,7 +58,7 @@ private val DarkColorScheme = darkColorScheme(
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Color(0x6f90CCE5),
+    primary = Color(0xaf32c4c0),
     secondary = PurpleGrey40,
     tertiary = Pink40,
     background = Color(red = 255, green = 251, blue = 254),
@@ -113,7 +113,7 @@ private val darkAppPalette = AppPalette(
 private val liteAppPalette = AppPalette(
     drawerBg = Color(red = 255, green = 251, blue = 254),
     dialogBg = Color(red = 255, green = 251, blue = 254),
-    labelChecked = Color(0x3390CCE5),
+    labelChecked = Color(0x664CB9A1),
 //    labelChecked = Color(0x4f90CCE5),
     labelUnChecked = Color(0x1A3F3C3C),
 //    labelUnChecked = colorA8A8A8_7f,
@@ -180,9 +180,6 @@ fun Modifier.appBackground() = appBackground(LocalContext.current, R.drawable.re
 fun Modifier.drawerBackground() = appBackground(LocalContext.current, R.drawable.rectangle_16, heightScale = 1f)
 @Composable
 fun Modifier.dialogBackground() = appBackground(LocalContext.current, R.drawable.rectangle_16, heightScale = goldenRatio)
-
-@Composable
-fun Modifier.bottomSheetBackground() = appBackground(LocalContext.current, R.drawable.rectangle_16, heightScale = goldenRatio)
 
 
 @LayoutScopeMarker
