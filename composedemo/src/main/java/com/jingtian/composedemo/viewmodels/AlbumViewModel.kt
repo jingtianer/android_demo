@@ -151,7 +151,7 @@ class AlbumViewModel : ViewModel() {
         itemRank: ItemRank,
         itemDesc: String,
         itemScore: Float,
-        itemLabel: List<LabelInfo>,
+        itemLabel: Set<String>,
     ) {
         val albumId = album.albumId ?: return
         val uri = selectedUri ?: return
@@ -178,8 +178,8 @@ class AlbumViewModel : ViewModel() {
                 fileId = fileId
             )
             val albumItemId = DataBase.dbImpl.getAlbumItemDao().insertAlbumItem(albumItem)
-            itemLabel.forEach { it.albumItemId = albumItemId }
-            DataBase.dbImpl.getLabelInfoDao().insertAllLabel(itemLabel)
+            val labelInfo = itemLabel.map { LabelInfo(label = it, albumItemId = albumItemId) }
+            DataBase.dbImpl.getLabelInfoDao().insertAllLabel(labelInfo)
         }) {
             albumItemListChange.notifyChange()
             sendMessage("添加文件 ${album.albumName} 成功!")
@@ -233,14 +233,14 @@ class AlbumViewModel : ViewModel() {
         itemRank: ItemRank,
         itemDesc: String,
         itemScore: Float,
-        itemLabel: List<LabelInfo>,
+        itemLabel: Set<String>,
         targetAlbumId: Long?,
     ) {
         val album = albumItemRelation.albumItem
         val albumId = targetAlbumId ?: album.albumId
         val uri = selectedUri
         val mediaType = selectedFileType
-        val oldUri = albumItemRelation.fileInfo?.getFileUri()
+        val oldUri = albumItemRelation.fileInfo.getFileUri()
 
         CoroutineUtils.runIOTask({
             val nextId = if (uri != oldUri) {
@@ -280,9 +280,8 @@ class AlbumViewModel : ViewModel() {
                 itemId = albumItemId,
             )
             DataBase.dbImpl.getAlbumItemDao().updateAlbumItem(albumItem)
-            itemLabel.forEach { it.albumItemId = albumItemId }
             DataBase.dbImpl.getLabelInfoDao().deleteAllLabel(albumItemId)
-            DataBase.dbImpl.getLabelInfoDao().insertAllLabel(itemLabel)
+            DataBase.dbImpl.getLabelInfoDao().insertAllLabel(itemLabel.map { LabelInfo(albumItemId = albumItemId, label = it) })
         }) {
             albumItemListChange.notifyChange()
             sendMessage("更新文件 ${album.itemName} 成功!")

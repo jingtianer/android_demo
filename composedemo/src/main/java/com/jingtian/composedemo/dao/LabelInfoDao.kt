@@ -2,6 +2,7 @@ package com.jingtian.composedemo.dao
 
 import androidx.room.Dao
 import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.jingtian.composedemo.dao.model.LabelInfo
 
@@ -11,7 +12,7 @@ interface LabelInfoDao {
         const val TABLE_NAME = "TB_label"
     }
 
-    @Insert
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     fun insertAllLabel(labelList: List<LabelInfo>)
 
     @Query("delete from $TABLE_NAME where albumItemId = :albumItemId")

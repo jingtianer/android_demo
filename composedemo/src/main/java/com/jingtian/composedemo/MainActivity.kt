@@ -777,8 +777,7 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, size: Dp, 
     var itemDesc by remember { mutableStateOf(albumItemRelation.albumItem.desc) }
     var itemRank by remember { mutableStateOf(albumItemRelation.albumItem.rank) }
     var itemScore by remember { mutableStateOf(albumItemRelation.albumItem.score) }
-    var itemLabel by remember { mutableStateOf(albumItemRelation.labelInfos.toMutableList()) }
-    var itemLabelSize by remember { mutableStateOf(albumItemRelation.labelInfos.size) }
+    var itemLabel by remember { mutableStateOf(albumItemRelation.labelInfos) }
 
     val scope = rememberCoroutineScope()
     var imageResource by remember { mutableStateOf(R.drawable.load_failed) }
@@ -986,13 +985,10 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, size: Dp, 
                 Modifier
                     .fillMaxWidth()
                     .padding(bottom = 4.dp, start = padding, end = padding)) {
-                items(itemLabelSize, key = { index: Int ->
+                items(itemLabel.size, key = { index: Int ->
                     itemLabel[index].label
                 }) { index: Int ->
-                    LabelView(itemLabel[index], editable = false) {
-                        itemLabel.removeAt(index)
-                        itemLabelSize = itemLabel.size
-                    }
+                    LabelView(itemLabel[index].label, editable = false) { }
                 }
             }
         }
@@ -1009,8 +1005,8 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
     var itemDesc by remember { mutableStateOf(album.desc) }
     var itemRank by remember { mutableStateOf(album.rank) }
     var itemScore by remember { mutableStateOf(album.score) }
-    val itemLabel by remember { mutableStateOf(albumItemRelation.labelInfos.toMutableList()) }
-    var itemLabelSize by remember { mutableStateOf(albumItemRelation.labelInfos.size) }
+    val itemLabel = remember { mutableStateListOf(*albumItemRelation.labelInfos.map { it.label }.toTypedArray()) }
+    val itemLabelSet = remember { mutableStateMapOf(*albumItemRelation.labelInfos.map { it.label to it.label }.toTypedArray()) }
 
     var selectedUri by remember { mutableStateOf(albumItemRelation.fileInfo?.getFileUri()) }
     var selectedFileType by remember { mutableStateOf(albumItemRelation.fileInfo?.fileType) }
@@ -1042,8 +1038,8 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
             itemRank,
             itemDesc,
             itemScore,
-            itemLabel,
-            currentSelectedAlbum?.albumId,
+            itemLabelSet.keys,
+            currentSelectedAlbum.albumId,
         )
     }
 
@@ -1289,19 +1285,20 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
                                 val isChecked by item.isChecked.observeAsState()
                                 CheckableLabelView(label = item.label, isChecked = isChecked ?: false) {
                                     item.isChecked.value = it
-                                    if (it) {
-                                        itemLabel.add(LabelInfo(label = item.name))
-                                        itemLabelSize = itemLabel.size
-                                    } else {
-                                        itemLabel.removeIf { it.label == item.name }
-                                        itemLabelSize = itemLabel.size
+                                    if (it && !itemLabelSet.containsKey(item.label)) {
+                                        itemLabelSet[item.label] = item.label
+                                        itemLabel.add(0, item.label)
+                                    } else if (!it && itemLabelSet.containsKey(item.label)) {
+                                        itemLabelSet.remove(item.label)
+                                        itemLabel.remove(item.label)
                                     }
                                 }
                             }
                         }
                         EditLabelView {
-                            itemLabel.addAll(0, it.map { LabelInfo(label = it) })
-                            itemLabelSize = itemLabel.size
+                            itemLabelSet.putAll(it.map { it to it })
+                            itemLabel.clear()
+                            itemLabel.addAll(itemLabelSet.keys)
                         }
                         Spacer(Modifier.height(4.dp))
                     }
@@ -1313,12 +1310,11 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
                         Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 6.dp)) {
-                        items(itemLabelSize, key = { index: Int ->
-                            itemLabel[index].label
+                        items(itemLabel.size, key = { index: Int ->
+                            itemLabel[index]
                         }) { index: Int ->
                             LabelView(itemLabel[index]) {
                                 itemLabel.removeAt(index)
-                                itemLabelSize = itemLabel.size
                             }
                         }
                     }
@@ -1343,8 +1339,8 @@ fun AddItemDialog(album: Album, labelList: List<LabelCheckInfo<String>>, onDismi
     var itemRank by remember { mutableStateOf(ItemRank.NONE) }
     val totalLabelList = remember { mutableStateListOf(*labelList.map { LabelCheckInfo(it.label, it.name) }.toTypedArray()) }
     var itemScore by remember { mutableStateOf(0.0f) }
-    val itemLabel by remember { mutableStateOf<MutableList<LabelInfo>>(mutableListOf()) }
-    var itemLabelSize by remember { mutableStateOf<Int>(0) }
+    val itemLabel = remember { mutableStateListOf<String>() }
+    val itemLabelSet = remember { mutableStateMapOf<String, String>() }
 
     var selectedUri by remember { mutableStateOf<Uri?>(null) }
     val scope = rememberCoroutineScope()
@@ -1358,7 +1354,7 @@ fun AddItemDialog(album: Album, labelList: List<LabelCheckInfo<String>>, onDismi
             return
         }
         onDismiss()
-        viewModel.addItem(album, selectedUri, itemName, itemRank, itemDesc, itemScore, itemLabel)
+        viewModel.addItem(album, selectedUri, itemName, itemRank, itemDesc, itemScore, itemLabelSet.keys)
     }
 
     val multipleImagePickerLauncher = rememberLauncherForActivityResult(
@@ -1510,27 +1506,28 @@ fun AddItemDialog(album: Album, labelList: List<LabelCheckInfo<String>>, onDismi
                     val isChecked by item.isChecked.observeAsState()
                     CheckableLabelView(label = item.label, isChecked = isChecked ?: false) {
                         item.isChecked.value = it
-                        if (it) {
-                            itemLabel.add(LabelInfo(label = item.name))
-                            itemLabelSize = itemLabel.size
-                        } else {
-                            itemLabel.removeIf { it.label == item.name }
-                            itemLabelSize = itemLabel.size
+                        if (it && !itemLabelSet.containsKey(item.name)) {
+                            itemLabelSet[item.name] = item.name
+                            itemLabel.add(0, item.name)
+                        } else if (!it && itemLabelSet.containsKey(item.name)) {
+                            itemLabelSet.remove(item.name)
+                            itemLabel.remove(item.name)
                         }
                     }
                 }
             }
             EditLabelView {
-                itemLabel.addAll(0, it.map { LabelInfo(label = it) })
-                itemLabelSize = itemLabel.size
+                itemLabelSet.putAll(it.map { it to it })
+                itemLabel.clear()
+                itemLabel.addAll(itemLabelSet.keys)
             }
             LazyRow(Modifier.padding(horizontal = 6.dp)) {
-                items(itemLabelSize, key = { index: Int ->
-                    itemLabel[index].label
+                items(itemLabel.size, key = { index: Int ->
+                    itemLabel[index]
                 }) { index: Int ->
                     LabelView(itemLabel[index]) {
                         itemLabel.removeAt(index)
-                        itemLabelSize = itemLabel.size
+                        itemLabelSet.remove(itemLabel[index])
                     }
                 }
             }
@@ -1581,7 +1578,7 @@ fun CheckableLabelView(label: String, isChecked:Boolean, onCheckStateChange: (Bo
 }
 
 @Composable
-fun LabelView(label: LabelInfo, editable: Boolean = true, onRemove: ()->Unit) {
+fun LabelView(label: String, editable: Boolean = true, onRemove: ()->Unit) {
     if (editable) {
         Row(
             Modifier
@@ -1591,7 +1588,7 @@ fun LabelView(label: LabelInfo, editable: Boolean = true, onRemove: ()->Unit) {
                 )
                 .padding(horizontal = 4.dp, vertical = 2.dp)
                 .wrapContentSize(), verticalAlignment = Alignment.CenterVertically) {
-            AppThemeText(label.label,
+            AppThemeText(label,
                 Modifier
                     .wrapContentSize(), style = LocalTextStyle.current.copy(fontSize = 16.sp, color = LocalAppPalette.current.labelTextColor))
             Spacer(Modifier.padding(2.dp))
@@ -1611,7 +1608,7 @@ fun LabelView(label: LabelInfo, editable: Boolean = true, onRemove: ()->Unit) {
                     color = LocalAppPalette.current.labelUnChecked, shape = RoundedCornerShape(4.dp)
                 )
                 .wrapContentSize(), contentAlignment = Alignment.Center) {
-            AppThemeText(label.label,
+            AppThemeText(label,
                 Modifier
                     .padding(horizontal = 4.dp, vertical = 2.dp)
                     .wrapContentSize(), style = LocalTextStyle.current.copy(fontSize = 14.sp, color = LocalAppPalette.current.labelTextColor))
@@ -2213,18 +2210,4 @@ fun DrawerMenuItem(
             deleteConfirmDialogState = false
         }, content = {})
     }
-}
-
-@Composable
-fun LabelEditView(albumItemId: Long, labelList: List<LabelInfo>, onAddLabel: (LabelInfo)->Unit, onRemoveLabel: (LabelInfo)->Unit) {
-    LazyHorizontalStaggeredGrid(
-        rows = StaggeredGridCells.Fixed(3)
-    ) {
-        items(labelList.size) { index->
-            LabelView(labelList[index]) {
-                onRemoveLabel(labelList[index])
-            }
-        }
-    }
-
 }

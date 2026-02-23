@@ -22,5 +22,5 @@ class AlbumItemRelation(
         entityColumn = "id",
         entity = FileInfo::class
     )
-    val fileInfo: FileInfo?
+    val fileInfo: FileInfo
 )
