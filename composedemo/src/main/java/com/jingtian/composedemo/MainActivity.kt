@@ -264,27 +264,12 @@ fun Main() {
             drawerState = drawerState,
             gesturesEnabled = menuItemsEntity.isNotEmpty()
         ) {
-            val totalLabelList = remember { mutableStateListOf<String>() }
-            Gallery(currentSelectedAlbum, onAlbumTotalListInfoChanged = {
-                totalLabelList.clear()
-                totalLabelList.addAll(it)
-            }) {
+            Gallery(currentSelectedAlbum, menuItemsEntity) {
                 scope.launch {
                     if (drawerState.isOpen) {
                         drawerState.close()
                     } else {
                         drawerState.open()
-                    }
-                }
-            }
-            val editDialogAlbum by viewModel.editDialogAlbum.observeAsState()
-            val editDialogAlbumItem by viewModel.editDialogAlbumItem.observeAsState()
-
-            editDialogAlbumItem?.let { editDialogAlbumItem->
-                editDialogAlbum?.let { editDialogAlbum->
-                    EditDialog(editDialogAlbumItem, editDialogAlbum, menuItemsEntity, totalLabelList) {
-                        viewModel.editDialogAlbum.value = null
-                        viewModel.editDialogAlbumItem.value = null
                     }
                 }
             }
@@ -309,7 +294,7 @@ fun <T> LazyListScope.roundRectTabFilter(checkedList: List<LabelCheckInfo<T>>, o
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun Gallery(album: IndexedValue<Album>?, onAlbumTotalListInfoChanged: (List<String>) -> Unit, openDrawer: ()->Unit) {
+fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()->Unit) {
     if (album == null) {
         return
     }
@@ -326,6 +311,7 @@ fun Gallery(album: IndexedValue<Album>?, onAlbumTotalListInfoChanged: (List<Stri
     val albumItemDataChange by viewModel.albumItemListChange.observeAsState()
 
     var labelFilterCheckedInfo by remember { mutableStateOf<List<LabelCheckInfo<String>>>(emptyList()) }
+    var totalLabelList by remember { mutableStateOf<List<String>>(emptyList()) }
     val fileTypeCheckState by remember { mutableStateOf(FileType.entries.map { LabelCheckInfo(it, it.typeName) }) }
     val itemRankTypeCheckState by remember { mutableStateOf(ItemRank.entries.map { LabelCheckInfo(it, it.name) }) }
 
@@ -338,7 +324,7 @@ fun Gallery(album: IndexedValue<Album>?, onAlbumTotalListInfoChanged: (List<Stri
                 withContext(Dispatchers.Main) {
                     albumName = album.value.albumName
                     labelFilterCheckedInfo = value.map { LabelCheckInfo(it, it) }
-                    onAlbumTotalListInfoChanged(value)
+                    totalLabelList = value
                 }
             }
         }
@@ -498,7 +484,7 @@ fun Gallery(album: IndexedValue<Album>?, onAlbumTotalListInfoChanged: (List<Stri
                 .weight(1f)
                 .padding(horizontal = galleryItemPadding)) {
             items(filteredItemList.size, key = { index-> filteredItemList[index].hashCode() }) { index: Int ->
-                AlbumItemView(filteredItemList[index], album.value, size, galleryItemPadding)
+                AlbumItemView(filteredItemList[index], album.value, totalLabelList, albumList, size, galleryItemPadding)
             }
         }
     }
@@ -770,7 +756,7 @@ fun playIntent(context: Context, fileInfo: FileInfo): Intent? {
 }
 
 @Composable
-fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, size: Dp, padding: Dp) {
+fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, totalLabelList: List<String>, albumList: List<Album>, size: Dp, padding: Dp) {
     var imageBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
 
     var itemName by remember { mutableStateOf(albumItemRelation.albumItem.itemName) }
@@ -857,8 +843,6 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, size: Dp, 
         .pointerInput(Unit) {
             detectTapGestures(onLongPress = {
                 showEditDialog = true
-                viewModel.editDialogAlbumItem.value = albumItemRelation
-                viewModel.editDialogAlbum.value = album
             })
         }
         .background(
@@ -991,6 +975,12 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, size: Dp, 
                     LabelView(itemLabel[index].label, editable = false) { }
                 }
             }
+        }
+    }
+
+    if (showEditDialog) {
+        EditDialog(albumItemRelation, album, albumList, totalLabelList) {
+            showEditDialog = false
         }
     }
 }

@@ -47,9 +47,6 @@ class AlbumViewModel : ViewModel() {
     val menuItemsFlow: Flow<List<Album>>
         get() = albumDao.getAllAlbum()
 
-    val editDialogAlbum = MutableLiveData<Album?>(null)
-    val editDialogAlbumItem = MutableLiveData<AlbumItemRelation?>(null)
-
     fun getLabelList(album: Album): Flow<List<String>> {
         return DataBase.dbImpl.getAlbumItemDao().getLabelList(album.albumId ?: return flow {  })
     }
