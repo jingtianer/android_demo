@@ -66,6 +66,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ModalDrawerSheet
@@ -364,82 +365,84 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
             .fillMaxSize()
             .appBackground()
             .windowInsetsPadding(WindowInsets.systemBars)) {
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 8.dp)
-                .wrapContentHeight()
-        ) {
-            Icon(
-                painter = painterResource(R.drawable.drawer),
-                contentDescription = "打开drawer",
-                modifier = Modifier
-                    .align(Alignment.CenterVertically)
-                    .size(LocalAppUIConstants.current.filterLabelHeight)
-                    .background(LocalAppPalette.current.labelUnChecked, shape = CircleShape)
-                    .clickable { openDrawer() }
-                    .padding(4.dp)
-            )
-            Spacer(Modifier.width(12.dp))
-            AppThemeText(albumName,
-                Modifier
-                    .align(Alignment.CenterVertically)
-                    .fillMaxWidth()
-                    .weight(1f), style = LocalTextStyle.current.copy(fontSize = 24.sp, fontWeight = FontWeight(600)))
-            Spacer(Modifier.width(6.dp))
+        CompositionLocalProvider(LocalContentColor provides LocalAppPalette.current.galleryHeaderColor, LocalTextStyle provides LocalTextStyle.current.copy(color = LocalAppPalette.current.galleryHeaderColor)) {
+
             Row(
                 Modifier
-                    .wrapContentSize()
-                    .align(Alignment.CenterVertically)) {
-                Icon(
-                    painter = painterResource(R.drawable.edit_normal),
-                    contentDescription = "编辑名称",
-                    modifier = Modifier
-                        .size(LocalAppUIConstants.current.filterLabelHeight)
-                        .background(LocalAppPalette.current.labelUnChecked, shape = CircleShape)
-                        .clickable { editAlbumDialogState = true }
-                        .padding(4.dp)
-                )
-                Spacer(Modifier.width(6.dp))
-                Icon(
-                    painter = painterResource(R.drawable.add),
-                    contentDescription = "添加图片",
-                    modifier = Modifier
-                        .size(LocalAppUIConstants.current.filterLabelHeight)
-                        .background(LocalAppPalette.current.labelUnChecked, shape = CircleShape)
-                        .clickable { addImageDialogState = true }
-                        .padding(4.dp)
-                )
-                Spacer(Modifier.width(6.dp))
-                Icon(
-                    painter = painterResource(R.drawable.import_icon),
-                    contentDescription = "批量导入",
-                    modifier = Modifier
-                        .size(LocalAppUIConstants.current.filterLabelHeight)
-                        .background(LocalAppPalette.current.labelUnChecked, shape = CircleShape)
-                        .clickable {
-                            importDirLauncher.launch(null)
-                        }
-                        .padding(4.dp)
-                )
-            }
-        }
-        Row(Modifier.padding(start = 4.dp, end = 8.dp)) {
-            LazyRow(
-                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 8.dp)
                     .wrapContentHeight()
-                    .weight(1f)) {
-                roundRectTabFilter(labelFilterCheckedInfo) { checkInfo->
-                    val targetLabelSet = checkInfo.toSet()
-                    filterLabels = targetLabelSet
-                }
-                roundRectTabFilter(fileTypeCheckState) { checkedFileType->
-                    filterFileTypes = checkedFileType
-                }
-                roundRectTabFilter(itemRankTypeCheckState) { checkedItemRank->
-                    itemRankFilter = checkedItemRank
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.drawer),
+                    contentDescription = "打开drawer",
+                    modifier = Modifier
+                        .align(Alignment.CenterVertically)
+                        .size(LocalAppUIConstants.current.filterLabelHeight)
+                        .background(LocalAppPalette.current.labelUnChecked, shape = CircleShape)
+                        .clickable { openDrawer() }
+                        .padding(4.dp)
+                )
+                Spacer(Modifier.width(12.dp))
+                AppThemeText(albumName,
+                    Modifier
+                        .align(Alignment.CenterVertically)
+                        .fillMaxWidth()
+                        .weight(1f), style = LocalTextStyle.current.copy(fontSize = 24.sp, fontWeight = FontWeight(600)))
+                Spacer(Modifier.width(6.dp))
+                Row(
+                    Modifier
+                        .wrapContentSize()
+                        .align(Alignment.CenterVertically)) {
+                    Icon(
+                        painter = painterResource(R.drawable.edit_normal),
+                        contentDescription = "编辑名称",
+                        modifier = Modifier
+                            .size(LocalAppUIConstants.current.filterLabelHeight)
+                            .background(LocalAppPalette.current.labelUnChecked, shape = CircleShape)
+                            .clickable { editAlbumDialogState = true }
+                            .padding(4.dp)
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Icon(
+                        painter = painterResource(R.drawable.add),
+                        contentDescription = "添加图片",
+                        modifier = Modifier
+                            .size(LocalAppUIConstants.current.filterLabelHeight)
+                            .background(LocalAppPalette.current.labelUnChecked, shape = CircleShape)
+                            .clickable { addImageDialogState = true }
+                            .padding(4.dp)
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Icon(
+                        painter = painterResource(R.drawable.import_icon),
+                        contentDescription = "批量导入",
+                        modifier = Modifier
+                            .size(LocalAppUIConstants.current.filterLabelHeight)
+                            .background(LocalAppPalette.current.labelUnChecked, shape = CircleShape)
+                            .clickable {
+                                importDirLauncher.launch(null)
+                            }
+                            .padding(4.dp)
+                    )
                 }
             }
+            Row(Modifier.padding(start = 4.dp, end = 8.dp)) {
+                LazyRow(
+                    Modifier
+                        .wrapContentHeight()
+                        .weight(1f)) {
+                    roundRectTabFilter(labelFilterCheckedInfo) { checkInfo->
+                        val targetLabelSet = checkInfo.toSet()
+                        filterLabels = targetLabelSet
+                    }
+                    roundRectTabFilter(fileTypeCheckState) { checkedFileType->
+                        filterFileTypes = checkedFileType
+                    }
+                    roundRectTabFilter(itemRankTypeCheckState) { checkedItemRank->
+                        itemRankFilter = checkedItemRank
+                    }
+                }
 //            Image(painter = painterResource(R.drawable.trash_bin),
 //                contentDescription = "清空筛选",
 //                Modifier
@@ -453,16 +456,17 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
 //                        itemRankTypeCheckState.forEach { it.isChecked.value = false }
 //                    })
 
-            Icon(
-                painter = painterResource(R.drawable.down),
-                contentDescription = "过滤器",
-                modifier = Modifier
-                    .size(LocalAppUIConstants.current.filterLabelHeight)
-                    .background(LocalAppPalette.current.labelUnChecked, shape = CircleShape)
-                    .clickable { showLabelFilter = !showLabelFilter }
-                    .padding(4.dp)
-                    .align(Alignment.CenterVertically)
-            )
+                Icon(
+                    painter = painterResource(R.drawable.down),
+                    contentDescription = "过滤器",
+                    modifier = Modifier
+                        .size(LocalAppUIConstants.current.filterLabelHeight)
+                        .background(LocalAppPalette.current.labelUnChecked, shape = CircleShape)
+                        .clickable { showLabelFilter = !showLabelFilter }
+                        .padding(4.dp)
+                        .align(Alignment.CenterVertically)
+                )
+            }
         }
         LaunchedEffect(filterFileTypes, filterLabels, itemRankFilter) {
             coroutine.launch(Dispatchers.Default) {
@@ -845,14 +849,14 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, totalLabel
             detectTapGestures(onLongPress = {
                 showEditDialog = true
             },
-            onTap = {
-                if (playIntent != null) {
-                    context.startActivity(playIntent)
-                }
-                scope.launch(Dispatchers.IO) {
-                    fetchImage()
-                }
-            })
+                onTap = {
+                    if (playIntent != null) {
+                        context.startActivity(playIntent)
+                    }
+                    scope.launch(Dispatchers.IO) {
+                        fetchImage()
+                    }
+                })
         }
         .background(
             color = LocalAppPalette.current.galleryCardBg, shape = RoundedCornerShape(padding)
@@ -1579,7 +1583,8 @@ fun CheckableLabelView(label: String, isChecked:Boolean, onCheckStateChange: (Bo
                 shape = RoundedCornerShape(4.dp)
             )
             .padding(horizontal = 4.dp, vertical = 2.dp)
-            .wrapContentSize().clickable {
+            .wrapContentSize()
+            .clickable {
                 onCheckStateChange(!isChecked)
             }, contentAlignment = Alignment.Center) {
         AppThemeText(label,

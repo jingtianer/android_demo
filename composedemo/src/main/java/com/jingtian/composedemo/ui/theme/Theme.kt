@@ -94,6 +94,7 @@ class AppPalette(
     val bottomSheetBackgroundColor: Color,
     val labelTextColor: Color,
     val deleteButtonColor: Color,
+    val galleryHeaderColor: Color,
 )
 
 private val darkAppPalette = AppPalette(
@@ -109,6 +110,7 @@ private val darkAppPalette = AppPalette(
     bottomSheetBackgroundColor = Color(red = 28, green = 27, blue = 31),
     labelTextColor = colorA8A8A8,
     deleteButtonColor = Color(0xffFF5959),
+    galleryHeaderColor = colorF8f8f8,
 )
 private val liteAppPalette = AppPalette(
     drawerBg = Color(red = 255, green = 251, blue = 254),
@@ -126,6 +128,7 @@ private val liteAppPalette = AppPalette(
     bottomSheetBackgroundColor = Color(red = 255, green = 251, blue = 254),
     labelTextColor = color686868,
     deleteButtonColor = Color(0xffFF5959),
+    galleryHeaderColor = Color(0xFF272727),
 )
 
 
