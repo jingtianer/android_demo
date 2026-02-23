@@ -111,6 +111,7 @@ class AlbumViewModel : ViewModel() {
             val files = itemInfoList.mapNotNull { it.albumItem.itemName to (it.fileInfo ?: return@mapNotNull null) }
             files.forEach {
                 FileStorageUtils.getStorage(it.second.fileType)?.delete(it.second.storageId)
+                BitMapCachePool.invalid(it.second.storageId, it.second.fileType)
                 sendMessage("正在删除文件: ${it.first}")
             }
             sendMessage("正在删除数据库记录")
