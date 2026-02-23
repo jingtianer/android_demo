@@ -128,6 +128,8 @@ import com.jingtian.composedemo.ui.theme.LocalAppUIConstants
 import com.jingtian.composedemo.ui.theme.LocalMiddleButtonConfig
 import com.jingtian.composedemo.ui.theme.LocalSecondaryTextStyle
 import com.jingtian.composedemo.ui.theme.appBackground
+import com.jingtian.composedemo.ui.theme.bottomSheetBackground
+import com.jingtian.composedemo.ui.theme.dialogBackground
 import com.jingtian.composedemo.ui.theme.drawerBackground
 import com.jingtian.composedemo.ui.theme.goldenRatio
 import com.jingtian.composedemo.ui.widget.FollowTailLayout
@@ -281,7 +283,7 @@ fun Main() {
 class LabelCheckInfo<T>(val label: T, val name: String, var isChecked: MutableLiveData<Boolean> = MutableLiveData(false))
 
 fun <T> LazyListScope.roundRectTabFilter(checkedList: List<LabelCheckInfo<T>>, onCheckStateChange: (List<T>)->Unit) {
-    items(checkedList.size) { index->
+    items(checkedList.size, key = { index-> checkedList[index].name }) { index->
         RoundRectCheckableLabel(
             checkedList[index],
             checkedList,
@@ -573,7 +575,7 @@ fun FilterPanel(
             item(span = { GridItemSpan(maxLineSpan) }) {
                 AppThemeText(text = "类型筛选", Modifier.padding(horizontal = horizontalInnerPadding, vertical = verticalPadding), style = LocalTextStyle.current.copy(fontWeight = FontWeight(600), fontSize = 16.sp))
             }
-            items(fileTypeCheckStateList.size) { index ->
+            items(fileTypeCheckStateList.size, key = { index-> fileTypeCheckStateList[index].name }) { index ->
                 RoundRectCheckableLabel(
                     fileTypeCheckStateList[index],
                     fileTypeCheckStateList,
@@ -584,7 +586,7 @@ fun FilterPanel(
             item(span = { GridItemSpan(this.maxLineSpan) }) {
                 AppThemeText(text = "排行筛选", Modifier.padding(horizontal = horizontalInnerPadding, vertical = verticalPadding), style = LocalTextStyle.current.copy(fontWeight = FontWeight(600), fontSize = 16.sp))
             }
-            items(itemRankCheckStateList.size) { index ->
+            items(itemRankCheckStateList.size, key = { index-> itemRankCheckStateList[index].name }) { index ->
                 RoundRectCheckableLabel(
                     itemRankCheckStateList[index],
                     itemRankCheckStateList,
@@ -607,7 +609,7 @@ fun FilterPanel(
                             .fillMaxWidth(),
                         horizontalItemSpacing = horizontalInnerPadding,
                     ) {
-                        items(labelCheckStateList.size) { index ->
+                        items(labelCheckStateList.size, { index-> labelCheckStateList[index].name }) { index ->
                             val item = labelCheckStateList[index]
                             RoundRectCheckableLabel(
                                 item,
@@ -843,6 +845,14 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, totalLabel
         .pointerInput(Unit) {
             detectTapGestures(onLongPress = {
                 showEditDialog = true
+            },
+            onTap = {
+                if (playIntent != null) {
+                    context.startActivity(playIntent)
+                }
+                scope.launch(Dispatchers.IO) {
+                    fetchImage()
+                }
             })
         }
         .background(
@@ -867,14 +877,6 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, totalLabel
                     painter = painterResource(imageResource),
                     contentDescription = "文件缩略图",
                     Modifier
-                        .clickable {
-                            scope.launch(Dispatchers.IO) {
-                                fetchImage()
-                            }
-                            if (playIntent != null) {
-                                context.startActivity(playIntent)
-                            }
-                        }
                         .fillMaxWidth()
                         .aspectRatioOrNull(intrinsicRatio)
                         .align(Alignment.Center),
@@ -885,11 +887,6 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, totalLabel
                     bitmap = currentPickedImage,
                     contentDescription = "文件缩略图",
                     Modifier
-                        .clickable {
-                            if (playIntent != null) {
-                                context.startActivity(playIntent)
-                            }
-                        }
                         .fillMaxWidth()
                         .aspectRatioOrNull(intrinsicRatio)
                         .align(Alignment.Center),
@@ -913,6 +910,7 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, totalLabel
                     Modifier
                         .wrapContentSize()
                         .align(Alignment.TopEnd)
+                        .clip(RoundedCornerShape(bottomStart = padding))
                     ,
                     update = {
                         it.initRankView()
@@ -1127,9 +1125,10 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
             Modifier
                 .fillMaxWidth(LocalAppUIConstants.current.dialogPercent)
                 .fillMaxHeight(LocalAppUIConstants.current.dialogPercent)
+                .wrapContentHeight()
                 .clip(RoundedCornerShape(4.dp))
                 .background(LocalAppPalette.current.dialogBg)
-                .wrapContentHeight(),
+                .dialogBackground(),
             onNegative = onDismiss,
             onMiddleClick = {
                 deleteItem()
@@ -1208,11 +1207,9 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
                 }
 
                 if (openAlbumList) {
-                    items(
-                        albumData.size,
-                        key = { index: Int ->
-                            albumData[index].albumId ?: DataBase.INVALID_ID
-                        }) { index ->
+                    items(albumData.size,
+                        key = { index: Int -> albumData[index].let { it.albumId ?: DataBase.INVALID_ID to it.albumName } }
+                    ) { index ->
                         val item = albumData[index]
                         ImmutableDrawerMenuItem(
                             item,
@@ -1270,7 +1267,7 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
                         Spacer(Modifier.height(4.dp))
 
                         LazyRow(Modifier.padding(horizontal = 6.dp)) {
-                            items(totalLabelList.size) { index->
+                            items(totalLabelList.size, key = { index-> totalLabelList[index].name }) { index->
                                 val item = totalLabelList[index]
                                 val isChecked by item.isChecked.observeAsState()
                                 CheckableLabelView(label = item.label, isChecked = isChecked ?: false) {
@@ -1390,7 +1387,8 @@ fun AddItemDialog(album: Album, labelList: List<LabelCheckInfo<String>>, onDismi
             .fillMaxHeight(LocalAppUIConstants.current.dialogPercent)
             .wrapContentHeight()
             .clip(RoundedCornerShape(4.dp))
-            .background(LocalAppPalette.current.dialogBg),
+            .background(LocalAppPalette.current.dialogBg)
+            .dialogBackground(),
         onDismissRequest = {},
         properties = DialogProperties(usePlatformDefaultWidth = false),
         onNegative = onDismiss,
@@ -1491,7 +1489,7 @@ fun AddItemDialog(album: Album, labelList: List<LabelCheckInfo<String>>, onDismi
 
             Spacer(Modifier.height(4.dp))
             LazyRow(Modifier.padding(horizontal = 6.dp)) {
-                items(totalLabelList.size) { index->
+                items(totalLabelList.size, { index-> totalLabelList[index].name }) { index->
                     val item = totalLabelList[index]
                     val isChecked by item.isChecked.observeAsState()
                     CheckableLabelView(label = item.label, isChecked = isChecked ?: false) {
@@ -1521,13 +1519,13 @@ fun AddItemDialog(album: Album, labelList: List<LabelCheckInfo<String>>, onDismi
                     }
                 }
             }
-        }
-        Column(
-            Modifier
-                .padding(horizontal = 6.dp)
-                .wrapContentHeight()
-                .fillMaxWidth()) {
-            actionButton()
+            Column(
+                Modifier
+                    .padding(horizontal = 6.dp)
+                    .wrapContentHeight()
+                    .fillMaxWidth()) {
+                actionButton()
+            }
         }
     }
 }
@@ -1664,7 +1662,7 @@ fun DrawerHeader() {
     var userAvatarImage by remember { mutableStateOf<ImageBitmap?>(null) }
 
     val avatarSize = DrawerDefaults.MaximumDrawerWidth * (1 - goldenRatio)
-    val borderSize = avatarSize / 25f
+    val borderSize = 2.dp
     val iconSize = avatarSize / 8f
 
     val scope = rememberCoroutineScope()
@@ -2171,6 +2169,7 @@ fun DrawerMenuItem(
                         painter = painterResource(R.drawable.trash_bin),
                         contentDescription = "删除",
                         Modifier
+                            .align(Alignment.CenterVertically)
                             .size(size)
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(size))
@@ -2180,11 +2179,11 @@ fun DrawerMenuItem(
             }) {
             AppThemeText(
                 text = albumName,
-                style = LocalTextStyle.current.copy(fontSize = 16.sp),
+                style = LocalTextStyle.current.copy(fontSize = 20.sp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(LocalAppPalette.current.drawerBg)
-                    .fillMaxHeight()
+                    .wrapContentHeight()
                     .padding(8.dp),
             )
         }

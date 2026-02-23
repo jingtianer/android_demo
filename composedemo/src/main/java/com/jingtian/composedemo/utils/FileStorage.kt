@@ -248,9 +248,11 @@ object FileStorageUtils {
         // 1. 计算缩放比例（保持宽高比）
         val width = bitmap.width
         val height = bitmap.height
-        val scaleWidth = maxWidth.toFloat() / width
-        val scaleHeight = maxHeight.toFloat() / height
-        val scale = minOf(scaleWidth, scaleHeight) // 取最小比例，避免拉伸
+        val scaleWidth = (maxWidth.toFloat() / width).takeIf { maxWidth > 0 }
+        val scaleHeight = (maxHeight.toFloat() / height).takeIf { maxHeight > 0 }
+        val scale = if (scaleWidth != null && scaleHeight != null) {
+            minOf(scaleWidth, scaleHeight)
+        } else scaleWidth ?: scaleHeight ?: 1f
 
         // 2. 创建缩放矩阵
         val matrix = Matrix().apply {
@@ -261,9 +263,9 @@ object FileStorageUtils {
         val compressedBitmap = Bitmap.createBitmap(
             bitmap, 0, 0, width, height, matrix, true
         )
-        if (compressedBitmap != bitmap) {
-            bitmap.recycle() // 回收原始Bitmap
-        }
+//        if (compressedBitmap != bitmap) {
+//            bitmap.recycle() // 回收原始Bitmap
+//        }
         withContext(Dispatchers.Main) {
             onLoadBitmap(compressedBitmap)
         }

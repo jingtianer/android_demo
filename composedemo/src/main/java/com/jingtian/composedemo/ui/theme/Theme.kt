@@ -99,12 +99,13 @@ class AppPalette(
 private val darkAppPalette = AppPalette(
     drawerBg = Color(red = 28, green = 27, blue = 31),
     dialogBg = Color(red = 28, green = 27, blue = 31),
-    labelChecked = Color(0xff09476F),
+    labelChecked = Color(0x663B79A2),
     labelUnChecked = colorD8D8D8_2f,
     dividerColor = colorA8A8A8,
-    cardBg = colorA8A8A8_7f,
+//    cardBg = colorA8A8A8_7f,
+    cardBg = Color.Transparent,
     galleryCardBg = colorD8D8D8_2f,
-    strokeColor = colorC8c8c8,
+    strokeColor = Color(0x3fffffff),
     bottomSheetBackgroundColor = Color(red = 28, green = 27, blue = 31),
     labelTextColor = colorA8A8A8,
     deleteButtonColor = Color(0xffFF5959),
@@ -112,12 +113,16 @@ private val darkAppPalette = AppPalette(
 private val liteAppPalette = AppPalette(
     drawerBg = Color(red = 255, green = 251, blue = 254),
     dialogBg = Color(red = 255, green = 251, blue = 254),
-    labelChecked = Color(0x4f90CCE5),
-    labelUnChecked = colorA8A8A8_7f,
+    labelChecked = Color(0x3390CCE5),
+//    labelChecked = Color(0x4f90CCE5),
+    labelUnChecked = Color(0x1A3F3C3C),
+//    labelUnChecked = colorA8A8A8_7f,
     dividerColor = color282828,
-    cardBg = colorA8A8A8_7f,
-    galleryCardBg = colorA8A8A8_7f,
-    strokeColor = color686868,
+//    cardBg = colorA8A8A8_7f,
+    cardBg = Color.Transparent,
+//    galleryCardBg = colorA8A8A8_7f,
+    galleryCardBg = Color(0x1A3C3636),
+    strokeColor = Color(0x3fffffff),
     bottomSheetBackgroundColor = Color(red = 255, green = 251, blue = 254),
     labelTextColor = color686868,
     deleteButtonColor = Color(0xffFF5959),
@@ -174,7 +179,11 @@ fun Modifier.appBackground() = appBackground(LocalContext.current, R.drawable.re
 @Composable
 fun Modifier.drawerBackground() = appBackground(LocalContext.current, R.drawable.rectangle_16, heightScale = 1f)
 @Composable
-fun Modifier.dialogBackground() = this // appBackground(LocalContext.current, R.drawable.rectangle_16, heightScale = goldenRatio)
+fun Modifier.dialogBackground() = appBackground(LocalContext.current, R.drawable.rectangle_16, heightScale = goldenRatio)
+
+@Composable
+fun Modifier.bottomSheetBackground() = appBackground(LocalContext.current, R.drawable.rectangle_16, heightScale = goldenRatio)
+
 
 @LayoutScopeMarker
 @Immutable

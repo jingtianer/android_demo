@@ -225,6 +225,10 @@ fun AppThemeConfirmDialog(
     content: @Composable () -> Unit = {}
 ) {
     AppThemeDialog(
+        modifier = Modifier
+            .fillMaxWidth(LocalAppUIConstants.current.dialogPercent)
+            .background(LocalAppPalette.current.dialogBg)
+            .padding(horizontal = 8.dp),
         title = title,
         titleTextStyle = titleTextStyle,
         properties = properties,
@@ -244,7 +248,8 @@ fun AppThemeDialog(
     modifier: Modifier = Modifier
         .fillMaxWidth(LocalAppUIConstants.current.dialogPercent)
         .background(LocalAppPalette.current.dialogBg)
-        .padding(horizontal = 8.dp),
+        .padding(horizontal = 8.dp)
+        .dialogBackground(),
     title: String? = null,
     titleTextStyle: TextStyle = LocalTextStyle.current.copy(
         fontSize = 18.sp,
@@ -261,8 +266,7 @@ fun AppThemeDialog(
     ) -> Unit
 ) {
     Dialog(onDismissRequest = onDismissRequest, properties = properties) {
-        Column(modifier
-            .dialogBackground()) {
+        Column(modifier) {
             content(
                 header = {
                     Spacer(modifier = Modifier.height(8.dp))
