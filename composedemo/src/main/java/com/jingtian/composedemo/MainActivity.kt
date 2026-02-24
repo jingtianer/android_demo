@@ -877,7 +877,8 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, totalLabel
                 })
         }
         .background(
-            color = LocalAppPalette.current.galleryCardBg, shape = RoundedCornerShape(padding * 2)
+            color = LocalAppPalette.current.galleryCardBg,
+            shape = RoundedCornerShape(padding * 2)
         )
         .clip(RoundedCornerShape(padding * 2))) {
 
@@ -895,11 +896,16 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, totalLabel
         Icon(
             painter = painterResource(fileTypeIcon),
             contentDescription = "文件类型图标",
-            modifier = Modifier.padding(vertical = 4.dp).size(24.dp).align(Alignment.CenterHorizontally)
+            modifier = Modifier
+                .padding(vertical = 4.dp)
+                .size(24.dp)
+                .align(Alignment.CenterHorizontally)
         )
 
-        Box(Modifier
-            .clip(RoundedCornerShape(padding * 2)).fillMaxWidth()) {
+        Box(
+            Modifier
+                .clip(RoundedCornerShape(padding * 2))
+                .fillMaxWidth()) {
             val imageResource = imageResource
             if (currentPickedImage != null) {
                 Image(
@@ -1275,36 +1281,37 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
                             update = {
                                 it.setRankType(itemRank)
                             })
-
-                        Spacer(Modifier.height(4.dp))
-
-                        LazyRow(Modifier.padding(horizontal = 6.dp)) {
-                            items(totalLabelList.size, key = { index-> totalLabelList[index].name }) { index->
-                                val item = totalLabelList[index]
-                                val isChecked by item.isChecked.observeAsState()
-                                CheckableLabelView(label = item.label, isChecked = isChecked ?: false) {
-                                    if (it && !itemLabelSet.containsKey(item.label)) {
-                                        itemLabelSet[item.label] = item.label
-                                        itemLabel.add(0, item.label)
-                                    } else if (!it && itemLabelSet.containsKey(item.label)) {
-                                        itemLabelSet.remove(item.label)
-                                        itemLabel.remove(item.label)
-                                    }
-                                    item.isChecked.value = it
-                                }
-                            }
-                        }
-                        EditLabelView {
-                            itemLabelSet.putAll(it.map { it to it })
-                            itemLabel.clear()
-                            itemLabel.addAll(itemLabelSet.keys)
-                        }
                         Spacer(Modifier.height(4.dp))
                     }
                 }
 
                 item {
+                    LazyRow(Modifier.padding(horizontal = 6.dp)) {
+                        items(totalLabelList.size, key = { index-> totalLabelList[index].name }) { index->
+                            val item = totalLabelList[index]
+                            val isChecked by item.isChecked.observeAsState()
+                            CheckableLabelView(label = item.label, isChecked = isChecked ?: false) {
+                                if (it && !itemLabelSet.containsKey(item.label)) {
+                                    itemLabelSet[item.label] = item.label
+                                    itemLabel.add(0, item.label)
+                                } else if (!it && itemLabelSet.containsKey(item.label)) {
+                                    itemLabelSet.remove(item.label)
+                                    itemLabel.remove(item.label)
+                                }
+                                item.isChecked.value = it
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    EditLabelView {
+                        itemLabelSet.putAll(it.map { it to it })
+                        itemLabel.clear()
+                        itemLabel.addAll(itemLabelSet.keys)
+                    }
+                    Spacer(Modifier.height(4.dp))
+                }
 
+                item {
                     LazyRow(
                         Modifier
                             .fillMaxWidth()
@@ -1319,6 +1326,7 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
                             }
                         }
                     }
+                    Spacer(Modifier.height(4.dp))
                 }
 
                 item {
@@ -1349,6 +1357,7 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
                             contentScale = ContentScale.FillWidth
                         )
                     }
+                    Spacer(Modifier.height(4.dp))
                 }
 
                 item {
@@ -1486,7 +1495,9 @@ fun AddItemDialog(album: Album, labelList: List<LabelCheckInfo<String>>, albumDa
 
             if (openAlbumList) {
                 items(albumData.size,
-                    key = { index: Int -> albumData[index].let { it.albumId ?: DataBase.INVALID_ID to it.albumName } }
+                    key = { index: Int -> albumData[index].let {
+                        it.albumId ?: (DataBase.INVALID_ID to it.albumName)
+                    } }
                 ) { index ->
                     val item = albumData[index]
                     ImmutableDrawerMenuItem(
@@ -1500,6 +1511,7 @@ fun AddItemDialog(album: Album, labelList: List<LabelCheckInfo<String>>, albumDa
                     }
                 }
             }
+
 
             item {
                 Column(Modifier.fillMaxWidth()) {
@@ -1522,7 +1534,6 @@ fun AddItemDialog(album: Album, labelList: List<LabelCheckInfo<String>>, albumDa
                             it.setScore(itemScore)
                         })
                     Spacer(Modifier.height(4.dp))
-
                     AndroidView({ context ->
                         RankTypeChooser(context).apply {
                             layoutParams = ViewGroup.LayoutParams(
@@ -1535,42 +1546,43 @@ fun AddItemDialog(album: Album, labelList: List<LabelCheckInfo<String>>, albumDa
                         }
                     },
                         Modifier
+                            .align(Alignment.CenterHorizontally)
                             .wrapContentWidth()
-                            .height(30.dp)
-                            .align(Alignment.CenterHorizontally),
+                            .height(30.dp),
                         update = {
                             it.setRankType(itemRank)
                         })
-
-                    Spacer(Modifier.height(4.dp))
-
-                    LazyRow(Modifier.padding(horizontal = 6.dp)) {
-                        items(totalLabelList.size, key = { index-> totalLabelList[index].name }) { index->
-                            val item = totalLabelList[index]
-                            val isChecked by item.isChecked.observeAsState()
-                            CheckableLabelView(label = item.label, isChecked = isChecked ?: false) {
-                                item.isChecked.value = it
-                                if (it && !itemLabelSet.containsKey(item.label)) {
-                                    itemLabelSet[item.label] = item.label
-                                    itemLabel.add(0, item.label)
-                                } else if (!it && itemLabelSet.containsKey(item.label)) {
-                                    itemLabelSet.remove(item.label)
-                                    itemLabel.remove(item.label)
-                                }
-                            }
-                        }
-                    }
-                    EditLabelView {
-                        itemLabelSet.putAll(it.map { it to it })
-                        itemLabel.clear()
-                        itemLabel.addAll(itemLabelSet.keys)
-                    }
                     Spacer(Modifier.height(4.dp))
                 }
             }
 
             item {
+                LazyRow(Modifier.padding(horizontal = 6.dp)) {
+                    items(totalLabelList.size, key = { index-> totalLabelList[index].name }) { index->
+                        val item = totalLabelList[index]
+                        val isChecked by item.isChecked.observeAsState()
+                        CheckableLabelView(label = item.label, isChecked = isChecked ?: false) {
+                            item.isChecked.value = it
+                            if (it && !itemLabelSet.containsKey(item.label)) {
+                                itemLabelSet[item.label] = item.label
+                                itemLabel.add(0, item.label)
+                            } else if (!it && itemLabelSet.containsKey(item.label)) {
+                                itemLabelSet.remove(item.label)
+                                itemLabel.remove(item.label)
+                            }
+                        }
+                    }
+                }
+                Spacer(Modifier.height(4.dp))
+                EditLabelView {
+                    itemLabelSet.putAll(it.map { it to it })
+                    itemLabel.clear()
+                    itemLabel.addAll(itemLabelSet.keys)
+                }
+                Spacer(Modifier.height(4.dp))
+            }
 
+            item {
                 LazyRow(
                     Modifier
                         .fillMaxWidth()
@@ -1585,6 +1597,7 @@ fun AddItemDialog(album: Album, labelList: List<LabelCheckInfo<String>>, albumDa
                         }
                     }
                 }
+                Spacer(Modifier.height(4.dp))
             }
 
             item {
@@ -1615,6 +1628,7 @@ fun AddItemDialog(album: Album, labelList: List<LabelCheckInfo<String>>, albumDa
                         contentScale = ContentScale.FillWidth
                     )
                 }
+                Spacer(Modifier.height(4.dp))
             }
 
             item {
@@ -1630,76 +1644,83 @@ fun AddItemDialog(album: Album, labelList: List<LabelCheckInfo<String>>, albumDa
 }
 
 @Composable
-fun CheckableLabelView(label: String, isChecked:Boolean, onCheckStateChange: (Boolean) -> Unit) {
-    Box(
-        Modifier
-            .padding(2.dp)
-            .background(
-                color = if (isChecked) LocalAppPalette.current.labelChecked else LocalAppPalette.current.labelUnChecked,
-                shape = RoundedCornerShape(4.dp)
-            )
-            .padding(horizontal = 4.dp, vertical = 2.dp)
-            .wrapContentSize()
-            .clickable {
-                onCheckStateChange(!isChecked)
-            }, contentAlignment = Alignment.Center) {
-        AppThemeText(label,
-            Modifier
-                .wrapContentSize(), style = LocalTextStyle.current.copy(fontSize = 16.sp, color = LocalAppPalette.current.labelTextColor))
-    }
-//    Box(
-//        Modifier
-//            .padding(2.dp)
-//            .background(
-//                color = if (isChecked) LocalAppPalette.current.labelChecked else LocalAppPalette.current.labelUnChecked,
-//                shape = RoundedCornerShape(4.dp)
-//            )
-//            .wrapContentSize()
-//            .clickable {
-//                onCheckStateChange(!isChecked)
-//            }, contentAlignment = Alignment.Center) {
-//        AppThemeText(label,
-//            Modifier
-//                .padding(horizontal = 4.dp, vertical = 2.dp)
-//                .wrapContentSize(), style = LocalTextStyle.current.copy(fontSize = 14.sp))
-//    }
+fun CheckableLabelView(label: String, isChecked: Boolean, onCheckStateChange: (Boolean) -> Unit) {
+    LabelViewImpl(label = label, editable = false, checkable = true, isChecked = isChecked, onRemove = {}, onCheckStateChange = onCheckStateChange)
 }
 
 @Composable
 fun LabelView(label: String, editable: Boolean = true, onRemove: ()->Unit) {
-    if (editable) {
-        Row(
+    LabelViewImpl(label = label, editable = editable, checkable = false, isChecked = false, onRemove = onRemove, onCheckStateChange = {})
+}
+
+@Composable
+fun LabelViewImpl(label: String, editable: Boolean = false, checkable: Boolean = false, isChecked: Boolean = false, onRemove: ()->Unit = {}, onCheckStateChange: (Boolean) -> Unit = {}) {
+    fun Modifier.onClickListener(): Modifier {
+        return if (checkable) {
+            this.clickable {
+                onCheckStateChange(!isChecked)
+            }
+        } else {
+            this
+        }
+    }
+    @Composable
+    fun Modifier.viewBackground(): Modifier {
+        return if (isChecked) {
+            this.background(
+                color = LocalAppPalette.current.labelChecked,
+                shape = RoundedCornerShape(4.dp)
+            )
+        } else {
+            this.background(
+                color = LocalAppPalette.current.labelUnChecked,
+                shape = RoundedCornerShape(4.dp)
+            )
+        }
+    }
+    fun Modifier.viewHeight(): Modifier {
+        return if (editable) {
+            this.height(26.dp)
+        } else {
+            this.height(24.dp)
+        }
+    }
+    val fontSize = if (editable) {
+        16.sp
+    } else {
+        14.sp
+    }
+    Row(
+        Modifier
+            .padding(2.dp)
+            .viewHeight()
+            .viewBackground()
+            .wrapContentSize()
+            .onClickListener(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        AppThemeText(
+            label,
             Modifier
-                .padding(2.dp)
-                .background(
-                    color = LocalAppPalette.current.labelUnChecked, shape = RoundedCornerShape(4.dp)
-                )
                 .padding(horizontal = 4.dp, vertical = 2.dp)
-                .wrapContentSize(), verticalAlignment = Alignment.CenterVertically) {
-            AppThemeText(label,
-                Modifier
-                    .wrapContentSize(), style = LocalTextStyle.current.copy(fontSize = 16.sp, color = LocalAppPalette.current.labelTextColor))
+                .align(Alignment.CenterVertically)
+                .wrapContentSize(),
+            style = LocalTextStyle.current.copy(
+                fontSize = fontSize,
+                color = LocalAppPalette.current.labelTextColor
+            )
+        )
+        if (editable) {
             Spacer(Modifier.padding(2.dp))
             Image(
                 painter = painterResource(R.drawable.close),
                 contentDescription = "删除标签",
                 Modifier
+                    .padding(end = 4.dp)
                     .size(16.dp)
+                    .align(Alignment.CenterVertically)
                     .clickable { onRemove() },
             )
-        }
-    } else {
-        Box(
-            Modifier
-                .padding(2.dp)
-                .background(
-                    color = LocalAppPalette.current.labelUnChecked, shape = RoundedCornerShape(4.dp)
-                )
-                .wrapContentSize(), contentAlignment = Alignment.Center) {
-            AppThemeText(label,
-                Modifier
-                    .padding(horizontal = 4.dp, vertical = 2.dp)
-                    .wrapContentSize(), style = LocalTextStyle.current.copy(fontSize = 14.sp, color = LocalAppPalette.current.labelTextColor))
         }
     }
 }
