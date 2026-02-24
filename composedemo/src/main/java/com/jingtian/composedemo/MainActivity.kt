@@ -308,7 +308,7 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
     val coroutine = rememberCoroutineScope()
     val albumItemDataChange by viewModel.albumItemListChange.observeAsState()
 
-    var labelFilterCheckedInfo by remember { mutableStateOf<List<LabelCheckInfo<String>>>(emptyList()) }
+    var labelFilterCheckedInfo by remember { mutableStateOf<List<LabelCheckInfo<String>>?>(null) }
     var totalLabelList by remember { mutableStateOf<List<String>>(emptyList()) }
     val fileTypeCheckState by remember { mutableStateOf(FileType.entries.map { LabelCheckInfo(it, it.typeName) }) }
     val itemRankTypeCheckState by remember { mutableStateOf(ItemRank.entries.map { LabelCheckInfo(it, it.name) }) }
@@ -424,19 +424,21 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
                 }
             }
             Row(Modifier.padding(start = 4.dp, end = 8.dp)) {
-                LazyRow(
-                    Modifier
-                        .wrapContentHeight()
-                        .weight(1f)) {
-                    roundRectTabFilter(labelFilterCheckedInfo) { checkInfo->
-                        val targetLabelSet = checkInfo.toSet()
-                        filterLabels = targetLabelSet
-                    }
-                    roundRectTabFilter(fileTypeCheckState) { checkedFileType->
-                        filterFileTypes = checkedFileType
-                    }
-                    roundRectTabFilter(itemRankTypeCheckState) { checkedItemRank->
-                        itemRankFilter = checkedItemRank
+                labelFilterCheckedInfo?.let { labelFilterCheckedInfo->
+                    LazyRow(
+                        Modifier
+                            .wrapContentHeight()
+                            .weight(1f)) {
+                        roundRectTabFilter(labelFilterCheckedInfo) { checkInfo->
+                            val targetLabelSet = checkInfo.toSet()
+                            filterLabels = targetLabelSet
+                        }
+                        roundRectTabFilter(fileTypeCheckState) { checkedFileType->
+                            filterFileTypes = checkedFileType
+                        }
+                        roundRectTabFilter(itemRankTypeCheckState) { checkedItemRank->
+                            itemRankFilter = checkedItemRank
+                        }
                     }
                 }
 //            Image(painter = painterResource(R.drawable.trash_bin),
@@ -491,7 +493,7 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
     }
 
     if (addImageDialogState) {
-        AddItemDialog(album.value, labelFilterCheckedInfo, albumList) {
+        AddItemDialog(album.value, labelFilterCheckedInfo ?: emptyList(), albumList) {
             addImageDialogState = false
         }
     }
@@ -526,7 +528,7 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
             { checkedItemRank ->
                 itemRankFilter = checkedItemRank
             },
-            labelFilterCheckedInfo,
+            labelFilterCheckedInfo ?: emptyList(),
             { checkInfo ->
                 val targetLabelSet = checkInfo.toSet()
                 filterLabels = targetLabelSet
