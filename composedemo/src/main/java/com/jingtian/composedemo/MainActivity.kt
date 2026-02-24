@@ -125,7 +125,6 @@ import com.jingtian.composedemo.ui.theme.LocalAppUIConstants
 import com.jingtian.composedemo.ui.theme.LocalMiddleButtonConfig
 import com.jingtian.composedemo.ui.theme.LocalSecondaryTextStyle
 import com.jingtian.composedemo.ui.theme.appBackground
-import com.jingtian.composedemo.ui.theme.dialogBackground
 import com.jingtian.composedemo.ui.theme.drawerBackground
 import com.jingtian.composedemo.ui.theme.goldenRatio
 import com.jingtian.composedemo.ui.widget.FollowTailLayout
@@ -335,6 +334,13 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
                     itemList = it
                     filteredItemList = it
                 }
+            }
+        }
+        viewModel.getLabelList(album.value).collect { value->
+            withContext(Dispatchers.Main) {
+                albumName = album.value.albumName
+                labelFilterCheckedInfo = value.map { LabelCheckInfo(it, it) }
+                totalLabelList = value
             }
         }
     }
@@ -1005,7 +1011,7 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, totalLabel
                 items(itemLabel.size, key = { index: Int ->
                     itemLabel[index].label
                 }) { index: Int ->
-                    LabelView(itemLabel[index].label, editable = false) { }
+                    LabelView(itemLabel[index].label)
                 }
             }
         }
@@ -1195,15 +1201,11 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
                     Modifier
                         .padding(top = imageWidth / 2)
                         .fillMaxWidth()
-//                    .verticalScroll(rememberScrollState())
                         .wrapContentHeight()
                         .clip(RoundedCornerShape(4.dp))
                         .background(LocalAppPalette.current.dialogBg)
-//                    .padding(12.dp),
+                        .padding(top = imageWidth / 2)
                 ) {
-                    item {
-                        Spacer(Modifier.height(imageWidth / 2))
-                    }
                     item {
                         OutlinedTextField(itemName, { value->
                             itemName = value
@@ -1292,8 +1294,27 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
                     }
 
                     item {
-                        LazyRow(Modifier.padding(horizontal = 6.dp)) {
-                            items(totalLabelList.size, key = { index-> totalLabelList[index].name }) { index->
+                        LazyHorizontalStaggeredGrid(rows = StaggeredGridCells.FixedSize(30.dp),
+                            Modifier
+                                .padding(horizontal = 6.dp)
+                                .height(60.dp)
+                                .fillMaxWidth()) {
+                            item {
+                                var addItemValue by remember { mutableStateOf("") }
+                                EditableLabelView(addItemValue, enableEdit = true, onRemove = {
+                                    val addLabelList = addItemValue
+                                        .trim()
+                                        .splitByWhiteSpace()
+                                        .toSet()
+                                        .filter { it !in itemLabelSet.keys }
+                                    itemLabelSet.putAll(addLabelList.map { it to it })
+                                    itemLabel.addAll(0, addLabelList)
+                                    addItemValue = ""
+                                }) { value->
+                                    addItemValue = value
+                                }
+                            }
+                            items(totalLabelList.size, key = { index-> totalLabelList[index].name to 1 }) { index->
                                 val item = totalLabelList[index]
                                 val isChecked by item.isChecked.observeAsState()
                                 CheckableLabelView(label = item.label, isChecked = isChecked ?: false) {
@@ -1308,28 +1329,19 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
                                 }
                             }
                         }
-                        Spacer(Modifier.height(4.dp))
-                        EditLabelView {
-                            itemLabelSet.putAll(it.map { it to it })
-                            itemLabel.clear()
-                            itemLabel.addAll(itemLabelSet.keys)
-                        }
-                        Spacer(Modifier.height(4.dp))
-                    }
-
-                    item {
-                        LazyRow(
+                        LazyHorizontalStaggeredGrid(rows = StaggeredGridCells.FixedSize(30.dp),
                             Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 6.dp)) {
+                                .padding(horizontal = 6.dp)
+                                .height(60.dp)
+                                .fillMaxWidth()) {
                             items(itemLabel.size, key = { index: Int ->
                                 itemLabel[index]
                             }) { index: Int ->
-                                LabelView(itemLabel[index]) {
-                                    itemLabel.removeAt(index)
-                                    itemLabelSet.remove(itemLabel[index])
-                                    itemLabel.remove(itemLabel[index])
-                                }
+                                val item = itemLabel[index]
+                                EditableLabelView(item, enableEdit = false, onRemove = {
+                                    itemLabel.remove(item)
+                                    itemLabelSet.remove(item)
+                                }) { }
                             }
                         }
                         Spacer(Modifier.height(4.dp))
@@ -1464,15 +1476,11 @@ fun AddItemDialog(album: Album, labelList: List<LabelCheckInfo<String>>, albumDa
                 Modifier
                     .padding(top = imageWidth / 2)
                     .fillMaxWidth()
-//                    .verticalScroll(rememberScrollState())
                     .wrapContentHeight()
                     .clip(RoundedCornerShape(4.dp))
                     .background(LocalAppPalette.current.dialogBg)
-//                    .padding(12.dp),
+                    .padding(top = imageWidth / 2)
             ) {
-                item {
-                    Spacer(Modifier.height(imageWidth / 2))
-                }
                 item {
                     OutlinedTextField(itemName, { value->
                         itemName = value
@@ -1561,8 +1569,27 @@ fun AddItemDialog(album: Album, labelList: List<LabelCheckInfo<String>>, albumDa
                 }
 
                 item {
-                    LazyRow(Modifier.padding(horizontal = 6.dp)) {
-                        items(totalLabelList.size, key = { index-> totalLabelList[index].name }) { index->
+                    LazyHorizontalStaggeredGrid(rows = StaggeredGridCells.FixedSize(30.dp),
+                        Modifier
+                            .padding(horizontal = 6.dp)
+                            .height(60.dp)
+                            .fillMaxWidth()) {
+                        item {
+                            var addItemValue by remember { mutableStateOf("") }
+                            EditableLabelView(addItemValue, enableEdit = true, onRemove = {
+                                val addLabelList = addItemValue
+                                    .trim()
+                                    .splitByWhiteSpace()
+                                    .toSet()
+                                    .filter { it !in itemLabelSet.keys }
+                                itemLabelSet.putAll(addLabelList.map { it to it })
+                                itemLabel.addAll(0, addLabelList)
+                                addItemValue = ""
+                            }) { value->
+                                addItemValue = value
+                            }
+                        }
+                        items(totalLabelList.size, key = { index-> totalLabelList[index].name to 1 }) { index->
                             val item = totalLabelList[index]
                             val isChecked by item.isChecked.observeAsState()
                             CheckableLabelView(label = item.label, isChecked = isChecked ?: false) {
@@ -1577,28 +1604,19 @@ fun AddItemDialog(album: Album, labelList: List<LabelCheckInfo<String>>, albumDa
                             }
                         }
                     }
-                    Spacer(Modifier.height(4.dp))
-                    EditLabelView {
-                        itemLabelSet.putAll(it.map { it to it })
-                        itemLabel.clear()
-                        itemLabel.addAll(itemLabelSet.keys)
-                    }
-                    Spacer(Modifier.height(4.dp))
-                }
-
-                item {
-                    LazyRow(
+                    LazyHorizontalStaggeredGrid(rows = StaggeredGridCells.FixedSize(30.dp),
                         Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 6.dp)) {
+                            .padding(horizontal = 6.dp)
+                            .height(60.dp)
+                            .fillMaxWidth()) {
                         items(itemLabel.size, key = { index: Int ->
                             itemLabel[index]
                         }) { index: Int ->
-                            LabelView(itemLabel[index]) {
-                                itemLabel.removeAt(index)
-                                itemLabelSet.remove(itemLabel[index])
-                                itemLabel.remove(itemLabel[index])
-                            }
+                            val item = itemLabel[index]
+                            EditableLabelView(item, enableEdit = false, onRemove = {
+                                itemLabel.remove(item)
+                                itemLabelSet.remove(item)
+                            }) { }
                         }
                     }
                     Spacer(Modifier.height(4.dp))
@@ -1648,16 +1666,21 @@ fun AddItemDialog(album: Album, labelList: List<LabelCheckInfo<String>>, albumDa
 
 @Composable
 fun CheckableLabelView(label: String, isChecked: Boolean, onCheckStateChange: (Boolean) -> Unit) {
-    LabelViewImpl(label = label, editable = false, checkable = true, isChecked = isChecked, onRemove = {}, onCheckStateChange = onCheckStateChange)
+    LabelViewImpl(label = label, editable = false, checkable = true, isChecked = isChecked, onRemove = {}, onCheckStateChange = onCheckStateChange, onValueChange = { })
 }
 
 @Composable
-fun LabelView(label: String, editable: Boolean = true, onRemove: ()->Unit) {
-    LabelViewImpl(label = label, editable = editable, checkable = false, isChecked = false, onRemove = onRemove, onCheckStateChange = {})
+fun LabelView(label: String) {
+    LabelViewImpl(label = label, editable = false, checkable = false, isChecked = false, onRemove = { }, onCheckStateChange = {}, onValueChange = { })
 }
 
 @Composable
-fun LabelViewImpl(label: String, editable: Boolean = false, checkable: Boolean = false, isChecked: Boolean = false, onRemove: ()->Unit = {}, onCheckStateChange: (Boolean) -> Unit = {}) {
+fun EditableLabelView(label: String, editable: Boolean = true, enableEdit: Boolean = editable, onRemove: ()->Unit, onValueChange: (String) -> Unit) {
+    LabelViewImpl(label = label, editable = editable, enableEdit = enableEdit, checkable = false, isChecked = false, onRemove = onRemove, onCheckStateChange = {}, onValueChange = onValueChange)
+}
+
+@Composable
+fun LabelViewImpl(label: String, editable: Boolean = false, enableEdit: Boolean = false, checkable: Boolean = false, isChecked: Boolean = false, onRemove: ()->Unit = {}, onCheckStateChange: (Boolean) -> Unit = {}, onValueChange: (String)->Unit = {}) {
     fun Modifier.onClickListener(): Modifier {
         return if (checkable) {
             this.clickable {
@@ -1698,26 +1721,45 @@ fun LabelViewImpl(label: String, editable: Boolean = false, checkable: Boolean =
             .padding(2.dp)
             .viewHeight()
             .viewBackground()
-            .wrapContentSize()
+            .wrapContentWidth()
             .onClickListener(),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        AppThemeText(
-            label,
-            Modifier
-                .padding(horizontal = 4.dp, vertical = 2.dp)
-                .align(Alignment.CenterVertically)
-                .wrapContentSize(),
-            style = LocalTextStyle.current.copy(
-                fontSize = fontSize,
-                color = LocalAppPalette.current.labelTextColor
+        if (editable && enableEdit) {
+            AppThemeBasicTextField(
+                label,
+                onValueChange = onValueChange,
+                modifier = Modifier
+                    .padding(horizontal = 4.dp, vertical = 2.dp)
+                    .align(Alignment.CenterVertically)
+                    .wrapContentSize(),
+                textStyle = LocalTextStyle.current.copy(
+                    fontSize = fontSize,
+                    color = LocalAppPalette.current.labelTextColor
+                ),
+                hint = "新建标签"
             )
-        )
+        } else {
+            AppThemeText(
+                label,
+                Modifier
+                    .padding(horizontal = 4.dp, vertical = 2.dp)
+                    .align(Alignment.CenterVertically)
+                    .wrapContentSize(),
+                style = LocalTextStyle.current.copy(
+                    fontSize = fontSize,
+                    color = LocalAppPalette.current.labelTextColor
+                )
+            )
+        }
         if (editable) {
             Spacer(Modifier.padding(2.dp))
             Image(
-                painter = painterResource(R.drawable.close),
-                contentDescription = "删除标签",
+                painter = painterResource(
+                    if (enableEdit) R.drawable.add_green
+                    else R.drawable.close
+                ),
+                contentDescription = if (enableEdit) "添加标签" else "删除标签",
                 Modifier
                     .padding(end = 4.dp)
                     .size(16.dp)
