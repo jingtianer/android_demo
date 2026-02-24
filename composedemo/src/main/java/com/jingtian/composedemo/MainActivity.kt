@@ -35,7 +35,6 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -56,10 +55,8 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.staggeredgrid.LazyHorizontalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.DrawerDefaults
 import androidx.compose.runtime.Composable
@@ -122,7 +119,6 @@ import com.jingtian.composedemo.dao.model.DEFAULT_USER_NAME
 import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.FileType
 import com.jingtian.composedemo.dao.model.ItemRank
-import com.jingtian.composedemo.dao.model.LabelInfo
 import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
 import com.jingtian.composedemo.ui.theme.LocalAppPalette
 import com.jingtian.composedemo.ui.theme.LocalAppUIConstants
@@ -142,13 +138,12 @@ import com.jingtian.composedemo.utils.CoroutineUtils
 import com.jingtian.composedemo.utils.FileStorageUtils
 import com.jingtian.composedemo.utils.FileStorageUtils.getFileNameFromUri
 import com.jingtian.composedemo.utils.FileStorageUtils.getMediaType
-import com.jingtian.composedemo.utils.FileStorageUtils.getVideoThumbnail
+import com.jingtian.composedemo.utils.FileStorageUtils.getThumbnail
 import com.jingtian.composedemo.utils.FileStorageUtils.safeToFile
 import com.jingtian.composedemo.utils.UserStorage
 import com.jingtian.composedemo.utils.ViewUtils.commonConfig
 import com.jingtian.composedemo.utils.ViewUtils.commonEditableConfig
 import com.jingtian.composedemo.utils.ViewUtils.dpValue
-import com.jingtian.composedemo.utils.splitBy
 import com.jingtian.composedemo.utils.splitByWhiteSpace
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
 import com.jingtian.composedemo.viewmodels.AppThemeViewModel
@@ -810,7 +805,7 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, totalLabel
                     }
                 }
                 FileType.VIDEO -> {
-                    getVideoThumbnail(
+                    getThumbnail(
                         albumItemRelation.fileInfo,
                         scope, uri,
                         maxWidth = size.dpValue.toInt(),
@@ -823,6 +818,16 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, totalLabel
                 }
                 FileType.AUDIO -> {
                     imageResource = R.drawable.music
+                    getThumbnail(
+                        albumItemRelation.fileInfo,
+                        scope, uri,
+                        maxWidth = size.dpValue.toInt(),
+                    ) { bitmap->
+                        imageBitmap = bitmap?.asImageBitmap()
+                        imageBitmap?.aspectRatio()?.let {
+                            intrinsicRatio = it
+                        }
+                    }
                 }
                 FileType.RegularFile -> {
                     imageResource = R.drawable.file
@@ -1052,13 +1057,13 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
 
             FileType.VIDEO -> {
                 if (fileInfo != null) {
-                    getVideoThumbnail(fileInfo, scope, uri, maxWidth = imageWidth.dpValue.toInt()) { bitmap: Bitmap? ->
+                    getThumbnail(fileInfo, scope, uri, maxWidth = imageWidth.dpValue.toInt()) { bitmap: Bitmap? ->
                         withContext(Dispatchers.Main) {
                             pickedImage = bitmap?.asImageBitmap()
                         }
                     }
                 } else {
-                    getVideoThumbnail(scope, uri, maxWidth = imageWidth.dpValue.toInt()) { bitmap: Bitmap? ->
+                    getThumbnail(FileType.VIDEO, scope, uri, maxWidth = imageWidth.dpValue.toInt()) { bitmap: Bitmap? ->
                         withContext(Dispatchers.Main) {
                             pickedImage = bitmap?.asImageBitmap()
                         }
@@ -1068,7 +1073,19 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
 
             FileType.AUDIO -> {
                 imageResource = R.drawable.music
-                pickedImage = null
+                if (fileInfo != null) {
+                    getThumbnail(fileInfo, scope, uri, maxWidth = imageWidth.dpValue.toInt()) { bitmap: Bitmap? ->
+                        withContext(Dispatchers.Main) {
+                            pickedImage = bitmap?.asImageBitmap()
+                        }
+                    }
+                } else {
+                    getThumbnail(FileType.AUDIO, scope, uri, maxWidth = imageWidth.dpValue.toInt()) { bitmap: Bitmap? ->
+                        withContext(Dispatchers.Main) {
+                            pickedImage = bitmap?.asImageBitmap()
+                        }
+                    }
+                }
             }
 
             FileType.RegularFile -> {
@@ -1361,17 +1378,22 @@ fun AddItemDialog(album: Album, labelList: List<LabelCheckInfo<String>>, albumDa
                 }
 
                 FileType.VIDEO -> {
-                    getVideoThumbnail(scope, uri, maxWidth = imageWidth.dpValue.toInt()) { bitmap: Bitmap? ->
+                    getThumbnail(FileType.VIDEO, scope, uri, maxWidth = imageWidth.dpValue.toInt()) { bitmap: Bitmap? ->
                         pickedImage = bitmap?.asImageBitmap()
                     }
                 }
 
                 FileType.AUDIO -> {
                     imageResource = R.drawable.music
+                    getThumbnail(FileType.AUDIO, scope, uri, maxWidth = imageWidth.dpValue.toInt()) { bitmap: Bitmap? ->
+                        pickedImage = bitmap?.asImageBitmap()
+                    }
+                    pickedImage = null
                 }
 
                 FileType.RegularFile -> {
                     imageResource = R.drawable.file
+                    pickedImage = null
                 }
             }
             if (itemName.isNullOrBlank()) {

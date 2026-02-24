@@ -1,8 +1,6 @@
 package com.jingtian.composedemo.viewmodels
 
 import android.net.Uri
-import android.util.Log
-import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -22,21 +20,13 @@ import com.jingtian.composedemo.utils.FileStorageUtils
 import com.jingtian.composedemo.utils.FileStorageUtils.getFileIntrinsicSize
 import com.jingtian.composedemo.utils.FileStorageUtils.getFileNameFromUri
 import com.jingtian.composedemo.utils.FileStorageUtils.getMediaType
-import com.jingtian.composedemo.utils.FileStorageUtils.getVideoThumbnail
-import com.jingtian.composedemo.utils.FileStorageUtils.getVideoThumbnailIntrinsicSize
-import com.jingtian.composedemo.utils.FileStorageUtils.safeToFile
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.flatMapConcat
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.File
 
 class AlbumViewModel : ViewModel() {
     companion object {

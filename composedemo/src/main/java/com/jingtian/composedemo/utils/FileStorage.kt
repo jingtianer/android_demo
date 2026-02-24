@@ -4,6 +4,7 @@ import android.content.ContentResolver
 import android.content.Context
 import android.database.Cursor
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import android.media.MediaMetadataRetriever
 import android.net.Uri
@@ -230,15 +231,25 @@ object FileStorageUtils {
         }
     }
 
+    fun getThumbnailByType(fileType: FileType, uri: Uri): Bitmap? {
+        return when (fileType) {
+            FileType.VIDEO -> getVideoThumbnail(uri)
+            FileType.AUDIO -> getAudioThumbnail(uri)
+            FileType.RegularFile -> null
+            FileType.IMAGE -> null
+        }
+    }
 
-    fun getVideoThumbnail(
+
+    fun getThumbnail(
+        fileType: FileType,
         coroutineScope: CoroutineScope,
         videoUri: Uri,
         maxWidth: Int = -1,
         maxHeight: Int = -1,
         onLoadBitmap: suspend (Bitmap?)->Unit
     ): Job = coroutineScope.launch(Dispatchers.IO) {
-        val bitmap = getVideoThumbnail(videoUri)
+        val bitmap = getThumbnailByType(fileType, videoUri)
         if (bitmap == null) {
             withContext(Dispatchers.Main) {
                 onLoadBitmap(null)
@@ -271,7 +282,7 @@ object FileStorageUtils {
         }
     }
 
-    fun getVideoThumbnail(
+    fun getThumbnail(
         fileInfo: FileInfo,
         coroutineScope: CoroutineScope,
         videoUri: Uri,
@@ -279,13 +290,13 @@ object FileStorageUtils {
         maxHeight: Int = -1,
         onLoadBitmap: suspend (Bitmap?)->Unit
     ): Job = coroutineScope.launch(Dispatchers.IO) {
-        BitMapCachePool.loadImage(fileInfo, maxWidth, maxHeight) { getVideoThumbnail(videoUri) }.second?.let {
+        BitMapCachePool.loadImage(fileInfo, maxWidth, maxHeight) { getThumbnailByType(fileInfo.fileType, videoUri) }.second?.let {
             withContext(Dispatchers.Main) {
                 onLoadBitmap(it)
             }
             return@launch
         }
-        val bitmap = getVideoThumbnail(videoUri)
+        val bitmap = getThumbnailByType(fileInfo.fileType, videoUri)
         withContext(Dispatchers.Main) {
             onLoadBitmap(bitmap)
         }
@@ -308,7 +319,29 @@ object FileStorageUtils {
         }
     }
 
-    suspend fun getVideoThumbnailIntrinsicSize(videoUri: Uri): Pair<Int, Int> {
+    private fun getAudioThumbnail(uri: Uri): Bitmap? {
+        val retriever = MediaMetadataRetriever()
+        return try {
+            retriever.setDataSource(app, uri)
+            val coverBytes = retriever.embeddedPicture
+            coverBytes?.let { BitmapFactory.decodeByteArray(it, 0, it.size) }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        } finally {
+            retriever.release()
+        }
+    }
+
+    private suspend fun getAudioThumbnailIntrinsicSize(uri: Uri): Pair<Int, Int> {
+        return withContext(Dispatchers.IO) {
+            getAudioThumbnail(uri)
+        }?.let {
+            it.width to it.height
+        } ?: (-1 to -1)
+    }
+
+    private suspend fun getVideoThumbnailIntrinsicSize(videoUri: Uri): Pair<Int, Int> {
         return withContext(Dispatchers.IO) {
             val retriever = MediaMetadataRetriever()
             return@withContext try {
@@ -334,6 +367,9 @@ object FileStorageUtils {
             BitMapCachePool.getImageRatio(uri)
         }
         FileType.VIDEO -> {
+            getVideoThumbnailIntrinsicSize(uri)
+        }
+        FileType.AUDIO -> {
             getVideoThumbnailIntrinsicSize(uri)
         }
         else -> -1 to -1
