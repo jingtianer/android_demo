@@ -424,11 +424,12 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
                 }
             }
             Row(Modifier.padding(start = 4.dp, end = 8.dp)) {
-                labelFilterCheckedInfo?.let { labelFilterCheckedInfo->
-                    LazyRow(
-                        Modifier
-                            .wrapContentHeight()
-                            .weight(1f)) {
+
+                LazyRow(
+                    Modifier
+                        .wrapContentHeight()
+                        .weight(1f)) {
+                    labelFilterCheckedInfo?.let { labelFilterCheckedInfo->
                         roundRectTabFilter(labelFilterCheckedInfo) { checkInfo->
                             val targetLabelSet = checkInfo.toSet()
                             filterLabels = targetLabelSet
@@ -770,7 +771,7 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, totalLabel
     var itemLabel by remember { mutableStateOf(albumItemRelation.labelInfos) }
 
     val scope = rememberCoroutineScope()
-    var imageResource by remember { mutableStateOf(R.drawable.load_failed) }
+    var imageResource by remember { mutableStateOf<Int?>(R.drawable.load_failed) }
 
     fun FileInfo.aspectRatio(): Float? {
         return (this.intrinsicWidth.toFloat() / this.intrinsicHeight.toFloat()).takeIf {
@@ -833,7 +834,8 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, totalLabel
                     }
                 }
                 FileType.RegularFile -> {
-                    imageResource = R.drawable.file
+                    imageResource = null
+                    imageBitmap = null
                 }
             }
         }
@@ -897,10 +899,11 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, totalLabel
         )
 
         Box(Modifier
-            .clip(RoundedCornerShape(padding * 2))) {
-            if (currentPickedImage == null) {
+            .clip(RoundedCornerShape(padding * 2)).fillMaxWidth()) {
+            val imageResource = imageResource
+            if (currentPickedImage != null) {
                 Image(
-                    painter = painterResource(imageResource),
+                    bitmap = currentPickedImage,
                     contentDescription = "文件缩略图",
                     Modifier
                         .fillMaxWidth()
@@ -908,9 +911,9 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, totalLabel
                         .align(Alignment.Center),
                     contentScale = ContentScale.FillWidth
                 )
-            } else {
+            } else if (imageResource != null) {
                 Image(
-                    bitmap = currentPickedImage,
+                    painter = painterResource(imageResource),
                     contentDescription = "文件缩略图",
                     Modifier
                         .fillMaxWidth()
