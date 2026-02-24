@@ -406,11 +406,14 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
                         .padding(4.dp)
                 )
                 Spacer(Modifier.width(12.dp))
-                AppThemeText(albumName,
+                AppThemeText(albumName.trim(),
                     Modifier
                         .align(Alignment.CenterVertically)
                         .fillMaxWidth()
-                        .weight(1f), style = LocalTextStyle.current.copy(fontSize = 24.sp, fontWeight = FontWeight(600)))
+                        .weight(1f), style = LocalTextStyle.current.copy(fontSize = 24.sp, fontWeight = FontWeight(600)),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
                 Spacer(Modifier.width(6.dp))
                 Row(
                     Modifier
@@ -2365,13 +2368,15 @@ fun DrawerMenuItem(
                 }
             }) {
             AppThemeText(
-                text = albumName,
+                text = albumName.trim(),
                 style = LocalTextStyle.current.copy(fontSize = 20.sp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(LocalAppPalette.current.drawerBg)
                     .wrapContentHeight()
                     .padding(8.dp),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         }
     }
