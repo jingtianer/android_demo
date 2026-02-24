@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.util.Log
+import androidx.annotation.IntRange
 import com.jingtian.composedemo.base.app
 import com.jingtian.composedemo.dao.DataBase
 import com.jingtian.composedemo.dao.model.FileInfo
@@ -38,46 +39,54 @@ object BitMapCachePool {
             }
         }
 
+        private fun getIfNotNull(queue: ArrayList<Pair<Int, SoftReference<Bitmap?>>>, index: Int): Pair<Int, Bitmap>? {
+            queue.lastOrNull()?.let { last->
+                last.second.get()?.let { bitmap ->
+                    return last.first to bitmap
+                }
+            }
+            return null
+        }
+
+        private fun tryGetNeighborBitmap(queue: ArrayList<Pair<Int, SoftReference<Bitmap?>>>, id: Long, scaleFactor: Int, insertPos: Int, bitmapCreator: () -> Bitmap?): Pair<Int, Bitmap>? {
+            getIfNotNull(queue, insertPos-1)?.let { (neighborScaleFactor, bitmap)->
+                CoroutineUtils.runIOTask({
+                    createAndStoreBitmap(id, scaleFactor, -insertPos-1, queue, bitmapCreator)
+                })
+                return neighborScaleFactor to bitmap
+            }
+            getIfNotNull(queue, insertPos)?.let { (neighborScaleFactor, bitmap)->
+                CoroutineUtils.runIOTask({
+                    createAndStoreBitmap(id, scaleFactor, -insertPos-1, queue, bitmapCreator)
+                })
+                return neighborScaleFactor to bitmap
+            }
+            return null
+        }
+
         fun put(id: Long, scaleFactor: Int = -1, bitmapCreator: () -> Bitmap?): Bitmap? {
             val queue = getQueue(id)
             synchronized(queue) {
                 if (scaleFactor == -1) {
-                    return queue.lastOrNull()?.second?.get() ?: bitmapCreator()
+                    getIfNotNull(queue, 0)?.let { (scaleFactor, bitmap)->
+                        return bitmap
+                    }
+                    return bitmapCreator()
                 }
                 val insertPos = queue.binarySearch {
                     scaleFactor - it.first
                 }
                 if (insertPos < 0) {
-                    val cacheFile = getCacheFile(fileType.value, id, scaleFactor)
-                    if (cacheFile?.exists() == true) {
-                        FileInputStream(cacheFile).use {
-                            BitmapFactory.decodeStream(it)?.let {
-                                queue.add(-insertPos-1, scaleFactor to SoftReference(it))
-                                return@put it
-                            }
-                        }
+                    tryGetNeighborBitmap(queue, id, scaleFactor, -insertPos-1, bitmapCreator)?.let { (scaleFactor, bitmap)->
+                        return bitmap
                     }
-                    val bitmap = bitmapCreator()
-                    queue.add(-insertPos-1, scaleFactor to SoftReference(bitmap))
-                    if (bitmap != null) {
-                        CoroutineUtils.runIOTask({
-                            val file = getCacheFile(fileType.value, id, scaleFactor)
-                            if (file == null || file.exists()) {
-                                return@runIOTask
-                            }
-                            FileOutputStream(file).use {
-                                bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)
-                                it.flush()
-                            }
-                        }, { e->
-
-                        }) {
-                        }
-                    }
-                    return bitmap
+                    return createAndStoreBitmap(id, scaleFactor, -insertPos-1, queue, bitmapCreator)
                 }
                 val cachedBitmap = queue[insertPos].second.get()
                 if (cachedBitmap == null || cachedBitmap.isRecycled) {
+                    tryGetNeighborBitmap(queue, id, scaleFactor, insertPos, bitmapCreator)?.let { (scaleFactor, bitmap)->
+                        return bitmap
+                    }
                     val bitmap = bitmapCreator()
                     queue[insertPos] = scaleFactor to SoftReference(bitmap)
                     return bitmap
@@ -92,6 +101,36 @@ object BitMapCachePool {
                 queue.clear()
             }
             getCacheDir(fileType.value, id).takeIf { it.exists() }?.deleteRecursively()
+        }
+
+        private fun createAndStoreBitmap(id: Long, scaleFactor: Int, @IntRange(from = 0) insertPos: Int, queue: ArrayList<Pair<Int, SoftReference<Bitmap?>>>, bitmapCreator: () -> Bitmap?): Bitmap? {
+            val cacheFile = getCacheFile(fileType.value, id, scaleFactor)
+            if (cacheFile?.exists() == true) {
+                FileInputStream(cacheFile).use {
+                    BitmapFactory.decodeStream(it)?.let {
+                        queue.add(insertPos, scaleFactor to SoftReference(it))
+                        return@createAndStoreBitmap it
+                    }
+                }
+            }
+            val bitmap = bitmapCreator()
+            queue.add(insertPos, scaleFactor to SoftReference(bitmap))
+            if (bitmap != null) {
+                CoroutineUtils.runIOTask({
+                    val file = getCacheFile(fileType.value, id, scaleFactor)
+                    if (file == null || file.exists()) {
+                        return@runIOTask
+                    }
+                    FileOutputStream(file).use {
+                        bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)
+                        it.flush()
+                    }
+                }, { e->
+
+                }) {
+                }
+            }
+            return bitmap
         }
     }
 
