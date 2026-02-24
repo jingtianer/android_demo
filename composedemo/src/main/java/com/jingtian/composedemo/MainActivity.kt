@@ -79,6 +79,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -146,6 +147,7 @@ import com.jingtian.composedemo.utils.ViewUtils.commonEditableConfig
 import com.jingtian.composedemo.utils.ViewUtils.dpValue
 import com.jingtian.composedemo.utils.splitByWhiteSpace
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
+import com.jingtian.composedemo.viewmodels.AlbumViewModel.Companion.notifyChange
 import com.jingtian.composedemo.viewmodels.AppThemeViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -277,13 +279,14 @@ fun Main() {
 
 class LabelCheckInfo<T>(val label: T, val name: String, var isChecked: MutableLiveData<Boolean> = MutableLiveData(false))
 
-fun <T> LazyListScope.roundRectTabFilter(checkedList: List<LabelCheckInfo<T>>, onCheckStateChange: (List<T>)->Unit) {
-    items(checkedList.size, key = { index-> checkedList[index].name }) { index->
+fun LazyListScope.roundRectTabFilter(checkedList: SnapshotStateMap<String, Boolean>, filerList: List<String>) {
+    items(filerList.size, key = { index-> filerList[index] }) { index->
+        val item = filerList[index]
         RoundRectCheckableLabel(
-            checkedList[index],
+            item,
+            checkedList[item] ?: false,
             checkedList,
             true,
-            onCheckStateChange
         )
     }
 }
@@ -298,30 +301,37 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
 
     var addImageDialogState by remember { mutableStateOf(false) }
     var itemList by remember { mutableStateOf(emptyList<AlbumItemRelation>()) }
-    var filteredItemList by remember { mutableStateOf(emptyList<AlbumItemRelation>()) }
+    val filteredItemList = remember { mutableStateListOf<AlbumItemRelation>() }
     val viewModel: AlbumViewModel = viewModel()
-    var filterLabels by remember { mutableStateOf<Set<String>>(emptySet()) }
-    var filterFileTypes by remember { mutableStateOf<List<FileType>>(emptyList()) }
-    var itemRankFilter by remember { mutableStateOf<List<ItemRank>>(emptyList()) }
     var showLabelFilter by remember { mutableStateOf(false) }
     val coroutine = rememberCoroutineScope()
     val albumItemDataChange by viewModel.albumItemListChange.observeAsState()
 
-    var labelFilterCheckedInfo by remember { mutableStateOf<List<LabelCheckInfo<String>>?>(null) }
-    var totalLabelList by remember { mutableStateOf<List<String>>(emptyList()) }
-    val fileTypeCheckState by remember { mutableStateOf(FileType.entries.map { LabelCheckInfo(it, it.typeName) }) }
-    val itemRankTypeCheckState by remember { mutableStateOf(ItemRank.entries.map { LabelCheckInfo(it, it.name) }) }
-
+    val totalLabelList = remember { mutableStateListOf<String>() }
+    val totalFileTypeList by remember { derivedStateOf { FileType.entries.map { it.typeName } } }
+    val totalItemRankList by remember { derivedStateOf { ItemRank.entries.map { it.name } } }
+    var labelFilterCheckedInfo by remember { mutableStateOf<SnapshotStateMap<String, Boolean>?>(null) }
+    val fileTypeCheckState = remember { mutableStateMapOf<String, Boolean>() }
+    val itemRankTypeCheckState = remember { mutableStateMapOf<String, Boolean>() }
     var albumName by remember { mutableStateOf(album.value.albumName) }
 
     var editAlbumDialogState by remember { mutableStateOf(false) }
     LaunchedEffect(album) {
         withContext(Dispatchers.IO) {
             viewModel.getLabelList(album.value).collect { value->
+                val checkList = SnapshotStateMap<String, Boolean>()
+                labelFilterCheckedInfo?.let {
+                    for ((k, v) in it) {
+                        if (v) {
+                            checkList[k] = true
+                        }
+                    }
+                }
                 withContext(Dispatchers.Main) {
                     albumName = album.value.albumName
-                    labelFilterCheckedInfo = value.map { LabelCheckInfo(it, it) }
-                    totalLabelList = value
+                    labelFilterCheckedInfo = checkList
+                    totalLabelList.clear()
+                    totalLabelList.addAll(value)
                 }
             }
         }
@@ -332,15 +342,25 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
             viewModel.getAllAlbumItem(album.value).collect {
                 withContext(Dispatchers.Main) {
                     itemList = it
-                    filteredItemList = it
+                    filteredItemList.clear()
+                    filteredItemList.addAll(it)
                 }
             }
         }
         viewModel.getLabelList(album.value).collect { value->
+            val checkList = SnapshotStateMap<String, Boolean>()
+            labelFilterCheckedInfo?.let {
+                for ((k, v) in it) {
+                    if (v) {
+                        checkList[k] = true
+                    }
+                }
+            }
             withContext(Dispatchers.Main) {
                 albumName = album.value.albumName
-                labelFilterCheckedInfo = value.map { LabelCheckInfo(it, it) }
-                totalLabelList = value
+                labelFilterCheckedInfo = checkList
+                totalLabelList.clear()
+                totalLabelList.addAll(value)
             }
         }
     }
@@ -436,16 +456,9 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
                         .wrapContentHeight()
                         .weight(1f)) {
                     labelFilterCheckedInfo?.let { labelFilterCheckedInfo->
-                        roundRectTabFilter(labelFilterCheckedInfo) { checkInfo->
-                            val targetLabelSet = checkInfo.toSet()
-                            filterLabels = targetLabelSet
-                        }
-                        roundRectTabFilter(fileTypeCheckState) { checkedFileType->
-                            filterFileTypes = checkedFileType
-                        }
-                        roundRectTabFilter(itemRankTypeCheckState) { checkedItemRank->
-                            itemRankFilter = checkedItemRank
-                        }
+                        roundRectTabFilter(labelFilterCheckedInfo, totalLabelList)
+                        roundRectTabFilter(fileTypeCheckState, totalFileTypeList)
+                        roundRectTabFilter(itemRankTypeCheckState, totalItemRankList)
                     }
                 }
 //            Image(painter = painterResource(R.drawable.trash_bin),
@@ -473,15 +486,22 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
                 )
             }
         }
-        LaunchedEffect(filterFileTypes, filterLabels, itemRankFilter) {
+        val filterChanged by viewModel.filterCheckChanged.observeAsState()
+        LaunchedEffect(filterChanged) {
             coroutine.launch(Dispatchers.Default) {
-                val intersectList = itemList.filter {
-                    (filterLabels.isEmpty() || it.labelInfos.map { it.label }.toSet().intersect(filterLabels).isNotEmpty())
-                            && (filterFileTypes.isEmpty() || (it.fileInfo?.let { fileInfo -> filterFileTypes.contains(fileInfo.fileType) } ?: true))
-                            && (itemRankFilter.isEmpty() || itemRankFilter.contains(it.albumItem.rank))
+                val labelFilterCheckedInfo = labelFilterCheckedInfo
+                val filteredList = mutableListOf<AlbumItemRelation>()
+                for (item in itemList) {
+                    val labelCheck = labelFilterCheckedInfo.isNullOrEmpty() || item.labelInfos.map { it.label }.intersect(labelFilterCheckedInfo.keys).isNotEmpty()
+                    val fileTypeCheck = fileTypeCheckState.isEmpty() || fileTypeCheckState.get(item.fileInfo.fileType.typeName) == true
+                    val itemRankCheck = itemRankTypeCheckState.isEmpty() || itemRankTypeCheckState.get(item.albumItem.rank.name) == true
+                    if (labelCheck && fileTypeCheck && itemRankCheck) {
+                        filteredList.add(item)
+                    }
                 }
                 withContext(Dispatchers.Main) {
-                    filteredItemList = intersectList
+                    filteredItemList.clear()
+                    filteredItemList.addAll(filteredList)
                 }
             }
         }
@@ -500,7 +520,7 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
     }
 
     if (addImageDialogState) {
-        AddItemDialog(album.value, labelFilterCheckedInfo ?: emptyList(), albumList) {
+        AddItemDialog(album.value, totalLabelList, albumList) {
             addImageDialogState = false
         }
     }
@@ -530,16 +550,11 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
         FilterPanel(
             sheetState,
             fileTypeCheckState,
-            { checkedFileType -> filterFileTypes = checkedFileType },
+            totalFileTypeList,
             itemRankTypeCheckState,
-            { checkedItemRank ->
-                itemRankFilter = checkedItemRank
-            },
-            labelFilterCheckedInfo ?: emptyList(),
-            { checkInfo ->
-                val targetLabelSet = checkInfo.toSet()
-                filterLabels = targetLabelSet
-            }
+            totalItemRankList,
+            labelFilterCheckedInfo,
+            totalLabelList,
         ) {
             showLabelFilter = false
         }
@@ -550,17 +565,18 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
 @Composable
 fun FilterPanel(
     sheetState: SheetState,
-    fileTypeCheckStateList: List<LabelCheckInfo<FileType>>,
-    onFileTypeCheckStateChange: (List<FileType>)->Unit,
-    itemRankCheckStateList: List<LabelCheckInfo<ItemRank>>,
-    onItemRankCheckStateChange: (List<ItemRank>)->Unit,
-    labelCheckStateList: List<LabelCheckInfo<String>>,
-    onLabelCheckStateChange: (List<String>)->Unit,
+    fileTypeCheckStateList: SnapshotStateMap<String, Boolean>,
+    fileTypeList: List<String>,
+    itemRankCheckStateList: SnapshotStateMap<String, Boolean>,
+    itemRankList: List<String>,
+    labelCheckStateList: SnapshotStateMap<String, Boolean>?,
+    labelList: List<String>,
     onDismiss: () -> Unit,
 ) {
     val horizontalPadding = 6.dp
     val verticalPadding = 6.dp
     val horizontalInnerPadding = LocalAppUIConstants.current.filterLabelPaddings[2]
+    val viewModel: AlbumViewModel = viewModel()
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -584,26 +600,26 @@ fun FilterPanel(
             item(span = { GridItemSpan(maxLineSpan) }) {
                 AppThemeText(text = "类型筛选", Modifier.padding(horizontal = horizontalInnerPadding, vertical = verticalPadding), style = LocalTextStyle.current.copy(fontWeight = FontWeight(600), fontSize = 16.sp))
             }
-            items(fileTypeCheckStateList.size, key = { index-> fileTypeCheckStateList[index].name }) { index ->
+            items(fileTypeList.size, key = { index-> fileTypeList[index] }) { index ->
                 RoundRectCheckableLabel(
-                    fileTypeCheckStateList[index],
+                    fileTypeList[index],
+                    fileTypeCheckStateList[fileTypeList[index]] ?: false,
                     fileTypeCheckStateList,
                     false,
-                    onFileTypeCheckStateChange
                 )
             }
             item(span = { GridItemSpan(this.maxLineSpan) }) {
                 AppThemeText(text = "排行筛选", Modifier.padding(horizontal = horizontalInnerPadding, vertical = verticalPadding), style = LocalTextStyle.current.copy(fontWeight = FontWeight(600), fontSize = 16.sp))
             }
-            items(itemRankCheckStateList.size, key = { index-> itemRankCheckStateList[index].name }) { index ->
+            items(itemRankList.size, key = { index-> itemRankList[index] }) { index ->
                 RoundRectCheckableLabel(
-                    itemRankCheckStateList[index],
+                    itemRankList[index],
+                    itemRankCheckStateList[itemRankList[index]] ?: false,
                     itemRankCheckStateList,
                     false,
-                    onItemRankCheckStateChange
                 )
             }
-            if (labelCheckStateList.isNotEmpty()) {
+            if (labelCheckStateList != null && labelList.isNotEmpty()) {
                 item(span = { GridItemSpan(this.maxLineSpan) }) {
                     AppThemeText(text = "标签筛选", Modifier.padding(horizontal = horizontalInnerPadding, vertical = verticalPadding), style = LocalTextStyle.current.copy(fontWeight = FontWeight(600), fontSize = 16.sp))
                 }
@@ -618,13 +634,13 @@ fun FilterPanel(
                             .fillMaxWidth(),
                         horizontalItemSpacing = horizontalInnerPadding,
                     ) {
-                        items(labelCheckStateList.size, { index-> labelCheckStateList[index].name }) { index ->
-                            val item = labelCheckStateList[index]
+                        items(labelList.size, { index-> labelList[index] }) { index ->
+                            val item = labelList[index]
                             RoundRectCheckableLabel(
                                 item,
+                                labelCheckStateList[item] ?: false,
                                 labelCheckStateList,
                                 true,
-                                onLabelCheckStateChange
                             )
                         }
                     }
@@ -639,12 +655,12 @@ fun FilterPanel(
                 .padding(horizontal = horizontalPadding)) {
             Button(onClick = {
                 scope.launch {
-                    fileTypeCheckStateList.forEach { it.isChecked.value = !(it.isChecked.value ?: false) }
-                    itemRankCheckStateList.forEach { it.isChecked.value = !(it.isChecked.value ?: false) }
-                    labelCheckStateList.forEach { it.isChecked.value = !(it.isChecked.value ?: false) }
-                    onFileTypeCheckStateChange(emptyList())
-                    onItemRankCheckStateChange(emptyList())
-                    onLabelCheckStateChange(emptyList())
+                    withContext(Dispatchers.Default) {
+                        fileTypeCheckStateList.keys.forEach { fileTypeCheckStateList[it] = !(fileTypeCheckStateList[it] ?: false) }
+                        itemRankCheckStateList.keys.forEach { itemRankCheckStateList[it] = !(itemRankCheckStateList[it] ?: false) }
+                        labelCheckStateList?.keys?.forEach { labelCheckStateList[it] = !(labelCheckStateList[it] ?: false) }
+                    }
+                    viewModel.filterCheckChanged.notifyChange()
                 }
             },
                 modifier = Modifier
@@ -656,12 +672,12 @@ fun FilterPanel(
             }
             Button(onClick = {
                 scope.launch {
-                    fileTypeCheckStateList.forEach { it.isChecked.value = false }
-                    itemRankCheckStateList.forEach { it.isChecked.value = false }
-                    labelCheckStateList.forEach { it.isChecked.value = false }
-                    onFileTypeCheckStateChange(emptyList())
-                    onItemRankCheckStateChange(emptyList())
-                    onLabelCheckStateChange(emptyList())
+                    withContext(Dispatchers.Default) {
+                        fileTypeCheckStateList.keys.forEach { fileTypeCheckStateList[it] = false }
+                        itemRankCheckStateList.keys.forEach { itemRankCheckStateList[it] = false }
+                        labelCheckStateList?.keys?.forEach { labelCheckStateList[it] = false }
+                    }
+                    viewModel.filterCheckChanged.notifyChange()
                 }
             },
                 modifier = Modifier
@@ -687,14 +703,13 @@ fun FilterPanel(
 }
 
 @Composable
-fun <T> RoundRectCheckableLabel(item: LabelCheckInfo<T>, checkedList: List<LabelCheckInfo<T>>, wrapContent: Boolean, onCheckStateChange: (List<T>)->Unit) {
-    val checked by item.isChecked.observeAsState()
-    val isChecked = checked ?: false
+fun RoundRectCheckableLabel(item: String, isChecked: Boolean, checkedList: SnapshotStateMap<String, Boolean>, wrapContent: Boolean) {
     val paddings = LocalAppUIConstants.current.filterLabelPaddings
     val paddingInnerHorizontal = paddings[0]
     val paddingInnerVertical = paddings[1]
     val paddingOuterHorizontal = paddings[2]
     val paddingOuterVertical = paddings[3]
+    val viewModel: AlbumViewModel = viewModel()
     val modifier = if (wrapContent) {
         Modifier
             .padding(horizontal = paddingOuterHorizontal, vertical = paddingOuterVertical)
@@ -724,15 +739,16 @@ fun <T> RoundRectCheckableLabel(item: LabelCheckInfo<T>, checkedList: List<Label
     Box(
         modifier
             .clickable {
-                item.isChecked.value = !isChecked
-                onCheckStateChange(checkedList.mapNotNull { checkedInfo ->
-                    checkedInfo.label.takeIf {
-                        checkedInfo.isChecked.value ?: false
-                    }
-                })
+                checkedList[item] = !isChecked
+                if (isChecked) {
+                    checkedList.remove(item)
+                } else {
+                    checkedList[item] = true
+                }
+                viewModel.filterCheckChanged.value = (viewModel.filterCheckChanged.value ?: 0) + 1
             }) {
         AppThemeText(
-            text = item.name,
+            text = item,
             Modifier
                 .wrapContentSize()
                 .align(Alignment.Center)
@@ -1391,13 +1407,14 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
 }
 
 @Composable
-fun AddItemDialog(album: Album, labelList: List<LabelCheckInfo<String>>, albumData: List<Album>, onDismiss: () -> Unit) {
+fun AddItemDialog(album: Album, labelList: List<String>?, albumData: List<Album>, onDismiss: () -> Unit) {
 
     var pickedImage by remember { mutableStateOf<ImageBitmap?>(null) }
     var itemName by remember { mutableStateOf("") }
     var itemDesc by remember { mutableStateOf("") }
     var itemRank by remember { mutableStateOf(ItemRank.NONE) }
-    val totalLabelList = remember { mutableStateListOf(*labelList.map { LabelCheckInfo(it.label, it.name) }.toTypedArray()) }
+    val totalLabelList = remember { mutableStateListOf(*(labelList?.toTypedArray() ?: emptyArray())) }
+    val totalLabelListCheckInfo = remember { SnapshotStateMap<String, Boolean>() }
     var itemScore by remember { mutableStateOf(0.0f) }
     val itemLabel = remember { mutableStateListOf<String>() }
     val itemLabelSet = remember { mutableStateMapOf<String, String>() }
@@ -1589,18 +1606,18 @@ fun AddItemDialog(album: Album, labelList: List<LabelCheckInfo<String>>, albumDa
                                 addItemValue = value
                             }
                         }
-                        items(totalLabelList.size, key = { index-> totalLabelList[index].name to 1 }) { index->
+                        items(totalLabelList.size, key = { index-> totalLabelList[index] }) { index->
                             val item = totalLabelList[index]
-                            val isChecked by item.isChecked.observeAsState()
-                            CheckableLabelView(label = item.label, isChecked = isChecked ?: false) {
-                                if (it && !itemLabelSet.containsKey(item.label)) {
-                                    itemLabelSet[item.label] = item.label
-                                    itemLabel.add(0, item.label)
-                                } else if (!it && itemLabelSet.containsKey(item.label)) {
-                                    itemLabelSet.remove(item.label)
-                                    itemLabel.remove(item.label)
+                            val isChecked = totalLabelListCheckInfo[item] ?: false
+                            CheckableLabelView(label = item, isChecked = isChecked) {
+                                if (it && !itemLabelSet.containsKey(item)) {
+                                    itemLabelSet[item] = item
+                                    itemLabel.add(0, item)
+                                } else if (!it && itemLabelSet.containsKey(item)) {
+                                    itemLabelSet.remove(item)
+                                    itemLabel.remove(item)
                                 }
-                                item.isChecked.value = it
+                                totalLabelListCheckInfo[item] = it
                             }
                         }
                     }

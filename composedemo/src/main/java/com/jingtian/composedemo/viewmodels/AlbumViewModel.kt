@@ -32,6 +32,11 @@ import kotlinx.coroutines.withContext
 class AlbumViewModel : ViewModel() {
     companion object {
         private const val TAG = "AlbumViewModel"
+
+        fun MutableLiveData<Int>.notifyChange() {
+            this.value = (this.value ?: 0) + 1
+        }
+
     }
     val albumDao = DataBase.dbImpl.getAlbumDao()
     val albumItemDao = DataBase.dbImpl.getAlbumItemDao()
@@ -49,10 +54,7 @@ class AlbumViewModel : ViewModel() {
     val albumListChange: MutableLiveData<Int> = MutableLiveData(0)
     val albumNameChange: MutableLiveData<Int> = MutableLiveData(0)
     val albumItemListChange: MutableLiveData<Int> = MutableLiveData(0)
-
-    fun MutableLiveData<Int>.notifyChange() {
-        this.value = (this.value ?: 0) + 1
-    }
+    val filterCheckChanged: MutableLiveData<Int> = MutableLiveData(0)
 
     fun getAlbumName(albumId: Long): Album {
         return albumDao.getAlbum(albumId)
