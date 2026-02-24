@@ -1192,36 +1192,7 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
 //                    .padding(12.dp)
                     .clip(RectangleShape),
             ) {
-
                 item {
-                    val currentPickedImage = pickedImage
-                    if (currentPickedImage == null) {
-                        Image(
-                            painter = painterResource(imageResource),
-                            contentDescription = "上传照片",
-                            Modifier
-                                .fillMaxWidth()
-                                .wrapContentHeight()
-                                .padding(12.dp)
-                                .clickable {
-                                    pickImage()
-                                },
-                            contentScale = ContentScale.FillWidth
-                        )
-                    } else {
-                        Image(
-                            bitmap = currentPickedImage,
-                            contentDescription = "上传照片",
-                            Modifier
-                                .clickable {
-                                    pickImage()
-                                }
-                                .fillMaxWidth()
-                                .wrapContentHeight(),
-                            contentScale = ContentScale.FillWidth
-                        )
-                    }
-
                     OutlinedTextField(itemName, { value->
                         itemName = value
                     }, modifier = Modifier
@@ -1348,6 +1319,39 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
                             }
                         }
                     }
+                }
+
+                item {
+                    val currentPickedImage = pickedImage
+                    if (currentPickedImage == null) {
+                        Image(
+                            painter = painterResource(imageResource),
+                            contentDescription = "上传照片",
+                            Modifier
+                                .fillMaxWidth()
+                                .wrapContentHeight()
+                                .padding(12.dp)
+                                .clickable {
+                                    pickImage()
+                                },
+                            contentScale = ContentScale.FillWidth
+                        )
+                    } else {
+                        Image(
+                            bitmap = currentPickedImage,
+                            contentDescription = "上传照片",
+                            Modifier
+                                .clickable {
+                                    pickImage()
+                                }
+                                .fillMaxWidth()
+                                .wrapContentHeight(),
+                            contentScale = ContentScale.FillWidth
+                        )
+                    }
+                }
+
+                item {
                     Column(
                         Modifier
                             .padding(horizontal = 6.dp)
@@ -1455,34 +1459,6 @@ fun AddItemDialog(album: Album, labelList: List<LabelCheckInfo<String>>, albumDa
         ) {
 
             item {
-                val currentPickedImage = pickedImage
-                if (currentPickedImage == null) {
-                    Image(
-                        painter = painterResource(imageResource),
-                        contentDescription = "上传照片",
-                        Modifier
-                            .fillMaxWidth()
-                            .wrapContentHeight()
-                            .padding(12.dp)
-                            .clickable {
-                                pickImage()
-                            },
-                        contentScale = ContentScale.FillWidth
-                    )
-                } else {
-                    Image(
-                        bitmap = currentPickedImage,
-                        contentDescription = "上传照片",
-                        Modifier
-                            .clickable {
-                                pickImage()
-                            }
-                            .fillMaxWidth()
-                            .wrapContentHeight(),
-                        contentScale = ContentScale.FillWidth
-                    )
-                }
-
                 OutlinedTextField(itemName, { value->
                     itemName = value
                 }, modifier = Modifier
@@ -1609,6 +1585,39 @@ fun AddItemDialog(album: Album, labelList: List<LabelCheckInfo<String>>, albumDa
                         }
                     }
                 }
+            }
+
+            item {
+                val currentPickedImage = pickedImage
+                if (currentPickedImage == null) {
+                    Image(
+                        painter = painterResource(imageResource),
+                        contentDescription = "上传照片",
+                        Modifier
+                            .fillMaxWidth()
+                            .wrapContentHeight()
+                            .padding(12.dp)
+                            .clickable {
+                                pickImage()
+                            },
+                        contentScale = ContentScale.FillWidth
+                    )
+                } else {
+                    Image(
+                        bitmap = currentPickedImage,
+                        contentDescription = "上传照片",
+                        Modifier
+                            .clickable {
+                                pickImage()
+                            }
+                            .fillMaxWidth()
+                            .wrapContentHeight(),
+                        contentScale = ContentScale.FillWidth
+                    )
+                }
+            }
+
+            item {
                 Column(
                     Modifier
                         .padding(horizontal = 6.dp)
