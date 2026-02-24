@@ -17,6 +17,7 @@ import androidx.core.net.toUri
 import com.jingtian.composedemo.base.app
 import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.FileType
+import com.jingtian.composedemo.utils.BitMapCachePool.toImmutable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -366,7 +367,9 @@ object FileStorageUtils {
         maxHeight: Int = -1,
         onLoadBitmap: suspend (Bitmap?)->Unit
     ): Job = coroutineScope.launch(Dispatchers.IO) {
-        BitMapCachePool.loadImage(fileInfo, maxWidth, maxHeight) { getThumbnailByType(fileInfo.fileType, videoUri) }.second?.let {
+        BitMapCachePool.loadImage(fileInfo, maxWidth, maxHeight) {
+            getThumbnailByType(fileInfo.fileType, videoUri).toImmutable()
+        }.second?.let {
             withContext(Dispatchers.Main) {
                 onLoadBitmap(it)
             }

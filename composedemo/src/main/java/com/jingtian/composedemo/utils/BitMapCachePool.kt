@@ -29,6 +29,14 @@ object BitMapCachePool {
         }
     }
 
+    fun Bitmap?.toImmutable(): Bitmap? {
+        return if (this != null && this.isMutable) {
+            return this.copy(this.config, false)
+        } else {
+            this
+        }
+    }
+
     class BitMapCache(private val fileType: FileType) {
         private val imagePool = ConcurrentHashMap<Long, ArrayList<Pair<Int, SoftReference<Bitmap?>>>>()
 
@@ -51,13 +59,13 @@ object BitMapCachePool {
         private fun tryGetNeighborBitmap(queue: ArrayList<Pair<Int, SoftReference<Bitmap?>>>, id: Long, scaleFactor: Int, insertPos: Int, bitmapCreator: () -> Bitmap?): Pair<Int, Bitmap>? {
             getIfNotNull(queue, insertPos-1)?.let { (neighborScaleFactor, bitmap)->
                 CoroutineUtils.runIOTask({
-                    createAndStoreBitmap(id, scaleFactor, -insertPos-1, queue, bitmapCreator)
+                    createAndStoreBitmap(id, scaleFactor, -insertPos-1, queue, bitmapCreator).toImmutable()
                 })
                 return neighborScaleFactor to bitmap
             }
             getIfNotNull(queue, insertPos)?.let { (neighborScaleFactor, bitmap)->
                 CoroutineUtils.runIOTask({
-                    createAndStoreBitmap(id, scaleFactor, -insertPos-1, queue, bitmapCreator)
+                    createAndStoreBitmap(id, scaleFactor, -insertPos-1, queue, bitmapCreator).toImmutable()
                 })
                 return neighborScaleFactor to bitmap
             }
@@ -71,7 +79,7 @@ object BitMapCachePool {
                     getIfNotNull(queue, 0)?.let { (scaleFactor, bitmap)->
                         return bitmap
                     }
-                    return bitmapCreator()
+                    return bitmapCreator().toImmutable()
                 }
                 val insertPos = queue.binarySearch {
                     scaleFactor - it.first
@@ -87,7 +95,7 @@ object BitMapCachePool {
                     tryGetNeighborBitmap(queue, id, scaleFactor, insertPos, bitmapCreator)?.let { (scaleFactor, bitmap)->
                         return bitmap
                     }
-                    val bitmap = bitmapCreator()
+                    val bitmap = bitmapCreator().toImmutable()
                     queue[insertPos] = scaleFactor to SoftReference(bitmap)
                     return bitmap
                 }
@@ -271,6 +279,7 @@ object BitMapCachePool {
                     inJustDecodeBounds = false // 实际加载像素
                     inSampleSize = scaleFactor // 缩放比例（2的倍数，如 2=1/2 大小，4=1/4 大小）
                     inPreferredConfig = Bitmap.Config.RGB_565 // 可选：使用 RGB_565 节省内存（比 ARGB_8888 节省一半）
+                    inMutable = false // 不可变
                 }
                 BitmapFactory.decodeStream(`is`, null, options)
             }
