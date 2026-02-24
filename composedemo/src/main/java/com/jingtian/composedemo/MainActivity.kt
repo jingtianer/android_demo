@@ -139,6 +139,7 @@ import com.jingtian.composedemo.utils.FileStorageUtils
 import com.jingtian.composedemo.utils.FileStorageUtils.getFileNameFromUri
 import com.jingtian.composedemo.utils.FileStorageUtils.getMediaType
 import com.jingtian.composedemo.utils.FileStorageUtils.getThumbnail
+import com.jingtian.composedemo.utils.FileStorageUtils.isHidden
 import com.jingtian.composedemo.utils.FileStorageUtils.safeToFile
 import com.jingtian.composedemo.utils.UserStorage
 import com.jingtian.composedemo.utils.ViewUtils.commonConfig
@@ -1124,7 +1125,7 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
     val multipleImagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
         onResult = { uri: Uri? ->
-            uri ?: return@rememberLauncherForActivityResult
+            uri?.takeIf { !it.isHidden() } ?: return@rememberLauncherForActivityResult
             selectedFileType = getMediaType(uri)
             selectedUri = uri
             onSelectedUriChange()
@@ -1369,7 +1370,7 @@ fun AddItemDialog(album: Album, labelList: List<LabelCheckInfo<String>>, albumDa
     val multipleImagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
         onResult = { uri: Uri? ->
-            uri ?: return@rememberLauncherForActivityResult
+            uri?.takeIf { !it.isHidden() } ?: return@rememberLauncherForActivityResult
             when (getMediaType(uri)) {
                 FileType.IMAGE -> {
                     BitMapCachePool.toBitMap(scope, uri, maxWidth = imageWidth.dpValue.toInt()) { _, bitmap->
@@ -1759,7 +1760,7 @@ fun DrawerHeader() {
     val multipleImagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
         onResult = { uri: Uri? ->
-            uri ?: return@rememberLauncherForActivityResult
+            uri?.takeIf { !it.isHidden() } ?: return@rememberLauncherForActivityResult
             scope.launch(Dispatchers.IO) {
                 val imageStorage = FileStorageUtils.getStorage(FileType.IMAGE) ?: return@launch
                 val currentUser = UserStorage.userInstance

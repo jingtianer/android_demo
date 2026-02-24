@@ -20,6 +20,7 @@ import com.jingtian.composedemo.utils.FileStorageUtils
 import com.jingtian.composedemo.utils.FileStorageUtils.getFileIntrinsicSize
 import com.jingtian.composedemo.utils.FileStorageUtils.getFileNameFromUri
 import com.jingtian.composedemo.utils.FileStorageUtils.getMediaType
+import com.jingtian.composedemo.utils.FileStorageUtils.isHidden
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -202,6 +203,9 @@ class AlbumViewModel : ViewModel() {
             }
         } else {
             val uri = documentFile.uri
+            if (uri.isHidden()) {
+                return
+            }
             val type = getMediaType(uri)
             val fileName = getFileNameFromUri(uri) ?: ""
             val fileStorageId = FileStorageUtils.getStorage(type)?.asyncStore(uri) ?: DataBase.INVALID_ID

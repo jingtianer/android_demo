@@ -8,8 +8,10 @@ import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import android.media.MediaMetadataRetriever
 import android.net.Uri
+import android.os.Build
 import android.provider.DocumentsContract
 import android.provider.MediaStore
+import android.util.Log
 import android.webkit.MimeTypeMap
 import androidx.core.net.toUri
 import com.jingtian.composedemo.base.app
@@ -21,9 +23,15 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.FileNotFoundException
+import java.io.IOException
 import java.io.InputStream
 import java.lang.ref.SoftReference
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.Paths
 import java.util.concurrent.ConcurrentHashMap
+
 
 object FileStorageUtils {
     private const val RANK_IMAGE_STORE_ROOT_DIR = "fileStorage"
@@ -90,6 +98,74 @@ object FileStorageUtils {
         } else {
             null
         }
+    }
+
+    fun Uri.isHidden(): Boolean {
+        val file = safeToFile()
+        if (file != null) {
+            return file.let { it.exists() && it.isHidden }
+        }
+        val filePath = getRealPathFromContentUri(app, this)
+        if (filePath != null) {
+            return File(filePath).let { it.exists() && it.isHidden }
+        }
+
+        val fileName = getFileNameFromContentUri(app, this)
+        if (fileName != null && fileName.startsWith(".")) {
+            return true
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            try {
+                app.contentResolver.openInputStream(this).use { `is` ->
+                    if (`is` != null) {
+                        val path: Path = Paths.get(this.getPath())
+                        return Files.isHidden(path)
+                    }
+                }
+            } catch (e: FileNotFoundException) {
+            } catch (e: IOException) {
+            }
+        }
+        return false
+    }
+
+    /**
+     * 从Content URI获取文件真实路径（适配媒体文件）
+     */
+    private fun getRealPathFromContentUri(context: Context, uri: Uri): String? {
+        val projection = arrayOf(MediaStore.Images.Media.DATA)
+        var cursor: Cursor? = null
+        try {
+            cursor = context.contentResolver.query(uri, projection, null, null, null)
+            if (cursor != null && cursor.moveToFirst()) {
+                val columnIndex = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA)
+                return cursor.getString(columnIndex)
+            }
+        } catch (e: java.lang.Exception) {
+        } finally {
+            cursor?.close()
+        }
+        return null
+    }
+
+    /**
+     * 从Content URI获取文件名
+     */
+    private fun getFileNameFromContentUri(context: Context, uri: Uri): String? {
+        val projection = arrayOf(MediaStore.MediaColumns.DISPLAY_NAME)
+        var cursor: Cursor? = null
+        try {
+            cursor = context.contentResolver.query(uri, projection, null, null, null)
+            if (cursor != null && cursor.moveToFirst()) {
+                val columnIndex = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DISPLAY_NAME)
+                return cursor.getString(columnIndex)
+            }
+        } catch (e: Exception) {
+        } finally {
+            cursor?.close()
+        }
+        return null
     }
 
     fun Uri.extension(): String {
