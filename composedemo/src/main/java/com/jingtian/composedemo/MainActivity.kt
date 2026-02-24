@@ -1293,7 +1293,6 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
                                 val item = totalLabelList[index]
                                 val isChecked by item.isChecked.observeAsState()
                                 CheckableLabelView(label = item.label, isChecked = isChecked ?: false) {
-                                    item.isChecked.value = it
                                     if (it && !itemLabelSet.containsKey(item.label)) {
                                         itemLabelSet[item.label] = item.label
                                         itemLabel.add(0, item.label)
@@ -1301,6 +1300,7 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
                                         itemLabelSet.remove(item.label)
                                         itemLabel.remove(item.label)
                                     }
+                                    item.isChecked.value = it
                                 }
                             }
                         }
@@ -1324,6 +1324,8 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
                         }) { index: Int ->
                             LabelView(itemLabel[index]) {
                                 itemLabel.removeAt(index)
+                                itemLabelSet.remove(itemLabel[index])
+                                itemLabel.remove(itemLabel[index])
                             }
                         }
                     }
@@ -1583,6 +1585,8 @@ fun AddItemDialog(album: Album, labelList: List<LabelCheckInfo<String>>, albumDa
                     }) { index: Int ->
                         LabelView(itemLabel[index]) {
                             itemLabel.removeAt(index)
+                            itemLabelSet.remove(itemLabel[index])
+                            itemLabel.remove(itemLabel[index])
                         }
                     }
                 }
