@@ -647,7 +647,6 @@ fun FilterPanel(
                 }
             }
         }
-
         Spacer(Modifier.height(16.dp))
         Row(
             Modifier
@@ -656,9 +655,14 @@ fun FilterPanel(
             Button(onClick = {
                 scope.launch {
                     withContext(Dispatchers.Default) {
-                        fileTypeCheckStateList.keys.forEach { fileTypeCheckStateList[it] = !(fileTypeCheckStateList[it] ?: false) }
-                        itemRankCheckStateList.keys.forEach { itemRankCheckStateList[it] = !(itemRankCheckStateList[it] ?: false) }
-                        labelCheckStateList?.keys?.forEach { labelCheckStateList[it] = !(labelCheckStateList[it] ?: false) }
+                        fun SnapshotStateMap<String, Boolean>.reverseList(totalList: List<String>) {
+                            val reveredList = totalList.toSet() - this.keys
+                            this.clear()
+                            this.putAll(reveredList.map { it to true })
+                        }
+                        fileTypeCheckStateList.reverseList(fileTypeList)
+                        itemRankCheckStateList.reverseList(itemRankList)
+                        labelCheckStateList?.reverseList(labelList)
                     }
                     viewModel.filterCheckChanged.notifyChange()
                 }
@@ -673,9 +677,9 @@ fun FilterPanel(
             Button(onClick = {
                 scope.launch {
                     withContext(Dispatchers.Default) {
-                        fileTypeCheckStateList.keys.forEach { fileTypeCheckStateList[it] = false }
-                        itemRankCheckStateList.keys.forEach { itemRankCheckStateList[it] = false }
-                        labelCheckStateList?.keys?.forEach { labelCheckStateList[it] = false }
+                        fileTypeCheckStateList.clear()
+                        itemRankCheckStateList.clear()
+                        labelCheckStateList?.clear()
                     }
                     viewModel.filterCheckChanged.notifyChange()
                 }
