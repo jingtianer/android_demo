@@ -49,9 +49,10 @@ object BitMapCachePool {
                 }
                 if (insertPos < 0) {
                     val cacheFile = getCacheFile(fileType.value, id, scaleFactor)
-                    if (cacheFile.exists()) {
+                    if (cacheFile?.exists() == true) {
                         FileInputStream(cacheFile).use {
                             BitmapFactory.decodeStream(it)?.let {
+                                queue.add(-insertPos-1, scaleFactor to SoftReference(it))
                                 return@put it
                             }
                         }
@@ -61,7 +62,7 @@ object BitMapCachePool {
                     if (bitmap != null) {
                         CoroutineUtils.runIOTask({
                             val file = getCacheFile(fileType.value, id, scaleFactor)
-                            if (file.exists()) {
+                            if (file == null || file.exists()) {
                                 return@runIOTask
                             }
                             FileOutputStream(file).use {
@@ -94,7 +95,7 @@ object BitMapCachePool {
         }
     }
 
-    private fun getCacheFile(fileType: Int, storageId: Long, scaleFactor: Int): File {
+    private fun getCacheFile(fileType: Int, storageId: Long, scaleFactor: Int): File? {
         ensureCacheDir(fileType, storageId)
         return File(app.cacheDir, "bitmap_cache/bitmap_${fileType}/${storageId}/${scaleFactor}").ensureFile()
     }
