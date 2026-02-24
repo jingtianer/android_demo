@@ -846,6 +846,13 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, totalLabel
         playIntent(context, fileInfo)
     }
 
+    val fileTypeIcon = when(albumItemRelation.fileInfo.fileType) {
+        FileType.IMAGE -> R.drawable.pic_icon
+        FileType.VIDEO -> R.drawable.video_icon
+        FileType.AUDIO -> R.drawable.music_icon
+        FileType.RegularFile -> R.drawable.doc_icon
+    }
+
     var showEditDialog by remember { mutableStateOf(false) }
     val viewModel: AlbumViewModel = viewModel()
 
@@ -866,9 +873,9 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, totalLabel
                 })
         }
         .background(
-            color = LocalAppPalette.current.galleryCardBg, shape = RoundedCornerShape(padding)
+            color = LocalAppPalette.current.galleryCardBg, shape = RoundedCornerShape(padding * 2)
         )
-        .clip(RoundedCornerShape(padding))) {
+        .clip(RoundedCornerShape(padding * 2))) {
 
         val currentPickedImage = imageBitmap
 
@@ -880,8 +887,15 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, totalLabel
             }
         }
 
+
+        Icon(
+            painter = painterResource(fileTypeIcon),
+            contentDescription = "文件类型图标",
+            modifier = Modifier.padding(vertical = 4.dp).size(24.dp).align(Alignment.CenterHorizontally)
+        )
+
         Box(Modifier
-            .clip(RoundedCornerShape(padding))) {
+            .clip(RoundedCornerShape(padding * 2))) {
             if (currentPickedImage == null) {
                 Image(
                     painter = painterResource(imageResource),
@@ -920,7 +934,7 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, totalLabel
                     Modifier
                         .wrapContentSize()
                         .align(Alignment.TopEnd)
-                        .clip(RoundedCornerShape(bottomStart = padding))
+                        .clip(RoundedCornerShape(bottomStart = padding * 2))
                     ,
                     update = {
                         it.initRankView()
