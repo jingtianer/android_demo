@@ -892,7 +892,7 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, totalLabel
                 }
                 HTML -> {
                     intrinsicRatio = 1f
-                    imageResource = null
+                    imageResource = R.drawable.chrome
                     imageBitmap = null
                     getThumbnail(
                         albumItemRelation.fileInfo,
@@ -1001,17 +1001,18 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, totalLabel
                     Modifier
                         .fillMaxWidth()
                         .aspectRatioOrNull(intrinsicRatio)
+                        .padding(6.dp)
                         .align(Alignment.Center),
                     contentScale = ContentScale.FillWidth
                 )
             } else if (albumItemRelation.fileInfo.fileType == HTML) {
-                CommonWebView(Modifier
-                    .fillMaxWidth()
-                    .aspectRatioOrNull(intrinsicRatio)
-                    .align(Alignment.Center),
-                    uri = albumItemRelation.fileInfo.getFileUri(),
-                    enabled = false,
-                )
+//                CommonWebView(Modifier
+//                    .fillMaxWidth()
+//                    .aspectRatioOrNull(intrinsicRatio)
+//                    .align(Alignment.Center),
+//                    uri = albumItemRelation.fileInfo.getFileUri(),
+//                    enabled = false,
+//                )
             }
 
             if (itemRank != null && itemRank != ItemRank.NONE) {
@@ -1123,7 +1124,8 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
 
     val totalLabelList = remember { mutableStateListOf(*(totalLabelList.toSet() - albumItemRelation.labelInfos.map { it.label }.toSet()).map { LabelCheckInfo(it, it) }.toTypedArray()) }
 
-    val imageWidth = androidx.compose.ui.unit.min(LocalConfiguration.current.screenWidthDp.dp / 2, 200.dp)
+    val imageWidth = min(LocalConfiguration.current.let { min(it.screenWidthDp, it.screenHeightDp)/2 }, 180).dp
+
     fun deleteItem() {
         viewModel.deleteItem(albumItemRelation)
     }
@@ -1289,9 +1291,7 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
     ) {
         AppThemeDialog(
             Modifier
-                .width(imageWidth / goldenRatio)
-                .height(imageWidth / goldenRatio / goldenRatio + imageWidth)
-                .wrapContentHeight()
+                .fillMaxSize(0.9f)
 //                .clip(RoundedCornerShape(4.dp))
 //                .background(LocalAppPalette.current.dialogBg)
 //                .dialogBackground()
@@ -1524,14 +1524,13 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
 }
 
 @Composable
-fun AddItemDialog(album: Album, labelList: List<String>?, albumData: List<Album>, onDismiss: () -> Unit) {
+fun AddItemDialog(album: Album, totalLabelList: List<String>, albumData: List<Album>, onDismiss: () -> Unit) {
 
     var pickedImage by remember { mutableStateOf<ImageBitmap?>(null) }
     var itemName by remember { mutableStateOf("") }
     var itemDesc by remember { mutableStateOf("") }
     var itemRank by remember { mutableStateOf(ItemRank.NONE) }
-    val totalLabelList = remember { mutableStateListOf(*(labelList?.toTypedArray() ?: emptyArray())) }
-    val totalLabelListCheckInfo = remember { SnapshotStateMap<String, Boolean>() }
+    val totalLabelList = remember { mutableStateListOf(*(totalLabelList.map { LabelCheckInfo(it, it) }.toTypedArray())) }
     var itemScore by remember { mutableStateOf(0.0f) }
     val itemLabel = remember { mutableStateListOf<String>() }
     val itemLabelSet = remember { mutableStateMapOf<String, String>() }
@@ -1541,7 +1540,7 @@ fun AddItemDialog(album: Album, labelList: List<String>?, albumData: List<Album>
     val scope = rememberCoroutineScope()
     var imageResource by remember { mutableStateOf(R.drawable.upload_to_cloud) }
     val viewModel: AlbumViewModel = viewModel()
-    val imageWidth = LocalConfiguration.current.screenWidthDp.dp * LocalAppUIConstants.current.dialogPercent * goldenRatio
+    val imageWidth = min(LocalConfiguration.current.let { min(it.screenWidthDp, it.screenHeightDp)/2 }, 180).dp
     var currentSelectedAlbum by remember { mutableStateOf(album) }
     var selectedFileType by remember { mutableStateOf<FileType?>(null) }
     fun saveItem(context: Context) {
@@ -1744,20 +1743,20 @@ fun AddItemDialog(album: Album, labelList: List<String>?, albumData: List<Album>
                                 addItemValue = value
                             }
                         }
-//                        items(totalLabelList.size, key = { index-> totalLabelList[index].name to 1 }) { index->
-//                            val item = totalLabelList[index]
-//                            val isChecked by item.isChecked.observeAsState()
-//                            CheckableLabelView(label = item.label, isChecked = isChecked ?: false) {
-//                                if (it && !itemLabelSet.containsKey(item.label)) {
-//                                    itemLabelSet[item.label] = item.label
-//                                    itemLabel.add(0, item.label)
-//                                } else if (!it && itemLabelSet.containsKey(item.label)) {
-//                                    itemLabelSet.remove(item.label)
-//                                    itemLabel.remove(item.label)
-//                                }
-//                                item.isChecked.value = it
-//                            }
-//                        }
+                        items(totalLabelList.size, key = { index-> totalLabelList[index].name to 1 }) { index->
+                            val item = totalLabelList[index]
+                            val isChecked by item.isChecked.observeAsState()
+                            CheckableLabelView(label = item.label, isChecked = isChecked ?: false) {
+                                if (it && !itemLabelSet.containsKey(item.label)) {
+                                    itemLabelSet[item.label] = item.label
+                                    itemLabel.add(0, item.label)
+                                } else if (!it && itemLabelSet.containsKey(item.label)) {
+                                    itemLabelSet.remove(item.label)
+                                    itemLabel.remove(item.label)
+                                }
+                                item.isChecked.value = it
+                            }
+                        }
                     }
                     LazyHorizontalStaggeredGrid(rows = StaggeredGridCells.FixedSize(30.dp),
                         Modifier
