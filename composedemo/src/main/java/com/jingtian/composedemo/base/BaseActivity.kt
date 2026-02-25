@@ -18,6 +18,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.jingtian.composedemo.ui.theme.DemoAppTheme
 import com.jingtian.composedemo.utils.AppTheme
 import com.jingtian.composedemo.utils.UserStorage
+import com.jingtian.composedemo.utils.python.PyInitializer
 import com.jingtian.composedemo.viewmodels.AppThemeViewModel
 
 abstract class BaseActivity : AppCompatActivity() {
@@ -39,6 +40,7 @@ abstract class BaseActivity : AppCompatActivity() {
         if (shouldFitSystemBars()) {
             fitSystemBars()
         }
+        PyInitializer.init()
     }
 
     @Composable
