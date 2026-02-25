@@ -823,18 +823,18 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, totalLabel
     var itemLabel by remember { mutableStateOf(albumItemRelation.labelInfos) }
 
     val scope = rememberCoroutineScope()
-    var imageResource by remember { mutableStateOf<Int?>(R.drawable.load_failed) }
+    var imageResource by remember { mutableStateOf(R.drawable.load_failed) }
 
     fun FileInfo.aspectRatio(): Float? {
         return (this.intrinsicWidth.toFloat() / this.intrinsicHeight.toFloat()).takeIf {
             this.intrinsicHeight > 0 && this.intrinsicWidth > 0
-        }
+        } ?: 1f
     }
 
     fun ImageBitmap.aspectRatio(): Float? {
         return (this.width.toFloat() / this.height.toFloat()).takeIf {
             this.width > 0 && this.height > 0
-        }
+        } ?: 1f
     }
 
     var intrinsicRatio by remember {
@@ -887,7 +887,8 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, totalLabel
                     }
                 }
                 RegularFile -> {
-                    imageResource = null
+                    intrinsicRatio = 1f
+                    imageResource = R.drawable.file
                     imageBitmap = null
                 }
                 HTML -> {

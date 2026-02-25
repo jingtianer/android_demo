@@ -15,3 +15,7 @@
 local.properties
 .idea
 */release
+*/py39
+*/py310
+*/py311
+*/py312
