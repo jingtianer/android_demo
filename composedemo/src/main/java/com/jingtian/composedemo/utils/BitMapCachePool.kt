@@ -3,10 +3,7 @@ package com.jingtian.composedemo.utils
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
-import android.util.Log
 import androidx.annotation.IntRange
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
 import com.jingtian.composedemo.base.app
 import com.jingtian.composedemo.dao.DataBase
 import com.jingtian.composedemo.dao.model.FileInfo
@@ -253,7 +250,11 @@ object BitMapCachePool {
         maxHeight: Int = -1,
         creator: () -> Bitmap?,
     ): Pair<Int, Bitmap?> {
-        val scaleFactor = calculateScaleFactor(fileInfo.intrinsicWidth, fileInfo.intrinsicHeight, maxWidth, maxHeight)
+        val scaleFactor = if (fileInfo.fileType == FileType.HTML) {
+            2
+        } else {
+            calculateScaleFactor(fileInfo.intrinsicWidth, fileInfo.intrinsicHeight, maxWidth, maxHeight)
+        }
         val bitmap =  getBitMapCachePool(fileInfo.fileType).put(fileInfo.storageId, scaleFactor, creator)
         return scaleFactor to bitmap
     }

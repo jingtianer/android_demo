@@ -119,6 +119,7 @@ import com.jingtian.composedemo.dao.model.DEFAULT_DESC
 import com.jingtian.composedemo.dao.model.DEFAULT_USER_NAME
 import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.FileType
+import com.jingtian.composedemo.dao.model.FileType.*
 import com.jingtian.composedemo.dao.model.ItemRank
 import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
 import com.jingtian.composedemo.ui.theme.LocalAppPalette
@@ -149,6 +150,8 @@ import com.jingtian.composedemo.utils.splitByWhiteSpace
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
 import com.jingtian.composedemo.viewmodels.AlbumViewModel.Companion.notifyChange
 import com.jingtian.composedemo.viewmodels.AppThemeViewModel
+import com.jingtian.composedemo.web.CommonWebView
+import com.jingtian.composedemo.web.WebViewActivity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -520,7 +523,7 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
                 .fillMaxSize()
                 .weight(1f)
                 .padding(horizontal = galleryItemPadding)) {
-            items(filteredItemList.size, key = { index-> filteredItemList[index].hashCode() }) { index: Int ->
+            items(filteredItemList.size, key = { index-> filteredItemList[index].hashCode() }, contentType = { index-> filteredItemList[index].fileInfo.fileType.value }) { index: Int ->
                 AlbumItemView(filteredItemList[index], album.value, totalLabelList, albumList, size, galleryItemPadding)
             }
         }
@@ -764,7 +767,7 @@ fun RoundRectCheckableLabel(item: String, isChecked: Boolean, checkedList: Snaps
     }
 }
 
-fun playIntent(context: Context, fileInfo: FileInfo): Intent? {
+fun systemFallbackIntent(context: Context, fileInfo: FileInfo): Intent? {
     val mediaType = fileInfo.fileType.mimeType
     val originFileUri = fileInfo.getFileUri()
     val originFile = originFileUri?.safeToFile()
@@ -786,6 +789,23 @@ fun playIntent(context: Context, fileInfo: FileInfo): Intent? {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
+    }
+}
+
+fun webIntent(context: Context, fileInfo: FileInfo) : Intent {
+    return Intent(context, WebViewActivity::class.java).apply {
+        putExtra(WebViewActivity.KEY_WEB_URI, fileInfo.getFileUri())
+    }
+}
+
+fun playIntent(context: Context, fileInfo: FileInfo): Intent? {
+    val mediaType = fileInfo.fileType
+    return when (mediaType) {
+        HTML -> {
+            webIntent(context, fileInfo)
+        }
+
+        IMAGE, VIDEO, AUDIO, RegularFile -> systemFallbackIntent(context, fileInfo)
     }
 }
 
@@ -816,7 +836,7 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, totalLabel
 
     var intrinsicRatio by remember {
         mutableStateOf(
-            albumItemRelation.fileInfo?.aspectRatio()
+            albumItemRelation.fileInfo.aspectRatio()
         )
     }
 
@@ -825,7 +845,7 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, totalLabel
             val uri = albumItemRelation.fileInfo?.getFileUri() ?: return@withContext
             val fileType = albumItemRelation.fileInfo.fileType
             when(fileType) {
-                FileType.IMAGE -> {
+                IMAGE -> {
                     val (_, image) = BitMapCachePool.loadImage(
                         albumItemRelation.fileInfo,
                         size.dpValue.toInt(),
@@ -838,7 +858,7 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, totalLabel
                         }
                     }
                 }
-                FileType.VIDEO -> {
+                VIDEO -> {
                     getThumbnail(
                         albumItemRelation.fileInfo,
                         scope, uri,
@@ -850,7 +870,7 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, totalLabel
                         }
                     }
                 }
-                FileType.AUDIO -> {
+                AUDIO -> {
                     imageResource = R.drawable.music
                     getThumbnail(
                         albumItemRelation.fileInfo,
@@ -863,9 +883,21 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, totalLabel
                         }
                     }
                 }
-                FileType.RegularFile -> {
+                RegularFile -> {
                     imageResource = null
                     imageBitmap = null
+                }
+                HTML -> {
+                    intrinsicRatio = 1f
+                    imageResource = null
+                    imageBitmap = null
+                    getThumbnail(
+                        albumItemRelation.fileInfo,
+                        scope, uri,
+                        maxWidth = size.dpValue.toInt(),
+                    ) { bitmap->
+                        imageBitmap = bitmap?.asImageBitmap()
+                    }
                 }
             }
         }
@@ -876,19 +908,19 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, totalLabel
 
     val context = LocalContext.current
     val playIntent = remember(albumItemRelation) {
-        val fileInfo = albumItemRelation.fileInfo ?: return@remember null
+        val fileInfo = albumItemRelation.fileInfo
         playIntent(context, fileInfo)
     }
 
     val fileTypeIcon = when(albumItemRelation.fileInfo.fileType) {
-        FileType.IMAGE -> R.drawable.pic_icon
-        FileType.VIDEO -> R.drawable.video_icon
-        FileType.AUDIO -> R.drawable.music_icon
-        FileType.RegularFile -> R.drawable.doc_icon
+        IMAGE -> R.drawable.pic_icon
+        VIDEO -> R.drawable.video_icon
+        AUDIO -> R.drawable.music_icon
+        HTML -> R.drawable.web_icon
+        RegularFile -> R.drawable.doc_icon
     }
 
     var showEditDialog by remember { mutableStateOf(false) }
-    val viewModel: AlbumViewModel = viewModel()
 
     Column(Modifier
         .width(size)
@@ -956,6 +988,14 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, totalLabel
                         .aspectRatioOrNull(intrinsicRatio)
                         .align(Alignment.Center),
                     contentScale = ContentScale.FillWidth
+                )
+            } else if (albumItemRelation.fileInfo.fileType == HTML) {
+                CommonWebView(Modifier
+                    .fillMaxWidth()
+                    .aspectRatioOrNull(intrinsicRatio)
+                    .align(Alignment.Center),
+                    uri = albumItemRelation.fileInfo.getFileUri(),
+                    enabled = false,
                 )
             }
 
@@ -1099,7 +1139,7 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
     suspend fun updateImage(uri: Uri, fileType: FileType, fileInfo: FileInfo?) {
         withContext(Dispatchers.IO) {
             when (fileType) {
-                FileType.IMAGE -> {
+                IMAGE -> {
                     val bitmap = if (fileInfo != null) {
                         BitMapCachePool.loadImage(fileInfo, maxWidth = imageWidth.dpValue.toInt()).second?.asImageBitmap()
                     } else {
@@ -1110,7 +1150,7 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
                     }
                 }
 
-                FileType.VIDEO -> {
+                VIDEO -> {
                     if (fileInfo != null) {
                         getThumbnail(fileInfo, scope, uri, maxWidth = imageWidth.dpValue.toInt()) { bitmap ->
                             withContext(Dispatchers.Main) {
@@ -1118,7 +1158,7 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
                             }
                         }
                     } else {
-                        getThumbnail(FileType.VIDEO, scope, uri, maxWidth = imageWidth.dpValue.toInt()) { bitmap: Bitmap? ->
+                        getThumbnail(VIDEO, scope, uri, maxWidth = imageWidth.dpValue.toInt()) { bitmap: Bitmap? ->
                             withContext(Dispatchers.Main) {
                                 pickedImage = bitmap?.asImageBitmap()
                             }
@@ -1126,7 +1166,7 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
                     }
                 }
 
-                FileType.AUDIO -> {
+                AUDIO -> {
                     imageResource = R.drawable.music
                     if (fileInfo != null) {
                         getThumbnail(fileInfo, scope, uri, maxWidth = imageWidth.dpValue.toInt()) { bitmap ->
@@ -1135,7 +1175,7 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
                             }
                         }
                     } else {
-                        getThumbnail(FileType.AUDIO, scope, uri, maxWidth = imageWidth.dpValue.toInt()) { bitmap: Bitmap? ->
+                        getThumbnail(AUDIO, scope, uri, maxWidth = imageWidth.dpValue.toInt()) { bitmap: Bitmap? ->
                             withContext(Dispatchers.Main) {
                                 pickedImage = bitmap?.asImageBitmap()
                             }
@@ -1143,7 +1183,27 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
                     }
                 }
 
-                FileType.RegularFile -> {
+                HTML -> {
+                    withContext(Dispatchers.Main) {
+                        imageResource = R.drawable.chrome
+                        pickedImage = null
+                    }
+                    if (fileInfo != null) {
+                        getThumbnail(fileInfo, scope, uri, maxWidth = imageWidth.dpValue.toInt()) { bitmap ->
+                            withContext(Dispatchers.Main) {
+                                pickedImage = bitmap?.asImageBitmap()
+                            }
+                        }
+                    } else {
+                        getThumbnail(HTML, scope, uri, maxWidth = imageWidth.dpValue.toInt()) { bitmap: Bitmap? ->
+                            withContext(Dispatchers.Main) {
+                                pickedImage = bitmap?.asImageBitmap()
+                            }
+                        }
+                    }
+                }
+
+                RegularFile -> {
                     withContext(Dispatchers.Main) {
                         imageResource = R.drawable.file
                         pickedImage = null
@@ -1452,27 +1512,35 @@ fun AddItemDialog(album: Album, labelList: List<String>?, albumData: List<Album>
         onResult = { uri: Uri? ->
             uri?.takeIf { !it.isHidden() } ?: return@rememberLauncherForActivityResult
             when (getMediaType(uri)) {
-                FileType.IMAGE -> {
+                IMAGE -> {
                     BitMapCachePool.toBitMap(scope, uri, maxWidth = imageWidth.dpValue.toInt()) { _, bitmap->
                         pickedImage = bitmap?.asImageBitmap()
                     }
                 }
 
-                FileType.VIDEO -> {
-                    getThumbnail(FileType.VIDEO, scope, uri, maxWidth = imageWidth.dpValue.toInt()) { bitmap: Bitmap? ->
+                VIDEO -> {
+                    getThumbnail(VIDEO, scope, uri, maxWidth = imageWidth.dpValue.toInt()) { bitmap: Bitmap? ->
                         pickedImage = bitmap?.asImageBitmap()
                     }
                 }
 
-                FileType.AUDIO -> {
+                AUDIO -> {
                     imageResource = R.drawable.music
-                    getThumbnail(FileType.AUDIO, scope, uri, maxWidth = imageWidth.dpValue.toInt()) { bitmap: Bitmap? ->
+                    pickedImage = null
+                    getThumbnail(AUDIO, scope, uri, maxWidth = imageWidth.dpValue.toInt()) { bitmap: Bitmap? ->
                         pickedImage = bitmap?.asImageBitmap()
                     }
-                    pickedImage = null
                 }
 
-                FileType.RegularFile -> {
+                HTML -> {
+                    imageResource = R.drawable.chrome
+                    pickedImage = null
+                    getThumbnail(AUDIO, scope, uri, maxWidth = imageWidth.dpValue.toInt()) { bitmap: Bitmap? ->
+                        pickedImage = bitmap?.asImageBitmap()
+                    }
+                }
+
+                RegularFile -> {
                     imageResource = R.drawable.file
                     pickedImage = null
                 }
@@ -1886,18 +1954,18 @@ fun DrawerHeader() {
         onResult = { uri: Uri? ->
             uri?.takeIf { !it.isHidden() } ?: return@rememberLauncherForActivityResult
             scope.launch(Dispatchers.IO) {
-                val imageStorage = FileStorageUtils.getStorage(FileType.IMAGE) ?: return@launch
+                val imageStorage = FileStorageUtils.getStorage(IMAGE) ?: return@launch
                 val currentUser = UserStorage.userInstance
                 val currentImageId =
                     currentUser.userAvatar.storageId.takeIf { it != DataBase.INVALID_ID }
                 val nextId = if (currentImageId != null) {
-                    BitMapCachePool.invalid(currentImageId, FileType.IMAGE)
+                    BitMapCachePool.invalid(currentImageId, IMAGE)
                     imageStorage.asyncStore(currentImageId, uri)
                 } else {
                     imageStorage.asyncStore(uri)
                 }
                 currentUser.userAvatar.storageId = nextId
-                currentUser.userAvatar.fileType = FileType.IMAGE
+                currentUser.userAvatar.fileType = IMAGE
                 currentUser.userAvatar.uri = uri
                 UserStorage.userInstance = currentUser
                 val (_, image) = BitMapCachePool.loadImage(

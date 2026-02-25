@@ -11,12 +11,12 @@ import android.net.Uri
 import android.os.Build
 import android.provider.DocumentsContract
 import android.provider.MediaStore
-import android.util.Log
 import android.webkit.MimeTypeMap
 import androidx.core.net.toUri
 import com.jingtian.composedemo.base.app
 import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.FileType
+import com.jingtian.composedemo.utils.BitMapCachePool.toImmutable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -286,13 +286,13 @@ object FileStorageUtils {
         // 方式1：通过ContentResolver获取MIME类型（推荐，最可靠）
         val contentResolver: ContentResolver = app.contentResolver
         val mimeType = contentResolver.getType(uri)
-
         return when {
             // 判断是否为图片
             mimeType?.startsWith("image/") == true -> FileType.IMAGE
             // 判断是否为视频
             mimeType?.startsWith("video/") == true -> FileType.VIDEO
             mimeType?.startsWith("audio/") == true -> FileType.AUDIO
+            mimeType?.startsWith("text/html") == true -> FileType.HTML
             // 方式2：兜底方案（通过文件扩展名判断，防止ContentResolver获取失败）
             else -> {
                 val extension = MimeTypeMap.getFileExtensionFromUrl(uri.toString())
@@ -301,6 +301,7 @@ object FileStorageUtils {
                     fallbackMimeType?.startsWith("image/") == true -> FileType.IMAGE
                     fallbackMimeType?.startsWith("video/") == true -> FileType.VIDEO
                     fallbackMimeType?.startsWith("audio/") == true -> FileType.AUDIO
+                    fallbackMimeType?.startsWith("text/html") == true -> FileType.HTML
                     else -> FileType.RegularFile
                 }
             }
@@ -311,6 +312,7 @@ object FileStorageUtils {
         return when (fileType) {
             FileType.VIDEO -> getVideoThumbnail(uri)
             FileType.AUDIO -> getAudioThumbnail(uri)
+            FileType.HTML -> getWebThumbnail(uri)
             FileType.RegularFile -> null
             FileType.IMAGE -> null
         }
@@ -350,11 +352,11 @@ object FileStorageUtils {
         val compressedBitmap = Bitmap.createBitmap(
             bitmap, 0, 0, width, height, matrix, true
         )
-//        if (compressedBitmap != bitmap) {
-//            bitmap.recycle() // 回收原始Bitmap
-//        }
+        if (compressedBitmap != bitmap) {
+            bitmap.recycle() // 回收原始Bitmap
+        }
         withContext(Dispatchers.Main) {
-            onLoadBitmap(compressedBitmap)
+            onLoadBitmap(compressedBitmap.toImmutable())
         }
     }
 
@@ -368,7 +370,7 @@ object FileStorageUtils {
     ): Job = coroutineScope.launch(Dispatchers.IO) {
         BitMapCachePool.loadImage(fileInfo, maxWidth, maxHeight) {
             getThumbnailByType(fileInfo.fileType, videoUri)?.apply {
-                this.copy(this.config, false)
+                this.toImmutable()
             }
         }.second?.let {
             withContext(Dispatchers.Main) {
@@ -413,12 +415,8 @@ object FileStorageUtils {
         }
     }
 
-    private suspend fun getAudioThumbnailIntrinsicSize(uri: Uri): Pair<Int, Int> {
-        return withContext(Dispatchers.IO) {
-            getAudioThumbnail(uri)
-        }?.let {
-            it.width to it.height
-        } ?: (-1 to -1)
+    private fun getWebThumbnail(uri: Uri): Bitmap? {
+        return null
     }
 
     private suspend fun getVideoThumbnailIntrinsicSize(videoUri: Uri): Pair<Int, Int> {
@@ -451,6 +449,9 @@ object FileStorageUtils {
         }
         FileType.AUDIO -> {
             getVideoThumbnailIntrinsicSize(uri)
+        }
+        FileType.HTML -> {
+            1 to 1
         }
         else -> -1 to -1
     }

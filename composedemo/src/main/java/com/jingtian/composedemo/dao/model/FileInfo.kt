@@ -38,6 +38,7 @@ enum class FileType(val value: Int, val mimeType: String, val typeName: String) 
     IMAGE(1, "image/*", "图片"),
     VIDEO(2, "video/*", "视频"),
     AUDIO(3, "audio/*", "音频"),
+    HTML(4, "text/html", "html"),
     RegularFile(0, "*/*", "其他"),
     ;
 

@@ -11,7 +11,6 @@ import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.LinkedList
-import java.util.concurrent.Callable
 import java.util.concurrent.Executors
 import java.util.concurrent.ThreadFactory
 import java.util.concurrent.locks.Condition
@@ -36,10 +35,10 @@ object CoroutineUtils {
     private val lowPriorityDispatcher: CoroutineDispatcher = Executors.newFixedThreadPool(2, LowPriorityThreadFactory())
         .asCoroutineDispatcher()
 
-    fun <T> runIOTaskLowPriority(block: Callable<T>, callback: (T) -> Unit = {}): Job {
+    fun <T> runIOTaskLowPriority(block: suspend ()->T, callback: (T) -> Unit = {}): Job {
         return globalScope.launch {
             val ret = withContext(lowPriorityDispatcher) {
-                block.call()
+                block()
             }
             withContext(Dispatchers.Main) {
                 callback.invoke(ret)

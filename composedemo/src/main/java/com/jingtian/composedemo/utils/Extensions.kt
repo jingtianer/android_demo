@@ -1,13 +1,16 @@
 package com.jingtian.composedemo.utils
 
+import android.content.Context
+import android.os.Build
+import android.util.DisplayMetrics
+import android.view.WindowManager
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.Stable
 import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.compose.ui.unit.Dp
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Observer
 import java.util.function.Predicate
+
 
 @Composable
 inline fun <T> MutableLiveData<T>.composeObserve(crossinline onUpdate: (T?)->Unit) {
@@ -45,3 +48,23 @@ fun CharSequence.splitBy(predicate: Predicate<Char>): List<String> {
 }
 
 fun CharSequence.splitByWhiteSpace() = splitBy(Char::isWhitespace)
+
+fun Context.getScreenWidth(): Int {
+    val displayMetrics = DisplayMetrics()
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        this.getSystemService(WindowManager::class.java).currentWindowMetrics.bounds.width()
+    } else {
+        this.getSystemService(WindowManager::class.java).defaultDisplay.getMetrics(displayMetrics)
+        displayMetrics.widthPixels
+    }
+}
+
+fun Context.getScreenHeight(): Int {
+    val displayMetrics = DisplayMetrics()
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        this.getSystemService(WindowManager::class.java).currentWindowMetrics.bounds.height()
+    } else {
+        this.getSystemService(WindowManager::class.java).defaultDisplay.getMetrics(displayMetrics)
+        displayMetrics.heightPixels
+    }
+}
