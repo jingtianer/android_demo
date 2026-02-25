@@ -302,7 +302,10 @@ object FileStorageUtils {
                     fallbackMimeType?.startsWith("video/") == true -> FileType.VIDEO
                     fallbackMimeType?.startsWith("audio/") == true -> FileType.AUDIO
                     fallbackMimeType?.startsWith("text/html") == true -> FileType.HTML
-                    else -> FileType.RegularFile
+                    else -> when {
+                        extension.equals("jfif") -> FileType.IMAGE // 二进制先按照图片处理
+                        else -> FileType.RegularFile
+                    }
                 }
             }
         }
