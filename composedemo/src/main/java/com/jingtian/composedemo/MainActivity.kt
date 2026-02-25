@@ -323,7 +323,28 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
     var albumName by remember { mutableStateOf(album.value.albumName) }
 
     var editAlbumDialogState by remember { mutableStateOf(false) }
-    LaunchedEffect(album) {
+
+
+    suspend fun updateFilterList() {
+        withContext(Dispatchers.Default) {
+            val labelFilterCheckedInfo = labelFilterCheckedInfo
+            val filteredList = mutableListOf<AlbumItemRelation>()
+            for (item in itemList) {
+                val labelCheck = labelFilterCheckedInfo.isNullOrEmpty() || item.labelInfos.map { it.label }.intersect(labelFilterCheckedInfo.keys).isNotEmpty()
+                val fileTypeCheck = fileTypeCheckState.isEmpty() || fileTypeCheckState.get(item.fileInfo.fileType.typeName) == true
+                val itemRankCheck = itemRankTypeCheckState.isEmpty() || itemRankTypeCheckState.get(item.albumItem.rank.name) == true
+                if (labelCheck && fileTypeCheck && itemRankCheck) {
+                    filteredList.add(item)
+                }
+            }
+            withContext(Dispatchers.Main) {
+                filteredItemList.clear()
+                filteredItemList.addAll(filteredList)
+            }
+        }
+    }
+
+    LaunchedEffect(Unit, album) {
         withContext(Dispatchers.IO) {
             viewModel.getLabelList(album.value).collect { value->
                 val checkList = SnapshotStateMap<String, Boolean>()
@@ -340,17 +361,17 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
                     totalLabelList.clear()
                     totalLabelList.addAll(value)
                 }
+                updateFilterList()
             }
         }
     }
+
 
     LaunchedEffect(albumItemDataChange, album) {
         withContext(Dispatchers.IO) {
             viewModel.getAllAlbumItem(album.value).collect {
                 withContext(Dispatchers.Main) {
                     itemList = it
-                    filteredItemList.clear()
-                    filteredItemList.addAll(it)
                 }
             }
         }
@@ -369,6 +390,7 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
                 totalLabelList.clear()
                 totalLabelList.addAll(value)
             }
+            updateFilterList()
         }
     }
 
@@ -499,23 +521,8 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
             }
         }
         val filterChanged by viewModel.filterCheckChanged.observeAsState()
-        LaunchedEffect(filterChanged) {
-            withContext(Dispatchers.Default) {
-                val labelFilterCheckedInfo = labelFilterCheckedInfo
-                val filteredList = mutableListOf<AlbumItemRelation>()
-                for (item in itemList) {
-                    val labelCheck = labelFilterCheckedInfo.isNullOrEmpty() || item.labelInfos.map { it.label }.intersect(labelFilterCheckedInfo.keys).isNotEmpty()
-                    val fileTypeCheck = fileTypeCheckState.isEmpty() || fileTypeCheckState.get(item.fileInfo.fileType.typeName) == true
-                    val itemRankCheck = itemRankTypeCheckState.isEmpty() || itemRankTypeCheckState.get(item.albumItem.rank.name) == true
-                    if (labelCheck && fileTypeCheck && itemRankCheck) {
-                        filteredList.add(item)
-                    }
-                }
-                withContext(Dispatchers.Main) {
-                    filteredItemList.clear()
-                    filteredItemList.addAll(filteredList)
-                }
-            }
+        LaunchedEffect(filterChanged, itemList) {
+            updateFilterList()
         }
         val size = 160.dp
         val galleryItemPadding = 4.dp
