@@ -1,18 +1,19 @@
 package com.jingtian.composedemo.ui.widget
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.net.Uri
 import android.util.AttributeSet
+import android.view.View
+import android.view.ViewGroup
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import androidx.core.net.toFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.io.FileInputStream
 import java.io.IOException
 
-open class CommonWebView @JvmOverloads constructor(
+class CommonWebView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0,
@@ -33,13 +34,28 @@ open class CommonWebView @JvmOverloads constructor(
             mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
         }
         webViewClient = WebViewClient()
+        setLayerType(View.LAYER_TYPE_HARDWARE, null)
     }
 
-    open suspend fun suspendLoadUri(uri: Uri?) {
+    fun initForSnapShot(width: Int, height: Int, enable: Boolean = false) {
+        layoutParams = ViewGroup.LayoutParams(width, height)
+        isHorizontalFadingEdgeEnabled = false
+        isVerticalFadingEdgeEnabled = false
+        settings.apply {
+            useWideViewPort = true
+            loadWithOverviewMode = true
+            setSupportZoom(enable)
+            builtInZoomControls = enable
+            displayZoomControls = false
+            loadsImagesAutomatically = true
+        }
+    }
+
+    suspend fun suspendLoadUri(uri: Uri?) {
         try {
             if (uri != null) {
                 withContext(Dispatchers.IO) {
-                    FileInputStream(uri.toFile()).use {
+                    context.contentResolver.openInputStream(uri)?.use {
                         val htmlContent = it.bufferedReader().readText()
                         withContext(Dispatchers.Main) {
                             loadDataWithBaseURL(
@@ -50,7 +66,7 @@ open class CommonWebView @JvmOverloads constructor(
                                 null
                             )
                         }
-                    }
+                    } ?: throw RuntimeException("无法打开uri $uri")
                 }
             } else {
                 throw RuntimeException("没有找到地址")
@@ -60,5 +76,14 @@ open class CommonWebView @JvmOverloads constructor(
             // 加载失败时显示错误信息
             loadData("<h1>加载失败</h1><p>原因：${e.message}</p>", "text/html", "UTF-8")
         }
+    }
+
+    suspend fun takeSnapShot(view: View = this): Bitmap {
+        val bitmap = Bitmap.createBitmap(measuredWidth, measuredHeight, Bitmap.Config.ARGB_8888)
+        val canvas = android.graphics.Canvas(bitmap)
+        withContext(Dispatchers.Main) {
+            view.draw(canvas)
+        }
+        return bitmap
     }
 }

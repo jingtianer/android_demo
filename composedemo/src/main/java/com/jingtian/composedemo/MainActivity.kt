@@ -1,5 +1,6 @@
 package com.jingtian.composedemo
 
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
@@ -157,6 +158,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
@@ -795,6 +797,7 @@ fun systemFallbackIntent(context: Context, fileInfo: FileInfo): Intent? {
 fun webIntent(context: Context, fileInfo: FileInfo) : Intent {
     return Intent(context, WebViewActivity::class.java).apply {
         putExtra(WebViewActivity.KEY_WEB_URI, fileInfo.getFileUri())
+        putExtra(WebViewActivity.KEY_STORAGE_ID, fileInfo.storageId)
     }
 }
 
@@ -921,7 +924,15 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, totalLabel
     }
 
     var showEditDialog by remember { mutableStateOf(false) }
-
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            scope.launch {
+                fetchImage()
+            }
+        }
+    }
     Column(Modifier
         .width(size)
         .padding(padding)
@@ -931,7 +942,11 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, totalLabel
             },
                 onTap = {
                     if (playIntent != null) {
-                        context.startActivity(playIntent)
+                        if (albumItemRelation.fileInfo.fileType == HTML) {
+                            launcher.launch(playIntent)
+                        } else {
+                            context.startActivity(playIntent)
+                        }
                     }
                     scope.launch(Dispatchers.IO) {
                         fetchImage()
@@ -1108,10 +1123,11 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
 
     val totalLabelList = remember { mutableStateListOf(*(totalLabelList.toSet() - albumItemRelation.labelInfos.map { it.label }.toSet()).map { LabelCheckInfo(it, it) }.toTypedArray()) }
 
-    val imageWidth = LocalConfiguration.current.screenWidthDp.dp * LocalAppUIConstants.current.dialogPercent * goldenRatio
+    val imageWidth = androidx.compose.ui.unit.min(LocalConfiguration.current.screenWidthDp.dp / 2, 200.dp)
     fun deleteItem() {
         viewModel.deleteItem(albumItemRelation)
     }
+    var webSnapShotTaker: (suspend ()->Bitmap)? by remember { mutableStateOf(null) }
 
     var currentSelectedAlbum by remember { mutableStateOf(relatedAlbum) }
 
@@ -1122,18 +1138,26 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
             Toast.makeText(context, "数据不合法，缺少文件或标题", Toast.LENGTH_SHORT).show()
             return
         }
-        onDismiss()
-        viewModel.updateItem(
-            albumItemRelation,
-            selectedUri,
-            selectedFileType,
-            itemName,
-            itemRank,
-            itemDesc,
-            itemScore,
-            itemLabelSet.keys,
-            currentSelectedAlbum.albumId,
-        )
+        scope.launch {
+            val webSnapShot = if (selectedFileType == HTML) {
+                webSnapShotTaker?.invoke()
+            } else {
+                null
+            }
+            onDismiss()
+            viewModel.updateItem(
+                albumItemRelation,
+                selectedUri,
+                selectedFileType,
+                itemName,
+                itemRank,
+                itemDesc,
+                itemScore,
+                itemLabelSet.keys,
+                currentSelectedAlbum.albumId,
+                webSnapShot,
+            )
+        }
     }
 
     suspend fun updateImage(uri: Uri, fileType: FileType, fileInfo: FileInfo?) {
@@ -1222,7 +1246,7 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
             imageResource = R.drawable.load_failed
         }
         if (itemName.isBlank() && uri != null) {
-            itemName = getFileNameFromUri(uri) ?:""
+            itemName = getFileNameFromUri(uri) ?: ""
         }
     }
 
@@ -1255,6 +1279,7 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
         multipleImagePickerLauncher.launch(FileType.mimes)
     }
 
+
     val context = LocalContext.current
     CompositionLocalProvider(
         LocalMiddleButtonConfig provides LocalMiddleButtonConfig.current.copy(
@@ -1264,8 +1289,8 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
     ) {
         AppThemeDialog(
             Modifier
-                .fillMaxWidth(LocalAppUIConstants.current.dialogPercent)
-                .fillMaxHeight(LocalAppUIConstants.current.dialogPercent)
+                .width(imageWidth / goldenRatio)
+                .height(imageWidth / goldenRatio / goldenRatio + imageWidth)
                 .wrapContentHeight()
 //                .clip(RoundedCornerShape(4.dp))
 //                .background(LocalAppPalette.current.dialogBg)
@@ -1446,9 +1471,9 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
                 }
 
                 val currentPickedImage = pickedImage
-                if (currentPickedImage == null) {
+                if (currentPickedImage != null) {
                     Image(
-                        painter = painterResource(imageResource),
+                        bitmap = currentPickedImage,
                         contentDescription = "上传照片",
                         Modifier
                             .size(imageWidth)
@@ -1459,9 +1484,29 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
                             .align(Alignment.TopCenter),
                         contentScale = ContentScale.FillWidth
                     )
+                } else if (selectedFileType == HTML && selectedUri != null) {
+                    CommonWebView(
+                        Modifier
+                            .size(imageWidth)
+                            .clickable {
+                                pickImage()
+                            }
+                            .clip(RoundedCornerShape(12.dp))
+                            .align(Alignment.TopCenter)
+                        ,
+                        selectedUri,
+                        false,
+                        width = imageWidth,
+                        height = imageWidth,
+                    ) {
+                        initForSnapShot(imageWidth.dpValue.toInt(), imageWidth.dpValue.toInt())
+                        webSnapShotTaker = suspend {
+                            this.takeSnapShot()
+                        }
+                    }
                 } else {
                     Image(
-                        bitmap = currentPickedImage,
+                        painter = painterResource(imageResource),
                         contentDescription = "上传照片",
                         Modifier
                             .size(imageWidth)
@@ -1490,6 +1535,7 @@ fun AddItemDialog(album: Album, labelList: List<String>?, albumData: List<Album>
     var itemScore by remember { mutableStateOf(0.0f) }
     val itemLabel = remember { mutableStateListOf<String>() }
     val itemLabelSet = remember { mutableStateMapOf<String, String>() }
+    var webSnapShotTaker: (suspend ()->Bitmap)? by remember { mutableStateOf(null) }
 
     var selectedUri by remember { mutableStateOf<Uri?>(null) }
     val scope = rememberCoroutineScope()
@@ -1497,14 +1543,23 @@ fun AddItemDialog(album: Album, labelList: List<String>?, albumData: List<Album>
     val viewModel: AlbumViewModel = viewModel()
     val imageWidth = LocalConfiguration.current.screenWidthDp.dp * LocalAppUIConstants.current.dialogPercent * goldenRatio
     var currentSelectedAlbum by remember { mutableStateOf(album) }
-
+    var selectedFileType by remember { mutableStateOf<FileType?>(null) }
     fun saveItem(context: Context) {
-        if (selectedUri == null || itemName.isNullOrBlank()) {
+        if (selectedUri == null || itemName.isBlank()) {
             Toast.makeText(context, "数据不合法，缺少文件或标题", Toast.LENGTH_SHORT).show()
             return
         }
-        onDismiss()
-        viewModel.addItem(currentSelectedAlbum, selectedUri, itemName, itemRank, itemDesc, itemScore, itemLabelSet.keys)
+        scope.launch {
+            selectedUri?.let { selectedUri->
+                val webSnapShot = if (selectedFileType == HTML) {
+                    webSnapShotTaker?.invoke()
+                } else {
+                    null
+                }
+                onDismiss()
+                viewModel.addItem(currentSelectedAlbum, selectedUri, itemName, itemRank, itemDesc, itemScore, itemLabelSet.keys, webSnapShot)
+            }
+        }
     }
 
     val multipleImagePickerLauncher = rememberLauncherForActivityResult(
@@ -1549,6 +1604,9 @@ fun AddItemDialog(album: Album, labelList: List<String>?, albumData: List<Album>
                 itemName = getFileNameFromUri(uri) ?:""
             }
             selectedUri = uri
+            selectedUri?.let { selectedUri->
+                selectedFileType = getMediaType(selectedUri)
+            }
         }
     )
 
@@ -1686,20 +1744,20 @@ fun AddItemDialog(album: Album, labelList: List<String>?, albumData: List<Album>
                                 addItemValue = value
                             }
                         }
-                        items(totalLabelList.size, key = { index-> totalLabelList[index] }) { index->
-                            val item = totalLabelList[index]
-                            val isChecked = totalLabelListCheckInfo[item] ?: false
-                            CheckableLabelView(label = item, isChecked = isChecked) {
-                                if (it && !itemLabelSet.containsKey(item)) {
-                                    itemLabelSet[item] = item
-                                    itemLabel.add(0, item)
-                                } else if (!it && itemLabelSet.containsKey(item)) {
-                                    itemLabelSet.remove(item)
-                                    itemLabel.remove(item)
-                                }
-                                totalLabelListCheckInfo[item] = it
-                            }
-                        }
+//                        items(totalLabelList.size, key = { index-> totalLabelList[index].name to 1 }) { index->
+//                            val item = totalLabelList[index]
+//                            val isChecked by item.isChecked.observeAsState()
+//                            CheckableLabelView(label = item.label, isChecked = isChecked ?: false) {
+//                                if (it && !itemLabelSet.containsKey(item.label)) {
+//                                    itemLabelSet[item.label] = item.label
+//                                    itemLabel.add(0, item.label)
+//                                } else if (!it && itemLabelSet.containsKey(item.label)) {
+//                                    itemLabelSet.remove(item.label)
+//                                    itemLabel.remove(item.label)
+//                                }
+//                                item.isChecked.value = it
+//                            }
+//                        }
                     }
                     LazyHorizontalStaggeredGrid(rows = StaggeredGridCells.FixedSize(30.dp),
                         Modifier
@@ -1730,9 +1788,9 @@ fun AddItemDialog(album: Album, labelList: List<String>?, albumData: List<Album>
             }
 
             val currentPickedImage = pickedImage
-            if (currentPickedImage == null) {
+            if (currentPickedImage != null) {
                 Image(
-                    painter = painterResource(imageResource),
+                    bitmap = currentPickedImage,
                     contentDescription = "上传照片",
                     Modifier
                         .size(imageWidth)
@@ -1743,9 +1801,29 @@ fun AddItemDialog(album: Album, labelList: List<String>?, albumData: List<Album>
                         .align(Alignment.TopCenter),
                     contentScale = ContentScale.FillWidth
                 )
+            } else if (selectedFileType == HTML && selectedUri != null) {
+                CommonWebView(
+                    Modifier
+                        .size(imageWidth)
+                        .clickable {
+                            pickImage()
+                        }
+                        .clip(RoundedCornerShape(12.dp))
+                        .align(Alignment.TopCenter)
+                    ,
+                    selectedUri,
+                    false,
+                    width = imageWidth,
+                    height = imageWidth,
+                ) {
+                    initForSnapShot(imageWidth.dpValue.toInt(), imageWidth.dpValue.toInt())
+                    webSnapShotTaker = suspend {
+                        this.takeSnapShot()
+                    }
+                }
             } else {
                 Image(
-                    bitmap = currentPickedImage,
+                    painter = painterResource(imageResource),
                     contentDescription = "上传照片",
                     Modifier
                         .size(imageWidth)

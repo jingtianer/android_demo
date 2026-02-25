@@ -1,5 +1,6 @@
 package com.jingtian.composedemo.viewmodels
 
+import android.graphics.Bitmap
 import android.net.Uri
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.MutableLiveData
@@ -137,15 +138,16 @@ class AlbumViewModel : ViewModel() {
 
     fun addItem(
         album: Album,
-        selectedUri: Uri?,
+        selectedUri: Uri,
         itemName: String,
         itemRank: ItemRank,
         itemDesc: String,
         itemScore: Float,
         itemLabel: Set<String>,
+        webSnapShot: Bitmap?
     ) {
         val albumId = album.albumId ?: return
-        val uri = selectedUri ?: return
+        val uri = selectedUri
         CoroutineUtils.runIOTask({
             val mediaType = FileStorageUtils.getMediaType(uri)
             val imageStorage =
@@ -171,6 +173,9 @@ class AlbumViewModel : ViewModel() {
             val albumItemId = DataBase.dbImpl.getAlbumItemDao().insertAlbumItem(albumItem)
             val labelInfo = itemLabel.map { LabelInfo(label = it, albumItemId = albumItemId) }
             DataBase.dbImpl.getLabelInfoDao().insertAllLabel(labelInfo)
+            if (webSnapShot != null) {
+                BitMapCachePool.loadImage(file) { webSnapShot }
+            }
         }) {
             albumItemListChange.notifyChange()
             sendMessage("添加文件 ${album.albumName} 成功!")
@@ -229,6 +234,7 @@ class AlbumViewModel : ViewModel() {
         itemScore: Float,
         itemLabel: Set<String>,
         targetAlbumId: Long?,
+        webBitmap: Bitmap?
     ) {
         val album = albumItemRelation.albumItem
         val albumId = targetAlbumId ?: album.albumId
@@ -259,6 +265,7 @@ class AlbumViewModel : ViewModel() {
             } else {
                 albumItemRelation.fileInfo.storageId
             } ?: DataBase.INVALID_ID
+
             val (width, height) = getFileIntrinsicSize(uri, mediaType)
             val file = FileInfo(id = albumItemRelation.fileInfo?.id, uri = uri, storageId = nextId, fileType = mediaType, intrinsicWidth = width, intrinsicHeight = height)
             DataBase.dbImpl.getFileInfoDao().updateFileInfo(file)
@@ -276,6 +283,10 @@ class AlbumViewModel : ViewModel() {
             DataBase.dbImpl.getAlbumItemDao().updateAlbumItem(albumItem)
             DataBase.dbImpl.getLabelInfoDao().deleteAllLabel(albumItemId)
             DataBase.dbImpl.getLabelInfoDao().insertAllLabel(itemLabel.map { LabelInfo(albumItemId = albumItemId, label = it) })
+
+            if (selectedFileType == FileType.HTML) {
+                BitMapCachePool.loadImage(file) { webBitmap }
+            }
         }) {
             albumItemListChange.notifyChange()
             sendMessage("更新文件 ${album.itemName} 成功!")

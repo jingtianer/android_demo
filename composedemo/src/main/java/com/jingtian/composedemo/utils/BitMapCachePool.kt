@@ -95,7 +95,9 @@ object BitMapCachePool {
                         return bitmap
                     }
                     val bitmap = bitmapCreator().toImmutable()
-                    queue[insertPos] = scaleFactor to SoftReference(bitmap)
+                    if (bitmap != null) {
+                        queue[insertPos] = scaleFactor to SoftReference(bitmap)
+                    }
                     return bitmap
                 }
                 return cachedBitmap
@@ -121,8 +123,8 @@ object BitMapCachePool {
                 }
             }
             val bitmap = bitmapCreator()
-            queue.add(insertPos, scaleFactor to SoftReference(bitmap))
             if (bitmap != null) {
+                queue.add(insertPos, scaleFactor to SoftReference(bitmap))
                 CoroutineUtils.runIOTask({
                     val file = getCacheFile(fileType.value, id, scaleFactor)
                     if (file == null || file.exists()) {
@@ -141,9 +143,13 @@ object BitMapCachePool {
         }
     }
 
+    private fun getCacheStoreRoot(fileType: Int): File {
+        return if (fileType == FileType.HTML.value) app.filesDir else app.cacheDir
+    }
+
     private fun getCacheFile(fileType: Int, storageId: Long, scaleFactor: Int): File? {
-        ensureCacheDir(fileType, storageId)
-        return File(app.cacheDir, "bitmap_cache/bitmap_${fileType}/${storageId}/${scaleFactor}").ensureFile()
+        ensureCacheDir((fileType), storageId)
+        return File(getCacheStoreRoot(fileType), "bitmap_cache/bitmap_${fileType}/${storageId}/${scaleFactor}").ensureFile()
     }
 
     private fun File.ensureDir(): File {
@@ -168,11 +174,11 @@ object BitMapCachePool {
     }
 
     private fun ensureCacheDir(fileType: Int, storageId: Long) {
-        File(app.cacheDir, "bitmap_cache/bitmap_${fileType}/${storageId}").ensureDir()
+        File(getCacheStoreRoot(fileType), "bitmap_cache/bitmap_${fileType}/${storageId}").ensureDir()
     }
 
     private fun getCacheDir(fileType: Int, storageId: Long): File {
-        return File(app.cacheDir, "bitmap_cache/bitmap_${fileType}/${storageId}")
+        return File(getCacheStoreRoot(fileType), "bitmap_cache/bitmap_${fileType}/${storageId}")
     }
 
     fun getImageRatio(uri: Uri): Pair<Int, Int> {
