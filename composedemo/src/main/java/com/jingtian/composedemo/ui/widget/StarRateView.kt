@@ -94,7 +94,7 @@ class StarRateView @JvmOverloads constructor(
         }
         starSize = min(h.toFloat(), width)
         starTotalWidth = starSize * starCnt + (starCnt - 1) * starPadding
-        Log.d("TAG", "onSizeChanged: $w, $h, $width, $starSize, $starTotalWidth, $measuredWidth")
+//        Log.d("TAG", "onSizeChanged: $w, $h, $width, $starSize, $starTotalWidth, $measuredWidth")
         layoutParams = layoutParams?.apply {
             this.width = starTotalWidth.toInt()
             this.height = h

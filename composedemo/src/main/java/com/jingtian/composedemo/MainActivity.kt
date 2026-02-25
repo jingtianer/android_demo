@@ -172,9 +172,12 @@ fun Main() {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed, confirmStateChange = { drawerValue: DrawerValue ->
         when(drawerValue) {
             DrawerValue.Closed -> {
-                val canClose = !menuItemsEntity.isEmpty()
+                val canClose = menuItemsEntity.isNotEmpty()
                 if (!canClose) {
-                    viewModel.sendMessage("没有任何相册，先创建相册吧")
+                    val noAlbumToast = "没有任何合集，先创建合集吧"
+                    if (viewModel.currentBackgroundTask.value?.equals(noAlbumToast) != true) {
+                        viewModel.sendMessage(noAlbumToast)
+                    }
                 }
                 canClose
             }
@@ -261,7 +264,7 @@ fun Main() {
             },
             Modifier.fillMaxSize(),
             drawerState = drawerState,
-            gesturesEnabled = menuItemsEntity.isNotEmpty()
+            gesturesEnabled = true
         ) {
             Gallery(currentSelectedAlbum, menuItemsEntity) {
                 scope.launch {
@@ -304,7 +307,6 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
     val filteredItemList = remember { mutableStateListOf<AlbumItemRelation>() }
     val viewModel: AlbumViewModel = viewModel()
     var showLabelFilter by remember { mutableStateOf(false) }
-    val coroutine = rememberCoroutineScope()
     val albumItemDataChange by viewModel.albumItemListChange.observeAsState()
 
     val totalLabelList = remember { mutableStateListOf<String>() }
@@ -371,7 +373,9 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
         withContext(Dispatchers.IO) {
             val newAlbum = viewModel.getAlbumName(album.value.albumId ?: return@withContext)
             album.value.albumName = newAlbum.albumName
-            albumName = newAlbum.albumName
+            withContext(Dispatchers.Main) {
+                albumName = newAlbum.albumName
+            }
         }
     }
 
@@ -491,7 +495,7 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
         }
         val filterChanged by viewModel.filterCheckChanged.observeAsState()
         LaunchedEffect(filterChanged) {
-            coroutine.launch(Dispatchers.Default) {
+            withContext(Dispatchers.Default) {
                 val labelFilterCheckedInfo = labelFilterCheckedInfo
                 val filteredList = mutableListOf<AlbumItemRelation>()
                 for (item in itemList) {
@@ -539,13 +543,9 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
 
    LaunchedEffect(showLabelFilter) {
        if (showLabelFilter) {
-           scope.launch {
-               sheetState.expand()
-           }
+           sheetState.expand()
        } else {
-           scope.launch {
-               sheetState.hide()
-           }
+           sheetState.hide()
        }
    }
 
@@ -826,12 +826,13 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, totalLabel
             val fileType = albumItemRelation.fileInfo.fileType
             when(fileType) {
                 FileType.IMAGE -> {
-                    val (_, bitmap) = BitMapCachePool.loadImage(
+                    val (_, image) = BitMapCachePool.loadImage(
                         albumItemRelation.fileInfo,
                         size.dpValue.toInt(),
                     )
+                    val bitmap = image?.asImageBitmap()
                     withContext(Dispatchers.Main) {
-                        imageBitmap = bitmap?.asImageBitmap()
+                        imageBitmap = bitmap
                         imageBitmap?.aspectRatio()?.let {
                             intrinsicRatio = it
                         }
@@ -1095,10 +1096,10 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
         )
     }
 
-    fun updateImage(uri: Uri, fileType: FileType, fileInfo: FileInfo?) {
-        when (fileType) {
-            FileType.IMAGE -> {
-                scope.launch(Dispatchers.IO) {
+    suspend fun updateImage(uri: Uri, fileType: FileType, fileInfo: FileInfo?) {
+        withContext(Dispatchers.IO) {
+            when (fileType) {
+                FileType.IMAGE -> {
                     val bitmap = if (fileInfo != null) {
                         BitMapCachePool.loadImage(fileInfo, maxWidth = imageWidth.dpValue.toInt()).second?.asImageBitmap()
                     } else {
@@ -1108,49 +1109,51 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
                         pickedImage = bitmap
                     }
                 }
-            }
 
-            FileType.VIDEO -> {
-                if (fileInfo != null) {
-                    getThumbnail(fileInfo, scope, uri, maxWidth = imageWidth.dpValue.toInt()) { bitmap: Bitmap? ->
-                        withContext(Dispatchers.Main) {
-                            pickedImage = bitmap?.asImageBitmap()
+                FileType.VIDEO -> {
+                    if (fileInfo != null) {
+                        getThumbnail(fileInfo, scope, uri, maxWidth = imageWidth.dpValue.toInt()) { bitmap ->
+                            withContext(Dispatchers.Main) {
+                                pickedImage = bitmap?.asImageBitmap()
+                            }
                         }
-                    }
-                } else {
-                    getThumbnail(FileType.VIDEO, scope, uri, maxWidth = imageWidth.dpValue.toInt()) { bitmap: Bitmap? ->
-                        withContext(Dispatchers.Main) {
-                            pickedImage = bitmap?.asImageBitmap()
+                    } else {
+                        getThumbnail(FileType.VIDEO, scope, uri, maxWidth = imageWidth.dpValue.toInt()) { bitmap: Bitmap? ->
+                            withContext(Dispatchers.Main) {
+                                pickedImage = bitmap?.asImageBitmap()
+                            }
                         }
                     }
                 }
-            }
 
-            FileType.AUDIO -> {
-                imageResource = R.drawable.music
-                if (fileInfo != null) {
-                    getThumbnail(fileInfo, scope, uri, maxWidth = imageWidth.dpValue.toInt()) { bitmap: Bitmap? ->
-                        withContext(Dispatchers.Main) {
-                            pickedImage = bitmap?.asImageBitmap()
+                FileType.AUDIO -> {
+                    imageResource = R.drawable.music
+                    if (fileInfo != null) {
+                        getThumbnail(fileInfo, scope, uri, maxWidth = imageWidth.dpValue.toInt()) { bitmap ->
+                            withContext(Dispatchers.Main) {
+                                pickedImage = bitmap?.asImageBitmap()
+                            }
                         }
-                    }
-                } else {
-                    getThumbnail(FileType.AUDIO, scope, uri, maxWidth = imageWidth.dpValue.toInt()) { bitmap: Bitmap? ->
-                        withContext(Dispatchers.Main) {
-                            pickedImage = bitmap?.asImageBitmap()
+                    } else {
+                        getThumbnail(FileType.AUDIO, scope, uri, maxWidth = imageWidth.dpValue.toInt()) { bitmap: Bitmap? ->
+                            withContext(Dispatchers.Main) {
+                                pickedImage = bitmap?.asImageBitmap()
+                            }
                         }
                     }
                 }
-            }
 
-            FileType.RegularFile -> {
-                imageResource = R.drawable.file
-                pickedImage = null
+                FileType.RegularFile -> {
+                    withContext(Dispatchers.Main) {
+                        imageResource = R.drawable.file
+                        pickedImage = null
+                    }
+                }
             }
         }
     }
 
-    fun onSelectedUriChange() {
+    suspend fun onSelectedUriChange() {
         val uri = selectedUri
         val fileType = selectedFileType
         if (uri != null && fileType != null) {
@@ -1158,7 +1161,7 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
         } else {
             imageResource = R.drawable.load_failed
         }
-        if (itemName.isNullOrBlank() && uri != null) {
+        if (itemName.isBlank() && uri != null) {
             itemName = getFileNameFromUri(uri) ?:""
         }
     }
@@ -1182,7 +1185,9 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
             uri?.takeIf { !it.isHidden() } ?: return@rememberLauncherForActivityResult
             selectedFileType = getMediaType(uri)
             selectedUri = uri
-            onSelectedUriChange()
+            scope.launch {
+                onSelectedUriChange()
+            }
         }
     )
 
@@ -1859,24 +1864,21 @@ fun DrawerHeader() {
     var editUserInfoJob by remember { mutableStateOf<Job?>(null) }
 
     LaunchedEffect(Unit) {
-        if (true) {
-            withContext(Dispatchers.IO) {
-                val innerUserInfo = UserStorage.userInstance
-                val fileInfo = innerUserInfo.userAvatar
-                withContext(Dispatchers.Main) {
-                    userName = innerUserInfo.userName
-                    userDesc = innerUserInfo.userDesc
-                }
-                val (_, image) = BitMapCachePool.loadImage(
-                    fileInfo,
-                    avatarSize.dpValue.toInt(),
-                    avatarSize.dpValue.toInt()
-                )
-                withContext(Dispatchers.Main) {
-                    userAvatarImage = image?.asImageBitmap()
-                }
-            }
+        val innerUserInfo = UserStorage.userInstance
+        userName = innerUserInfo.userName
+        userDesc = innerUserInfo.userDesc
+    }
+    LaunchedEffect(Unit) {
+        val fileInfo = UserStorage.userInstance.userAvatar
+        val bitmap = withContext(Dispatchers.IO) {
+            val (_, image) = BitMapCachePool.loadImage(
+                fileInfo,
+                avatarSize.dpValue.toInt(),
+                avatarSize.dpValue.toInt()
+            )
+            image
         }
+        userAvatarImage = bitmap?.asImageBitmap()
     }
 
     val multipleImagePickerLauncher = rememberLauncherForActivityResult(
@@ -1903,8 +1905,9 @@ fun DrawerHeader() {
                     avatarSize.dpValue.toInt(),
                     avatarSize.dpValue.toInt()
                 )
+                val bitmap = image?.asImageBitmap()
                 withContext(Dispatchers.Main) {
-                    userAvatarImage = image?.asImageBitmap()
+                    userAvatarImage = bitmap
                 }
             }
         }
@@ -2138,7 +2141,7 @@ fun DrawerFunctionArea() {
             dialogState = true
         },
         drawableId = R.drawable.add,
-        text = "添加相册",
+        text = "添加合集",
     )
 
     if (dialogState) {
@@ -2179,7 +2182,7 @@ fun AddOrEditAlbumDialog(album: Album? = null, onDismiss: () -> Unit) {
             OutlinedTextField(albumName, { value ->
                 albumName = value
             }, label = {
-                AppThemeText("相册名称")
+                AppThemeText("合集名称")
             }, modifier = Modifier.focusRequester(focusRequester))
             actionButtons()
         }
@@ -2382,7 +2385,7 @@ fun DrawerMenuItem(
     }
 
     if (deleteConfirmDialogState) {
-        AppThemeConfirmDialog("确认删除相册: ${item.albumName}", properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnClickOutside = false), onNegative = {
+        AppThemeConfirmDialog("确认删除合集: ${item.albumName}", properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnClickOutside = false), onNegative = {
             deleteConfirmDialogState = false
         }, onPositive = {
             deleteConfirmDialogState = false

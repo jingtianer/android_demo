@@ -126,7 +126,7 @@ class StrokeTextDrawable @JvmOverloads constructor(color: Int = 0) : ColorDrawab
         var l = left.toInt()
         var r = ceil(right.toDouble()).toInt()
         while(l <= r) {
-            Log.d("TAG", "autoAdjustTextSize: l=$l, r=$r")
+//            Log.d("TAG", "autoAdjustTextSize: l=$l, r=$r")
             val mid = ((r - l) / 2f  + l).toInt()
             mTextStrokePaint.textSize = mid.toFloat()
             mTextStrokePaint.measure(text, measuredTextSize)

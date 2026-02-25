@@ -1,38 +1,20 @@
 package com.jingtian.composedemo.ui.theme
 
 import android.content.Context
-import android.util.Log
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.LayoutScopeMarker
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.Stable
 import androidx.compose.runtime.compositionLocalOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.structuralEqualityPolicy
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.BlendMode
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
@@ -41,11 +23,6 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.graphics.drawable.toBitmap
 import com.jingtian.composedemo.R
-import com.jingtian.composedemo.base.app
-import com.jingtian.composedemo.utils.AppTheme
-import com.jingtian.composedemo.utils.ViewUtils.dpValue
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
@@ -166,7 +143,6 @@ val goldenRatio = 2f / (sqrt(5f) + 1)
 
 fun Modifier.appBackground(context: Context, @DrawableRes resource: Int, widthScale: Float = 1f, heightScale : Float = 1-goldenRatio): Modifier {
     val bg = ResourcesCompat.getDrawable(context.resources, resource, context.theme) ?: return this
-    Log.d("jingtian", "appBackground: theme=${context.theme}")
     val paint = Paint()
     return this.drawBehind {
         val width = this.size.width * widthScale
@@ -184,61 +160,39 @@ fun Modifier.drawerBackground() = appBackground(LocalContext.current, R.drawable
 @Composable
 fun Modifier.dialogBackground() = appBackground(LocalContext.current, R.drawable.rectangle_16, heightScale = goldenRatio)
 
-
-@LayoutScopeMarker
-@Immutable
-interface AppThemeScope {
-    fun setAppTheme(appTheme: AppTheme)
-
-}
-
 @Composable
 fun DemoAppTheme(
     systemDarkTheme: Boolean = isSystemInDarkTheme(),
-    content: @Composable AppThemeScope.() -> Unit
+    content: @Composable () -> Unit
 ) {
-    var darkTheme by remember { mutableStateOf(systemDarkTheme) }
-    LaunchedEffect(Unit) {
-        darkTheme = AppTheme.isDarkTheme(systemDarkTheme)
-    }
-    
     val colorScheme = when {
-        darkTheme -> DarkColorScheme
+        systemDarkTheme -> DarkColorScheme
         else -> LightColorScheme
     }
     val customTextStyle = LocalTextStyle.current.copy(
-        color = if (darkTheme) colorF8f8f8 else colorBlack
+        color = if (systemDarkTheme) colorF8f8f8 else colorBlack
     )
     val customSecondaryTextStyle = LocalTextStyle.current.copy(
-        color = if (darkTheme) colorA8A8A8 else color686868,
+        color = if (systemDarkTheme) colorA8A8A8 else color686868,
         fontStyle = FontStyle.Italic
     )
-    val appPalette = if (darkTheme) {
+    val appPalette = if (systemDarkTheme) {
         darkAppPalette
     } else {
         liteAppPalette
     }
-    val middleButtonConfig = if (darkTheme) {
+    val middleButtonConfig = if (systemDarkTheme) {
         darkMiddleButtonConfig
     } else {
         liteMiddleButtonConfig
     }
-    val contentColor = if (darkTheme) {
+    val contentColor = if (systemDarkTheme) {
         Color.Black
     } else {
         Color.White
     }
 
-    val scope = rememberCoroutineScope()
 
-    val appThemeScope = object : AppThemeScope {
-        override fun setAppTheme(appTheme: AppTheme) {
-            scope.launch(Dispatchers.Main) {
-                AppTheme.setAppTheme(appTheme)
-                darkTheme = AppTheme.isDarkTheme(systemDarkTheme)
-            }
-        }
-    }
     MaterialTheme(
         colorScheme = colorScheme,
         typography = Typography,
@@ -251,7 +205,7 @@ fun DemoAppTheme(
                 LocalContentColor provides contentColor,
                 LocalSecondaryTextStyle provides customSecondaryTextStyle,
                 LocalMiddleButtonConfig provides middleButtonConfig,
-                content = { appThemeScope.content() }
+                content = { content() }
             )
         }
     )

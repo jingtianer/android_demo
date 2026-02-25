@@ -67,7 +67,7 @@ class AlbumViewModel : ViewModel() {
 //            Log.d(TAG, "addAlbum: ${album.albumName}")
         }) {
             albumListChange.notifyChange()
-            sendMessage("添加相册: ${album.albumName} 成功!")
+            sendMessage("添加合集: ${album.albumName} 成功!")
         }
     }
 
@@ -78,7 +78,7 @@ class AlbumViewModel : ViewModel() {
 //            Log.d(TAG, "addAlbum: ${album.albumName}")
         }) {
             albumNameChange.notifyChange()
-            sendMessage("添加相册: ${album.albumName} 成功!")
+            sendMessage("添加合集: ${album.albumName} 成功!")
         }
     }
 
@@ -114,7 +114,7 @@ class AlbumViewModel : ViewModel() {
             albumDao.deleteAlbum(album)
         }) {
             albumListChange.notifyChange()
-            sendMessage("删除相册: ${album.albumName} 成功!")
+            sendMessage("删除合集: ${album.albumName} 成功!")
         }
     }
 

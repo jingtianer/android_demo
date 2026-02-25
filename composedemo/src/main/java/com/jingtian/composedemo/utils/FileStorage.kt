@@ -17,7 +17,6 @@ import androidx.core.net.toUri
 import com.jingtian.composedemo.base.app
 import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.FileType
-import com.jingtian.composedemo.utils.BitMapCachePool.toImmutable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -308,7 +307,7 @@ object FileStorageUtils {
         }
     }
 
-    fun getThumbnailByType(fileType: FileType, uri: Uri): Bitmap? {
+    private fun getThumbnailByType(fileType: FileType, uri: Uri): Bitmap? {
         return when (fileType) {
             FileType.VIDEO -> getVideoThumbnail(uri)
             FileType.AUDIO -> getAudioThumbnail(uri)
@@ -368,7 +367,9 @@ object FileStorageUtils {
         onLoadBitmap: suspend (Bitmap?)->Unit
     ): Job = coroutineScope.launch(Dispatchers.IO) {
         BitMapCachePool.loadImage(fileInfo, maxWidth, maxHeight) {
-            getThumbnailByType(fileInfo.fileType, videoUri).toImmutable()
+            getThumbnailByType(fileInfo.fileType, videoUri)?.apply {
+                this.copy(this.config, false)
+            }
         }.second?.let {
             withContext(Dispatchers.Main) {
                 onLoadBitmap(it)
