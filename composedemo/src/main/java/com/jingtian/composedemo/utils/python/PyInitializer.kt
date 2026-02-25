@@ -11,7 +11,7 @@ object PyInitializer {
         }
         if (Python.isStarted()) {
             val module = Python.getInstance().getModule("hello_world.hello_world")
-            module.callAttr("main")
+            module.callAttr("hello_world")
         }
     }
 }
