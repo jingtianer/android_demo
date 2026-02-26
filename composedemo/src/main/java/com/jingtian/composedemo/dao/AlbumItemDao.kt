@@ -33,6 +33,10 @@ interface AlbumItemDao {
     @Update
     fun updateAlbumItem(albumItem: AlbumItem)
 
+
+    @Update
+    fun updateAllAlbumItem(albumItem: List<AlbumItem>)
+
     @Transaction
     @Query("select * from $TABLE_NAME where albumId = :albumId order by score desc")
     fun getAllAlbumItemWithExtra(albumId: Long): Flow<List<AlbumItemRelation>>

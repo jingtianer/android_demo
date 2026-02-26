@@ -59,6 +59,7 @@ import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DrawerDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.material3.DrawerValue
@@ -108,6 +109,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.FileProvider
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.jingtian.composedemo.GalleryFunctions.*
 import com.jingtian.composedemo.base.AppThemeBasicTextField
 import com.jingtian.composedemo.base.AppThemeConfirmDialog
 import com.jingtian.composedemo.base.AppThemeDialog
@@ -299,6 +301,22 @@ fun LazyListScope.roundRectTabFilter(checkedList: SnapshotStateMap<String, Boole
     }
 }
 
+enum class GalleryFunctions(val functionName: String, @DrawableRes val resId: Int) {
+    ADD("添加", R.drawable.add),
+    IMPORT("导入", R.drawable.import_icon),
+    RENAME("编辑相册", R.drawable.edit_normal),
+    EDIT("编辑", R.drawable.edit_normal),
+    DELETE("删除", R.drawable.delete),
+    MOVE("移动", R.drawable.move);
+    companion object {
+        // 0 -> 添加, 导入, 修改相册名称
+        // 1 -> 编辑, 删除, 移动
+        // >1 -> 删除, 移动
+        val albumFunctions = listOf(RENAME, ADD, IMPORT).map { it to it }
+        val itemFunctions = listOf(EDIT, DELETE, MOVE).map { it to it }
+        val batchFunctions = listOf(DELETE, MOVE).map { it to it }
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -321,7 +339,12 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
     val fileTypeCheckState = remember { mutableStateMapOf<String, Boolean>() }
     val itemRankTypeCheckState = remember { mutableStateMapOf<String, Boolean>() }
     var albumName by remember { mutableStateOf(album.value.albumName) }
-
+    val currentSelectedItem = remember { mutableStateMapOf<Long, AlbumItemRelation>() }
+    val itemSelectStateChangeState = remember { mutableStateOf(0L) }
+    val itemSelectStateChange by remember { itemSelectStateChangeState }
+    val currentFunctions = remember { mutableStateMapOf<GalleryFunctions, GalleryFunctions>() }
+    val enterEditModeState = remember { mutableStateOf(false) }
+    var enterEditMode by remember { enterEditModeState }
     var editAlbumDialogState by remember { mutableStateOf(false) }
 
 
@@ -345,6 +368,8 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
     }
 
     LaunchedEffect(Unit, album) {
+        currentSelectedItem.clear()
+        enterEditMode = false
         withContext(Dispatchers.IO) {
             viewModel.getLabelList(album.value).collect { value->
                 val checkList = SnapshotStateMap<String, Boolean>()
@@ -396,6 +421,9 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
 
     val albumNameChange by viewModel.albumNameChange.observeAsState()
 
+    var showEditDialog by remember { mutableStateOf(false) }
+    var showConfirmDeleteDialog by remember { mutableStateOf(false) }
+    var showMoveToDialog by remember { mutableStateOf(false) }
     LaunchedEffect(albumNameChange) {
         withContext(Dispatchers.IO) {
             val newAlbum = viewModel.getAlbumName(album.value.albumId ?: return@withContext)
@@ -413,13 +441,21 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
         viewModel.importFiles(album.value, uri)
     }
 
+    val filterChanged by viewModel.filterCheckChanged.observeAsState()
+    LaunchedEffect(filterChanged, itemList) {
+        updateFilterList()
+    }
+    val size = 160.dp
+    val galleryItemPadding = 4.dp
+
     Column(
         Modifier
             .fillMaxSize()
             .appBackground()
             .windowInsetsPadding(WindowInsets.systemBars)) {
+        val editBarHeight = if (enterEditMode) 6.dp * 2 + 36.dp else 0.dp
+        val filterHeight = if (enterEditMode) LocalAppUIConstants.current.filterLabelHeight + 8.dp * 2 else 0.dp
         CompositionLocalProvider(LocalContentColor provides LocalAppPalette.current.galleryHeaderColor, LocalTextStyle provides LocalTextStyle.current.copy(color = LocalAppPalette.current.galleryHeaderColor)) {
-
             Row(
                 Modifier
                     .fillMaxWidth()
@@ -446,95 +482,117 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
                     overflow = TextOverflow.Ellipsis
                 )
                 Spacer(Modifier.width(6.dp))
-                Row(
-                    Modifier
-                        .wrapContentSize()
-                        .align(Alignment.CenterVertically)) {
-                    Icon(
-                        painter = painterResource(R.drawable.edit_normal),
-                        contentDescription = "编辑名称",
-                        modifier = Modifier
-                            .size(LocalAppUIConstants.current.filterLabelHeight)
-                            .background(LocalAppPalette.current.labelUnChecked, shape = CircleShape)
-                            .clickable { editAlbumDialogState = true }
-                            .padding(4.dp)
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    Icon(
-                        painter = painterResource(R.drawable.add),
-                        contentDescription = "添加图片",
-                        modifier = Modifier
-                            .size(LocalAppUIConstants.current.filterLabelHeight)
-                            .background(LocalAppPalette.current.labelUnChecked, shape = CircleShape)
-                            .clickable { addImageDialogState = true }
-                            .padding(4.dp)
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    Icon(
-                        painter = painterResource(R.drawable.import_icon),
-                        contentDescription = "批量导入",
-                        modifier = Modifier
-                            .size(LocalAppUIConstants.current.filterLabelHeight)
-                            .background(LocalAppPalette.current.labelUnChecked, shape = CircleShape)
-                            .clickable {
-                                importDirLauncher.launch(null)
-                            }
-                            .padding(4.dp)
-                    )
-                }
-            }
-            Row(Modifier.padding(start = 4.dp, end = 8.dp)) {
-
-                LazyRow(
-                    Modifier
-                        .wrapContentHeight()
-                        .weight(1f)) {
-                    labelFilterCheckedInfo?.let { labelFilterCheckedInfo->
-                        roundRectTabFilter(labelFilterCheckedInfo, totalLabelList)
-                        roundRectTabFilter(fileTypeCheckState, totalFileTypeList)
-                        roundRectTabFilter(itemRankTypeCheckState, totalItemRankList)
-                    }
-                }
-//            Image(painter = painterResource(R.drawable.trash_bin),
-//                contentDescription = "清空筛选",
-//                Modifier
-//                    .size(24.dp)
-//                    .clickable {
-//                        filterLabels = emptySet()
-//                        filterFileTypes = emptyList()
-//                        itemRankFilter = emptyList()
-//                        labelFilterCheckedInfo.forEach { it.isChecked.value = false }
-//                        fileTypeCheckState.forEach { it.isChecked.value = false }
-//                        itemRankTypeCheckState.forEach { it.isChecked.value = false }
-//                    })
-
                 Icon(
-                    painter = painterResource(R.drawable.down),
-                    contentDescription = "过滤器",
+                    painter = painterResource(R.drawable.edit_normal),
+                    contentDescription = "编辑模式",
                     modifier = Modifier
                         .size(LocalAppUIConstants.current.filterLabelHeight)
                         .background(LocalAppPalette.current.labelUnChecked, shape = CircleShape)
-                        .clickable { showLabelFilter = !showLabelFilter }
+                        .clickable { enterEditMode = !enterEditMode }
                         .padding(4.dp)
                         .align(Alignment.CenterVertically)
                 )
             }
+
         }
-        val filterChanged by viewModel.filterCheckChanged.observeAsState()
-        LaunchedEffect(filterChanged, itemList) {
-            updateFilterList()
+        CompositionLocalProvider(LocalContentColor provides LocalAppPalette.current.galleryHeaderColor, LocalTextStyle provides LocalTextStyle.current.copy(color = LocalAppPalette.current.galleryHeaderColor)) {
+            if (enterEditMode) {
+                Row(Modifier.padding(start = 4.dp, end = 8.dp).fillMaxWidth()) {
+                    LazyRow(
+                        Modifier
+                            .fillMaxWidth()
+                            .wrapContentHeight()
+                            .weight(1f)) {
+                        labelFilterCheckedInfo?.let { labelFilterCheckedInfo->
+                            roundRectTabFilter(labelFilterCheckedInfo, totalLabelList)
+                            roundRectTabFilter(fileTypeCheckState, totalFileTypeList)
+                            roundRectTabFilter(itemRankTypeCheckState, totalItemRankList)
+                        }
+                    }
+
+                    Icon(
+                        painter = painterResource(R.drawable.down),
+                        contentDescription = "过滤器",
+                        modifier = Modifier
+                            .size(LocalAppUIConstants.current.filterLabelHeight)
+                            .background(LocalAppPalette.current.labelUnChecked, shape = CircleShape)
+                            .clickable { showLabelFilter = !showLabelFilter }
+                            .padding(4.dp)
+                            .align(Alignment.CenterVertically)
+                    )
+                }
+            }
         }
-        val size = 160.dp
-        val galleryItemPadding = 4.dp
+
         LazyVerticalStaggeredGrid(
             columns = StaggeredGridCells.Adaptive((size + galleryItemPadding*2)),
             Modifier
                 .fillMaxSize()
                 .weight(1f)
-                .padding(horizontal = galleryItemPadding)) {
+                .padding(start = galleryItemPadding, end = galleryItemPadding)) {
             items(filteredItemList.size, key = { index-> filteredItemList[index].hashCode() }, contentType = { index-> filteredItemList[index].fileInfo.fileType.value }) { index: Int ->
-                AlbumItemView(filteredItemList[index], album.value, totalLabelList, albumList, size, galleryItemPadding)
+                AlbumItemView(filteredItemList[index], size, galleryItemPadding, currentSelectedItem, enterEditModeState, itemSelectStateChangeState)
             }
+        }
+        if (enterEditMode) {
+            Box(Modifier.fillMaxWidth().wrapContentHeight()) {
+                Row(Modifier.wrapContentSize().padding(vertical = 6.dp).align(Alignment.Center)) {
+                    for (item in currentFunctions) {
+                        val func = item.key
+                        when(func) {
+                            ADD -> {
+                                GalleryFunctionView(func) {
+                                    addImageDialogState = true
+                                }
+                            }
+                            IMPORT -> {
+                                GalleryFunctionView(func) {
+                                    importDirLauncher.launch(null)
+                                }
+                            }
+                            RENAME -> {
+                                GalleryFunctionView(func) {
+                                    editAlbumDialogState = true
+                                }
+                            }
+                            EDIT -> {
+                                GalleryFunctionView(func) {
+                                    showEditDialog = true
+                                }
+                            }
+                            DELETE -> {
+                                GalleryFunctionView(func) {
+                                    showConfirmDeleteDialog = true
+                                }
+                            }
+                            MOVE -> {
+                                GalleryFunctionView(func) {
+                                    showMoveToDialog = true
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    LaunchedEffect(currentSelectedItem, enterEditMode, itemSelectStateChange) {
+        currentFunctions.clear()
+        if (enterEditMode) {
+            val selectedCount = currentSelectedItem.size
+            when(selectedCount) {
+                0 -> {
+                    currentFunctions.putAll(GalleryFunctions.albumFunctions)
+                }
+                1 -> {
+                    currentFunctions.putAll(GalleryFunctions.itemFunctions)
+                }
+                else -> {
+                    currentFunctions.putAll(GalleryFunctions.batchFunctions)
+                }
+            }
+        } else {
+            currentSelectedItem.clear()
         }
     }
 
@@ -544,20 +602,73 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
         }
     }
 
+    @Composable
+    fun ShowDeleteConfirmDialog() {
+        val title = if (currentSelectedItem.size > 1) {
+            "选择的${currentSelectedItem.size}项"
+        } else if (currentSelectedItem.size == 1) {
+            "${currentFunctions.values.firstOrNull() ?: ""}"
+        } else {
+            showConfirmDeleteDialog = false
+            return
+        }
+        CompositionLocalProvider(
+            LocalMiddleButtonConfig provides LocalMiddleButtonConfig.current.copy(
+                text = "删除",
+                colors = LocalMiddleButtonConfig.current.colors.copy(containerColor = LocalAppPalette.current.deleteButtonColor, contentColor = Color.White),
+            )
+        ) {
+            AppThemeConfirmDialog("确认删除$title", onNegative = null, onMiddleClick = {
+                viewModel.deleteItems(currentSelectedItem.values)
+                showConfirmDeleteDialog = false
+                enterEditMode = false
+            }, onPositive = {
+                showConfirmDeleteDialog = false
+                enterEditMode = false
+            }, onDismissRequest = {
+                showConfirmDeleteDialog = false
+                enterEditMode = false
+            })
+        }
+    }
+
+    if (showConfirmDeleteDialog) {
+        ShowDeleteConfirmDialog()
+    }
+
     if (editAlbumDialogState) {
         AddOrEditAlbumDialog(album.value) {
             editAlbumDialogState = false
+            enterEditMode = false
+        }
+    }
+
+    if (showEditDialog) {
+        currentSelectedItem.keys.firstOrNull()?.let { firstKey->
+            currentSelectedItem[firstKey]?.let { albumItemRelation->
+                EditDialog(albumItemRelation, album.value, albumList, totalLabelList) {
+                    showEditDialog = false
+                    enterEditMode = false
+                }
+            }
+        }
+    }
+
+    if (showMoveToDialog) {
+        MoveToDialog(currentSelectedItem.values, album.value, albumList) {
+            showMoveToDialog = false
+            enterEditMode = false
         }
     }
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val scope = rememberCoroutineScope()
 
    LaunchedEffect(showLabelFilter) {
        if (showLabelFilter) {
            sheetState.expand()
        } else {
            sheetState.hide()
+           enterEditMode = false
        }
    }
 
@@ -573,6 +684,18 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
         ) {
             showLabelFilter = false
         }
+    }
+}
+
+@Composable
+fun GalleryFunctionView(func: GalleryFunctions, onClick: ()->Unit) {
+    Column(Modifier.padding(horizontal = 6.dp).clickable { onClick() }) {
+        Icon(
+            painter = painterResource(func.resId),
+            contentDescription = "${func.functionName}功能",
+            modifier = Modifier.size(36.dp).align(Alignment.CenterHorizontally)
+        )
+        AppThemeText(func.functionName, Modifier.align(Alignment.CenterHorizontally))
     }
 }
 
@@ -820,7 +943,7 @@ fun playIntent(context: Context, fileInfo: FileInfo): Intent? {
 }
 
 @Composable
-fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, totalLabelList: List<String>, albumList: List<Album>, size: Dp, padding: Dp) {
+fun AlbumItemView(albumItemRelation: AlbumItemRelation, size: Dp, padding: Dp, currentSelectedItem: SnapshotStateMap<Long, AlbumItemRelation>, enterEditState: MutableState<Boolean>, itemSelectStateChangeState: MutableState<Long>) {
     var imageBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
 
     var itemName by remember { mutableStateOf(albumItemRelation.albumItem.itemName) }
@@ -931,7 +1054,6 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, totalLabel
         RegularFile -> R.drawable.doc_icon
     }
 
-    var showEditDialog by remember { mutableStateOf(false) }
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -946,18 +1068,29 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, totalLabel
         .padding(padding)
         .pointerInput(Unit) {
             detectTapGestures(onLongPress = {
-                showEditDialog = true
+                enterEditState.value = true
+                itemSelectStateChangeState.value += 1
             },
                 onTap = {
-                    if (playIntent != null) {
-                        if (albumItemRelation.fileInfo.fileType == HTML) {
-                            launcher.launch(playIntent)
+                    if (enterEditState.value) {
+                        val itemId = albumItemRelation.albumItem.itemId ?: DataBase.INVALID_ID
+                        if (currentSelectedItem.containsKey(itemId)) {
+                            currentSelectedItem.remove(itemId)
                         } else {
-                            context.startActivity(playIntent)
+                            currentSelectedItem[itemId] = albumItemRelation
                         }
-                    }
-                    scope.launch(Dispatchers.IO) {
-                        fetchImage()
+                        itemSelectStateChangeState.value += 1
+                    } else {
+                        if (playIntent != null) {
+                            if (albumItemRelation.fileInfo.fileType == HTML) {
+                                launcher.launch(playIntent)
+                            } else {
+                                context.startActivity(playIntent)
+                            }
+                        }
+                        scope.launch(Dispatchers.IO) {
+                            fetchImage()
+                        }
                     }
                 })
         }
@@ -978,14 +1111,41 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, totalLabel
         }
 
 
-        Icon(
-            painter = painterResource(fileTypeIcon),
-            contentDescription = "文件类型图标",
-            modifier = Modifier
-                .padding(vertical = 4.dp)
-                .size(24.dp)
-                .align(Alignment.CenterHorizontally)
-        )
+        Box(Modifier.fillMaxWidth()) {
+            Icon(
+                painter = painterResource(fileTypeIcon),
+                contentDescription = "文件类型图标",
+                modifier = Modifier
+                    .padding(vertical = 4.dp)
+                    .size(24.dp)
+                    .align(Alignment.Center)
+            )
+            if (enterEditState.value) {
+                val itemId = albumItemRelation.albumItem.itemId ?: DataBase.INVALID_ID
+                val isSelected = currentSelectedItem.containsKey(itemId)
+                Icon(painter = painterResource(R.drawable.check), contentDescription = "复选框",
+                    Modifier
+                        .padding(4.dp)
+                        .align(Alignment.CenterEnd)
+                        .size(24.dp)
+                        .background(
+                            color = if (isSelected) {
+                                LocalAppPalette.current.labelChecked
+                            } else {
+                                LocalAppPalette.current.labelUnChecked
+                            },
+                            CircleShape
+                        ).clickable {
+                            if (isSelected) {
+                                currentSelectedItem.remove(itemId)
+                            } else {
+                                currentSelectedItem[itemId] = albumItemRelation
+                            }
+                            itemSelectStateChangeState.value += 1
+                        }
+                )
+            }
+        }
 
         Box(
             Modifier
@@ -1105,9 +1265,39 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, album: Album, totalLabel
         }
     }
 
-    if (showEditDialog) {
-        EditDialog(albumItemRelation, album, albumList, totalLabelList) {
-            showEditDialog = false
+}
+
+@Composable
+fun MoveToDialog(albumItemRelation: Collection<AlbumItemRelation>, album: Album, albumList: List<Album>, onDismiss: () -> Unit) {
+    var currentSelectedAlbum by remember { mutableStateOf(album) }
+    val viewModel: AlbumViewModel = viewModel()
+    AppThemeDialog(onNegative = onDismiss, onPositive = {
+        if (album.albumId != currentSelectedAlbum.albumId) {
+            viewModel.moveItems(currentSelectedAlbum, albumItemRelation)
+        }
+        onDismiss()
+    }) { _, actionButtons->
+        Column(Modifier.fillMaxSize()) {
+            LazyColumn(Modifier.padding(horizontal = 16.dp).fillMaxSize().weight(1f)) {
+                item {
+                    AppThemeText("移动到")
+                    Spacer(Modifier.height(8.dp))
+                }
+                items(albumList.size) { index->
+                    val item = albumList[index]
+                    ImmutableDrawerMenuItem(
+                        item,
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 6.dp, vertical = 10.dp)
+                    ) {
+                        currentSelectedAlbum = item
+                    }
+                }
+            }
+            Row(Modifier.fillMaxWidth().wrapContentHeight()) {
+                actionButtons()
+            }
         }
     }
 }
@@ -1305,10 +1495,11 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
 //                .dialogBackground()
             ,
             onNegative = onDismiss,
-            onMiddleClick = {
-                deleteItem()
-                onDismiss()
-            },
+//            onMiddleClick = {
+//                deleteItem()
+//                onDismiss()
+//            },
+            onMiddleClick = null,
             onPositive = {
                 saveItem(context)
             },

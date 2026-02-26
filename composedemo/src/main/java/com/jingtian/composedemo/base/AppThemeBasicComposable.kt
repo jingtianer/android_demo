@@ -219,8 +219,9 @@ fun AppThemeConfirmDialog(
         fontWeight = FontWeight(600)
     ),
     properties: DialogProperties = DialogProperties(),
-    onNegative: () -> Unit = {},
-    onPositive: () -> Unit = {},
+    onMiddleClick: (() -> Unit)? = null,
+    onNegative: (() -> Unit)? = {},
+    onPositive: (() -> Unit)? = {},
     onDismissRequest: () -> Unit = {},
     content: @Composable () -> Unit = {}
 ) {
@@ -233,7 +234,7 @@ fun AppThemeConfirmDialog(
         titleTextStyle = titleTextStyle,
         properties = properties,
         onNegative = onNegative,
-        onMiddleClick = null,
+        onMiddleClick = onMiddleClick,
         onPositive = onPositive,
         onDismissRequest = onDismissRequest
     ) { header, actionButton ->
@@ -256,10 +257,10 @@ fun AppThemeDialog(
         fontWeight = FontWeight(600)
     ),
     properties: DialogProperties = DialogProperties(),
-    onNegative: () -> Unit = {},
+    onNegative: (() -> Unit)? = {},
     onMiddleClick: (() -> Unit)? = null,
-    onPositive: () -> Unit = {},
-    onDismissRequest: () -> Unit = onNegative,
+    onPositive: (() -> Unit)? = {},
+    onDismissRequest: () -> Unit = onNegative ?: {},
     content: @Composable ColumnScope.(
         header: @Composable () -> Unit,
         actionButton: @Composable () -> Unit
@@ -284,18 +285,22 @@ fun AppThemeDialog(
                 actionButton = {
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(Modifier.align(Alignment.End)) {
-                        Button(onClick = onNegative) {
-                            AppThemeText("取消")
+                        if (onNegative != null) {
+                            Button(onClick = onNegative) {
+                                AppThemeText("取消")
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
                         }
-                        Spacer(modifier = Modifier.width(8.dp))
                         if (onMiddleClick != null) {
                             Button(onClick = onMiddleClick, colors = LocalMiddleButtonConfig.current.colors) {
                                 Text(LocalMiddleButtonConfig.current.text, style = LocalTextStyle.current.copy(color = LocalMiddleButtonConfig.current.colors.contentColor))
                             }
                             Spacer(modifier = Modifier.width(8.dp))
                         }
-                        Button(onClick = onPositive) {
-                            AppThemeText("确认")
+                        if (onPositive != null) {
+                            Button(onClick = onPositive) {
+                                AppThemeText("确认")
+                            }
                         }
                     }
                     Spacer(modifier = Modifier.height(8.dp))

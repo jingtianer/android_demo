@@ -119,6 +119,35 @@ class AlbumViewModel : ViewModel() {
         }
     }
 
+    fun deleteItems(albumList: Collection<AlbumItemRelation>) {
+        CoroutineUtils.runIOTask({
+            for (albumItemRelation in albumList) {
+                val album = albumItemRelation.albumItem
+                DataBase.dbImpl.getAlbumItemDao().deleteAllAlbumItem(album)
+                albumItemRelation.fileInfo.let {
+                    DataBase.dbImpl.getFileInfoDao().deleteFileInfo(it)
+                    FileStorageUtils.getStorage(it.fileType)?.delete(it.storageId)
+                }
+                album.itemId?.let {
+                    DataBase.dbImpl.getLabelInfoDao().deleteAllLabel(it)
+                }
+            }
+        }) {
+            albumItemListChange.notifyChange()
+            sendMessage("删除${albumList.size}个文件: 成功!")
+        }
+    }
+
+    fun moveItems(moveTo: Album, albumList: Collection<AlbumItemRelation>) {
+        CoroutineUtils.runIOTask({
+            val moveList = albumList.map { it.albumItem.also { it.albumId = moveTo.albumId ?: it.albumId } }
+            DataBase.dbImpl.getAlbumItemDao().updateAllAlbumItem(moveList)
+        }) {
+            albumItemListChange.notifyChange()
+            sendMessage("移动${albumList.size}个文件: 成功!")
+        }
+    }
+
     fun deleteItem(albumItemRelation: AlbumItemRelation) {
         val album = albumItemRelation.albumItem
         CoroutineUtils.runIOTask({
