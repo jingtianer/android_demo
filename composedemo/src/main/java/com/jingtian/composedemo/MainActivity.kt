@@ -28,7 +28,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
@@ -87,6 +90,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.RectangleShape
@@ -125,6 +129,7 @@ import com.jingtian.composedemo.dao.model.FileType
 import com.jingtian.composedemo.dao.model.FileType.*
 import com.jingtian.composedemo.dao.model.ItemRank
 import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
+import com.jingtian.composedemo.ui.theme.LocalAppColorScheme
 import com.jingtian.composedemo.ui.theme.LocalAppPalette
 import com.jingtian.composedemo.ui.theme.LocalAppUIConstants
 import com.jingtian.composedemo.ui.theme.LocalMiddleButtonConfig
@@ -497,7 +502,10 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
         }
         CompositionLocalProvider(LocalContentColor provides LocalAppPalette.current.galleryHeaderColor, LocalTextStyle provides LocalTextStyle.current.copy(color = LocalAppPalette.current.galleryHeaderColor)) {
             if (enterEditMode) {
-                Row(Modifier.padding(start = 4.dp, end = 8.dp).fillMaxWidth()) {
+                Row(
+                    Modifier
+                        .padding(start = 4.dp, end = 8.dp)
+                        .fillMaxWidth()) {
                     LazyRow(
                         Modifier
                             .fillMaxWidth()
@@ -523,51 +531,71 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
                 }
             }
         }
-
-        LazyVerticalStaggeredGrid(
-            columns = StaggeredGridCells.Adaptive((size + galleryItemPadding*2)),
+        Box(
             Modifier
                 .fillMaxSize()
-                .weight(1f)
-                .padding(start = galleryItemPadding, end = galleryItemPadding)) {
-            items(filteredItemList.size, key = { index-> filteredItemList[index].hashCode() }, contentType = { index-> filteredItemList[index].fileInfo.fileType.value }) { index: Int ->
-                AlbumItemView(filteredItemList[index], size, galleryItemPadding, currentSelectedItem, enterEditModeState, itemSelectStateChangeState)
+                .weight(1f)) {
+            val bottomBarHeight = 68.dp
+            val shadesHeight = 0.dp
+            LazyVerticalStaggeredGrid(
+                columns = StaggeredGridCells.Adaptive((size + galleryItemPadding*2)),
+                Modifier
+                    .fillMaxSize()
+                    .padding(start = galleryItemPadding, end = galleryItemPadding),
+                contentPadding = PaddingValues(bottom = if (enterEditMode) bottomBarHeight + shadesHeight else 0.dp)
+                ) {
+                items(filteredItemList.size, key = { index-> filteredItemList[index].hashCode() }, contentType = { index-> filteredItemList[index].fileInfo.fileType.value }) { index: Int ->
+                    AlbumItemView(filteredItemList[index], size, galleryItemPadding, currentSelectedItem, enterEditModeState, itemSelectStateChangeState)
+                }
             }
-        }
-        if (enterEditMode) {
-            Box(Modifier.fillMaxWidth().wrapContentHeight()) {
-                Row(Modifier.wrapContentSize().padding(vertical = 6.dp).align(Alignment.Center)) {
-                    for (item in currentFunctions) {
-                        val func = item.key
-                        when(func) {
-                            ADD -> {
-                                GalleryFunctionView(func) {
-                                    addImageDialogState = true
+            if (enterEditMode) {
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(bottomBarHeight)
+                        .background(
+                            LocalAppColorScheme.current.background.copy(alpha = 0.90f),
+                        )
+                        .align(Alignment.BottomCenter)
+                ) {
+                    Row(
+                        Modifier
+                            .wrapContentSize()
+                            .padding(vertical = 6.dp)
+                            .align(Alignment.Center)
+                    ) {
+                        for (item in currentFunctions) {
+                            val func = item.key
+                            when (func) {
+                                ADD -> {
+                                    GalleryFunctionView(func) {
+                                        addImageDialogState = true
+                                    }
                                 }
-                            }
-                            IMPORT -> {
-                                GalleryFunctionView(func) {
-                                    importDirLauncher.launch(null)
+                                IMPORT -> {
+                                    GalleryFunctionView(func) {
+                                        importDirLauncher.launch(null)
+                                    }
                                 }
-                            }
-                            RENAME -> {
-                                GalleryFunctionView(func) {
-                                    editAlbumDialogState = true
+                                RENAME -> {
+                                    GalleryFunctionView(func) {
+                                        editAlbumDialogState = true
+                                    }
                                 }
-                            }
-                            EDIT -> {
-                                GalleryFunctionView(func) {
-                                    showEditDialog = true
+                                EDIT -> {
+                                    GalleryFunctionView(func) {
+                                        showEditDialog = true
+                                    }
                                 }
-                            }
-                            DELETE -> {
-                                GalleryFunctionView(func) {
-                                    showConfirmDeleteDialog = true
+                                DELETE -> {
+                                    GalleryFunctionView(func) {
+                                        showConfirmDeleteDialog = true
+                                    }
                                 }
-                            }
-                            MOVE -> {
-                                GalleryFunctionView(func) {
-                                    showMoveToDialog = true
+                                MOVE -> {
+                                    GalleryFunctionView(func) {
+                                        showMoveToDialog = true
+                                    }
                                 }
                             }
                         }
@@ -688,12 +716,18 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
 }
 
 @Composable
-fun GalleryFunctionView(func: GalleryFunctions, onClick: ()->Unit) {
-    Column(Modifier.padding(horizontal = 6.dp).clickable { onClick() }) {
+fun RowScope.GalleryFunctionView(func: GalleryFunctions, onClick: ()->Unit) {
+    Column(
+        Modifier
+            .align(Alignment.CenterVertically)
+            .padding(horizontal = 6.dp)
+            .clickable { onClick() }) {
         Icon(
             painter = painterResource(func.resId),
             contentDescription = "${func.functionName}功能",
-            modifier = Modifier.size(36.dp).align(Alignment.CenterHorizontally)
+            modifier = Modifier
+                .size(36.dp)
+                .align(Alignment.CenterHorizontally)
         )
         AppThemeText(func.functionName, Modifier.align(Alignment.CenterHorizontally))
     }
@@ -1135,7 +1169,8 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, size: Dp, padding: Dp, c
                                 LocalAppPalette.current.labelUnChecked
                             },
                             CircleShape
-                        ).clickable {
+                        )
+                        .clickable {
                             if (isSelected) {
                                 currentSelectedItem.remove(itemId)
                             } else {
@@ -1278,7 +1313,11 @@ fun MoveToDialog(albumItemRelation: Collection<AlbumItemRelation>, album: Album,
         onDismiss()
     }) { _, actionButtons->
         Column(Modifier.fillMaxSize()) {
-            LazyColumn(Modifier.padding(horizontal = 16.dp).fillMaxSize().weight(1f)) {
+            LazyColumn(
+                Modifier
+                    .padding(horizontal = 16.dp)
+                    .fillMaxSize()
+                    .weight(1f)) {
                 item {
                     AppThemeText("移动到")
                     Spacer(Modifier.height(8.dp))
@@ -1295,7 +1334,10 @@ fun MoveToDialog(albumItemRelation: Collection<AlbumItemRelation>, album: Album,
                     }
                 }
             }
-            Row(Modifier.fillMaxWidth().wrapContentHeight()) {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .wrapContentHeight()) {
                 actionButtons()
             }
         }
