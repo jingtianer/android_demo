@@ -219,6 +219,7 @@ fun AppThemeConfirmDialog(
         fontWeight = FontWeight(600)
     ),
     properties: DialogProperties = DialogProperties(),
+    reversed: Boolean = false,
     onMiddleClick: (() -> Unit)? = null,
     onNegative: (() -> Unit)? = {},
     onPositive: (() -> Unit)? = {},
@@ -231,6 +232,7 @@ fun AppThemeConfirmDialog(
             .background(LocalAppPalette.current.dialogBg)
             .padding(horizontal = 8.dp),
         title = title,
+        reversed = reversed,
         titleTextStyle = titleTextStyle,
         properties = properties,
         onNegative = onNegative,
@@ -256,6 +258,7 @@ fun AppThemeDialog(
         fontSize = 18.sp,
         fontWeight = FontWeight(600)
     ),
+    reversed: Boolean = false,
     properties: DialogProperties = DialogProperties(),
     onNegative: (() -> Unit)? = {},
     onMiddleClick: (() -> Unit)? = null,
@@ -283,24 +286,44 @@ fun AppThemeDialog(
                     }
                 },
                 actionButton = {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(Modifier.align(Alignment.End)) {
-                        if (onNegative != null) {
-                            Button(onClick = onNegative) {
-                                AppThemeText("取消")
-                            }
-                            Spacer(modifier = Modifier.width(8.dp))
-                        }
-                        if (onMiddleClick != null) {
-                            Button(onClick = onMiddleClick, colors = LocalMiddleButtonConfig.current.colors) {
-                                Text(LocalMiddleButtonConfig.current.text, style = LocalTextStyle.current.copy(color = LocalMiddleButtonConfig.current.colors.contentColor))
-                            }
-                            Spacer(modifier = Modifier.width(8.dp))
-                        }
+                    @Composable
+                    fun PositiveButton() {
                         if (onPositive != null) {
                             Button(onClick = onPositive) {
                                 AppThemeText("确认")
                             }
+                        }
+                    }
+                    @Composable
+                    fun MiddleButton() {
+                        if (onMiddleClick != null) {
+                            Button(onClick = onMiddleClick, colors = LocalMiddleButtonConfig.current.colors) {
+                                Text(LocalMiddleButtonConfig.current.text, style = LocalTextStyle.current.copy(color = LocalMiddleButtonConfig.current.colors.contentColor))
+                            }
+                        }
+                    }
+                    @Composable
+                    fun NegativeButton() {
+                        if (onNegative != null) {
+                            Button(onClick = onNegative) {
+                                AppThemeText("取消")
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(Modifier.align(Alignment.End)) {
+                        if (reversed) {
+                            PositiveButton()
+                            Spacer(modifier = Modifier.width(8.dp))
+                            MiddleButton()
+                            Spacer(modifier = Modifier.width(8.dp))
+                            NegativeButton()
+                        } else {
+                            NegativeButton()
+                            Spacer(modifier = Modifier.width(8.dp))
+                            MiddleButton()
+                            Spacer(modifier = Modifier.width(8.dp))
+                            PositiveButton()
                         }
                     }
                     Spacer(modifier = Modifier.height(8.dp))

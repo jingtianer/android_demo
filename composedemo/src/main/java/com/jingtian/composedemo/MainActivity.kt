@@ -28,7 +28,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
@@ -62,7 +61,6 @@ import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DrawerDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.material3.DrawerValue
@@ -90,7 +88,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.RectangleShape
@@ -135,6 +132,7 @@ import com.jingtian.composedemo.ui.theme.LocalAppUIConstants
 import com.jingtian.composedemo.ui.theme.LocalMiddleButtonConfig
 import com.jingtian.composedemo.ui.theme.LocalSecondaryTextStyle
 import com.jingtian.composedemo.ui.theme.appBackground
+import com.jingtian.composedemo.ui.theme.dialogBackground
 import com.jingtian.composedemo.ui.theme.drawerBackground
 import com.jingtian.composedemo.ui.theme.goldenRatio
 import com.jingtian.composedemo.ui.widget.FollowTailLayout
@@ -312,6 +310,7 @@ enum class GalleryFunctions(val functionName: String, @DrawableRes val resId: In
     RENAME("编辑相册", R.drawable.edit_normal),
     EDIT("编辑", R.drawable.edit_normal),
     DELETE("删除", R.drawable.delete),
+    EXIT("退出", R.drawable.exit),
     MOVE("移动", R.drawable.move);
     companion object {
         // 0 -> 添加, 导入, 修改相册名称
@@ -351,7 +350,8 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
     val enterEditModeState = remember { mutableStateOf(false) }
     var enterEditMode by remember { enterEditModeState }
     var editAlbumDialogState by remember { mutableStateOf(false) }
-
+    val showEditDialogStateOnLongClick = remember { mutableStateOf<AlbumItemRelation?>(null) }
+    var showEditDialogOnLongClick by remember { showEditDialogStateOnLongClick }
 
     suspend fun updateFilterList() {
         withContext(Dispatchers.Default) {
@@ -426,7 +426,8 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
 
     val albumNameChange by viewModel.albumNameChange.observeAsState()
 
-    var showEditDialog by remember { mutableStateOf(false) }
+    val showEditDialogState = remember { mutableStateOf(false) }
+    var showEditDialog by remember { showEditDialogState }
     var showConfirmDeleteDialog by remember { mutableStateOf(false) }
     var showMoveToDialog by remember { mutableStateOf(false) }
     LaunchedEffect(albumNameChange) {
@@ -458,8 +459,6 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
             .fillMaxSize()
             .appBackground()
             .windowInsetsPadding(WindowInsets.systemBars)) {
-        val editBarHeight = if (enterEditMode) 6.dp * 2 + 36.dp else 0.dp
-        val filterHeight = if (enterEditMode) LocalAppUIConstants.current.filterLabelHeight + 8.dp * 2 else 0.dp
         CompositionLocalProvider(LocalContentColor provides LocalAppPalette.current.galleryHeaderColor, LocalTextStyle provides LocalTextStyle.current.copy(color = LocalAppPalette.current.galleryHeaderColor)) {
             Row(
                 Modifier
@@ -545,7 +544,7 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
                 contentPadding = PaddingValues(bottom = if (enterEditMode) bottomBarHeight + shadesHeight else 0.dp)
                 ) {
                 items(filteredItemList.size, key = { index-> filteredItemList[index].hashCode() }, contentType = { index-> filteredItemList[index].fileInfo.fileType.value }) { index: Int ->
-                    AlbumItemView(filteredItemList[index], size, galleryItemPadding, currentSelectedItem, enterEditModeState, itemSelectStateChangeState)
+                    AlbumItemView(filteredItemList[index], size, galleryItemPadding, currentSelectedItem, enterEditModeState, itemSelectStateChangeState, showEditDialogStateOnLongClick)
                 }
             }
             if (enterEditMode) {
@@ -597,7 +596,13 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
                                         showMoveToDialog = true
                                     }
                                 }
+                                else -> {}
                             }
+                        }
+                    }
+                    Row(Modifier.align(Alignment.CenterEnd)) {
+                        GalleryFunctionView(EXIT) {
+                            enterEditMode = false
                         }
                     }
                 }
@@ -646,16 +651,13 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
                 colors = LocalMiddleButtonConfig.current.colors.copy(containerColor = LocalAppPalette.current.deleteButtonColor, contentColor = Color.White),
             )
         ) {
-            AppThemeConfirmDialog("确认删除$title", onNegative = null, onMiddleClick = {
+            AppThemeConfirmDialog("确认删除$title", reversed = true, onPositive = null, onMiddleClick = {
                 viewModel.deleteItems(currentSelectedItem.values)
                 showConfirmDeleteDialog = false
-                enterEditMode = false
-            }, onPositive = {
+            }, onNegative = {
                 showConfirmDeleteDialog = false
-                enterEditMode = false
             }, onDismissRequest = {
                 showConfirmDeleteDialog = false
-                enterEditMode = false
             })
         }
     }
@@ -667,17 +669,20 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
     if (editAlbumDialogState) {
         AddOrEditAlbumDialog(album.value) {
             editAlbumDialogState = false
-            enterEditMode = false
         }
     }
 
-    if (showEditDialog) {
+
+    if (showEditDialog || showEditDialogOnLongClick != null) {
         currentSelectedItem.keys.firstOrNull()?.let { firstKey->
-            currentSelectedItem[firstKey]?.let { albumItemRelation->
+            (currentSelectedItem[firstKey])?.let { albumItemRelation->
                 EditDialog(albumItemRelation, album.value, albumList, totalLabelList) {
                     showEditDialog = false
-                    enterEditMode = false
                 }
+            }
+        } ?: showEditDialogOnLongClick?.let {
+            EditDialog(it, album.value, albumList, totalLabelList) {
+                showEditDialogOnLongClick = null
             }
         }
     }
@@ -685,7 +690,6 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
     if (showMoveToDialog) {
         MoveToDialog(currentSelectedItem.values, album.value, albumList) {
             showMoveToDialog = false
-            enterEditMode = false
         }
     }
 
@@ -696,7 +700,6 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
            sheetState.expand()
        } else {
            sheetState.hide()
-           enterEditMode = false
        }
    }
 
@@ -977,7 +980,7 @@ fun playIntent(context: Context, fileInfo: FileInfo): Intent? {
 }
 
 @Composable
-fun AlbumItemView(albumItemRelation: AlbumItemRelation, size: Dp, padding: Dp, currentSelectedItem: SnapshotStateMap<Long, AlbumItemRelation>, enterEditState: MutableState<Boolean>, itemSelectStateChangeState: MutableState<Long>) {
+fun AlbumItemView(albumItemRelation: AlbumItemRelation, size: Dp, padding: Dp, currentSelectedItem: SnapshotStateMap<Long, AlbumItemRelation>, enterEditState: MutableState<Boolean>, itemSelectStateChangeState: MutableState<Long>, showEditDialogState: MutableState<AlbumItemRelation?>) {
     var imageBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
 
     var itemName by remember { mutableStateOf(albumItemRelation.albumItem.itemName) }
@@ -1102,8 +1105,9 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, size: Dp, padding: Dp, c
         .padding(padding)
         .pointerInput(Unit) {
             detectTapGestures(onLongPress = {
-                enterEditState.value = true
-                itemSelectStateChangeState.value += 1
+//                enterEditState.value = true
+//                itemSelectStateChangeState.value += 1
+                showEditDialogState.value = albumItemRelation
             },
                 onTap = {
                     if (enterEditState.value) {
@@ -1306,20 +1310,24 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, size: Dp, padding: Dp, c
 fun MoveToDialog(albumItemRelation: Collection<AlbumItemRelation>, album: Album, albumList: List<Album>, onDismiss: () -> Unit) {
     var currentSelectedAlbum by remember { mutableStateOf(album) }
     val viewModel: AlbumViewModel = viewModel()
-    AppThemeDialog(onNegative = onDismiss, onPositive = {
+    AppThemeDialog(Modifier
+        .fillMaxWidth(LocalAppUIConstants.current.dialogPercent)
+        .background(LocalAppPalette.current.dialogBg)
+        .padding(horizontal = 8.dp),
+    onNegative = onDismiss, onPositive = {
         if (album.albumId != currentSelectedAlbum.albumId) {
             viewModel.moveItems(currentSelectedAlbum, albumItemRelation)
         }
         onDismiss()
     }) { _, actionButtons->
-        Column(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxHeight(LocalAppUIConstants.current.dialogPercent)) {
             LazyColumn(
                 Modifier
                     .padding(horizontal = 16.dp)
                     .fillMaxSize()
                     .weight(1f)) {
                 item {
-                    AppThemeText("移动到")
+                    AppThemeText("移动到: ${currentSelectedAlbum.albumName}", style = LocalTextStyle.current.copy(fontSize = 16.sp))
                     Spacer(Modifier.height(8.dp))
                 }
                 items(albumList.size) { index->
