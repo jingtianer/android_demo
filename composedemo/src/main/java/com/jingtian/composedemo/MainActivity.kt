@@ -377,17 +377,9 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
         enterEditMode = false
         withContext(Dispatchers.IO) {
             viewModel.getLabelList(album.value).collect { value->
-                val checkList = SnapshotStateMap<String, Boolean>()
-                labelFilterCheckedInfo?.let {
-                    for ((k, v) in it) {
-                        if (v) {
-                            checkList[k] = true
-                        }
-                    }
-                }
                 withContext(Dispatchers.Main) {
                     albumName = album.value.albumName
-                    labelFilterCheckedInfo = checkList
+                    labelFilterCheckedInfo = SnapshotStateMap<String, Boolean>()
                     totalLabelList.clear()
                     totalLabelList.addAll(value)
                 }
