@@ -6,6 +6,7 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
+import android.util.Log
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -25,7 +26,14 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.forEachGesture
+import androidx.compose.foundation.gestures.scrollable
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -33,6 +41,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.absoluteOffset
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -58,8 +67,11 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.staggeredgrid.LazyHorizontalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.DrawerDefaults
 import androidx.compose.runtime.Composable
@@ -86,12 +98,19 @@ import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.ComposeView
@@ -103,8 +122,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.util.fastJoinToString
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.FileProvider
@@ -160,6 +181,8 @@ import com.jingtian.composedemo.web.CommonWebView
 import com.jingtian.composedemo.web.WebViewActivity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.max
@@ -357,6 +380,15 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
     var selectAll by remember { mutableStateOf(false) }
     var selectNone by remember { mutableStateOf(false) }
 
+    val size = 160.dp
+    val galleryItemPadding = 4.dp
+    val scope = rememberCoroutineScope()
+
+    val galleryScrollState = rememberLazyStaggeredGridState()
+    var scrollOffsetY by remember { mutableStateOf(0f) }
+    val scrollBarSize = remember { mutableStateListOf(6.dp.dpValue, 64.dp.dpValue) }
+    val scrollAreaWidth = 28.dp
+    val scrollBarOffset = remember { mutableStateListOf(scrollAreaWidth.dpValue - scrollBarSize[0], 0f) }
     suspend fun updateFilterList() {
         withContext(Dispatchers.Default) {
             val labelFilterCheckedInfo = labelFilterCheckedInfo
@@ -374,6 +406,26 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
                 filteredItemList.addAll(filteredList)
             }
         }
+    }
+
+    fun updateScrollItem() {
+        scope.launch {
+            val y = scrollOffsetY
+            val totalHeight = galleryScrollState.layoutInfo.viewportSize.height.toFloat()
+            val totalItemCount = galleryScrollState.layoutInfo.totalItemsCount
+            val scrollPercent = (y / totalHeight) * totalItemCount
+            val targetItem = scrollPercent
+                .toInt()
+                .coerceIn(0, totalItemCount)
+            Log.i("jingtian", "updateScrollOffset: $y, $totalHeight, $scrollPercent, $targetItem")
+            galleryScrollState.scrollToItem(targetItem)
+        }
+    }
+
+    fun updateScrollOffset() {
+        val y = scrollOffsetY - scrollBarSize[1] / 2
+        Log.i("jingtian", "updateScrollOffset: $y")
+        scrollBarOffset[1] = y.coerceIn(0f, galleryScrollState.layoutInfo.viewportSize.height.toFloat() - scrollBarSize[1])
     }
 
     LaunchedEffect(Unit, album) {
@@ -449,9 +501,6 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
     LaunchedEffect(filterChanged, itemList) {
         updateFilterList()
     }
-    val size = 160.dp
-    val galleryItemPadding = 4.dp
-    val scope = rememberCoroutineScope()
 
     Column(
         Modifier
@@ -529,6 +578,10 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
                 }
             }
         }
+        fun getScrollOffset(): Float {
+            return galleryScrollState.layoutInfo.visibleItemsInfo.map { it.index - it.offset.y.toFloat() / it.size.height }.average().toFloat()
+        }
+
         Box(
             Modifier
                 .fillMaxSize()
@@ -536,12 +589,29 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
             val bottomBarHeight = 62.dp
             val shadesHeight = 0.dp
             LazyVerticalStaggeredGrid(
-                columns = StaggeredGridCells.Adaptive((size + galleryItemPadding*2)),
+                columns = StaggeredGridCells.Adaptive((size + galleryItemPadding * 2)),
                 Modifier
                     .fillMaxSize()
-                    .padding(start = galleryItemPadding, end = galleryItemPadding),
-                contentPadding = PaddingValues(bottom = if (enterEditMode) bottomBarHeight + shadesHeight else 0.dp)
-                ) {
+                    .padding(start = galleryItemPadding, end = galleryItemPadding)
+                    .nestedScroll(object : NestedScrollConnection {
+                        override fun onPostScroll(
+                            consumed: Offset,
+                            available: Offset,
+                            source: NestedScrollSource
+                        ): Offset {
+//                            val info =
+//                                galleryScrollState.layoutInfo.visibleItemsInfo
+//                                    .map { "{${it.index}, ${it.offset.y}, ${it.size.height}}" }
+//                                    .fastJoinToString { it }
+                            scrollOffsetY = getScrollOffset() / galleryScrollState.layoutInfo.totalItemsCount * galleryScrollState.layoutInfo.viewportSize.height.toFloat()
+                            updateScrollOffset()
+//                            Log.i("jingtian", "onPostScroll: $info")
+                            return super.onPostScroll(consumed, available, source)
+                        }
+                    }),
+                contentPadding = PaddingValues(bottom = if (enterEditMode) bottomBarHeight + shadesHeight else 0.dp),
+                state = galleryScrollState,
+            ) {
                 items(filteredItemList.size, key = { index-> filteredItemList[index].hashCode() }, contentType = { index-> filteredItemList[index].fileInfo.fileType.value }) { index: Int ->
                     AlbumItemView(filteredItemList[index], size, galleryItemPadding, currentSelectedItem, enterEditModeState, itemSelectStateChangeState, showEditDialogStateOnLongClick)
                 }
@@ -626,8 +696,79 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
                     }
                 }
             }
+            val scrollBarColor = LocalAppPalette.current.labelTextColor.copy(alpha = 0.85f)
+            Box(
+                Modifier
+                    .width(scrollAreaWidth)
+                    .fillMaxHeight()
+                    .align(Alignment.TopEnd)
+                    .pointerInput(Unit) {
+                        detectDragGestures(
+                            onDragStart = { offset ->
+                                scrollOffsetY = offset.y
+                                scrollBarSize[0] = 16.dp.dpValue
+                                scrollBarOffset[0] = scrollAreaWidth.dpValue - scrollBarSize[0]
+                                updateScrollOffset()
+                                updateScrollItem()
+                            },
+                            onDrag = { pointerInputChange, offset ->
+                                scrollOffsetY += offset.y
+                                scrollBarSize[0] = 16.dp.dpValue
+                                scrollBarOffset[0] = scrollAreaWidth.dpValue - scrollBarSize[0]
+                                updateScrollOffset()
+                                updateScrollItem()
+                            },
+                            onDragEnd = {
+                                scrollBarSize[0] = 6.dp.dpValue
+                                scrollBarOffset[0] = scrollAreaWidth.dpValue - scrollBarSize[0]
+                            },
+                            onDragCancel = {
+                                scrollBarSize[0] = 6.dp.dpValue
+                                scrollBarOffset[0] = scrollAreaWidth.dpValue - scrollBarSize[0]
+                            }
+                        )
+                    }
+                    .pointerInput(Unit) {
+                        awaitEachGesture {
+                            val downEvent = awaitFirstDown()
+                            scrollOffsetY = downEvent.position.y
+                            scope.launch {
+                                withContext(Dispatchers.Main) {
+                                    scrollBarSize[0] = 16.dp.dpValue
+                                    scrollBarOffset[0] = scrollAreaWidth.dpValue - scrollBarSize[0]
+                                    updateScrollOffset()
+                                    updateScrollItem()
+                                }
+                            }
+                        }
+                    }
+                    .pointerInput(Unit) {
+                        awaitEachGesture {
+                            val upOrCancel = waitForUpOrCancellation()
+                            scrollOffsetY = upOrCancel?.position?.y ?: scrollOffsetY
+                            scope.launch {
+                                withContext(Dispatchers.Main) {
+                                    scrollBarSize[0] = 6.dp.dpValue
+                                    scrollBarOffset[0] = scrollAreaWidth.dpValue - scrollBarSize[0]
+                                    updateScrollOffset()
+                                    updateScrollItem()
+                                }
+                            }
+                        }
+                    }
+                    .drawWithContent {
+                        drawContent()
+                        drawRoundRect(
+                            scrollBarColor,
+                            Offset(scrollBarOffset[0], scrollBarOffset[1]),
+                            Size(scrollBarSize[0], scrollBarSize[1]),
+                            cornerRadius = CornerRadius(scrollBarSize[0] / 2)
+                        )
+                    }
+            )
         }
     }
+
     LaunchedEffect(currentSelectedItem, enterEditMode, itemSelectStateChange) {
         currentFunctions.clear()
         if (currentSelectedItem.size == filteredItemList.size) {
