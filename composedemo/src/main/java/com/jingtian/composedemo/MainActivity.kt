@@ -311,6 +311,8 @@ enum class GalleryFunctions(val functionName: String, @DrawableRes val resId: In
     EDIT("编辑", R.drawable.edit_normal),
     DELETE("删除", R.drawable.delete),
     EXIT("退出", R.drawable.exit),
+    SELECT_ALL("全选", R.drawable.select_all),
+    SELECT_NONE("全不选", R.drawable.select_none),
     MOVE("移动", R.drawable.move);
     companion object {
         // 0 -> 添加, 导入, 修改相册名称
@@ -345,13 +347,15 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
     var albumName by remember { mutableStateOf(album.value.albumName) }
     val currentSelectedItem = remember { mutableStateMapOf<Long, AlbumItemRelation>() }
     val itemSelectStateChangeState = remember { mutableStateOf(0L) }
-    val itemSelectStateChange by remember { itemSelectStateChangeState }
+    var itemSelectStateChange by remember { itemSelectStateChangeState }
     val currentFunctions = remember { mutableStateMapOf<GalleryFunctions, GalleryFunctions>() }
     val enterEditModeState = remember { mutableStateOf(false) }
     var enterEditMode by remember { enterEditModeState }
     var editAlbumDialogState by remember { mutableStateOf(false) }
     val showEditDialogStateOnLongClick = remember { mutableStateOf<AlbumItemRelation?>(null) }
     var showEditDialogOnLongClick by remember { showEditDialogStateOnLongClick }
+    var selectAll by remember { mutableStateOf(false) }
+    var selectNone by remember { mutableStateOf(false) }
 
     suspend fun updateFilterList() {
         withContext(Dispatchers.Default) {
@@ -413,6 +417,8 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
                 totalLabelList.addAll(value)
             }
             updateFilterList()
+            currentSelectedItem.clear()
+            itemSelectStateChange++
         }
     }
 
@@ -549,6 +555,19 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
                         )
                         .align(Alignment.BottomCenter)
                 ) {
+                    Row(Modifier.align(Alignment.CenterStart)) {
+                        if (selectAll) {
+                            GalleryFunctionView(SELECT_ALL) {
+                                currentSelectedItem.putAll(filteredItemList.map { (it.albumItem.itemId?:DataBase.INVALID_ID) to it })
+                                itemSelectStateChange++
+                            }
+                        } else if (selectNone) {
+                            GalleryFunctionView(SELECT_NONE) {
+                                currentSelectedItem.clear()
+                                itemSelectStateChange++
+                            }
+                        }
+                    }
                     Row(
                         Modifier
                             .wrapContentSize()
@@ -603,6 +622,13 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
     }
     LaunchedEffect(currentSelectedItem, enterEditMode, itemSelectStateChange) {
         currentFunctions.clear()
+        if (currentSelectedItem.size == filteredItemList.size) {
+            selectNone = true
+            selectAll = false
+        } else {
+            selectAll = true
+            selectNone = false
+        }
         if (enterEditMode) {
             val selectedCount = currentSelectedItem.size
             when(selectedCount) {
@@ -1098,6 +1124,9 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, size: Dp, padding: Dp, c
             }
         }
     }
+    val itemId = albumItemRelation.albumItem.itemId ?: DataBase.INVALID_ID
+    val isSelected = currentSelectedItem.containsKey(itemId)
+
     Column(Modifier
         .width(size)
         .padding(padding)
@@ -1131,7 +1160,7 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, size: Dp, padding: Dp, c
                 })
         }
         .background(
-            color = LocalAppPalette.current.galleryCardBg,
+            color = if (isSelected) LocalAppPalette.current.labelChecked else LocalAppPalette.current.galleryCardBg,
             shape = RoundedCornerShape(padding * 2)
         )
         .clip(RoundedCornerShape(padding * 2))) {
@@ -1157,8 +1186,6 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, size: Dp, padding: Dp, c
                     .align(Alignment.Center)
             )
             if (enterEditState.value) {
-                val itemId = albumItemRelation.albumItem.itemId ?: DataBase.INVALID_ID
-                val isSelected = currentSelectedItem.containsKey(itemId)
                 Icon(painter = painterResource(R.drawable.check), contentDescription = "复选框",
                     Modifier
                         .padding(4.dp)
@@ -1308,10 +1335,11 @@ fun AlbumItemView(albumItemRelation: AlbumItemRelation, size: Dp, padding: Dp, c
 fun MoveToDialog(albumItemRelation: Collection<AlbumItemRelation>, album: Album, albumList: List<Album>, onDismiss: () -> Unit) {
     var currentSelectedAlbum by remember { mutableStateOf(album) }
     val viewModel: AlbumViewModel = viewModel()
-    AppThemeDialog(Modifier
-        .fillMaxWidth(LocalAppUIConstants.current.dialogPercent)
-        .background(LocalAppPalette.current.dialogBg)
-        .padding(horizontal = 8.dp),
+    AppThemeDialog(
+        Modifier
+            .fillMaxWidth(LocalAppUIConstants.current.dialogPercent)
+            .background(LocalAppPalette.current.dialogBg)
+            .padding(horizontal = 8.dp),
     onNegative = onDismiss, onPositive = {
         if (album.albumId != currentSelectedAlbum.albumId) {
             viewModel.moveItems(currentSelectedAlbum, albumItemRelation)
