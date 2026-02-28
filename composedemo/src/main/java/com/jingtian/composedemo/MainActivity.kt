@@ -451,6 +451,7 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
     }
     val size = 160.dp
     val galleryItemPadding = 4.dp
+    val scope = rememberCoroutineScope()
 
     Column(
         Modifier
@@ -558,7 +559,14 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
                     Row(Modifier.align(Alignment.CenterStart)) {
                         if (selectAll) {
                             GalleryFunctionView(SELECT_ALL) {
-                                currentSelectedItem.putAll(filteredItemList.map { (it.albumItem.itemId?:DataBase.INVALID_ID) to it })
+                                scope.launch(Dispatchers.Default) {
+                                    val map = HashMap<Long, AlbumItemRelation>().apply {
+                                        putAll(filteredItemList.map { (it.albumItem.itemId?:DataBase.INVALID_ID) to it })
+                                    }
+                                    withContext(Dispatchers.IO) {
+                                        currentSelectedItem.putAll(map)
+                                    }
+                                }
                                 itemSelectStateChange++
                             }
                         } else if (selectNone) {
