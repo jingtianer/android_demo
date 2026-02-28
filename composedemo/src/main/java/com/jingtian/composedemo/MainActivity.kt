@@ -307,7 +307,7 @@ fun LazyListScope.roundRectTabFilter(checkedList: SnapshotStateMap<String, Boole
 enum class GalleryFunctions(val functionName: String, @DrawableRes val resId: Int) {
     ADD("添加", R.drawable.add),
     IMPORT("导入", R.drawable.import_icon),
-    RENAME("编辑相册", R.drawable.edit_normal),
+    RENAME("重命名", R.drawable.edit_normal),
     EDIT("编辑", R.drawable.edit_normal),
     DELETE("删除", R.drawable.delete),
     EXIT("退出", R.drawable.exit),
@@ -526,7 +526,7 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
             Modifier
                 .fillMaxSize()
                 .weight(1f)) {
-            val bottomBarHeight = 68.dp
+            val bottomBarHeight = 62.dp
             val shadesHeight = 0.dp
             LazyVerticalStaggeredGrid(
                 columns = StaggeredGridCells.Adaptive((size + galleryItemPadding*2)),
@@ -665,17 +665,19 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
     }
 
 
-    if (showEditDialog || showEditDialogOnLongClick != null) {
+    if (showEditDialog) {
         currentSelectedItem.keys.firstOrNull()?.let { firstKey->
             (currentSelectedItem[firstKey])?.let { albumItemRelation->
                 EditDialog(albumItemRelation, album.value, albumList, totalLabelList) {
                     showEditDialog = false
                 }
             }
-        } ?: showEditDialogOnLongClick?.let {
-            EditDialog(it, album.value, albumList, totalLabelList) {
-                showEditDialogOnLongClick = null
-            }
+        }
+    }
+
+    showEditDialogOnLongClick?.let {
+        EditDialog(it, album.value, albumList, totalLabelList) {
+            showEditDialogOnLongClick = null
         }
     }
 
@@ -721,10 +723,14 @@ fun RowScope.GalleryFunctionView(func: GalleryFunctions, onClick: ()->Unit) {
             painter = painterResource(func.resId),
             contentDescription = "${func.functionName}功能",
             modifier = Modifier
-                .size(36.dp)
-                .align(Alignment.CenterHorizontally)
+                .size(32.dp)
+                .align(Alignment.CenterHorizontally),
         )
-        AppThemeText(func.functionName, Modifier.align(Alignment.CenterHorizontally))
+        AppThemeText(
+            func.functionName,
+            Modifier.align(Alignment.CenterHorizontally),
+            style = LocalTextStyle.current.copy(fontSize = 10.sp)
+        )
     }
 }
 
@@ -1315,9 +1321,10 @@ fun MoveToDialog(albumItemRelation: Collection<AlbumItemRelation>, album: Album,
         Column(Modifier.fillMaxHeight(LocalAppUIConstants.current.dialogPercent)) {
             LazyColumn(
                 Modifier
-                    .padding(horizontal = 16.dp)
+                    .padding(horizontal = 8.dp, vertical = 12.dp)
                     .fillMaxSize()
-                    .weight(1f)) {
+                    .weight(1f)
+            ) {
                 item {
                     AppThemeText("移动到: ${currentSelectedAlbum.albumName}", style = LocalTextStyle.current.copy(fontSize = 16.sp))
                     Spacer(Modifier.height(8.dp))
@@ -1334,7 +1341,7 @@ fun MoveToDialog(albumItemRelation: Collection<AlbumItemRelation>, album: Album,
                     }
                 }
             }
-            Row(
+            Box(
                 Modifier
                     .fillMaxWidth()
                     .wrapContentHeight()) {
