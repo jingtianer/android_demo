@@ -1,8 +1,21 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("com.google.devtools.ksp")
     id("com.chaquo.python")
+}
+
+val configFile = project.file("app-config.properties")
+val configProps = Properties()
+if (configFile.exists()) {
+    FileInputStream(configFile).use {
+        configProps.load(it)
+    }
+} else {
+    throw GradleException("配置文件 config.properties 不存在！")
 }
 
 android {
@@ -27,12 +40,17 @@ android {
     }
 
     buildTypes {
+        debug {
+            applicationIdSuffix = ".debug"
+            resValue("string", "app_name", "${configProps.getProperty("APP_NAME")}.debug")
+        }
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            resValue("string", "app_name", "${configProps.getProperty("APP_NAME")}")
         }
     }
     compileOptions {
@@ -54,22 +72,22 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
-    flavorDimensions += "pyVersion"
-    productFlavors {
-        create("py39") { dimension = "pyVersion" }
-        create("py310") { dimension = "pyVersion" }
-        create("py311") { dimension = "pyVersion" }
-        create("py312") { dimension = "pyVersion" }
-    }
+//    flavorDimensions += "pyVersion"
+//    productFlavors {
+//        create("py39") { dimension = "pyVersion" }
+//        create("py310") { dimension = "pyVersion" }
+//        create("py311") { dimension = "pyVersion" }
+//        create("py312") { dimension = "pyVersion" }
+//    }
 }
 //执行python 接入文档: https://chaquo.com/chaquopy/doc/15.0/android.html
 chaquopy {
-    productFlavors {
-        getByName("py39") { version = "3.9" }
-        getByName("py310") { version = "3.10" }
-        getByName("py311") { version = "3.11" }
-        getByName("py312") { version = "3.12" }
-    }
+//    productFlavors {
+//        getByName("py39") { version = "3.9" }
+//        getByName("py310") { version = "3.10" }
+//        getByName("py311") { version = "3.11" }
+//        getByName("py312") { version = "3.12" }
+//    }
     defaultConfig {
         version = "3.9"
         pip {
