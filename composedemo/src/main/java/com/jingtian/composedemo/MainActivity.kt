@@ -6,11 +6,14 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
+import android.os.Bundle
 import android.util.Log
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
+import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -74,6 +77,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.DrawerDefaults
+import androidx.compose.material3.DrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -299,18 +303,9 @@ fun Main() {
             drawerState = drawerState,
             gesturesEnabled = true
         ) {
-            Gallery(currentSelectedAlbum, menuItemsEntity) {
-                scope.launch {
-                    if (drawerState.isOpen) {
-                        drawerState.close()
-                    } else {
-                        drawerState.open()
-                    }
-                }
-            }
+            Gallery(currentSelectedAlbum, menuItemsEntity, drawerState)
         }
     }
-
 }
 
 class LabelCheckInfo<T>(val label: T, val name: String, var isChecked: MutableLiveData<Boolean> = MutableLiveData(false))
@@ -349,7 +344,7 @@ enum class GalleryFunctions(val functionName: String, @DrawableRes val resId: In
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()->Unit) {
+fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, drawerState: DrawerState) {
     if (album == null) {
         return
     }
@@ -417,14 +412,14 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
             val targetItem = scrollPercent
                 .toInt()
                 .coerceIn(0, totalItemCount)
-            Log.i("jingtian", "updateScrollOffset: $y, $totalHeight, $scrollPercent, $targetItem")
+            Log.d("jingtian", "updateScrollOffset: $y, $totalHeight, $scrollPercent, $targetItem")
             galleryScrollState.scrollToItem(targetItem)
         }
     }
 
     fun updateScrollOffset() {
         val y = scrollOffsetY - scrollBarSize[1] / 2
-        Log.i("jingtian", "updateScrollOffset: $y")
+        Log.d("jingtian", "updateScrollOffset: $y")
         scrollBarOffset[1] = y.coerceIn(0f, galleryScrollState.layoutInfo.viewportSize.height.toFloat() - scrollBarSize[1])
     }
 
@@ -521,7 +516,15 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
                         .align(Alignment.CenterVertically)
                         .size(LocalAppUIConstants.current.filterLabelHeight)
                         .background(LocalAppPalette.current.labelUnChecked, shape = CircleShape)
-                        .clickable { openDrawer() }
+                        .clickable {
+                            scope.launch {
+                                if (drawerState.isOpen) {
+                                    drawerState.close()
+                                } else {
+                                    drawerState.open()
+                                }
+                            }
+                        }
                         .padding(4.dp)
                 )
                 Spacer(Modifier.width(12.dp))
@@ -603,9 +606,10 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
 //                                galleryScrollState.layoutInfo.visibleItemsInfo
 //                                    .map { "{${it.index}, ${it.offset.y}, ${it.size.height}}" }
 //                                    .fastJoinToString { it }
-                            scrollOffsetY = getScrollOffset() / galleryScrollState.layoutInfo.totalItemsCount * galleryScrollState.layoutInfo.viewportSize.height.toFloat()
+                            scrollOffsetY =
+                                getScrollOffset() / galleryScrollState.layoutInfo.totalItemsCount * galleryScrollState.layoutInfo.viewportSize.height.toFloat()
                             updateScrollOffset()
-//                            Log.i("jingtian", "onPostScroll: $info")
+//                            Log.d("jingtian", "onPostScroll: $info")
                             return super.onPostScroll(consumed, available, source)
                         }
                     }),
@@ -885,6 +889,28 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, openDrawer: ()-
             showLabelFilter = false
         }
     }
+    val backPressedCallback = remember {
+        object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (drawerState.isOpen) {
+                    scope.launch {
+                        drawerState.close()
+                    }
+                } else if (enterEditMode) {
+                    enterEditMode = false
+                }
+            }
+
+        }
+    }
+    val dispatcher = LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
+    DisposableEffect(dispatcher) {
+        dispatcher?.addCallback(backPressedCallback)
+        onDispose {
+            backPressedCallback.remove()
+        }
+    }
+    backPressedCallback.isEnabled = drawerState.isOpen || enterEditMode
 }
 
 @Composable
