@@ -620,6 +620,76 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, drawerState: Dr
                     AlbumItemView(filteredItemList[index], size, galleryItemPadding, currentSelectedItem, enterEditModeState, itemSelectStateChangeState, showEditDialogStateOnLongClick)
                 }
             }
+            val scrollBarColor = LocalAppPalette.current.labelTextColor.copy(alpha = 0.85f)
+            Box(
+                Modifier
+                    .width(scrollAreaWidth)
+                    .fillMaxHeight()
+                    .align(Alignment.TopEnd)
+                    .pointerInput(Unit) {
+                        detectDragGestures(
+                            onDragStart = { offset ->
+                                scrollOffsetY = offset.y
+                                scrollBarSize[0] = 16.dp.dpValue
+                                scrollBarOffset[0] = scrollAreaWidth.dpValue - scrollBarSize[0]
+                                updateScrollOffset()
+                                updateScrollItem()
+                            },
+                            onDrag = { pointerInputChange, offset ->
+                                scrollOffsetY += offset.y
+                                scrollBarSize[0] = 16.dp.dpValue
+                                scrollBarOffset[0] = scrollAreaWidth.dpValue - scrollBarSize[0]
+                                updateScrollOffset()
+                                updateScrollItem()
+                            },
+                            onDragEnd = {
+                                scrollBarSize[0] = 6.dp.dpValue
+                                scrollBarOffset[0] = scrollAreaWidth.dpValue - scrollBarSize[0]
+                            },
+                            onDragCancel = {
+                                scrollBarSize[0] = 6.dp.dpValue
+                                scrollBarOffset[0] = scrollAreaWidth.dpValue - scrollBarSize[0]
+                            }
+                        )
+                    }
+                    .pointerInput(Unit) {
+                        awaitEachGesture {
+                            val downEvent = awaitFirstDown()
+                            scrollOffsetY = downEvent.position.y
+                            scope.launch {
+                                withContext(Dispatchers.Main) {
+                                    scrollBarSize[0] = 16.dp.dpValue
+                                    scrollBarOffset[0] = scrollAreaWidth.dpValue - scrollBarSize[0]
+                                    updateScrollOffset()
+                                    updateScrollItem()
+                                }
+                            }
+                        }
+                    }
+                    .pointerInput(Unit) {
+                        awaitEachGesture {
+                            val upOrCancel = waitForUpOrCancellation()
+                            scrollOffsetY = upOrCancel?.position?.y ?: scrollOffsetY
+                            scope.launch {
+                                withContext(Dispatchers.Main) {
+                                    scrollBarSize[0] = 6.dp.dpValue
+                                    scrollBarOffset[0] = scrollAreaWidth.dpValue - scrollBarSize[0]
+                                    updateScrollOffset()
+                                    updateScrollItem()
+                                }
+                            }
+                        }
+                    }
+                    .drawWithContent {
+                        drawContent()
+                        drawRoundRect(
+                            scrollBarColor,
+                            Offset(scrollBarOffset[0], scrollBarOffset[1]),
+                            Size(scrollBarSize[0], scrollBarSize[1]),
+                            cornerRadius = CornerRadius(scrollBarSize[0] / 2)
+                        )
+                    }
+            )
             if (enterEditMode) {
                 Box(
                     Modifier
@@ -700,76 +770,6 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, drawerState: Dr
                     }
                 }
             }
-            val scrollBarColor = LocalAppPalette.current.labelTextColor.copy(alpha = 0.85f)
-            Box(
-                Modifier
-                    .width(scrollAreaWidth)
-                    .fillMaxHeight()
-                    .align(Alignment.TopEnd)
-                    .pointerInput(Unit) {
-                        detectDragGestures(
-                            onDragStart = { offset ->
-                                scrollOffsetY = offset.y
-                                scrollBarSize[0] = 16.dp.dpValue
-                                scrollBarOffset[0] = scrollAreaWidth.dpValue - scrollBarSize[0]
-                                updateScrollOffset()
-                                updateScrollItem()
-                            },
-                            onDrag = { pointerInputChange, offset ->
-                                scrollOffsetY += offset.y
-                                scrollBarSize[0] = 16.dp.dpValue
-                                scrollBarOffset[0] = scrollAreaWidth.dpValue - scrollBarSize[0]
-                                updateScrollOffset()
-                                updateScrollItem()
-                            },
-                            onDragEnd = {
-                                scrollBarSize[0] = 6.dp.dpValue
-                                scrollBarOffset[0] = scrollAreaWidth.dpValue - scrollBarSize[0]
-                            },
-                            onDragCancel = {
-                                scrollBarSize[0] = 6.dp.dpValue
-                                scrollBarOffset[0] = scrollAreaWidth.dpValue - scrollBarSize[0]
-                            }
-                        )
-                    }
-                    .pointerInput(Unit) {
-                        awaitEachGesture {
-                            val downEvent = awaitFirstDown()
-                            scrollOffsetY = downEvent.position.y
-                            scope.launch {
-                                withContext(Dispatchers.Main) {
-                                    scrollBarSize[0] = 16.dp.dpValue
-                                    scrollBarOffset[0] = scrollAreaWidth.dpValue - scrollBarSize[0]
-                                    updateScrollOffset()
-                                    updateScrollItem()
-                                }
-                            }
-                        }
-                    }
-                    .pointerInput(Unit) {
-                        awaitEachGesture {
-                            val upOrCancel = waitForUpOrCancellation()
-                            scrollOffsetY = upOrCancel?.position?.y ?: scrollOffsetY
-                            scope.launch {
-                                withContext(Dispatchers.Main) {
-                                    scrollBarSize[0] = 6.dp.dpValue
-                                    scrollBarOffset[0] = scrollAreaWidth.dpValue - scrollBarSize[0]
-                                    updateScrollOffset()
-                                    updateScrollItem()
-                                }
-                            }
-                        }
-                    }
-                    .drawWithContent {
-                        drawContent()
-                        drawRoundRect(
-                            scrollBarColor,
-                            Offset(scrollBarOffset[0], scrollBarOffset[1]),
-                            Size(scrollBarSize[0], scrollBarSize[1]),
-                            cornerRadius = CornerRadius(scrollBarSize[0] / 2)
-                        )
-                    }
-            )
         }
     }
 
