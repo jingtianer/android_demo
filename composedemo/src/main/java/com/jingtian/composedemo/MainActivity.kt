@@ -6,7 +6,6 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
-import android.os.Bundle
 import android.util.Log
 import android.view.Gravity
 import android.view.View
@@ -29,13 +28,10 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.forEachGesture
-import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -44,7 +40,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.absoluteOffset
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -71,10 +66,8 @@ import androidx.compose.foundation.lazy.staggeredgrid.LazyHorizontalStaggeredGri
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.DrawerDefaults
 import androidx.compose.material3.DrawerState
@@ -126,10 +119,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.util.fastJoinToString
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.FileProvider
@@ -157,7 +148,6 @@ import com.jingtian.composedemo.ui.theme.LocalAppUIConstants
 import com.jingtian.composedemo.ui.theme.LocalMiddleButtonConfig
 import com.jingtian.composedemo.ui.theme.LocalSecondaryTextStyle
 import com.jingtian.composedemo.ui.theme.appBackground
-import com.jingtian.composedemo.ui.theme.dialogBackground
 import com.jingtian.composedemo.ui.theme.drawerBackground
 import com.jingtian.composedemo.ui.theme.goldenRatio
 import com.jingtian.composedemo.ui.widget.FollowTailLayout
@@ -185,8 +175,6 @@ import com.jingtian.composedemo.web.CommonWebView
 import com.jingtian.composedemo.web.WebViewActivity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.awaitCancellation
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.max
@@ -1572,13 +1560,12 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
     val scope = rememberCoroutineScope()
     var imageResource by remember { mutableStateOf(R.drawable.upload_to_cloud) }
 
-    val totalLabelList = remember { mutableStateListOf(*(totalLabelList.toSet() - albumItemRelation.labelInfos.map { it.label }.toSet()).map { LabelCheckInfo(it, it) }.toTypedArray()) }
+    val totalLabelList = remember { mutableStateMapOf(*(totalLabelList.map { it to it }).toTypedArray()) }
+    val filteredTotalLabelList = remember { mutableStateListOf(*((totalLabelList.keys - albumItemRelation.labelInfos.map { it.label }.toSet()).toTypedArray())) }
+    val selectedTotalLabelList = remember { mutableStateMapOf<String, String>() }
 
     val imageWidth = min(LocalConfiguration.current.let { min(it.screenWidthDp, it.screenHeightDp)/2 }, 180).dp
 
-    fun deleteItem() {
-        viewModel.deleteItem(albumItemRelation)
-    }
     var webSnapShotTaker: (suspend ()->Bitmap)? by remember { mutableStateOf(null) }
 
     var currentSelectedAlbum by remember { mutableStateOf(relatedAlbum) }
@@ -1861,7 +1848,7 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
                         LazyHorizontalStaggeredGrid(rows = StaggeredGridCells.FixedSize(30.dp),
                             Modifier
                                 .padding(horizontal = 6.dp)
-                                .height(60.dp)
+                                .height(90.dp)
                                 .fillMaxWidth()) {
                             item {
                                 var addItemValue by remember { mutableStateOf("") }
@@ -1878,25 +1865,29 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
                                     addItemValue = value
                                 }
                             }
-                            items(totalLabelList.size, key = { index-> totalLabelList[index].name to 1 }) { index->
-                                val item = totalLabelList[index]
-                                val isChecked by item.isChecked.observeAsState()
-                                CheckableLabelView(label = item.label, isChecked = isChecked ?: false) {
-                                    if (it && !itemLabelSet.containsKey(item.label)) {
-                                        itemLabelSet[item.label] = item.label
-                                        itemLabel.add(0, item.label)
-                                    } else if (!it && itemLabelSet.containsKey(item.label)) {
-                                        itemLabelSet.remove(item.label)
-                                        itemLabel.remove(item.label)
+                            items(filteredTotalLabelList.size, key = { index-> filteredTotalLabelList[index] }) { index->
+                                val item = filteredTotalLabelList[index]
+                                val isChecked = selectedTotalLabelList.containsKey(item)
+                                CheckableLabelView(label = item, isChecked = isChecked) {
+                                    if (it && !itemLabelSet.containsKey(item)) {
+                                        itemLabelSet[item] = item
+                                        itemLabel.add(0, item)
+                                    } else if (!it && itemLabelSet.containsKey(item)) {
+                                        itemLabelSet.remove(item)
+                                        itemLabel.remove(item)
                                     }
-                                    item.isChecked.value = it
+                                    if (it) {
+                                        selectedTotalLabelList[item] = item
+                                    } else {
+                                        selectedTotalLabelList.remove(item)
+                                    }
                                 }
                             }
                         }
                         LazyHorizontalStaggeredGrid(rows = StaggeredGridCells.FixedSize(30.dp),
                             Modifier
                                 .padding(horizontal = 6.dp)
-                                .height(60.dp)
+                                .height(30.dp)
                                 .fillMaxWidth()) {
                             items(itemLabel.size, key = { index: Int ->
                                 itemLabel[index]
@@ -1905,6 +1896,10 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
                                 EditableLabelView(item, enableEdit = false, onRemove = {
                                     itemLabel.remove(item)
                                     itemLabelSet.remove(item)
+                                    selectedTotalLabelList.remove(item)
+                                    if (totalLabelList.containsKey(item)) {
+                                        filteredTotalLabelList.add(item)
+                                    }
                                 }) { }
                             }
                         }
