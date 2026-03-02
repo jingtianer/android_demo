@@ -25,8 +25,8 @@ class FollowTailLayout @JvmOverloads constructor(
     val headView: MutableList<View> = mutableListOf()
     var orientation: Int = Gravity.LEFT
         set(value) {
-            gravity = field
             field = value
+            gravity = field
             initLp()
         }
 

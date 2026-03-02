@@ -357,8 +357,8 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, drawerState: Dr
     val albumItemDataChange by viewModel.albumItemListChange.observeAsState()
 
     val totalLabelList = remember { mutableStateListOf<String>() }
-    val totalFileTypeList by remember { derivedStateOf { FileType.entries.map { it.typeName } } }
-    val totalItemRankList by remember { derivedStateOf { ItemRank.entries.map { it.name } } }
+    val totalFileTypeList = remember { FileType.entries.map { it.typeName } }
+    val totalItemRankList = remember { ItemRank.entries.map { it.name } }
     var labelFilterCheckedInfo by remember { mutableStateOf<SnapshotStateMap<String, Boolean>?>(null) }
     val fileTypeCheckState = remember { mutableStateMapOf<String, Boolean>() }
     val itemRankTypeCheckState = remember { mutableStateMapOf<String, Boolean>() }
@@ -380,7 +380,7 @@ fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, drawerState: Dr
     val scope = rememberCoroutineScope()
 
     val galleryScrollState = rememberLazyStaggeredGridState()
-    var scrollOffsetY by remember { mutableStateOf(0f) }
+    var scrollOffsetY by remember { mutableFloatStateOf(0f) }
     val scrollBarSize = remember { mutableStateListOf(6.dp.dpValue, 64.dp.dpValue) }
     val scrollAreaWidth = 28.dp
     val scrollBarOffset = remember { mutableStateListOf(scrollAreaWidth.dpValue - scrollBarSize[0], 0f) }
@@ -2040,7 +2040,7 @@ fun AddItemDialog(album: Album, totalLabelList: List<String>, albumData: List<Al
                 HTML -> {
                     imageResource = R.drawable.chrome
                     pickedImage = null
-                    getThumbnail(AUDIO, scope, uri, maxWidth = imageWidth.dpValue.toInt()) { bitmap: Bitmap? ->
+                    getThumbnail(HTML, scope, uri, maxWidth = imageWidth.dpValue.toInt()) { bitmap: Bitmap? ->
                         pickedImage = bitmap?.asImageBitmap()
                     }
                 }

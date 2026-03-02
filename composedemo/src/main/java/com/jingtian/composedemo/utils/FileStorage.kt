@@ -117,11 +117,9 @@ object FileStorageUtils {
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             try {
-                app.contentResolver.openInputStream(this).use { `is` ->
-                    if (`is` != null) {
-                        val path: Path = Paths.get(this.getPath())
-                        return Files.isHidden(path)
-                    }
+                app.contentResolver.openInputStream(this)?.use { `is` ->
+                    val path: Path = Paths.get(this.path)
+                    return Files.isHidden(path)
                 }
             } catch (e: FileNotFoundException) {
             } catch (e: IOException) {
@@ -189,7 +187,7 @@ object FileStorageUtils {
 
         fun get(id: Long): Uri? {
             if (id == -1L) {
-                Uri.EMPTY
+                return null
             }
             val cachedUri = uriCache.get(id)
             if (cachedUri != null) {
