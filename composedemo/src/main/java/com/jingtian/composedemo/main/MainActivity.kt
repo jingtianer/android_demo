@@ -1,13 +1,11 @@
 package com.jingtian.composedemo.main
 
-import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
 import android.view.Gravity
-import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -25,13 +23,11 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -47,7 +43,6 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.staggeredgrid.LazyHorizontalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.shape.CircleShape
@@ -69,7 +64,6 @@ import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -79,14 +73,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -114,6 +106,7 @@ import com.jingtian.composedemo.dao.model.FileType.*
 import com.jingtian.composedemo.dao.model.ItemRank
 import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
 import com.jingtian.composedemo.main.gallery.Gallery
+import com.jingtian.composedemo.main.gallery.GalleryStateHolder
 import com.jingtian.composedemo.ui.theme.LocalAppPalette
 import com.jingtian.composedemo.ui.theme.LocalAppUIConstants
 import com.jingtian.composedemo.ui.theme.LocalMiddleButtonConfig
@@ -122,7 +115,6 @@ import com.jingtian.composedemo.ui.theme.drawerBackground
 import com.jingtian.composedemo.ui.theme.goldenRatio
 import com.jingtian.composedemo.ui.widget.FollowTailLayout
 import com.jingtian.composedemo.ui.widget.RankTypeChooser
-import com.jingtian.composedemo.ui.widget.RankTypeChooser.Companion.createBg
 import com.jingtian.composedemo.ui.widget.StarRateView
 import com.jingtian.composedemo.utils.AppTheme
 import com.jingtian.composedemo.utils.BitMapCachePool
@@ -134,7 +126,6 @@ import com.jingtian.composedemo.utils.FileStorageUtils.getThumbnail
 import com.jingtian.composedemo.utils.FileStorageUtils.isHidden
 import com.jingtian.composedemo.utils.FileStorageUtils.safeToFile
 import com.jingtian.composedemo.utils.UserStorage
-import com.jingtian.composedemo.utils.ViewUtils.commonConfig
 import com.jingtian.composedemo.utils.ViewUtils.commonEditableConfig
 import com.jingtian.composedemo.utils.ViewUtils.dpValue
 import com.jingtian.composedemo.utils.splitByWhiteSpace
@@ -146,9 +137,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlin.math.max
+import java.lang.ref.SoftReference
 import kotlin.math.min
-import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
 class MainActivity : BaseActivity() {
@@ -215,6 +205,9 @@ fun Main() {
     }
     val snackBarMessage by viewModel.currentBackgroundTask.observeAsState()
 
+    val galleryStateHolderMap = remember(menuItemsEntity) {
+        mutableStateMapOf<Long, SoftReference<GalleryStateHolder>>()
+    }
     var showSnackBar by remember { mutableStateOf(snackBarMessage != null) }
     var showSnackBarAnim by remember { mutableStateOf(true) }
 
@@ -259,7 +252,7 @@ fun Main() {
             drawerState = drawerState,
             gesturesEnabled = true
         ) {
-            Gallery(currentSelectedAlbum, menuItemsEntity, drawerState)
+            Gallery(galleryStateHolderMap, currentSelectedAlbum, menuItemsEntity, drawerState)
         }
     }
 }
@@ -307,334 +300,6 @@ fun playIntent(context: Context, fileInfo: FileInfo): Intent? {
 
         IMAGE, VIDEO, AUDIO, RegularFile -> systemFallbackIntent(context, fileInfo)
     }
-}
-
-@Composable
-fun AlbumItemView(albumItemRelation: AlbumItemRelation, size: Dp, padding: Dp, currentSelectedItem: SnapshotStateMap<Long, AlbumItemRelation>, enterEditState: MutableState<Boolean>, itemSelectStateChangeState: MutableState<Long>, showEditDialogState: MutableState<AlbumItemRelation?>) {
-    var imageBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
-
-    var itemName by remember { mutableStateOf(albumItemRelation.albumItem.itemName) }
-    var itemDesc by remember { mutableStateOf(albumItemRelation.albumItem.desc) }
-    var itemRank by remember { mutableStateOf(albumItemRelation.albumItem.rank) }
-    var itemScore by remember { mutableStateOf(albumItemRelation.albumItem.score) }
-    var itemLabel by remember { mutableStateOf(albumItemRelation.labelInfos) }
-
-    val scope = rememberCoroutineScope()
-    var imageResource by remember { mutableStateOf(R.drawable.load_failed) }
-
-    fun FileInfo.aspectRatio(): Float? {
-        return (this.intrinsicWidth.toFloat() / this.intrinsicHeight.toFloat()).takeIf {
-            this.intrinsicHeight > 0 && this.intrinsicWidth > 0
-        } ?: 1f
-    }
-
-    fun ImageBitmap.aspectRatio(): Float? {
-        return (this.width.toFloat() / this.height.toFloat()).takeIf {
-            this.width > 0 && this.height > 0
-        } ?: 1f
-    }
-
-    var intrinsicRatio by remember {
-        mutableStateOf(
-            albumItemRelation.fileInfo.aspectRatio()
-        )
-    }
-
-    suspend fun fetchImage() {
-        withContext(Dispatchers.IO) {
-            val uri = albumItemRelation.fileInfo?.getFileUri() ?: return@withContext
-            val fileType = albumItemRelation.fileInfo.fileType
-            when(fileType) {
-                IMAGE -> {
-                    val (_, image) = BitMapCachePool.loadImage(
-                        albumItemRelation.fileInfo,
-                        size.dpValue.toInt(),
-                    )
-                    val bitmap = image?.asImageBitmap()
-                    withContext(Dispatchers.Main) {
-                        imageBitmap = bitmap
-                        imageBitmap?.aspectRatio()?.let {
-                            intrinsicRatio = it
-                        }
-                    }
-                }
-                VIDEO -> {
-                    getThumbnail(
-                        albumItemRelation.fileInfo,
-                        scope, uri,
-                        maxWidth = size.dpValue.toInt(),
-                    ) { bitmap->
-                        imageBitmap = bitmap?.asImageBitmap()
-                        imageBitmap?.aspectRatio()?.let {
-                            intrinsicRatio = it
-                        }
-                    }
-                }
-                AUDIO -> {
-                    imageResource = R.drawable.music
-                    getThumbnail(
-                        albumItemRelation.fileInfo,
-                        scope, uri,
-                        maxWidth = size.dpValue.toInt(),
-                    ) { bitmap->
-                        imageBitmap = bitmap?.asImageBitmap()
-                        imageBitmap?.aspectRatio()?.let {
-                            intrinsicRatio = it
-                        }
-                    }
-                }
-                RegularFile -> {
-                    intrinsicRatio = 1f
-                    imageResource = R.drawable.file
-                    imageBitmap = null
-                }
-                HTML -> {
-                    intrinsicRatio = 1f
-                    imageResource = R.drawable.chrome
-                    imageBitmap = null
-                    getThumbnail(
-                        albumItemRelation.fileInfo,
-                        scope, uri,
-                        maxWidth = size.dpValue.toInt(),
-                    ) { bitmap->
-                        imageBitmap = bitmap?.asImageBitmap()
-                    }
-                }
-            }
-        }
-    }
-    LaunchedEffect(Unit) {
-        fetchImage()
-    }
-
-    val context = LocalContext.current
-    val playIntent = remember(albumItemRelation) {
-        val fileInfo = albumItemRelation.fileInfo
-        playIntent(context, fileInfo)
-    }
-
-    val fileTypeIcon = when(albumItemRelation.fileInfo.fileType) {
-        IMAGE -> R.drawable.pic_icon
-        VIDEO -> R.drawable.video_icon
-        AUDIO -> R.drawable.music_icon
-        HTML -> R.drawable.web_icon
-        RegularFile -> R.drawable.doc_icon
-    }
-
-    val launcher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            scope.launch {
-                fetchImage()
-            }
-        }
-    }
-    val itemId = albumItemRelation.albumItem.itemId ?: DataBase.INVALID_ID
-    val isSelected = currentSelectedItem.containsKey(itemId)
-
-    Column(Modifier
-        .width(size)
-        .padding(padding)
-        .pointerInput(Unit) {
-            detectTapGestures(onLongPress = {
-//                enterEditState.value = true
-//                itemSelectStateChangeState.value += 1
-                showEditDialogState.value = albumItemRelation
-            },
-                onTap = {
-                    if (enterEditState.value) {
-                        val itemId = albumItemRelation.albumItem.itemId ?: DataBase.INVALID_ID
-                        if (currentSelectedItem.containsKey(itemId)) {
-                            currentSelectedItem.remove(itemId)
-                        } else {
-                            currentSelectedItem[itemId] = albumItemRelation
-                        }
-                        itemSelectStateChangeState.value += 1
-                    } else {
-                        if (playIntent != null) {
-                            if (albumItemRelation.fileInfo.fileType == HTML) {
-                                launcher.launch(playIntent)
-                            } else {
-                                context.startActivity(playIntent)
-                            }
-                        }
-                        scope.launch(Dispatchers.IO) {
-                            fetchImage()
-                        }
-                    }
-                })
-        }
-        .background(
-            color = if (isSelected) LocalAppPalette.current.labelChecked else LocalAppPalette.current.galleryCardBg,
-            shape = RoundedCornerShape(padding * 2)
-        )
-        .clip(RoundedCornerShape(padding * 2))) {
-
-        val currentPickedImage = imageBitmap
-
-        fun Modifier.aspectRatioOrNull(intrinsicRatio: Float?): Modifier {
-            return if (intrinsicRatio != null) {
-                aspectRatio(intrinsicRatio)
-            } else {
-                this
-            }
-        }
-
-
-        Box(Modifier.fillMaxWidth()) {
-            Icon(
-                painter = painterResource(fileTypeIcon),
-                contentDescription = "文件类型图标",
-                modifier = Modifier
-                    .padding(vertical = 4.dp)
-                    .size(24.dp)
-                    .align(Alignment.Center)
-            )
-            if (enterEditState.value) {
-                Icon(painter = painterResource(R.drawable.check), contentDescription = "复选框",
-                    Modifier
-                        .padding(4.dp)
-                        .align(Alignment.CenterEnd)
-                        .size(24.dp)
-                        .background(
-                            color = if (isSelected) {
-                                LocalAppPalette.current.labelChecked
-                            } else {
-                                LocalAppPalette.current.labelUnChecked
-                            },
-                            CircleShape
-                        )
-                        .clickable {
-                            if (isSelected) {
-                                currentSelectedItem.remove(itemId)
-                            } else {
-                                currentSelectedItem[itemId] = albumItemRelation
-                            }
-                            itemSelectStateChangeState.value += 1
-                        }
-                )
-            }
-        }
-
-        Box(
-            Modifier
-                .clip(RoundedCornerShape(padding * 2))
-                .fillMaxWidth()) {
-            val imageResource = imageResource
-            if (currentPickedImage != null) {
-                Image(
-                    bitmap = currentPickedImage,
-                    contentDescription = "文件缩略图",
-                    Modifier
-                        .fillMaxWidth()
-                        .aspectRatioOrNull(intrinsicRatio)
-                        .align(Alignment.Center),
-                    contentScale = ContentScale.FillWidth
-                )
-            } else if (imageResource != null) {
-                Image(
-                    painter = painterResource(imageResource),
-                    contentDescription = "文件缩略图",
-                    Modifier
-                        .fillMaxWidth()
-                        .aspectRatioOrNull(intrinsicRatio)
-                        .padding(6.dp)
-                        .align(Alignment.Center),
-                    contentScale = ContentScale.FillWidth
-                )
-            } else if (albumItemRelation.fileInfo.fileType == HTML) {
-//                CommonWebView(Modifier
-//                    .fillMaxWidth()
-//                    .aspectRatioOrNull(intrinsicRatio)
-//                    .align(Alignment.Center),
-//                    uri = albumItemRelation.fileInfo.getFileUri(),
-//                    enabled = false,
-//                )
-            }
-
-            if (itemRank != null && itemRank != ItemRank.NONE) {
-                fun View.initRankView(): View {
-                    val bg = createBg(itemRank, context)
-                    val paddingHorizontal = 4.dp.dpValue.roundToInt()
-                    val width = max(bg.getWidth(), bg.getHeight()).roundToInt() + paddingHorizontal + paddingHorizontal
-                    layoutParams = ViewGroup.LayoutParams(width, bg.getHeight().roundToInt())
-                    setPadding(paddingHorizontal, 0, paddingHorizontal, 0)
-                    background = bg
-                    return this
-                }
-                AndroidView({ context ->
-                    View(context).initRankView()
-                },
-                    Modifier
-                        .wrapContentSize()
-                        .align(Alignment.TopEnd)
-                        .clip(RoundedCornerShape(bottomStart = padding * 2))
-                    ,
-                    update = {
-                        it.initRankView()
-                    })
-            }
-        }
-
-        AppThemeText(
-            itemName,
-            modifier = Modifier
-                .wrapContentWidth()
-                .padding(bottom = 4.dp, start = padding * 2, end = padding * 2, top = padding),
-            maxLines = 2,
-            style = LocalTextStyle.current.copy(textAlign = TextAlign.Start, fontSize = 16.sp, fontWeight = FontWeight(700)),
-            overflow = TextOverflow.Ellipsis
-        )
-
-        if (!itemDesc.isNullOrBlank()) {
-            OutlinedTextField(itemDesc, { value->
-                itemDesc = value
-            }, modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 4.dp, start = padding, end = padding), label = {
-                AppThemeText("评论")
-            }, maxLines = Int.MAX_VALUE, enabled = false, textStyle = LocalSecondaryTextStyle.current)
-        }
-
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .padding(top = 4.dp)
-                .wrapContentHeight()
-                .align(Alignment.CenterHorizontally)) {
-            AndroidView({ context ->
-                StarRateView(context).commonConfig().apply {
-                    layoutParams = ViewGroup.LayoutParams(
-                        ViewGroup.LayoutParams.WRAP_CONTENT,
-                        ViewGroup.LayoutParams.MATCH_PARENT
-                    )
-                }
-            },
-                Modifier
-                    .wrapContentWidth()
-                    .height(30.dp)
-                    .align(Alignment.Center)
-                    .padding(bottom = 4.dp, start = padding, end = padding),
-                update = {
-                    it.setScore(itemScore)
-                })
-        }
-
-        if (itemLabel.isNotEmpty()) {
-            LazyRow(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 4.dp, start = padding, end = padding)) {
-                items(itemLabel.size, key = { index: Int ->
-                    itemLabel[index].label
-                }) { index: Int ->
-                    LabelView(itemLabel[index].label)
-                }
-            }
-        }
-    }
-
 }
 
 @Composable

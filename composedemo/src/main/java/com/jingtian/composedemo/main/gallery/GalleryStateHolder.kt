@@ -86,13 +86,13 @@ class GalleryStateHolder(val album: IndexedValue<Album>, val albumList: List<Alb
         val targetItem = scrollPercent
             .toInt()
             .coerceIn(0, totalItemCount)
-        Log.d("jingtian", "updateScrollOffset: $y, $totalHeight, $scrollPercent, $targetItem")
+//        Log.d("jingtian", "updateScrollOffset: $y, $totalHeight, $scrollPercent, $targetItem")
         galleryScrollState.scrollToItem(targetItem)
     }
 
     fun updateScrollOffset() {
         val y = scrollOffsetY - scrollBarSize[1] / 2
-        Log.d("jingtian", "updateScrollOffset: $y")
+//        Log.d("jingtian", "updateScrollOffset: $y")
         scrollBarOffset[1] = y.coerceIn(0f, galleryScrollState.layoutInfo.viewportSize.height.toFloat() - scrollBarSize[1])
     }
 

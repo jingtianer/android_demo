@@ -48,6 +48,7 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
@@ -73,7 +74,7 @@ import com.jingtian.composedemo.dao.model.Album
 import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
 import com.jingtian.composedemo.main.AddItemDialog
 import com.jingtian.composedemo.main.AddOrEditAlbumDialog
-import com.jingtian.composedemo.main.AlbumItemView
+import com.jingtian.composedemo.main.albumItem.AlbumItemView
 import com.jingtian.composedemo.main.EditDialog
 import com.jingtian.composedemo.main.gallery.GalleryFunctions.ADD
 import com.jingtian.composedemo.main.gallery.GalleryFunctions.DELETE
@@ -85,30 +86,30 @@ import com.jingtian.composedemo.main.gallery.GalleryFunctions.RENAME
 import com.jingtian.composedemo.main.gallery.GalleryFunctions.SELECT_ALL
 import com.jingtian.composedemo.main.gallery.GalleryFunctions.SELECT_NONE
 import com.jingtian.composedemo.main.MoveToDialog
+import com.jingtian.composedemo.main.albumItem.AlbumItemViewStateHolder
 import com.jingtian.composedemo.ui.theme.LocalAppColorScheme
 import com.jingtian.composedemo.ui.theme.LocalAppPalette
 import com.jingtian.composedemo.ui.theme.LocalAppUIConstants
 import com.jingtian.composedemo.ui.theme.LocalMiddleButtonConfig
 import com.jingtian.composedemo.ui.theme.appBackground
 import com.jingtian.composedemo.utils.ViewUtils.dpValue
+import com.jingtian.composedemo.utils.getOrPutRef
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.lang.ref.SoftReference
 
 @Composable
-fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, drawerState: DrawerState) {
+fun Gallery(galleryStateHolderMap: SnapshotStateMap<Long, SoftReference<GalleryStateHolder>>, album: IndexedValue<Album>?, albumList: List<Album>, drawerState: DrawerState) {
     if (album == null) {
         return
     }
     val albumId: Long = album.value.albumId ?: return
     val viewModel: AlbumViewModel = viewModel()
-    val galleryStateHolderMap = remember(albumList) {
-        mutableStateMapOf<Long, GalleryStateHolder>()
-    }
     val galleryStateHolder by remember(album, albumList) {
         mutableStateOf(
-            galleryStateHolderMap.getOrPut(albumId) {
+            galleryStateHolderMap.getOrPutRef(albumId) {
                 GalleryStateHolder(album, albumList, drawerState, viewModel)
             }
         )
@@ -240,6 +241,7 @@ fun GalleryStateHolder.Gallery() {
                 .weight(1f)) {
             val bottomBarHeight = 62.dp
             val shadesHeight = 0.dp
+            val albumViewMap = remember { mutableStateMapOf<Long, SoftReference<AlbumItemViewStateHolder>>() }
             LazyVerticalStaggeredGrid(
                 columns = StaggeredGridCells.Adaptive((size + galleryItemPadding * 2)),
                 Modifier
@@ -265,7 +267,7 @@ fun GalleryStateHolder.Gallery() {
                 state = galleryScrollState,
             ) {
                 items(filteredItemList.size, key = { index-> filteredItemList[index].hashCode() }, contentType = { index-> filteredItemList[index].fileInfo.fileType.value }) { index: Int ->
-                    AlbumItemView(filteredItemList[index], size, galleryItemPadding, currentSelectedItem, enterEditModeState, itemSelectStateChangeState, showEditDialogStateOnLongClickState)
+                    AlbumItemView(albumViewMap, filteredItemList[index], size, galleryItemPadding, currentSelectedItem, enterEditModeState, itemSelectStateChangeState, showEditDialogStateOnLongClickState)
                 }
             }
             val scrollBarColor = LocalAppPalette.current.labelTextColor.copy(alpha = 0.85f)

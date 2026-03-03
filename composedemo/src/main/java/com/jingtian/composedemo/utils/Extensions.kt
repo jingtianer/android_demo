@@ -6,9 +6,11 @@ import android.util.DisplayMetrics
 import android.view.WindowManager
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Observer
+import java.lang.ref.SoftReference
 import java.util.function.Predicate
 
 
@@ -66,5 +68,11 @@ fun Context.getScreenHeight(): Int {
     } else {
         this.getSystemService(WindowManager::class.java).defaultDisplay.getMetrics(displayMetrics)
         displayMetrics.heightPixels
+    }
+}
+
+fun <K, V> SnapshotStateMap<K, SoftReference<V>>.getOrPutRef(key: K, default: ()->V): V {
+    return get(key)?.get() ?: default().also {
+        put(key, SoftReference(it))
     }
 }
