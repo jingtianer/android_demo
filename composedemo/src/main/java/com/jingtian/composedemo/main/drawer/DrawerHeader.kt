@@ -163,14 +163,11 @@ fun DrawerHeader() {
         )
     }
 
-    fun circleOffset(R: Dp, r: Dp, halfBorder: Dp) : Dp {
+    fun circleOffset(R: Dp, r: Dp, halfBorder: Dp): Dp {
         return R * (1 - sqrt(.5f)) - r + halfBorder * sqrt(0.5f)
     }
 
     val context = LocalContext.current
-    val playIntent = remember(UserStorage.userInstance) {
-        playIntent(context, UserStorage.userInstance.userAvatar)
-    }
 
     Column(
         Modifier
@@ -188,8 +185,8 @@ fun DrawerHeader() {
                 if (enableEdit) {
                     pickImage()
                 } else {
-                    if (playIntent != null) {
-                        context.startActivity(playIntent)
+                    playIntent(context, UserStorage.userInstance.userAvatar)?.let {
+                        context.startActivity(it)
                     }
                 }
             }
@@ -237,8 +234,8 @@ fun DrawerHeader() {
                                     if (enableEdit) {
                                         pickImage()
                                     } else {
-                                        if (playIntent != null) {
-                                            context.startActivity(playIntent)
+                                        playIntent(context, UserStorage.userInstance.userAvatar)?.let {
+                                            context.startActivity(it)
                                         }
                                     }
                                 }
