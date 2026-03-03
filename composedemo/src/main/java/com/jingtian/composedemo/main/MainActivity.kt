@@ -182,8 +182,6 @@ fun Main() {
     }
 }
 
-class LabelCheckInfo<T>(val label: T, val name: String, var isChecked: MutableLiveData<Boolean> = MutableLiveData(false))
-
 fun systemFallbackIntent(context: Context, fileInfo: FileInfo): Intent? {
     val mediaType = fileInfo.fileType.mimeType
     val originFileUri = fileInfo.getFileUri()
