@@ -48,6 +48,7 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -211,11 +212,9 @@ fun GalleryStateHolder.Gallery() {
                             .fillMaxWidth()
                             .wrapContentHeight()
                             .weight(1f)) {
-                        labelFilterCheckedInfo.let { labelFilterCheckedInfo->
-                            roundRectTabFilter(labelFilterCheckedInfo, totalLabelList)
-                            roundRectTabFilter(fileTypeCheckState, totalFileTypeList)
-                            roundRectTabFilter(itemRankTypeCheckState, totalItemRankList)
-                        }
+                        roundRectTabFilter(labelFilterCheckedInfo, totalLabelList)
+                        roundRectTabFilter(fileTypeCheckState, totalFileTypeList)
+                        roundRectTabFilter(itemRankTypeCheckState, totalItemRankList)
                     }
 
                     Icon(
@@ -241,7 +240,6 @@ fun GalleryStateHolder.Gallery() {
                 .weight(1f)) {
             val bottomBarHeight = 62.dp
             val shadesHeight = 0.dp
-            val albumViewMap = remember { mutableStateMapOf<Long, SoftReference<AlbumItemViewStateHolder>>() }
             LazyVerticalStaggeredGrid(
                 columns = StaggeredGridCells.Adaptive((size + galleryItemPadding * 2)),
                 Modifier
@@ -465,7 +463,7 @@ fun GalleryStateHolder.Gallery() {
         val title = if (currentSelectedItem.size > 1) {
             "选择的${currentSelectedItem.size}项"
         } else if (currentSelectedItem.size == 1) {
-            "${currentFunctions.values.firstOrNull() ?: ""}"
+            currentSelectedItem.values.firstOrNull()?.albumItem?.itemName ?: ""
         } else {
             showConfirmDeleteDialog = false
             return
@@ -543,8 +541,25 @@ fun GalleryStateHolder.Gallery() {
             showLabelFilter = false
         }
     }
-    val backPressedCallback = remember {
-        object : OnBackPressedCallback(true) {
+    var backPressedCallback by remember {
+        mutableStateOf<OnBackPressedCallback>(
+            object : OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    if (drawerState.isOpen) {
+                        scope.launch {
+                            drawerState.close()
+                        }
+                    } else if (enterEditMode) {
+                        enterEditMode = false
+                    }
+                }
+            }
+        )
+    }
+    val dispatcher = LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
+    DisposableEffect(dispatcher, this) {
+        backPressedCallback.remove()
+        backPressedCallback = object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 if (drawerState.isOpen) {
                     scope.launch {
@@ -555,11 +570,9 @@ fun GalleryStateHolder.Gallery() {
                 }
             }
         }
-    }
-    val dispatcher = LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
-    DisposableEffect(dispatcher) {
         dispatcher?.addCallback(backPressedCallback)
         onDispose {
+            backPressedCallback.isEnabled = false
             backPressedCallback.remove()
         }
     }

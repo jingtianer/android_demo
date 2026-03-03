@@ -81,9 +81,8 @@ fun AddItemDialog(album: Album, totalLabelList: List<String>, albumData: List<Al
     var itemName by remember { mutableStateOf("") }
     var itemDesc by remember { mutableStateOf("") }
     var itemRank by remember { mutableStateOf(ItemRank.NONE) }
-    val totalLabelList = remember {
-        mutableStateListOf(*(totalLabelList.map { LabelCheckInfo(it, it) }.toTypedArray()))
-    }
+    val filteredTotalLabelList = remember { mutableStateMapOf(*totalLabelList.map { it to it }.toTypedArray()) }
+    val selectedTotalLabelList = remember { mutableStateMapOf<String, String>() }
     var itemScore by remember { mutableFloatStateOf(0.0f) }
     val itemLabel = remember { mutableStateListOf<String>() }
     val itemLabelSet = remember { mutableStateMapOf<String, String>() }
@@ -330,18 +329,22 @@ fun AddItemDialog(album: Album, totalLabelList: List<String>, albumData: List<Al
                         }
                         items(
                             totalLabelList.size,
-                            key = { index -> totalLabelList[index].name to 1 }) { index ->
+                            key = { index -> totalLabelList[index] }) { index ->
                             val item = totalLabelList[index]
-                            val isChecked by item.isChecked.observeAsState()
-                            CheckableLabelView(label = item.label, isChecked = isChecked ?: false) {
-                                if (it && !itemLabelSet.containsKey(item.label)) {
-                                    itemLabelSet[item.label] = item.label
-                                    itemLabel.add(0, item.label)
-                                } else if (!it && itemLabelSet.containsKey(item.label)) {
-                                    itemLabelSet.remove(item.label)
-                                    itemLabel.remove(item.label)
+                            val isChecked = selectedTotalLabelList.containsKey(item)
+                            CheckableLabelView(label = item, isChecked = isChecked) {
+                                if (it && !itemLabelSet.containsKey(item)) {
+                                    itemLabelSet[item] = item
+                                    itemLabel.add(0, item)
+                                } else if (!it && itemLabelSet.containsKey(item)) {
+                                    itemLabelSet.remove(item)
+                                    itemLabel.remove(item)
                                 }
-                                item.isChecked.value = it
+                                if (it) {
+                                    selectedTotalLabelList[item] = item
+                                } else {
+                                    selectedTotalLabelList.remove(item)
+                                }
                             }
                         }
                     }
@@ -359,6 +362,9 @@ fun AddItemDialog(album: Album, totalLabelList: List<String>, albumData: List<Al
                             EditableLabelView(item, enableEdit = false, onRemove = {
                                 itemLabel.remove(item)
                                 itemLabelSet.remove(item)
+                                if (filteredTotalLabelList.containsKey(item)) {
+                                    selectedTotalLabelList.remove(item)
+                                }
                             }) { }
                         }
                     }

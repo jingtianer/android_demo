@@ -101,11 +101,11 @@ class AlbumItemViewStateHolder(
     )
 
     init {
-        Log.d("jingtian", "initHolder: ${albumItemRelation.fileInfo.fileType.name}, ${albumItemRelation.fileInfo.storageId}")
+//        Log.d("jingtian", "initHolder: ${albumItemRelation.fileInfo.fileType.name}, ${albumItemRelation.fileInfo.storageId}")
     }
 
     suspend fun initImage(scope: CoroutineScope) {
-        Log.d("jingtian", "initImage: ${albumItemRelation.fileInfo.fileType.name}, ${albumItemRelation.fileInfo.storageId}")
+//        Log.d("jingtian", "initImage: ${albumItemRelation.fileInfo.fileType.name}, ${albumItemRelation.fileInfo.storageId}")
         if (imageBitmap == null) {
             fetchImage(scope)
         }
@@ -124,7 +124,7 @@ class AlbumItemViewStateHolder(
     }
 
     suspend fun fetchImage(scope: CoroutineScope) {
-        Log.d("jingtian", "fetchImage: ${albumItemRelation.fileInfo.fileType.name}, ${albumItemRelation.fileInfo.storageId}")
+//        Log.d("jingtian", "fetchImage: ${albumItemRelation.fileInfo.fileType.name}, ${albumItemRelation.fileInfo.storageId}")
         withContext(Dispatchers.IO) {
             val uri = albumItemRelation.fileInfo.getFileUri() ?: return@withContext
             val fileType = albumItemRelation.fileInfo.fileType
@@ -208,7 +208,7 @@ fun AlbumItemView(
     val stateHolder by remember(itemId) {
         mutableStateOf(
             albumViewMap.getOrPutRef(itemId) {
-                Log.d("jingtian", "AlbumItemView: getOrPut ${itemId}, ${albumViewMap.hashCode()}")
+//                Log.d("jingtian", "AlbumItemView: getOrPut ${itemId}, ${albumViewMap.hashCode()}")
                 AlbumItemViewStateHolder(
                     albumItemRelation,
                     size,

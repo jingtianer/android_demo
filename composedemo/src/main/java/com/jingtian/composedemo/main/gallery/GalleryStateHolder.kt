@@ -9,6 +9,7 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewModelScope
@@ -16,11 +17,14 @@ import com.jingtian.composedemo.dao.model.Album
 import com.jingtian.composedemo.dao.model.FileType
 import com.jingtian.composedemo.dao.model.ItemRank
 import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
+import com.jingtian.composedemo.main.albumItem.AlbumItemViewStateHolder
 import com.jingtian.composedemo.utils.ViewUtils.dpValue
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.lang.ref.SoftReference
 
 class GalleryStateHolder(val album: IndexedValue<Album>, val albumList: List<Album>, val drawerState: DrawerState, val viewModel: AlbumViewModel) {
     var addImageDialogState by mutableStateOf(false)
@@ -57,6 +61,8 @@ class GalleryStateHolder(val album: IndexedValue<Album>, val albumList: List<Alb
     var showEditDialog by mutableStateOf(false)
     var showConfirmDeleteDialog by mutableStateOf(false)
     var showMoveToDialog by mutableStateOf(false)
+
+    val albumViewMap = mutableStateMapOf<Long, SoftReference<AlbumItemViewStateHolder>>()
 
     suspend fun updateFilterList() {
         withContext(Dispatchers.Default) {
@@ -108,31 +114,36 @@ class GalleryStateHolder(val album: IndexedValue<Album>, val albumList: List<Alb
     }
 
     suspend fun onAlbumDataChanged() {
-        withContext(Dispatchers.IO) {
-            viewModel.getAllAlbumItem(album.value).collect {
-                withContext(Dispatchers.Main) {
-                    itemList = it
+        coroutineScope {
+            launch {
+                withContext(Dispatchers.IO) {
+                    viewModel.getAllAlbumItem(album.value).collect {
+                        withContext(Dispatchers.Main) {
+                            itemList = it
+                            albumViewMap.clear()
+                        }
+                        updateFilterList()
+                    }
                 }
             }
-        }
-        viewModel.getLabelList(album.value).collect { value->
-//            val checkList = SnapshotStateMap<String, Boolean>()
-//            labelFilterCheckedInfo.let {
-//                for ((k, v) in it) {
-//                    if (v) {
-//                        checkList[k] = true
-//                    }
-//                }
-//            }
-            withContext(Dispatchers.Main) {
-                albumName = album.value.albumName
+            launch {
+                withContext(Dispatchers.IO) {
+                    viewModel.getLabelList(album.value).collect { value->
+                        withContext(Dispatchers.Main) {
+                            Log.d("jingtian", "onAlbumDataChanged: ${value.joinToString { it }}")
+                            albumName = album.value.albumName
 //                labelFilterCheckedInfo = checkList
-                totalLabelList.clear()
-                totalLabelList.addAll(value)
+                            totalLabelList.clear()
+                            totalLabelList.addAll(value)
+                        }
+                        updateFilterList()
+                        withContext(Dispatchers.Main) {
+                            currentSelectedItem.clear()
+                            itemSelectStateChange++
+                        }
+                    }
+                }
             }
-            updateFilterList()
-            currentSelectedItem.clear()
-            itemSelectStateChange++
         }
     }
 
