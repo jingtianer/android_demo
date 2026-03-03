@@ -5,13 +5,19 @@ import android.util.TypedValue
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.content.res.ResourcesCompat
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.recyclerview.widget.RecyclerView
 import com.jingtian.composedemo.R
 import com.jingtian.composedemo.base.app
 import com.jingtian.composedemo.ui.widget.StarRateView
+import com.jingtian.composedemo.viewmodels.AppThemeViewModel
 import kotlin.math.abs
 
 object ViewUtils {
@@ -84,24 +90,24 @@ object ViewUtils {
         }
     }
 
-    fun StarRateView.commonConfig(): StarRateView {
+    fun StarRateView.commonConfig(isDark: Boolean): StarRateView {
         updateStarConfig(
             false,
             5,
             3f.dp.value,
-            ResourcesCompat.getDrawable(resources, R.drawable.star_high_lighted, null),
-            ResourcesCompat.getDrawable(resources, R.drawable.star, null),
+            ResourcesCompat.getDrawable(resources, if (isDark) R.drawable.star_high_lighted_night else R.drawable.star_high_lighted, null),
+            ResourcesCompat.getDrawable(resources, if (isDark) R.drawable.star_night else R.drawable.star, null),
         )
         return this
     }
 
-    fun StarRateView.commonEditableConfig(): StarRateView {
+    fun StarRateView.commonEditableConfig(isDark: Boolean): StarRateView {
         updateStarConfig(
             true,
             5,
             3f.dp.value,
-            ResourcesCompat.getDrawable(resources, R.drawable.star_high_lighted, null),
-            ResourcesCompat.getDrawable(resources, R.drawable.star, null),
+            ResourcesCompat.getDrawable(resources, if (isDark) R.drawable.star_high_lighted_night else R.drawable.star_high_lighted, null),
+            ResourcesCompat.getDrawable(resources, if (isDark) R.drawable.star_night else R.drawable.star, null),
         )
         return this
     }

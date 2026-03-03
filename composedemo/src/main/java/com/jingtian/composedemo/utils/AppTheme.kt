@@ -16,6 +16,14 @@ enum class AppTheme(val value: Long) {
            }
        }
 
+       fun isDark(appTheme: AppTheme, isSystemDark: Boolean): Boolean {
+           return when(appTheme) {
+               AUTO -> isSystemDark
+               Dark -> true
+               Lite -> false
+           }
+       }
+
        fun currentAppTheme(): AppTheme {
            return UserStorage.userAppThemeConfig
        }

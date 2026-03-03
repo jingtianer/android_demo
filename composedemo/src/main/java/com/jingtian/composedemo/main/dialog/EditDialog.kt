@@ -10,6 +10,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -29,6 +30,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -64,6 +66,7 @@ import com.jingtian.composedemo.ui.theme.LocalAppPalette
 import com.jingtian.composedemo.ui.theme.LocalMiddleButtonConfig
 import com.jingtian.composedemo.ui.widget.RankTypeChooser
 import com.jingtian.composedemo.ui.widget.StarRateView
+import com.jingtian.composedemo.utils.AppTheme
 import com.jingtian.composedemo.utils.BitMapCachePool
 import com.jingtian.composedemo.utils.FileStorageUtils
 import com.jingtian.composedemo.utils.FileStorageUtils.isHidden
@@ -71,6 +74,7 @@ import com.jingtian.composedemo.utils.ViewUtils.commonEditableConfig
 import com.jingtian.composedemo.utils.ViewUtils.dpValue
 import com.jingtian.composedemo.utils.splitByWhiteSpace
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
+import com.jingtian.composedemo.viewmodels.AppThemeViewModel
 import com.jingtian.composedemo.web.CommonWebView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -395,8 +399,12 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
 
                     item {
                         Column(Modifier.fillMaxWidth()) {
+                            val viewModel: AppThemeViewModel = viewModel()
+                            val appTheme by viewModel.currentAppTheme.observeAsState()
+                            val isSystemDark = isSystemInDarkTheme()
+                            val isDark = AppTheme.isDark(appTheme ?: AppTheme.currentAppTheme(), isSystemDark)
                             AndroidView({ context ->
-                                StarRateView(context).commonEditableConfig().apply {
+                                StarRateView(context).commonEditableConfig(isDark).apply {
                                     onScoreChange = StarRateView.Companion.OnScoreChange { score: Float ->
                                         itemScore = score
                                     }
@@ -411,6 +419,7 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
                                     .height(30.dp)
                                     .align(Alignment.CenterHorizontally),
                                 update = {
+                                    it.commonEditableConfig(isDark)
                                     it.setScore(itemScore)
                                 })
                             Spacer(Modifier.height(4.dp))
@@ -424,6 +433,7 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
                                     onRankChange = RankTypeChooser.Companion.OnRankTypeChange { value ->
                                         itemRank = value
                                     }
+                                    init(isDark)
                                 }
                             },
                                 Modifier
@@ -431,6 +441,7 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
                                     .height(30.dp)
                                     .align(Alignment.CenterHorizontally),
                                 update = {
+                                    it.init(isDark)
                                     it.setRankType(itemRank)
                                 })
                             Spacer(Modifier.height(4.dp))

@@ -10,6 +10,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
@@ -31,6 +32,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -54,6 +56,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.jingtian.composedemo.R
 import com.jingtian.composedemo.base.AppThemeText
 import com.jingtian.composedemo.dao.DataBase
@@ -67,11 +70,13 @@ import com.jingtian.composedemo.ui.theme.LocalAppPalette
 import com.jingtian.composedemo.ui.theme.LocalSecondaryTextStyle
 import com.jingtian.composedemo.ui.widget.RankTypeChooser
 import com.jingtian.composedemo.ui.widget.StarRateView
+import com.jingtian.composedemo.utils.AppTheme
 import com.jingtian.composedemo.utils.BitMapCachePool
 import com.jingtian.composedemo.utils.FileStorageUtils
 import com.jingtian.composedemo.utils.ViewUtils.commonConfig
 import com.jingtian.composedemo.utils.ViewUtils.dpValue
 import com.jingtian.composedemo.utils.getOrPutRef
+import com.jingtian.composedemo.viewmodels.AppThemeViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -374,9 +379,13 @@ fun AlbumItemViewStateHolder.AlbumItemView() {
 //                )
             }
 
+            val appThemeViewModel: AppThemeViewModel = viewModel()
+            val appTheme by appThemeViewModel.currentAppTheme.observeAsState()
+            val isSystemDark = isSystemInDarkTheme()
+            val isNight = AppTheme.isDark(appTheme ?: AppTheme.currentAppTheme(), isSystemDark)
             if (itemRank != ItemRank.NONE) {
-                fun View.initRankView(): View {
-                    val bg = RankTypeChooser.createBg(itemRank, context)
+                fun View.initRankView(isNight: Boolean): View {
+                    val bg = RankTypeChooser.createBg(itemRank, context, isNight)
                     val paddingHorizontal = 4.dp.dpValue.roundToInt()
                     val width = max(
                         bg.getWidth(),
@@ -388,14 +397,14 @@ fun AlbumItemViewStateHolder.AlbumItemView() {
                     return this
                 }
                 AndroidView({ context ->
-                    View(context).initRankView()
+                    View(context).initRankView(isNight)
                 },
                     Modifier
                         .wrapContentSize()
                         .align(Alignment.TopEnd)
                         .clip(RoundedCornerShape(bottomStart = padding * 2)),
                     update = {
-                        it.initRankView()
+                        it.initRankView(isNight)
                     })
             }
         }
@@ -439,8 +448,12 @@ fun AlbumItemViewStateHolder.AlbumItemView() {
                 .wrapContentHeight()
                 .align(Alignment.CenterHorizontally)
         ) {
+            val viewModel: AppThemeViewModel = viewModel()
+            val appTheme by viewModel.currentAppTheme.observeAsState()
+            val isSystemDark = isSystemInDarkTheme()
+            val isDark = AppTheme.isDark(appTheme ?: AppTheme.currentAppTheme(), isSystemDark)
             AndroidView({ context ->
-                StarRateView(context).commonConfig().apply {
+                StarRateView(context).commonConfig(isDark).apply {
                     layoutParams = ViewGroup.LayoutParams(
                         ViewGroup.LayoutParams.WRAP_CONTENT,
                         ViewGroup.LayoutParams.MATCH_PARENT
@@ -453,6 +466,7 @@ fun AlbumItemViewStateHolder.AlbumItemView() {
                     .align(Alignment.Center)
                     .padding(bottom = 4.dp, start = padding, end = padding),
                 update = {
+                    it.commonConfig(isDark)
                     it.setScore(itemScore)
                 })
         }

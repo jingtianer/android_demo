@@ -30,10 +30,11 @@ class RankTypeChooser @JvmOverloads constructor(
                 value.onRankTypeChange(getRankType(checkedId))
             }
         }
-    init {
-        val apply : View.(ItemRank) -> Unit = { itemRank ->
-            val selected = createBg(itemRank, context)
-            val unselected = createUnselectedBg(itemRank, context)
+
+    fun init(isNight: Boolean) {
+        val apply : View.(ItemRank, Boolean) -> Unit = { itemRank, isNight ->
+            val selected = createBg(itemRank, context, isNight)
+            val unselected = createUnselectedBg(itemRank, context, isNight)
 
             background = StateListDrawable().apply {
                 addState(intArrayOf(android.R.attr.state_checked), selected)
@@ -42,11 +43,11 @@ class RankTypeChooser @JvmOverloads constructor(
 
             layoutParams.width = max(selected.getWidth(), unselected.getWidth()).toInt() + paddingLeft + paddingRight
         }
-        binding.rank1.apply(ItemRank.夯)
-        binding.rank2.apply(ItemRank.顶尖)
-        binding.rank3.apply(ItemRank.人上人)
-        binding.rank4.apply(ItemRank.NPC)
-        binding.rank5.apply(ItemRank.史)
+        binding.rank1.apply(ItemRank.夯, isNight)
+        binding.rank2.apply(ItemRank.顶尖, isNight)
+        binding.rank3.apply(ItemRank.人上人, isNight)
+        binding.rank4.apply(ItemRank.NPC, isNight)
+        binding.rank5.apply(ItemRank.史, isNight)
         binding.root.setOnCheckedChangeListener { group, checkedId ->
             this.onRankChange.onRankTypeChange(getRankType(checkedId))
         }
@@ -57,22 +58,22 @@ class RankTypeChooser @JvmOverloads constructor(
             fun onRankTypeChange(rankType: ItemRank)
         }
 
-        fun createBg(rankType: ItemRank, context: Context) : StrokeTextDrawable {
+        fun createBg(rankType: ItemRank, context: Context, isNight: Boolean) : StrokeTextDrawable {
             return StrokeTextDrawable(Color.argb(
                 rankType.a, rankType.r, rankType.g, rankType.b
             )).apply {
                 setText(rankType.name)
-                setStrokeColor(ResourcesCompat.getColor(context.resources, R.color.rank_text_stroke_color, context.theme), 2.dp.dpValue)
+                setStrokeColor(ResourcesCompat.getColor(context.resources, if (isNight) R.color.rank_text_stroke_color_night else R.color.rank_text_stroke_color, context.theme), 2.dp.dpValue)
                 setTextSize(24.dp.dpValue)
-                setTextColor(ResourcesCompat.getColor(context.resources, R.color.rank_text_color, context.theme))
+                setTextColor(ResourcesCompat.getColor(context.resources, if (isNight) R.color.rank_text_color_night else R.color.rank_text_color, context.theme))
             }
         }
-        fun createUnselectedBg(rankType: ItemRank, context: Context) : StrokeTextDrawable {
+        fun createUnselectedBg(rankType: ItemRank, context: Context, isNight: Boolean) : StrokeTextDrawable {
             return StrokeTextDrawable(Color.TRANSPARENT).apply {
                 setText(rankType.name)
                 setStrokeColor(Color.TRANSPARENT, 0f.dp.dpValue)
                 setTextSize(24.dp.dpValue)
-                setTextColor(ResourcesCompat.getColor(context.resources, R.color.rank_text_color, context.theme))
+                setTextColor(ResourcesCompat.getColor(context.resources, if (isNight) R.color.rank_text_color_night else R.color.rank_text_color, context.theme))
             }
         }
     }

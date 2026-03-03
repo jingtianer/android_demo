@@ -10,6 +10,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -62,6 +63,7 @@ import com.jingtian.composedemo.ui.theme.LocalAppPalette
 import com.jingtian.composedemo.ui.theme.LocalAppUIConstants
 import com.jingtian.composedemo.ui.widget.RankTypeChooser
 import com.jingtian.composedemo.ui.widget.StarRateView
+import com.jingtian.composedemo.utils.AppTheme
 import com.jingtian.composedemo.utils.BitMapCachePool
 import com.jingtian.composedemo.utils.FileStorageUtils
 import com.jingtian.composedemo.utils.FileStorageUtils.isHidden
@@ -69,6 +71,7 @@ import com.jingtian.composedemo.utils.ViewUtils.commonEditableConfig
 import com.jingtian.composedemo.utils.ViewUtils.dpValue
 import com.jingtian.composedemo.utils.splitByWhiteSpace
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
+import com.jingtian.composedemo.viewmodels.AppThemeViewModel
 import com.jingtian.composedemo.web.CommonWebView
 import kotlinx.coroutines.launch
 import kotlin.math.min
@@ -261,8 +264,12 @@ fun AddItemDialog(album: Album, totalLabelList: List<String>, albumData: List<Al
 
                 item {
                     Column(Modifier.fillMaxWidth()) {
+                        val viewModel: AppThemeViewModel = viewModel()
+                        val appTheme by viewModel.currentAppTheme.observeAsState()
+                        val isSystemDark = isSystemInDarkTheme()
+                        val isDark = AppTheme.isDark(appTheme ?: AppTheme.currentAppTheme(), isSystemDark)
                         AndroidView({ context ->
-                            StarRateView(context).commonEditableConfig().apply {
+                            StarRateView(context).commonEditableConfig(isDark).apply {
                                 onScoreChange = StarRateView.Companion.OnScoreChange { score: Float ->
                                     itemScore = score
                                 }
@@ -278,6 +285,7 @@ fun AddItemDialog(album: Album, totalLabelList: List<String>, albumData: List<Al
                                 .align(Alignment.CenterHorizontally),
                             update = {
                                 it.setScore(itemScore)
+                                it.commonEditableConfig(isDark)
                             })
                         Spacer(Modifier.height(4.dp))
 
@@ -290,6 +298,7 @@ fun AddItemDialog(album: Album, totalLabelList: List<String>, albumData: List<Al
                                 onRankChange = RankTypeChooser.Companion.OnRankTypeChange { value ->
                                     itemRank = value
                                 }
+                                init(isDark)
                             }
                         },
                             Modifier
@@ -298,6 +307,7 @@ fun AddItemDialog(album: Album, totalLabelList: List<String>, albumData: List<Al
                                 .align(Alignment.CenterHorizontally),
                             update = {
                                 it.setRankType(itemRank)
+                                it.init(isDark)
                             })
                         Spacer(Modifier.height(4.dp))
                     }

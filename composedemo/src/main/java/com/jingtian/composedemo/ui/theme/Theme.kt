@@ -7,6 +7,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.structuralEqualityPolicy
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -22,7 +27,10 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.graphics.drawable.toBitmap
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.jingtian.composedemo.R
+import com.jingtian.composedemo.utils.AppTheme
+import com.jingtian.composedemo.viewmodels.AppThemeViewModel
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
@@ -154,44 +162,59 @@ fun Modifier.appBackground(context: Context, @DrawableRes resource: Int, widthSc
     }
 }
 @Composable
-fun Modifier.appBackground() = appBackground(LocalContext.current, R.drawable.rectangle_16)
+fun Modifier.appBackground(heightScale: Float = 1 - goldenRatio): Modifier {
+    val viewModel: AppThemeViewModel = viewModel()
+    val currentTheme by viewModel.currentAppTheme.observeAsState()
+    val isSystemDark = isSystemInDarkTheme()
+    return appBackground(LocalContext.current, if (AppTheme.isDark(currentTheme ?: AppTheme.currentAppTheme(), isSystemDark)) R.drawable.rectangle_16_night else R.drawable.rectangle_16, heightScale = heightScale)
+}
+
 @Composable
-fun Modifier.drawerBackground() = appBackground(LocalContext.current, R.drawable.rectangle_16, heightScale = 1f)
+fun Modifier.drawerBackground() = appBackground(heightScale = 1f)
 @Composable
-fun Modifier.dialogBackground() = appBackground(LocalContext.current, R.drawable.rectangle_16, heightScale = goldenRatio)
+fun Modifier.dialogBackground() = appBackground(heightScale = goldenRatio)
+
+interface AppThemeScope {
+    fun setCurrentDark(isDark: Boolean)
+}
 
 @Composable
 fun DemoAppTheme(
     systemDarkTheme: Boolean = isSystemInDarkTheme(),
-    content: @Composable () -> Unit
+    content: @Composable AppThemeScope.() -> Unit
 ) {
+    var isDark by remember { mutableStateOf(systemDarkTheme) }
+    val appThemeScope = object : AppThemeScope {
+        override fun setCurrentDark(_isDark: Boolean) {
+            isDark = _isDark
+        }
+    }
     val colorScheme = when {
-        systemDarkTheme -> DarkColorScheme
+        isDark -> DarkColorScheme
         else -> LightColorScheme
     }
     val customTextStyle = LocalTextStyle.current.copy(
-        color = if (systemDarkTheme) colorF8f8f8 else colorBlack
+        color = if (isDark) colorF8f8f8 else colorBlack
     )
     val customSecondaryTextStyle = LocalTextStyle.current.copy(
-        color = if (systemDarkTheme) colorA8A8A8 else color686868,
+        color = if (isDark) colorA8A8A8 else color686868,
         fontStyle = FontStyle.Italic
     )
-    val appPalette = if (systemDarkTheme) {
+    val appPalette = if (isDark) {
         darkAppPalette
     } else {
         liteAppPalette
     }
-    val middleButtonConfig = if (systemDarkTheme) {
+    val middleButtonConfig = if (isDark) {
         darkMiddleButtonConfig
     } else {
         liteMiddleButtonConfig
     }
-    val contentColor = if (systemDarkTheme) {
+    val contentColor = if (isDark) {
         Color.Black
     } else {
         Color.White
     }
-
 
     MaterialTheme(
         colorScheme = colorScheme,
@@ -205,7 +228,7 @@ fun DemoAppTheme(
                 LocalContentColor provides contentColor,
                 LocalSecondaryTextStyle provides customSecondaryTextStyle,
                 LocalMiddleButtonConfig provides middleButtonConfig,
-                content = { content() }
+                content = { appThemeScope.content() }
             )
         }
     )

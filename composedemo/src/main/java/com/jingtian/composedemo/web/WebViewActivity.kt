@@ -6,7 +6,11 @@ import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.ViewGroup
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
@@ -16,6 +20,9 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.jingtian.composedemo.base.BaseActivity
 import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.FileType
+import com.jingtian.composedemo.ui.theme.LocalAppColorScheme
+import com.jingtian.composedemo.ui.theme.LocalAppPalette
+import com.jingtian.composedemo.ui.theme.appBackground
 import com.jingtian.composedemo.ui.widget.CommonWebView
 import com.jingtian.composedemo.utils.BitMapCachePool
 import com.jingtian.composedemo.utils.CoroutineUtils
@@ -55,7 +62,7 @@ class WebViewActivity: BaseActivity() {
 
     @Composable
     override fun Content() {
-        CommonWebView(Modifier.fillMaxSize(), uri) {
+        CommonWebView(Modifier.fillMaxSize().background(LocalAppColorScheme.current.background).appBackground().windowInsetsPadding(WindowInsets.systemBars), uri) {
             webView = this
         }
     }
@@ -81,6 +88,10 @@ class WebViewActivity: BaseActivity() {
             setResult(Activity.RESULT_OK)
             super.onBackPressed()
         }
+    }
+
+    override fun shouldFitSystemBars(): Boolean {
+        return false
     }
 }
 
