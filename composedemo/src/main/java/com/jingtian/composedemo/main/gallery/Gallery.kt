@@ -72,10 +72,10 @@ import com.jingtian.composedemo.base.AppThemeText
 import com.jingtian.composedemo.dao.DataBase
 import com.jingtian.composedemo.dao.model.Album
 import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
-import com.jingtian.composedemo.main.AddItemDialog
-import com.jingtian.composedemo.main.AddOrEditAlbumDialog
+import com.jingtian.composedemo.main.dialog.AddItemDialog
+import com.jingtian.composedemo.main.dialog.AddOrEditAlbumDialog
 import com.jingtian.composedemo.main.albumItem.AlbumItemView
-import com.jingtian.composedemo.main.EditDialog
+import com.jingtian.composedemo.main.dialog.EditDialog
 import com.jingtian.composedemo.main.gallery.GalleryFunctions.ADD
 import com.jingtian.composedemo.main.gallery.GalleryFunctions.DELETE
 import com.jingtian.composedemo.main.gallery.GalleryFunctions.EDIT
@@ -85,7 +85,7 @@ import com.jingtian.composedemo.main.gallery.GalleryFunctions.MOVE
 import com.jingtian.composedemo.main.gallery.GalleryFunctions.RENAME
 import com.jingtian.composedemo.main.gallery.GalleryFunctions.SELECT_ALL
 import com.jingtian.composedemo.main.gallery.GalleryFunctions.SELECT_NONE
-import com.jingtian.composedemo.main.MoveToDialog
+import com.jingtian.composedemo.main.dialog.MoveToDialog
 import com.jingtian.composedemo.main.albumItem.AlbumItemViewStateHolder
 import com.jingtian.composedemo.ui.theme.LocalAppColorScheme
 import com.jingtian.composedemo.ui.theme.LocalAppPalette

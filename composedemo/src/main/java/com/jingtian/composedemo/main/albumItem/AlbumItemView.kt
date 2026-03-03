@@ -61,7 +61,7 @@ import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.FileType
 import com.jingtian.composedemo.dao.model.ItemRank
 import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
-import com.jingtian.composedemo.main.LabelView
+import com.jingtian.composedemo.main.labels.LabelView
 import com.jingtian.composedemo.main.playIntent
 import com.jingtian.composedemo.ui.theme.LocalAppPalette
 import com.jingtian.composedemo.ui.theme.LocalSecondaryTextStyle
