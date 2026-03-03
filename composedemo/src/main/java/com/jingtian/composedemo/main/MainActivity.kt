@@ -1,4 +1,4 @@
-package com.jingtian.composedemo
+package com.jingtian.composedemo.main
 
 import android.app.Activity
 import android.content.Context
@@ -6,13 +6,10 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
-import android.util.Log
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
-import androidx.activity.OnBackPressedCallback
-import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -28,16 +25,10 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
@@ -51,43 +42,30 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.staggeredgrid.LazyHorizontalStaggeredGrid
-import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
-import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
 import androidx.compose.material3.DrawerDefaults
-import androidx.compose.material3.DrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalTextStyle
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SheetState
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.rememberDrawerState
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
@@ -95,19 +73,12 @@ import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
-import androidx.compose.ui.input.nestedscroll.NestedScrollSource
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.ComposeView
@@ -126,7 +97,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.FileProvider
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.jingtian.composedemo.GalleryFunctions.*
+import com.jingtian.composedemo.R
 import com.jingtian.composedemo.base.AppThemeBasicTextField
 import com.jingtian.composedemo.base.AppThemeConfirmDialog
 import com.jingtian.composedemo.base.AppThemeDialog
@@ -142,12 +113,11 @@ import com.jingtian.composedemo.dao.model.FileType
 import com.jingtian.composedemo.dao.model.FileType.*
 import com.jingtian.composedemo.dao.model.ItemRank
 import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
-import com.jingtian.composedemo.ui.theme.LocalAppColorScheme
+import com.jingtian.composedemo.main.gallery.Gallery
 import com.jingtian.composedemo.ui.theme.LocalAppPalette
 import com.jingtian.composedemo.ui.theme.LocalAppUIConstants
 import com.jingtian.composedemo.ui.theme.LocalMiddleButtonConfig
 import com.jingtian.composedemo.ui.theme.LocalSecondaryTextStyle
-import com.jingtian.composedemo.ui.theme.appBackground
 import com.jingtian.composedemo.ui.theme.drawerBackground
 import com.jingtian.composedemo.ui.theme.goldenRatio
 import com.jingtian.composedemo.ui.widget.FollowTailLayout
@@ -169,7 +139,6 @@ import com.jingtian.composedemo.utils.ViewUtils.commonEditableConfig
 import com.jingtian.composedemo.utils.ViewUtils.dpValue
 import com.jingtian.composedemo.utils.splitByWhiteSpace
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
-import com.jingtian.composedemo.viewmodels.AlbumViewModel.Companion.notifyChange
 import com.jingtian.composedemo.viewmodels.AppThemeViewModel
 import com.jingtian.composedemo.web.CommonWebView
 import com.jingtian.composedemo.web.WebViewActivity
@@ -209,7 +178,6 @@ fun Main() {
             DrawerValue.Open -> true
         }
     })
-//    val rememberScope = rememberCoroutineScope()
     var currentSelectedAlbum by remember { mutableStateOf<IndexedValue<Album>?>(null) }
     val albumListChange by viewModel.albumListChange.observeAsState()
 
@@ -297,831 +265,6 @@ fun Main() {
 }
 
 class LabelCheckInfo<T>(val label: T, val name: String, var isChecked: MutableLiveData<Boolean> = MutableLiveData(false))
-
-fun LazyListScope.roundRectTabFilter(checkedList: SnapshotStateMap<String, Boolean>, filerList: List<String>) {
-    items(filerList.size, key = { index-> filerList[index] }) { index->
-        val item = filerList[index]
-        RoundRectCheckableLabel(
-            item,
-            checkedList[item] ?: false,
-            checkedList,
-            true,
-        )
-    }
-}
-
-enum class GalleryFunctions(val functionName: String, @DrawableRes val resId: Int) {
-    ADD("添加", R.drawable.add),
-    IMPORT("导入", R.drawable.import_icon),
-    RENAME("重命名", R.drawable.edit_normal),
-    EDIT("编辑", R.drawable.edit_normal),
-    DELETE("删除", R.drawable.delete),
-    EXIT("退出", R.drawable.exit),
-    SELECT_ALL("全选", R.drawable.select_all),
-    SELECT_NONE("全不选", R.drawable.select_none),
-    MOVE("移动", R.drawable.move);
-    companion object {
-        // 0 -> 添加, 导入, 修改相册名称
-        // 1 -> 编辑, 删除, 移动
-        // >1 -> 删除, 移动
-        val albumFunctions = listOf(RENAME, ADD, IMPORT).map { it to it }
-        val itemFunctions = listOf(EDIT, DELETE, MOVE).map { it to it }
-        val batchFunctions = listOf(DELETE, MOVE).map { it to it }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun Gallery(album: IndexedValue<Album>?, albumList: List<Album>, drawerState: DrawerState) {
-    if (album == null) {
-        return
-    }
-
-    var addImageDialogState by remember { mutableStateOf(false) }
-    var itemList by remember { mutableStateOf(emptyList<AlbumItemRelation>()) }
-    val filteredItemList = remember { mutableStateListOf<AlbumItemRelation>() }
-    val viewModel: AlbumViewModel = viewModel()
-    var showLabelFilter by remember { mutableStateOf(false) }
-    val albumItemDataChange by viewModel.albumItemListChange.observeAsState()
-
-    val totalLabelList = remember { mutableStateListOf<String>() }
-    val totalFileTypeList = remember { FileType.entries.map { it.typeName } }
-    val totalItemRankList = remember { ItemRank.entries.map { it.name } }
-    var labelFilterCheckedInfo by remember { mutableStateOf<SnapshotStateMap<String, Boolean>?>(null) }
-    val fileTypeCheckState = remember { mutableStateMapOf<String, Boolean>() }
-    val itemRankTypeCheckState = remember { mutableStateMapOf<String, Boolean>() }
-    var albumName by remember { mutableStateOf(album.value.albumName) }
-    val currentSelectedItem = remember { mutableStateMapOf<Long, AlbumItemRelation>() }
-    val itemSelectStateChangeState = remember { mutableStateOf(0L) }
-    var itemSelectStateChange by remember { itemSelectStateChangeState }
-    val currentFunctions = remember { mutableStateMapOf<GalleryFunctions, GalleryFunctions>() }
-    val enterEditModeState = remember { mutableStateOf(false) }
-    var enterEditMode by remember { enterEditModeState }
-    var editAlbumDialogState by remember { mutableStateOf(false) }
-    val showEditDialogStateOnLongClick = remember { mutableStateOf<AlbumItemRelation?>(null) }
-    var showEditDialogOnLongClick by remember { showEditDialogStateOnLongClick }
-    var selectAll by remember { mutableStateOf(false) }
-    var selectNone by remember { mutableStateOf(false) }
-
-    val size = 160.dp
-    val galleryItemPadding = 4.dp
-    val scope = rememberCoroutineScope()
-
-    val galleryScrollState = rememberLazyStaggeredGridState()
-    var scrollOffsetY by remember { mutableFloatStateOf(0f) }
-    val scrollBarSize = remember { mutableStateListOf(6.dp.dpValue, 64.dp.dpValue) }
-    val scrollAreaWidth = 28.dp
-    val scrollBarOffset = remember { mutableStateListOf(scrollAreaWidth.dpValue - scrollBarSize[0], 0f) }
-    suspend fun updateFilterList() {
-        withContext(Dispatchers.Default) {
-            val labelFilterCheckedInfo = labelFilterCheckedInfo
-            val filteredList = mutableListOf<AlbumItemRelation>()
-            for (item in itemList) {
-                val labelCheck = labelFilterCheckedInfo.isNullOrEmpty() || item.labelInfos.map { it.label }.intersect(labelFilterCheckedInfo.keys).isNotEmpty()
-                val fileTypeCheck = fileTypeCheckState.isEmpty() || fileTypeCheckState.get(item.fileInfo.fileType.typeName) == true
-                val itemRankCheck = itemRankTypeCheckState.isEmpty() || itemRankTypeCheckState.get(item.albumItem.rank.name) == true
-                if (labelCheck && fileTypeCheck && itemRankCheck) {
-                    filteredList.add(item)
-                }
-            }
-            withContext(Dispatchers.Main) {
-                filteredItemList.clear()
-                filteredItemList.addAll(filteredList)
-            }
-        }
-    }
-
-    fun updateScrollItem() {
-        scope.launch {
-            val y = scrollOffsetY
-            val totalHeight = galleryScrollState.layoutInfo.viewportSize.height.toFloat()
-            val totalItemCount = galleryScrollState.layoutInfo.totalItemsCount
-            val scrollPercent = (y / totalHeight) * totalItemCount
-            val targetItem = scrollPercent
-                .toInt()
-                .coerceIn(0, totalItemCount)
-            Log.d("jingtian", "updateScrollOffset: $y, $totalHeight, $scrollPercent, $targetItem")
-            galleryScrollState.scrollToItem(targetItem)
-        }
-    }
-
-    fun updateScrollOffset() {
-        val y = scrollOffsetY - scrollBarSize[1] / 2
-        Log.d("jingtian", "updateScrollOffset: $y")
-        scrollBarOffset[1] = y.coerceIn(0f, galleryScrollState.layoutInfo.viewportSize.height.toFloat() - scrollBarSize[1])
-    }
-
-    LaunchedEffect(Unit, album) {
-        currentSelectedItem.clear()
-        enterEditMode = false
-        withContext(Dispatchers.IO) {
-            viewModel.getLabelList(album.value).collect { value->
-                withContext(Dispatchers.Main) {
-                    albumName = album.value.albumName
-                    labelFilterCheckedInfo = SnapshotStateMap<String, Boolean>()
-                    totalLabelList.clear()
-                    totalLabelList.addAll(value)
-                }
-                updateFilterList()
-            }
-        }
-    }
-
-
-    LaunchedEffect(albumItemDataChange, album) {
-        withContext(Dispatchers.IO) {
-            viewModel.getAllAlbumItem(album.value).collect {
-                withContext(Dispatchers.Main) {
-                    itemList = it
-                }
-            }
-        }
-        viewModel.getLabelList(album.value).collect { value->
-            val checkList = SnapshotStateMap<String, Boolean>()
-            labelFilterCheckedInfo?.let {
-                for ((k, v) in it) {
-                    if (v) {
-                        checkList[k] = true
-                    }
-                }
-            }
-            withContext(Dispatchers.Main) {
-                albumName = album.value.albumName
-                labelFilterCheckedInfo = checkList
-                totalLabelList.clear()
-                totalLabelList.addAll(value)
-            }
-            updateFilterList()
-            currentSelectedItem.clear()
-            itemSelectStateChange++
-        }
-    }
-
-    val albumNameChange by viewModel.albumNameChange.observeAsState()
-
-    val showEditDialogState = remember { mutableStateOf(false) }
-    var showEditDialog by remember { showEditDialogState }
-    var showConfirmDeleteDialog by remember { mutableStateOf(false) }
-    var showMoveToDialog by remember { mutableStateOf(false) }
-    LaunchedEffect(albumNameChange) {
-        withContext(Dispatchers.IO) {
-            val newAlbum = viewModel.getAlbumName(album.value.albumId ?: return@withContext)
-            album.value.albumName = newAlbum.albumName
-            withContext(Dispatchers.Main) {
-                albumName = newAlbum.albumName
-            }
-        }
-    }
-
-    val importDirLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocumentTree(),
-    ) {uri: Uri? ->
-        uri ?: return@rememberLauncherForActivityResult
-        viewModel.importFiles(album.value, uri)
-    }
-
-    val filterChanged by viewModel.filterCheckChanged.observeAsState()
-    LaunchedEffect(filterChanged, itemList) {
-        updateFilterList()
-    }
-
-    Column(
-        Modifier
-            .fillMaxSize()
-            .appBackground()
-            .windowInsetsPadding(WindowInsets.systemBars)) {
-        CompositionLocalProvider(LocalContentColor provides LocalAppPalette.current.galleryHeaderColor, LocalTextStyle provides LocalTextStyle.current.copy(color = LocalAppPalette.current.galleryHeaderColor)) {
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 8.dp)
-                    .wrapContentHeight()
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.drawer),
-                    contentDescription = "打开drawer",
-                    modifier = Modifier
-                        .align(Alignment.CenterVertically)
-                        .size(LocalAppUIConstants.current.filterLabelHeight)
-                        .background(LocalAppPalette.current.labelUnChecked, shape = CircleShape)
-                        .clickable {
-                            scope.launch {
-                                if (drawerState.isOpen) {
-                                    drawerState.close()
-                                } else {
-                                    drawerState.open()
-                                }
-                            }
-                        }
-                        .padding(4.dp)
-                )
-                Spacer(Modifier.width(12.dp))
-                AppThemeText(albumName.trim(),
-                    Modifier
-                        .align(Alignment.CenterVertically)
-                        .fillMaxWidth()
-                        .weight(1f), style = LocalTextStyle.current.copy(fontSize = 24.sp, fontWeight = FontWeight(600)),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(Modifier.width(6.dp))
-                Icon(
-                    painter = painterResource(R.drawable.edit_normal),
-                    contentDescription = "编辑模式",
-                    modifier = Modifier
-                        .size(LocalAppUIConstants.current.filterLabelHeight)
-                        .background(LocalAppPalette.current.labelUnChecked, shape = CircleShape)
-                        .clickable { enterEditMode = !enterEditMode }
-                        .padding(4.dp)
-                        .align(Alignment.CenterVertically)
-                )
-            }
-
-        }
-        CompositionLocalProvider(LocalContentColor provides LocalAppPalette.current.galleryHeaderColor, LocalTextStyle provides LocalTextStyle.current.copy(color = LocalAppPalette.current.galleryHeaderColor)) {
-            if (enterEditMode) {
-                Row(
-                    Modifier
-                        .padding(start = 4.dp, end = 8.dp)
-                        .fillMaxWidth()) {
-                    LazyRow(
-                        Modifier
-                            .fillMaxWidth()
-                            .wrapContentHeight()
-                            .weight(1f)) {
-                        labelFilterCheckedInfo?.let { labelFilterCheckedInfo->
-                            roundRectTabFilter(labelFilterCheckedInfo, totalLabelList)
-                            roundRectTabFilter(fileTypeCheckState, totalFileTypeList)
-                            roundRectTabFilter(itemRankTypeCheckState, totalItemRankList)
-                        }
-                    }
-
-                    Icon(
-                        painter = painterResource(R.drawable.down),
-                        contentDescription = "过滤器",
-                        modifier = Modifier
-                            .size(LocalAppUIConstants.current.filterLabelHeight)
-                            .background(LocalAppPalette.current.labelUnChecked, shape = CircleShape)
-                            .clickable { showLabelFilter = !showLabelFilter }
-                            .padding(4.dp)
-                            .align(Alignment.CenterVertically)
-                    )
-                }
-            }
-        }
-        fun getScrollOffset(): Float {
-            return galleryScrollState.layoutInfo.visibleItemsInfo.map { it.index - it.offset.y.toFloat() / it.size.height }.average().toFloat()
-        }
-
-        Box(
-            Modifier
-                .fillMaxSize()
-                .weight(1f)) {
-            val bottomBarHeight = 62.dp
-            val shadesHeight = 0.dp
-            LazyVerticalStaggeredGrid(
-                columns = StaggeredGridCells.Adaptive((size + galleryItemPadding * 2)),
-                Modifier
-                    .fillMaxSize()
-                    .padding(start = galleryItemPadding, end = galleryItemPadding)
-                    .nestedScroll(object : NestedScrollConnection {
-                        override fun onPostScroll(
-                            consumed: Offset,
-                            available: Offset,
-                            source: NestedScrollSource
-                        ): Offset {
-//                            val info =
-//                                galleryScrollState.layoutInfo.visibleItemsInfo
-//                                    .map { "{${it.index}, ${it.offset.y}, ${it.size.height}}" }
-//                                    .fastJoinToString { it }
-                            scrollOffsetY =
-                                getScrollOffset() / galleryScrollState.layoutInfo.totalItemsCount * galleryScrollState.layoutInfo.viewportSize.height.toFloat()
-                            updateScrollOffset()
-//                            Log.d("jingtian", "onPostScroll: $info")
-                            return super.onPostScroll(consumed, available, source)
-                        }
-                    }),
-                contentPadding = PaddingValues(bottom = if (enterEditMode) bottomBarHeight + shadesHeight else 0.dp),
-                state = galleryScrollState,
-            ) {
-                items(filteredItemList.size, key = { index-> filteredItemList[index].hashCode() }, contentType = { index-> filteredItemList[index].fileInfo.fileType.value }) { index: Int ->
-                    AlbumItemView(filteredItemList[index], size, galleryItemPadding, currentSelectedItem, enterEditModeState, itemSelectStateChangeState, showEditDialogStateOnLongClick)
-                }
-            }
-            val scrollBarColor = LocalAppPalette.current.labelTextColor.copy(alpha = 0.85f)
-            Box(
-                Modifier
-                    .width(scrollAreaWidth)
-                    .fillMaxHeight()
-                    .align(Alignment.TopEnd)
-                    .pointerInput(Unit) {
-                        detectDragGestures(
-                            onDragStart = { offset ->
-                                scrollOffsetY = offset.y
-                                scrollBarSize[0] = 16.dp.dpValue
-                                scrollBarOffset[0] = scrollAreaWidth.dpValue - scrollBarSize[0]
-                                updateScrollOffset()
-                                updateScrollItem()
-                            },
-                            onDrag = { pointerInputChange, offset ->
-                                scrollOffsetY += offset.y
-                                scrollBarSize[0] = 16.dp.dpValue
-                                scrollBarOffset[0] = scrollAreaWidth.dpValue - scrollBarSize[0]
-                                updateScrollOffset()
-                                updateScrollItem()
-                            },
-                            onDragEnd = {
-                                scrollBarSize[0] = 6.dp.dpValue
-                                scrollBarOffset[0] = scrollAreaWidth.dpValue - scrollBarSize[0]
-                            },
-                            onDragCancel = {
-                                scrollBarSize[0] = 6.dp.dpValue
-                                scrollBarOffset[0] = scrollAreaWidth.dpValue - scrollBarSize[0]
-                            }
-                        )
-                    }
-                    .pointerInput(Unit) {
-                        awaitEachGesture {
-                            val downEvent = awaitFirstDown()
-                            scrollOffsetY = downEvent.position.y
-                            scope.launch {
-                                withContext(Dispatchers.Main) {
-                                    scrollBarSize[0] = 16.dp.dpValue
-                                    scrollBarOffset[0] = scrollAreaWidth.dpValue - scrollBarSize[0]
-                                    updateScrollOffset()
-                                    updateScrollItem()
-                                }
-                            }
-                        }
-                    }
-                    .pointerInput(Unit) {
-                        awaitEachGesture {
-                            val upOrCancel = waitForUpOrCancellation()
-                            scrollOffsetY = upOrCancel?.position?.y ?: scrollOffsetY
-                            scope.launch {
-                                withContext(Dispatchers.Main) {
-                                    scrollBarSize[0] = 6.dp.dpValue
-                                    scrollBarOffset[0] = scrollAreaWidth.dpValue - scrollBarSize[0]
-                                    updateScrollOffset()
-                                    updateScrollItem()
-                                }
-                            }
-                        }
-                    }
-                    .drawWithContent {
-                        drawContent()
-                        drawRoundRect(
-                            scrollBarColor,
-                            Offset(scrollBarOffset[0], scrollBarOffset[1]),
-                            Size(scrollBarSize[0], scrollBarSize[1]),
-                            cornerRadius = CornerRadius(scrollBarSize[0] / 2)
-                        )
-                    }
-            )
-            if (enterEditMode) {
-                Box(
-                    Modifier
-                        .fillMaxWidth()
-                        .height(bottomBarHeight)
-                        .background(
-                            LocalAppColorScheme.current.background.copy(alpha = 0.90f),
-                        )
-                        .align(Alignment.BottomCenter)
-                ) {
-                    Row(Modifier.align(Alignment.CenterStart)) {
-                        if (selectAll) {
-                            GalleryFunctionView(SELECT_ALL) {
-                                scope.launch(Dispatchers.Default) {
-                                    val map = HashMap<Long, AlbumItemRelation>().apply {
-                                        putAll(filteredItemList.map { (it.albumItem.itemId?:DataBase.INVALID_ID) to it })
-                                    }
-                                    withContext(Dispatchers.IO) {
-                                        currentSelectedItem.putAll(map)
-                                    }
-                                }
-                                itemSelectStateChange++
-                            }
-                        } else if (selectNone) {
-                            GalleryFunctionView(SELECT_NONE) {
-                                currentSelectedItem.clear()
-                                itemSelectStateChange++
-                            }
-                        }
-                    }
-                    Row(
-                        Modifier
-                            .wrapContentSize()
-                            .padding(vertical = 6.dp)
-                            .align(Alignment.Center)
-                    ) {
-                        for (item in currentFunctions) {
-                            val func = item.key
-                            when (func) {
-                                ADD -> {
-                                    GalleryFunctionView(func) {
-                                        addImageDialogState = true
-                                    }
-                                }
-                                IMPORT -> {
-                                    GalleryFunctionView(func) {
-                                        importDirLauncher.launch(null)
-                                    }
-                                }
-                                RENAME -> {
-                                    GalleryFunctionView(func) {
-                                        editAlbumDialogState = true
-                                    }
-                                }
-                                EDIT -> {
-                                    GalleryFunctionView(func) {
-                                        showEditDialog = true
-                                    }
-                                }
-                                DELETE -> {
-                                    GalleryFunctionView(func) {
-                                        showConfirmDeleteDialog = true
-                                    }
-                                }
-                                MOVE -> {
-                                    GalleryFunctionView(func) {
-                                        showMoveToDialog = true
-                                    }
-                                }
-                                else -> {}
-                            }
-                        }
-                    }
-                    Row(Modifier.align(Alignment.CenterEnd)) {
-                        GalleryFunctionView(EXIT) {
-                            enterEditMode = false
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    LaunchedEffect(currentSelectedItem, enterEditMode, itemSelectStateChange) {
-        currentFunctions.clear()
-        if (currentSelectedItem.size == filteredItemList.size) {
-            selectNone = true
-            selectAll = false
-        } else {
-            selectAll = true
-            selectNone = false
-        }
-        if (enterEditMode) {
-            val selectedCount = currentSelectedItem.size
-            when(selectedCount) {
-                0 -> {
-                    currentFunctions.putAll(GalleryFunctions.albumFunctions)
-                }
-                1 -> {
-                    currentFunctions.putAll(GalleryFunctions.itemFunctions)
-                }
-                else -> {
-                    currentFunctions.putAll(GalleryFunctions.batchFunctions)
-                }
-            }
-        } else {
-            currentSelectedItem.clear()
-        }
-    }
-
-    if (addImageDialogState) {
-        AddItemDialog(album.value, totalLabelList, albumList) {
-            addImageDialogState = false
-        }
-    }
-
-    @Composable
-    fun ShowDeleteConfirmDialog() {
-        val title = if (currentSelectedItem.size > 1) {
-            "选择的${currentSelectedItem.size}项"
-        } else if (currentSelectedItem.size == 1) {
-            "${currentFunctions.values.firstOrNull() ?: ""}"
-        } else {
-            showConfirmDeleteDialog = false
-            return
-        }
-        CompositionLocalProvider(
-            LocalMiddleButtonConfig provides LocalMiddleButtonConfig.current.copy(
-                text = "删除",
-                colors = LocalMiddleButtonConfig.current.colors.copy(containerColor = LocalAppPalette.current.deleteButtonColor, contentColor = Color.White),
-            )
-        ) {
-            AppThemeConfirmDialog("确认删除$title", reversed = true, onPositive = null, onMiddleClick = {
-                viewModel.deleteItems(currentSelectedItem.values)
-                showConfirmDeleteDialog = false
-            }, onNegative = {
-                showConfirmDeleteDialog = false
-            }, onDismissRequest = {
-                showConfirmDeleteDialog = false
-            })
-        }
-    }
-
-    if (showConfirmDeleteDialog) {
-        ShowDeleteConfirmDialog()
-    }
-
-    if (editAlbumDialogState) {
-        AddOrEditAlbumDialog(album.value) {
-            editAlbumDialogState = false
-        }
-    }
-
-
-    if (showEditDialog) {
-        currentSelectedItem.keys.firstOrNull()?.let { firstKey->
-            (currentSelectedItem[firstKey])?.let { albumItemRelation->
-                EditDialog(albumItemRelation, album.value, albumList, totalLabelList) {
-                    showEditDialog = false
-                }
-            }
-        }
-    }
-
-    showEditDialogOnLongClick?.let {
-        EditDialog(it, album.value, albumList, totalLabelList) {
-            showEditDialogOnLongClick = null
-        }
-    }
-
-    if (showMoveToDialog) {
-        MoveToDialog(currentSelectedItem.values, album.value, albumList) {
-            showMoveToDialog = false
-        }
-    }
-
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-
-   LaunchedEffect(showLabelFilter) {
-       if (showLabelFilter) {
-           sheetState.expand()
-       } else {
-           sheetState.hide()
-       }
-   }
-
-    if (showLabelFilter) {
-        FilterPanel(
-            sheetState,
-            fileTypeCheckState,
-            totalFileTypeList,
-            itemRankTypeCheckState,
-            totalItemRankList,
-            labelFilterCheckedInfo,
-            totalLabelList,
-        ) {
-            showLabelFilter = false
-        }
-    }
-    val backPressedCallback = remember {
-        object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                if (drawerState.isOpen) {
-                    scope.launch {
-                        drawerState.close()
-                    }
-                } else if (enterEditMode) {
-                    enterEditMode = false
-                }
-            }
-
-        }
-    }
-    val dispatcher = LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
-    DisposableEffect(dispatcher) {
-        dispatcher?.addCallback(backPressedCallback)
-        onDispose {
-            backPressedCallback.remove()
-        }
-    }
-    backPressedCallback.isEnabled = drawerState.isOpen || enterEditMode
-}
-
-@Composable
-fun RowScope.GalleryFunctionView(func: GalleryFunctions, onClick: ()->Unit) {
-    Column(
-        Modifier
-            .align(Alignment.CenterVertically)
-            .padding(horizontal = 6.dp)
-            .clickable { onClick() }) {
-        Icon(
-            painter = painterResource(func.resId),
-            contentDescription = "${func.functionName}功能",
-            modifier = Modifier
-                .size(32.dp)
-                .align(Alignment.CenterHorizontally),
-        )
-        AppThemeText(
-            func.functionName,
-            Modifier.align(Alignment.CenterHorizontally),
-            style = LocalTextStyle.current.copy(fontSize = 10.sp)
-        )
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun FilterPanel(
-    sheetState: SheetState,
-    fileTypeCheckStateList: SnapshotStateMap<String, Boolean>,
-    fileTypeList: List<String>,
-    itemRankCheckStateList: SnapshotStateMap<String, Boolean>,
-    itemRankList: List<String>,
-    labelCheckStateList: SnapshotStateMap<String, Boolean>?,
-    labelList: List<String>,
-    onDismiss: () -> Unit,
-) {
-    val horizontalPadding = 6.dp
-    val verticalPadding = 6.dp
-    val horizontalInnerPadding = LocalAppUIConstants.current.filterLabelPaddings[2]
-    val viewModel: AlbumViewModel = viewModel()
-
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        modifier = Modifier
-            .fillMaxWidth()
-            .fillMaxHeight(sqrt(goldenRatio)),
-        containerColor = LocalAppPalette.current.bottomSheetBackgroundColor,
-        windowInsets = WindowInsets.navigationBars
-    ) {
-        val scope = rememberCoroutineScope()
-
-        LazyVerticalGrid(
-            columns = GridCells.Adaptive(LocalAppUIConstants.current.filterLabelHeight * LocalAppUIConstants.current.filterLabelAspectRatio),
-            modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight()
-                .weight(1f)
-                .padding(horizontal = horizontalPadding)
-        ) {
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                AppThemeText(text = "类型筛选", Modifier.padding(horizontal = horizontalInnerPadding, vertical = verticalPadding), style = LocalTextStyle.current.copy(fontWeight = FontWeight(600), fontSize = 16.sp))
-            }
-            items(fileTypeList.size, key = { index-> fileTypeList[index] }) { index ->
-                RoundRectCheckableLabel(
-                    fileTypeList[index],
-                    fileTypeCheckStateList[fileTypeList[index]] ?: false,
-                    fileTypeCheckStateList,
-                    false,
-                )
-            }
-            item(span = { GridItemSpan(this.maxLineSpan) }) {
-                AppThemeText(text = "排行筛选", Modifier.padding(horizontal = horizontalInnerPadding, vertical = verticalPadding), style = LocalTextStyle.current.copy(fontWeight = FontWeight(600), fontSize = 16.sp))
-            }
-            items(itemRankList.size, key = { index-> itemRankList[index] }) { index ->
-                RoundRectCheckableLabel(
-                    itemRankList[index],
-                    itemRankCheckStateList[itemRankList[index]] ?: false,
-                    itemRankCheckStateList,
-                    false,
-                )
-            }
-            if (labelCheckStateList != null && labelList.isNotEmpty()) {
-                item(span = { GridItemSpan(this.maxLineSpan) }) {
-                    AppThemeText(text = "标签筛选", Modifier.padding(horizontal = horizontalInnerPadding, vertical = verticalPadding), style = LocalTextStyle.current.copy(fontWeight = FontWeight(600), fontSize = 16.sp))
-                }
-                item(span = { GridItemSpan(this.maxLineSpan) }) {
-
-                    val labelItemHeight = LocalAppUIConstants.current.filterLabelHeight + (LocalAppUIConstants.current.filterLabelPaddings[1] + LocalAppUIConstants.current.filterLabelPaddings[3]) * 2
-                    LazyHorizontalStaggeredGrid(
-//            StaggeredGridCells.Adaptive(labelItemHeight),
-                        StaggeredGridCells.Fixed(3),
-                        Modifier
-                            .height(labelItemHeight * 3)
-                            .fillMaxWidth(),
-                        horizontalItemSpacing = horizontalInnerPadding,
-                    ) {
-                        items(labelList.size, { index-> labelList[index] }) { index ->
-                            val item = labelList[index]
-                            RoundRectCheckableLabel(
-                                item,
-                                labelCheckStateList[item] ?: false,
-                                labelCheckStateList,
-                                true,
-                            )
-                        }
-                    }
-                }
-            }
-        }
-        Spacer(Modifier.height(16.dp))
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .padding(horizontal = horizontalPadding)) {
-            Button(onClick = {
-                scope.launch {
-                    withContext(Dispatchers.Default) {
-                        fun SnapshotStateMap<String, Boolean>.reverseList(totalList: List<String>) {
-                            val reveredList = totalList.toSet() - this.keys
-                            this.clear()
-                            this.putAll(reveredList.map { it to true })
-                        }
-                        fileTypeCheckStateList.reverseList(fileTypeList)
-                        itemRankCheckStateList.reverseList(itemRankList)
-                        labelCheckStateList?.reverseList(labelList)
-                    }
-                    viewModel.filterCheckChanged.notifyChange()
-                }
-            },
-                modifier = Modifier
-                    .align(Alignment.CenterVertically)
-                    .weight(1f)
-                    .padding(horizontal = horizontalInnerPadding)
-            ) {
-                AppThemeText(text = "反转")
-            }
-            Button(onClick = {
-                scope.launch {
-                    withContext(Dispatchers.Default) {
-                        fileTypeCheckStateList.clear()
-                        itemRankCheckStateList.clear()
-                        labelCheckStateList?.clear()
-                    }
-                    viewModel.filterCheckChanged.notifyChange()
-                }
-            },
-                modifier = Modifier
-                    .align(Alignment.CenterVertically)
-                    .weight(1f)
-                    .padding(horizontal = horizontalInnerPadding)
-            ) {
-                AppThemeText(text = "清空")
-            }
-            Button(onClick = {
-                onDismiss()
-            },
-                modifier = Modifier
-                    .align(Alignment.CenterVertically)
-                    .weight(1f)
-                    .padding(horizontal = horizontalInnerPadding)
-            ) {
-                AppThemeText(text = "确认")
-            }
-            Spacer(Modifier.height(16.dp))
-        }
-    }
-}
-
-@Composable
-fun RoundRectCheckableLabel(item: String, isChecked: Boolean, checkedList: SnapshotStateMap<String, Boolean>, wrapContent: Boolean) {
-    val paddings = LocalAppUIConstants.current.filterLabelPaddings
-    val paddingInnerHorizontal = paddings[0]
-    val paddingInnerVertical = paddings[1]
-    val paddingOuterHorizontal = paddings[2]
-    val paddingOuterVertical = paddings[3]
-    val viewModel: AlbumViewModel = viewModel()
-    val modifier = if (wrapContent) {
-        Modifier
-            .padding(horizontal = paddingOuterHorizontal, vertical = paddingOuterVertical)
-            .wrapContentWidth()
-            .height(LocalAppUIConstants.current.filterLabelHeight)
-            .background(
-                color = if (isChecked) LocalAppPalette.current.labelChecked else LocalAppPalette.current.labelUnChecked,
-                shape = RoundedCornerShape(100)
-            )
-            .widthIn(LocalAppUIConstants.current.filterLabelHeight * LocalAppUIConstants.current.filterLabelAspectRatio)
-            .clip(
-                RoundedCornerShape(100),
-            )
-    } else {
-        Modifier
-            .padding(horizontal = paddingOuterHorizontal, vertical = paddingOuterVertical)
-            .fillMaxWidth()
-            .height(LocalAppUIConstants.current.filterLabelHeight)
-            .background(
-                color = if (isChecked) LocalAppPalette.current.labelChecked else LocalAppPalette.current.labelUnChecked,
-                shape = RoundedCornerShape(100)
-            )
-            .clip(
-                RoundedCornerShape(100),
-            )
-    }
-    Box(
-        modifier
-            .clickable {
-                checkedList[item] = !isChecked
-                if (isChecked) {
-                    checkedList.remove(item)
-                } else {
-                    checkedList[item] = true
-                }
-                viewModel.filterCheckChanged.value = (viewModel.filterCheckChanged.value ?: 0) + 1
-            }) {
-        AppThemeText(
-            text = item,
-            Modifier
-                .wrapContentSize()
-                .align(Alignment.Center)
-                .padding(horizontal = paddingInnerHorizontal, vertical = paddingInnerVertical)
-        )
-    }
-}
 
 fun systemFallbackIntent(context: Context, fileInfo: FileInfo): Intent? {
     val mediaType = fileInfo.fileType.mimeType
