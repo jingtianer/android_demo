@@ -361,9 +361,7 @@ fun AddItemDialog(album: Album, totalLabelList: List<String>, albumData: List<Al
                             EditableLabelView(item, enableEdit = false, onRemove = {
                                 itemLabel.remove(item)
                                 itemLabelSet.remove(item)
-                                if (filteredTotalLabelList.containsKey(item)) {
-                                    selectedTotalLabelList.remove(item)
-                                }
+                                selectedTotalLabelList.remove(item)
                             }) { }
                         }
                     }

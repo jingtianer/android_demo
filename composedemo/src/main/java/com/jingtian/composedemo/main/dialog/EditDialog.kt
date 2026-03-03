@@ -496,7 +496,7 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
                                     itemLabel.remove(item)
                                     itemLabelSet.remove(item)
                                     selectedTotalLabelList.remove(item)
-                                    if (totalLabelList.containsKey(item)) {
+                                    if (totalLabelList.containsKey(item) && !filteredTotalLabelList.contains(item)) {
                                         filteredTotalLabelList.add(item)
                                     }
                                 }) { }
