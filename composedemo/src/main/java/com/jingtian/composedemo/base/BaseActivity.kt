@@ -24,8 +24,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.jingtian.composedemo.ui.theme.AppThemeScope
 import com.jingtian.composedemo.ui.theme.DemoAppTheme
 import com.jingtian.composedemo.utils.AppTheme
-import com.jingtian.composedemo.utils.AppTheme.*
-import com.jingtian.composedemo.utils.UserStorage
 import com.jingtian.composedemo.utils.python.PyInitializer
 import com.jingtian.composedemo.viewmodels.AppThemeViewModel
 
@@ -34,11 +32,6 @@ abstract class BaseActivity : AppCompatActivity() {
 
     }
     override fun onCreate(savedInstanceState: Bundle?) {
-        when (UserStorage.userAppThemeConfig) {
-            AUTO -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
-            Dark -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
-            Lite -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
-        }
 
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -60,13 +53,25 @@ abstract class BaseActivity : AppCompatActivity() {
                 if (!isDark) WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS else 0,
                 WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
             )
+            window.insetsController?.setSystemBarsAppearance(
+                if (!isDark) WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS else 0,
+                WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
+            )
         } else {
             val decorView = window.decorView
             val currentFlags = decorView.systemUiVisibility
             decorView.systemUiVisibility = if (!isDark) {
-                currentFlags or View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    currentFlags or View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
+                } else {
+                    currentFlags or View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+                }
             } else {
-                currentFlags and View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR.inv()
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    (currentFlags and View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR.inv()) and View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
+                } else {
+                    currentFlags and View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR.inv()
+                }
             }
         }
     }

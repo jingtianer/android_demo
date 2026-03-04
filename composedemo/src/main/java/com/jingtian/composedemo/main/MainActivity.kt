@@ -232,7 +232,7 @@ fun AppThemeSwitcher() {
     @Composable
     fun Modifier.modifier(appTheme: AppTheme):Modifier {
         val modifier = this
-        return if (appTheme == (currentTheme ?: AppTheme.AUTO)) {
+        return if (appTheme == (currentTheme ?: AppTheme.currentAppTheme())) {
             modifier.background(
                 color = LocalAppPalette.current.labelChecked,
                 shape = RoundedCornerShape(100)
