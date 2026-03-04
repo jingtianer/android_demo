@@ -183,7 +183,7 @@ fun DemoAppTheme(
     systemDarkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable AppThemeScope.() -> Unit
 ) {
-    var isDark by remember { mutableStateOf(systemDarkTheme) }
+    var isDark by remember { mutableStateOf(AppTheme.isDark(AppTheme.currentAppTheme(), systemDarkTheme)) }
     val appThemeScope = object : AppThemeScope {
         override fun setCurrentDark(_isDark: Boolean) {
             isDark = _isDark
