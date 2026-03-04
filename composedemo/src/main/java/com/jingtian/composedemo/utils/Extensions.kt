@@ -4,29 +4,9 @@ import android.content.Context
 import android.os.Build
 import android.util.DisplayMetrics
 import android.view.WindowManager
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.snapshots.SnapshotStateMap
-import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.Observer
 import java.lang.ref.SoftReference
 import java.util.function.Predicate
-
-
-@Composable
-inline fun <T> MutableLiveData<T>.composeObserve(crossinline onUpdate: (T?)->Unit) {
-    val lifecycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(lifecycleOwner) {
-        val observer = Observer<T> {
-            onUpdate(it)
-        }
-        this@composeObserve.observe(lifecycleOwner, observer)
-        onDispose {
-            this@composeObserve.removeObserver(observer)
-        }
-    }
-}
 
 
 fun CharSequence.splitBy(predicate: Predicate<Char>): List<String> {

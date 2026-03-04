@@ -148,23 +148,6 @@ class AlbumViewModel : ViewModel() {
         }
     }
 
-    fun deleteItem(albumItemRelation: AlbumItemRelation) {
-        val album = albumItemRelation.albumItem
-        CoroutineUtils.runIOTask({
-            DataBase.dbImpl.getAlbumItemDao().deleteAllAlbumItem(album)
-            albumItemRelation.fileInfo?.let {
-                DataBase.dbImpl.getFileInfoDao().deleteFileInfo(it)
-                FileStorageUtils.getStorage(it.fileType)?.delete(it.storageId)
-            }
-            album.itemId?.let {
-                DataBase.dbImpl.getLabelInfoDao().deleteAllLabel(it)
-            }
-        }) {
-            albumItemListChange.notifyChange()
-            sendMessage("删除文件: ${album.itemName} 成功!")
-        }
-    }
-
     fun addItem(
         album: Album,
         selectedUri: Uri,

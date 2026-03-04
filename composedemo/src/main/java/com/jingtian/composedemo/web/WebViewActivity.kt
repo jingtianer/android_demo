@@ -21,7 +21,6 @@ import com.jingtian.composedemo.base.BaseActivity
 import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.FileType
 import com.jingtian.composedemo.ui.theme.LocalAppColorScheme
-import com.jingtian.composedemo.ui.theme.LocalAppPalette
 import com.jingtian.composedemo.ui.theme.appBackground
 import com.jingtian.composedemo.ui.widget.CommonWebView
 import com.jingtian.composedemo.utils.BitMapCachePool
@@ -36,6 +35,7 @@ class WebViewActivity: BaseActivity() {
     private var webView: CommonWebView? = null
 
     companion object {
+        private const val TAG = "WebViewActivity"
         const val KEY_WEB_URI = "web_uri"
         const val KEY_STORAGE_ID = "web_storage_id"
     }
@@ -82,7 +82,7 @@ class WebViewActivity: BaseActivity() {
             }
         }, onFailure = {
             setResult(2)
-            Log.e("jingtian", "WebViewActivity: onBackPressed: $it")
+            Log.e(TAG, "WebViewActivity: onBackPressed: $it")
             super.onBackPressed()
         }) {
             setResult(Activity.RESULT_OK)

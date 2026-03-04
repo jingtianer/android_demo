@@ -54,7 +54,7 @@ abstract class BaseActivity : AppCompatActivity() {
         PyInitializer.init()
     }
 
-    fun updateStateBar(isDark: Boolean) {
+    private fun updateStateBar(isDark: Boolean) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             window.insetsController?.setSystemBarsAppearance(
                 if (!isDark) WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS else 0,
