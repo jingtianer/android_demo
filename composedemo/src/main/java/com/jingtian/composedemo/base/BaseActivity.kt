@@ -7,9 +7,7 @@ import android.view.View
 import android.view.WindowInsetsController
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -24,7 +22,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.jingtian.composedemo.ui.theme.AppThemeScope
 import com.jingtian.composedemo.ui.theme.DemoAppTheme
 import com.jingtian.composedemo.utils.AppTheme
-import com.jingtian.composedemo.utils.python.PyInitializer
 import com.jingtian.composedemo.viewmodels.AppThemeViewModel
 
 abstract class BaseActivity : AppCompatActivity() {
@@ -44,7 +41,6 @@ abstract class BaseActivity : AppCompatActivity() {
         if (shouldFitSystemBars()) {
             fitSystemBars()
         }
-        PyInitializer.init()
     }
 
     private fun updateStateBar(isDark: Boolean) {
