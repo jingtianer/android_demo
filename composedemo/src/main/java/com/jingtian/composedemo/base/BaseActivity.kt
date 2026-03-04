@@ -8,7 +8,6 @@ import android.view.WindowInsetsController
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -29,7 +28,6 @@ abstract class BaseActivity : AppCompatActivity() {
 
     }
     override fun onCreate(savedInstanceState: Bundle?) {
-
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
@@ -38,6 +36,8 @@ abstract class BaseActivity : AppCompatActivity() {
                 Content()
             }
         }
+        val isDark = AppTheme.isDark(AppTheme.currentAppTheme(), isSystemInDarkTheme())
+        updateStateBar(isDark)
         if (shouldFitSystemBars()) {
             fitSystemBars()
         }
@@ -128,5 +128,10 @@ abstract class BaseActivity : AppCompatActivity() {
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
         onConfigurationChangeCallback.invoke(newConfig)
+    }
+
+    private fun isSystemInDarkTheme(): Boolean {
+        val uiMode = resources.configuration.uiMode
+        return (uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
     }
 }
