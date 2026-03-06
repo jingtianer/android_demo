@@ -380,7 +380,7 @@ fun AlbumItemViewStateHolder.AlbumItemView() {
             }
 
             val appThemeViewModel: AppThemeViewModel = viewModel()
-            val appTheme by appThemeViewModel.currentAppTheme.observeAsState()
+            val appTheme by remember { appThemeViewModel.currentAppTheme }
             val isSystemDark = isSystemInDarkTheme()
             val isNight = AppTheme.isDark(appTheme ?: AppTheme.currentAppTheme(), isSystemDark)
             if (itemRank != ItemRank.NONE) {
@@ -449,7 +449,7 @@ fun AlbumItemViewStateHolder.AlbumItemView() {
                 .align(Alignment.CenterHorizontally)
         ) {
             val viewModel: AppThemeViewModel = viewModel()
-            val appTheme by viewModel.currentAppTheme.observeAsState()
+            val appTheme by remember { viewModel.currentAppTheme }
             val isSystemDark = isSystemInDarkTheme()
             val isDark = AppTheme.isDark(appTheme ?: AppTheme.currentAppTheme(), isSystemDark)
             AndroidView({ context ->

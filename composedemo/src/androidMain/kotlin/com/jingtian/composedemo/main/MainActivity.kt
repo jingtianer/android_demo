@@ -231,11 +231,11 @@ fun playIntent(context: Context, fileInfo: FileInfo): Intent? {
 @Composable
 fun AppThemeSwitcher() {
     val viewModel: AppThemeViewModel = viewModel()
-    val currentTheme by viewModel.currentAppTheme.observeAsState()
+    var currentTheme by remember { viewModel.currentAppTheme }
     @Composable
     fun Modifier.modifier(appTheme: AppTheme):Modifier {
         val modifier = this
-        return if (appTheme == (currentTheme ?: AppTheme.currentAppTheme())) {
+        return if (appTheme == currentTheme) {
             modifier.background(
                 color = LocalAppPalette.current.labelChecked,
                 shape = RoundedCornerShape(100)
@@ -248,7 +248,7 @@ fun AppThemeSwitcher() {
         }
             .clip(RoundedCornerShape(100))
             .clickable {
-                viewModel.currentAppTheme.value = appTheme
+                currentTheme = appTheme
             }
             .padding(8.dp)
     }

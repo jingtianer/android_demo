@@ -400,9 +400,9 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
                     item {
                         Column(Modifier.fillMaxWidth()) {
                             val viewModel: AppThemeViewModel = viewModel()
-                            val appTheme by viewModel.currentAppTheme.observeAsState()
+                            val appTheme by remember { viewModel.currentAppTheme }
                             val isSystemDark = isSystemInDarkTheme()
-                            val isDark = AppTheme.isDark(appTheme ?: AppTheme.currentAppTheme(), isSystemDark)
+                            val isDark = AppTheme.isDark(appTheme, isSystemDark)
                             AndroidView({ context ->
                                 StarRateView(context).commonEditableConfig(isDark).apply {
                                     onScoreChange = StarRateView.Companion.OnScoreChange { score: Float ->

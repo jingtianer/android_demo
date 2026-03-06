@@ -75,9 +75,7 @@ abstract class BaseActivity : AppCompatActivity() {
     @Composable
     fun AppThemeScope.AppThemeSwitcher() {
         val viewModel: AppThemeViewModel = viewModel()
-        val currentAppTheme by viewModel.currentAppTheme.observeAsState()
-        var lastAppTheme by remember { mutableStateOf(currentAppTheme ?: AppTheme.currentAppTheme()) }
-        val appTheme = viewModel.currentAppTheme.value ?: AppTheme.currentAppTheme()
+        val currentAppTheme by remember { viewModel.currentAppTheme }
         val isSystemDark = isSystemInDarkTheme()
         onConfigurationChangeCallback = { newConfig->
             val uiMode = newConfig.uiMode and Configuration.UI_MODE_NIGHT_MASK
@@ -99,14 +97,10 @@ abstract class BaseActivity : AppCompatActivity() {
             updateStateBar(isDark)
         }
         LaunchedEffect(currentAppTheme) {
-            if (AppTheme.currentAppTheme() == appTheme) {
-                return@LaunchedEffect
-            }
-            AppTheme.setAppTheme(appTheme)
-            val isDark = AppTheme.isDark(appTheme, isSystemDark)
+            AppTheme.setAppTheme(currentAppTheme)
+            val isDark = AppTheme.isDark(currentAppTheme, isSystemDark)
             this@AppThemeSwitcher.setCurrentDark(isDark)
             updateStateBar(isDark)
-            lastAppTheme = appTheme
         }
     }
 

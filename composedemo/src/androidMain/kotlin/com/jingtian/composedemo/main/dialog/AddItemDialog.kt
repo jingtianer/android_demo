@@ -265,7 +265,7 @@ fun AddItemDialog(album: Album, totalLabelList: List<String>, albumData: List<Al
                 item {
                     Column(Modifier.fillMaxWidth()) {
                         val viewModel: AppThemeViewModel = viewModel()
-                        val appTheme by viewModel.currentAppTheme.observeAsState()
+                        val appTheme by remember { viewModel.currentAppTheme }
                         val isSystemDark = isSystemInDarkTheme()
                         val isDark = AppTheme.isDark(appTheme ?: AppTheme.currentAppTheme(), isSystemDark)
                         AndroidView({ context ->
