@@ -43,8 +43,6 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -96,6 +94,7 @@ import com.jingtian.composedemo.ui.theme.appBackground
 import com.jingtian.composedemo.utils.ViewUtils.dpValue
 import com.jingtian.composedemo.utils.getOrPutRef
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
+import com.jingtian.composedemo.viewmodels.AlbumViewModel.Companion.observeAsState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext

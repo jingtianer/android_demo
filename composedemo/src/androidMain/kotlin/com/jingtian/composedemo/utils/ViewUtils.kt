@@ -5,19 +5,13 @@ import android.util.TypedValue
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
-import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.content.res.ResourcesCompat
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.recyclerview.widget.RecyclerView
 import com.jingtian.composedemo.R
 import com.jingtian.composedemo.base.app
 import com.jingtian.composedemo.ui.widget.StarRateView
-import com.jingtian.composedemo.viewmodels.AppThemeViewModel
 import kotlin.math.abs
 
 object ViewUtils {

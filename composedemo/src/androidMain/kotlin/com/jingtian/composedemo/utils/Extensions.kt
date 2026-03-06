@@ -4,6 +4,9 @@ import android.content.Context
 import android.os.Build
 import android.util.DisplayMetrics
 import android.view.WindowManager
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshots.SnapshotStateMap
 import java.lang.ref.SoftReference
 import java.util.function.Predicate
@@ -56,3 +59,6 @@ fun <K, V> SnapshotStateMap<K, SoftReference<V>>.getOrPutRef(key: K, default: ()
         put(key, SoftReference(it))
     }
 }
+
+@Composable
+fun <T> MutableState<T>.observeAsState() = remember { this }

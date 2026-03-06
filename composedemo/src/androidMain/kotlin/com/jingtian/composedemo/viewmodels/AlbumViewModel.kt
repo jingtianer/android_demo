@@ -2,8 +2,12 @@ package com.jingtian.composedemo.viewmodels
 
 import android.graphics.Bitmap
 import android.net.Uri
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableLongState
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.documentfile.provider.DocumentFile
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jingtian.composedemo.base.app
@@ -34,9 +38,12 @@ class AlbumViewModel : ViewModel() {
     companion object {
         private const val TAG = "AlbumViewModel"
 
-        fun MutableLiveData<Int>.notifyChange() {
-            this.value = (this.value ?: 0) + 1
+        fun MutableLongState.notifyChange() {
+            this.value += 1
         }
+
+        @Composable
+        fun MutableLongState.observeAsState() = remember { this }
 
     }
     val albumDao = DataBase.dbImpl.getAlbumDao()
@@ -52,10 +59,10 @@ class AlbumViewModel : ViewModel() {
         return albumItemDao.getAllAlbumItemWithExtra(albumId = album.albumId ?: return flow {  })
     }
 
-    val albumListChange: MutableLiveData<Int> = MutableLiveData(0)
-    val albumNameChange: MutableLiveData<Int> = MutableLiveData(0)
-    val albumItemListChange: MutableLiveData<Int> = MutableLiveData(0)
-    val filterCheckChanged: MutableLiveData<Int> = MutableLiveData(0)
+    val albumListChange = mutableLongStateOf(0L)
+    val albumNameChange = mutableLongStateOf(0L)
+    val albumItemListChange = mutableLongStateOf(0L)
+    val filterCheckChanged = mutableLongStateOf(0L)
 
     fun getAlbumName(albumId: Long): Album {
         return albumDao.getAlbum(albumId)
@@ -84,7 +91,7 @@ class AlbumViewModel : ViewModel() {
     }
 
     private var currentMessageDelayJob: Job? = null
-    val currentBackgroundTask = MutableLiveData<String?>(null)
+    val currentBackgroundTask = mutableStateOf<String?>(null)
 
     fun sendMessage(message: String) {
         currentMessageDelayJob?.cancel()

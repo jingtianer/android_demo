@@ -38,7 +38,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.*
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,7 +45,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.jingtian.composedemo.R
 import com.jingtian.composedemo.base.AppThemeText
@@ -60,7 +58,9 @@ import com.jingtian.composedemo.main.gallery.GalleryStateHolder
 import com.jingtian.composedemo.ui.theme.LocalAppPalette
 import com.jingtian.composedemo.utils.AppTheme
 import com.jingtian.composedemo.utils.FileStorageUtils.safeToFile
+import com.jingtian.composedemo.utils.observeAsState
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
+import com.jingtian.composedemo.viewmodels.AlbumViewModel.Companion.observeAsState
 import com.jingtian.composedemo.viewmodels.AppThemeViewModel
 import com.jingtian.composedemo.web.WebViewActivity
 import kotlinx.coroutines.Dispatchers
