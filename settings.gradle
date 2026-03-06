@@ -12,9 +12,6 @@ pluginManagement {
         mavenLocal()
         maven { url "https://jitpack.io" }
         maven { url "https://redirector.kotlinlang.org/maven/compose-dev" }
-//        maven {
-//            url 'https://maven.byted.org/repository/android_public/'
-//        }
     }
 }
 dependencyResolutionManagement {
@@ -25,9 +22,6 @@ dependencyResolutionManagement {
         mavenLocal()
         maven { url "https://jitpack.io" }
         maven { url "https://redirector.kotlinlang.org/maven/compose-dev" }
-//        maven {
-//            url 'https://maven.byted.org/repository/android_public/'
-//        }
     }
 }
 rootProject.name = "DemoApp"

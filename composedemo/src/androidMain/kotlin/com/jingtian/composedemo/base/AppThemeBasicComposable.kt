@@ -272,7 +272,7 @@ fun AppThemeDialog(
     Dialog(onDismissRequest = onDismissRequest, properties = properties) {
         Column(modifier) {
             content(
-                header = {
+                {
                     Spacer(modifier = Modifier.height(8.dp))
                     if (!title.isNullOrBlank()) {
                         AppThemeText(title, style = titleTextStyle)
@@ -285,7 +285,7 @@ fun AppThemeDialog(
                         Spacer(modifier = Modifier.height(8.dp))
                     }
                 },
-                actionButton = {
+                {
                     @Composable
                     fun PositiveButton() {
                         if (onPositive != null) {

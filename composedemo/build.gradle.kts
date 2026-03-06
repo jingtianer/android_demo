@@ -1,4 +1,3 @@
-import org.jetbrains.compose.ComposePlugin.CommonComponentsDependencies.resources
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import java.io.FileInputStream
 import java.util.Properties
@@ -6,6 +5,7 @@ import java.util.Properties
 plugins {
     kotlin("multiplatform")
     kotlin("plugin.serialization")
+    kotlin("plugin.compose")
     id("com.google.devtools.ksp")
     id("org.jetbrains.compose")
     id("com.android.application")
@@ -28,17 +28,40 @@ val version = configProps.getProperty("APP_VERSION")
 val aid = configProps.getProperty("AID")
 
 kotlin {
-    androidTarget()
-    jvm("desktop")
-    jvmToolchain(11)
+    jvmToolchain(17)
+
+    androidTarget {
+//        compilations.all {
+//            kotlinOptions {
+//                jvmTarget = "17"
+//            }
+//        }
+    }
+
+    jvm("desktop") {
+        compilations.all {
+            kotlinOptions {
+                jvmTarget = "17"
+            }
+        }
+
+    }
 
     sourceSets {
         val commonMain by getting {
-
+            dependencies {
+                implementation(compose.runtime)
+                implementation(compose.foundation)
+                implementation(compose.material)
+                implementation(compose.ui)
+                implementation(compose.components.resources)
+            }
         }
 
         val androidMain by getting {
-
+            dependencies {
+                implementation(compose.uiTooling)
+            }
         }
 
         val desktopMain by getting {
@@ -81,24 +104,21 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
-//    kotlinOptions {
-//        jvmTarget = "1.8"
-//    }
     buildFeatures {
         compose = true
         viewBinding = true
     }
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.3"
+        kotlinCompilerExtensionVersion = "1.7.6"
     }
-    packagingOptions {
-        resources {
-            excludes += "/META-INF/{AL2.0,LGPL2.1}"
-        }
-    }
+//    packagingOptions {
+//        resources {
+//            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+//        }
+//    }
 }
 //执行python 接入文档: https://chaquo.com/chaquopy/doc/15.0/android.html
 
@@ -111,7 +131,7 @@ dependencies {
     implementation("androidx.recyclerview:recyclerview:1.2.0")
     implementation("androidx.documentfile:documentfile:1.0.0")
 
-    val composeVersion = "1.6.1"
+    val composeVersion = "1.7.6"
 
     implementation("androidx.compose.ui:ui:$composeVersion")
     implementation("androidx.compose.ui:ui-graphics:$composeVersion")
@@ -126,7 +146,7 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling:$composeVersion")
     debugImplementation("androidx.compose.ui:ui-test-manifest:$composeVersion")
 
-    val room_version = "2.6.1"
+    val room_version = "2.7.1"
     implementation("androidx.room:room-runtime:$room_version")
     ksp("androidx.room:room-compiler:$room_version")
     implementation("androidx.room:room-ktx:$room_version")
