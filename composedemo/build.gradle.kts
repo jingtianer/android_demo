@@ -1,10 +1,15 @@
+import org.jetbrains.compose.ComposePlugin.CommonComponentsDependencies.resources
+import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import java.io.FileInputStream
 import java.util.Properties
 
 plugins {
-    id("com.android.application")
-    id("org.jetbrains.kotlin.android")
+    kotlin("multiplatform")
+    kotlin("plugin.serialization")
     id("com.google.devtools.ksp")
+    id("org.jetbrains.compose")
+    id("com.android.application")
+//    id("org.jetbrains.kotlin.android")
     id("com.chaquo.python")
 }
 
@@ -18,16 +23,42 @@ if (configFile.exists()) {
     throw GradleException("配置文件 config.properties 不存在！")
 }
 
+val appName = configProps.getProperty("APP_NAME")
+val version = configProps.getProperty("APP_VERSION")
+val aid = configProps.getProperty("AID")
+
+kotlin {
+    androidTarget()
+    jvm("desktop")
+    jvmToolchain(11)
+
+    sourceSets {
+        val commonMain by getting {
+
+        }
+
+        val androidMain by getting {
+
+        }
+
+        val desktopMain by getting {
+            dependencies {
+                implementation(compose.desktop.currentOs)
+            }
+        }
+    }
+}
+
 android {
-    namespace = "com.jingtian.composedemo"
+    namespace = aid
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.jingtian.composedemo"
+        applicationId = aid
         minSdk = 24
         targetSdk = 34
         versionCode = 1
-        versionName = "1.0"
+        versionName = version
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -42,7 +73,7 @@ android {
     buildTypes {
         debug {
             applicationIdSuffix = ".debug"
-            resValue("string", "app_name", "${configProps.getProperty("APP_NAME")}.debug")
+            resValue("string", "app_name", "${appName}.debug")
         }
         release {
             isMinifyEnabled = true
@@ -50,16 +81,16 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            resValue("string", "app_name", "${configProps.getProperty("APP_NAME")}")
+            resValue("string", "app_name", "$appName")
         }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
     }
-    kotlinOptions {
-        jvmTarget = "1.8"
-    }
+//    kotlinOptions {
+//        jvmTarget = "1.8"
+//    }
     buildFeatures {
         compose = true
         viewBinding = true
@@ -118,7 +149,7 @@ dependencies {
     implementation("androidx.recyclerview:recyclerview:1.2.0")
     implementation("androidx.documentfile:documentfile:1.0.0")
 
-    val composeVersion = "1.6.0"
+    val composeVersion = "1.6.11"
 
     implementation("androidx.compose.ui:ui:$composeVersion")
     implementation("androidx.compose.ui:ui-graphics:$composeVersion")
@@ -150,4 +181,39 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.5.1")
 
     implementation("androidx.constraintlayout:constraintlayout-compose:1.0.1")
+}
+
+compose {
+    desktop.application {
+        mainClass = "$appName.app.MainKt"
+
+        nativeDistributions {
+            targetFormats(TargetFormat.Msi, TargetFormat.Deb, TargetFormat.Dmg)
+            packageName = appName
+            packageVersion = version
+
+            includeAllModules = true
+
+            windows {
+//                iconFile.set(project.file("src/commonMain/composeResources/drawable/icon.ico"))
+            }
+            linux {
+//                iconFile.set(project.file("src/commonMain/composeResources/drawable/icon.png"))
+            }
+            macOS {
+                bundleID = aid
+//                iconFile.set(project.file("src/commonMain/composeResources/drawable/icon.icns"))
+            }
+        }
+
+        buildTypes {
+            release {
+                proguard {
+                    obfuscate.set(true)
+                    optimize.set(false)
+                    configurationFiles.from(project.file("proguard-desktop.pro"))
+                }
+            }
+        }
+    }
 }

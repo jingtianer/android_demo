@@ -11,6 +11,7 @@ pluginManagement {
         gradlePluginPortal()
         mavenLocal()
         maven { url "https://jitpack.io" }
+        maven { url "https://redirector.kotlinlang.org/maven/compose-dev" }
 //        maven {
 //            url 'https://maven.byted.org/repository/android_public/'
 //        }
@@ -23,6 +24,7 @@ dependencyResolutionManagement {
         mavenCentral()
         mavenLocal()
         maven { url "https://jitpack.io" }
+        maven { url "https://redirector.kotlinlang.org/maven/compose-dev" }
 //        maven {
 //            url 'https://maven.byted.org/repository/android_public/'
 //        }
