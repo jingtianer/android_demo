@@ -156,11 +156,11 @@ dependencies {
     implementation("com.google.code.gson:gson:2.8.8")
 
 
-    implementation("androidx.lifecycle:lifecycle-viewmodel:2.5.1")
-    implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.5.1")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.5.1")
+    implementation("androidx.lifecycle:lifecycle-viewmodel:2.8.1")
+    implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.8.1")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.1")
     implementation("androidx.compose.runtime:runtime-livedata:1.0.0")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.5.1")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.1")
 
     implementation("androidx.constraintlayout:constraintlayout-compose:1.0.1")
 }
