@@ -73,7 +73,6 @@ class WebViewActivity: BaseActivity() {
             if (bitmap != null) {
                 BitMapCachePool.invalid(storageId, FileType.HTML)
                 BitMapCachePool.loadImage(FileInfo(
-                    uri = uri,
                     storageId = storageId,
                     fileType = FileType.HTML,
                 )) {

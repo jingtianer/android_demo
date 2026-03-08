@@ -276,7 +276,7 @@ object FileStorageUtils {
             }
             val uri = storageFile.toUri()
             uriCache[id] = uri
-            return FileInfo(storageId = id, uri = uri, fileType = fileType)
+            return FileInfo(storageId = id, fileType = fileType)
         }
     }
 

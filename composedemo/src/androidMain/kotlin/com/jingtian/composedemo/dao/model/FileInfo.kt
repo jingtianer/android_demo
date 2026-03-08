@@ -15,22 +15,15 @@ import com.jingtian.composedemo.utils.FileStorageUtils.extension
 class FileInfo(
     @PrimaryKey(autoGenerate = true)
     var id: Long? = null,
-    @Ignore
-    @Transient
-    var uri: Uri? = null,
     var storageId: Long = DataBase.INVALID_ID,
     var fileType: FileType = FileType.RegularFile,
     var intrinsicWidth: Int = -1,
     var intrinsicHeight: Int = -1,
 ) {
-    var extension: String? = uri?.extension()
+    @Deprecated("unused field")
+    var extension: String? = null
     fun getFileUri(): Uri? {
-        val uri = this.uri
-        return if (uri == null) {
-            FileStorageUtils.getStorage(fileType)?.get(storageId)
-        } else {
-            return uri
-        }
+        return FileStorageUtils.getStorage(fileType)?.get(storageId)
     }
 }
 

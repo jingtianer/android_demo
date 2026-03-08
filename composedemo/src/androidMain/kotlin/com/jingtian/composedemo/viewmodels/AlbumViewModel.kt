@@ -174,7 +174,6 @@ class AlbumViewModel : ViewModel() {
             val nextId = imageStorage.asyncStore(uri)
             val (width, height) = getFileIntrinsicSize(uri, mediaType)
             val file = FileInfo(
-                uri = uri,
                 storageId = nextId,
                 fileType = mediaType,
                 intrinsicWidth = width,
@@ -236,7 +235,7 @@ class AlbumViewModel : ViewModel() {
             val fileName = getFileNameFromUri(uri) ?: ""
             val fileStorageId = FileStorageUtils.getStorage(type)?.asyncStore(uri) ?: DataBase.INVALID_ID
             val (width, height) = getFileIntrinsicSize(uri, type)
-            val fileInfo = FileInfo(uri = uri, storageId = fileStorageId, fileType = type, intrinsicWidth = width, intrinsicHeight = height)
+            val fileInfo = FileInfo(storageId = fileStorageId, fileType = type, intrinsicWidth = width, intrinsicHeight = height)
             val albumItem = AlbumItem(itemName = fileName, albumId = album.albumId ?: DataBase.INVALID_ID)
             sendMessage("正在导入: ${documentFile.name}")
             fileInfoList.add(fileInfo to albumItem)
@@ -286,7 +285,7 @@ class AlbumViewModel : ViewModel() {
             } ?: DataBase.INVALID_ID
 
             val (width, height) = getFileIntrinsicSize(uri, mediaType)
-            val file = FileInfo(id = albumItemRelation.fileInfo?.id, uri = uri, storageId = nextId, fileType = mediaType, intrinsicWidth = width, intrinsicHeight = height)
+            val file = FileInfo(id = albumItemRelation.fileInfo?.id, storageId = nextId, fileType = mediaType, intrinsicWidth = width, intrinsicHeight = height)
             DataBase.dbImpl.getFileInfoDao().updateFileInfo(file)
             val albumItemId = albumItemRelation.albumItem.itemId ?: DataBase.INVALID_ID
             val fileId = albumItemRelation.fileInfo?.id ?: DataBase.INVALID_ID
