@@ -1,11 +1,8 @@
 package com.jingtian.composedemo.main.albumItem
 
 import android.app.Activity
-import android.util.Log
 import android.view.View
 import android.view.ViewGroup
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -46,7 +43,6 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -64,7 +60,7 @@ import com.jingtian.composedemo.dao.model.FileType
 import com.jingtian.composedemo.dao.model.ItemRank
 import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
 import com.jingtian.composedemo.main.labels.LabelView
-import com.jingtian.composedemo.main.playIntent
+import com.jingtian.composedemo.navigation.rememberAlbumLauncher
 import com.jingtian.composedemo.ui.theme.LocalAppPalette
 import com.jingtian.composedemo.ui.theme.LocalSecondaryTextStyle
 import com.jingtian.composedemo.ui.widget.RankTypeChooser
@@ -231,13 +227,6 @@ fun AlbumItemView(
 @Composable
 fun AlbumItemViewStateHolder.AlbumItemView() {
     val scope = rememberCoroutineScope()
-
-    val context = LocalContext.current
-    val playIntent = remember(albumItemRelation, context) {
-        val fileInfo = albumItemRelation.fileInfo
-        playIntent(context, fileInfo)
-    }
-
     val itemId = albumItemRelation.albumItem.itemId ?: DataBase.INVALID_ID
     val isSelected = currentSelectedItem.containsKey(itemId)
     LaunchedEffect(this) {
@@ -256,10 +245,8 @@ fun AlbumItemViewStateHolder.AlbumItemView() {
         )
     }
 
-    val launcher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
+    val albumItemLauncher by rememberAlbumLauncher { result->
+        if (result.toInt() == Activity.RESULT_OK) {
             scope.launch {
                 fetchImage(scope)
             }
@@ -285,13 +272,7 @@ fun AlbumItemViewStateHolder.AlbumItemView() {
                         }
                         itemSelectStateChangeState.value += 1
                     } else {
-                        if (playIntent != null) {
-                            if (albumItemRelation.fileInfo.fileType == FileType.HTML) {
-                                launcher.launch(playIntent)
-                            } else {
-                                context.startActivity(playIntent)
-                            }
-                        }
+                        albumItemLauncher.launch(albumItemRelation.fileInfo)
                         scope.launch(Dispatchers.IO) {
                             fetchImage(scope)
                         }
