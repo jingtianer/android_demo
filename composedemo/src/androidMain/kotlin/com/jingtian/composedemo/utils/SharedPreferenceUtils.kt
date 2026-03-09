@@ -3,16 +3,16 @@ package com.jingtian.composedemo.utils
 import android.content.SharedPreferences
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import com.jingtian.composedemo.multiplatform.IMultiplatformSharedPreferences
+import com.jingtian.composedemo.multiplatform.MultiplatformSharedPreferencesImpl
 import kotlin.properties.ReadWriteProperty
 import kotlin.reflect.KProperty
 
 class SharedPreferenceUtils {
     open class StorageVariable<V, T>(
-        private val sp: SharedPreferences,
+        private val sp: IMultiplatformSharedPreferences<T>,
         private val key: String,
         defaultValue: T,
-        getValue: SharedPreferences.(String, T) -> T,
-        private val putValue: SharedPreferences.Editor.(String, T) -> SharedPreferences.Editor,
     ) : ReadWriteProperty<V, T> {
         private var value = sp.getValue(key, defaultValue)
 
@@ -22,28 +22,22 @@ class SharedPreferenceUtils {
 
         override fun setValue(thisRef: V, property: KProperty<*>, value: T) {
             this.value = value
-            sp.edit().putValue(key, value).commit()
+            sp.setValue(key, value)
         }
     }
 
     class StorageBoolean<T>(
-        sp: SharedPreferences,
+        sp: IMultiplatformSharedPreferences<Boolean>,
         key: String,
         defaultValue: Boolean
-    ) : StorageVariable<T, Boolean>(
-        sp, key, defaultValue,
-        SharedPreferences::getBoolean,
-        SharedPreferences.Editor::putBoolean
-    )
+    ) : StorageVariable<T, Boolean>(sp, key, defaultValue)
 
     class StorageLong<T>(
-        sp: SharedPreferences,
+        sp: IMultiplatformSharedPreferences<Long>,
         key: String,
         defaultValue: Long
     ) : StorageVariable<T, Long>(
         sp, key, defaultValue,
-        SharedPreferences::getLong,
-        SharedPreferences.Editor::putLong
     )
 
     class SynchronizedProperty<T, V>(
@@ -63,27 +57,21 @@ class SharedPreferenceUtils {
     }
 
     class StorageNullableString<T>(
-        sp: SharedPreferences,
+        sp: IMultiplatformSharedPreferences<String?>,
         key: String,
         defaultValue: String?
     ) : StorageVariable<T, String?>(
         sp, key, defaultValue,
-        { k, v -> getString(k, v) ?: v },
-        SharedPreferences.Editor::putString
     )
 
     class StorageString<T>(
-        sp: SharedPreferences,
+        sp: IMultiplatformSharedPreferences<String>,
         key: String,
         defaultValue: String
-    ) : StorageVariable<T, String>(
-        sp, key, defaultValue,
-        { k, v -> getString(k, v) ?: v },
-        SharedPreferences.Editor::putString
-    )
+    ) : StorageVariable<T, String>(sp, key, defaultValue)
 
     class StorageJson<T, V>(
-        sp: SharedPreferences,
+        sp: IMultiplatformSharedPreferences<String>,
         key: String,
         defaultValue: V,
         typeToken: TypeToken<V>,
@@ -99,6 +87,5 @@ class SharedPreferenceUtils {
             this.value = value
             json = gson.toJson(value)
         }
-
     }
 }

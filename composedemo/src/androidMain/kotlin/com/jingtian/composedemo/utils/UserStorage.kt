@@ -5,14 +5,13 @@ import com.google.gson.GsonBuilder
 import com.google.gson.reflect.TypeToken
 import com.jingtian.composedemo.base.app
 import com.jingtian.composedemo.dao.model.User
+import com.jingtian.composedemo.multiplatform.getJsonStorage
+import com.jingtian.composedemo.multiplatform.getLongStorage
 
 object UserStorage {
     var userInstance by SharedPreferenceUtils.SynchronizedProperty(
         SharedPreferenceUtils.StorageJson(
-            app.getSharedPreferences(
-                "user_info",
-                Context.MODE_PRIVATE
-            ),
+            getJsonStorage("user_info"),
             "user",
             User(),
             TypeToken.get(User::class.java),
@@ -21,11 +20,8 @@ object UserStorage {
         )
     )
 
-    private var _userAppThemeConfig by SharedPreferenceUtils.StorageLong<Any>(
-        app.getSharedPreferences(
-            "user_config",
-            Context.MODE_PRIVATE
-        ),
+    private var _userAppThemeConfig by SharedPreferenceUtils.StorageLong(
+        getLongStorage("user_config"),
         "theme_config",
         AppTheme.AUTO.value,
     )

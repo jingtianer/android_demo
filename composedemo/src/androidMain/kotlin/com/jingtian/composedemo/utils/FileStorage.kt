@@ -13,6 +13,7 @@ import com.jingtian.composedemo.dao.model.FileType
 import com.jingtian.composedemo.multiplatform.MultiplatformFile
 import com.jingtian.composedemo.multiplatform.MultiplatformFileFactory
 import com.jingtian.composedemo.multiplatform.MultiplatformFileImpl
+import com.jingtian.composedemo.multiplatform.getLongStorage
 import com.jingtian.composedemo.utils.BitMapCachePool.toImmutable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -60,9 +61,12 @@ object FileStorageUtils {
 
     class FileStorage(val fileType: FileType) {
 
-        private val sp = app.getSharedPreferences("file-store_id", Context.MODE_PRIVATE)
         private var id by SharedPreferenceUtils.SynchronizedProperty(
-            SharedPreferenceUtils.StorageLong(sp, "file_id_${fileType.value}", 0L)
+            SharedPreferenceUtils.StorageLong(
+                getLongStorage("file-store_id"),
+                "file_id_${fileType.value}",
+                0L
+            )
         )
 
         private val rankImageStoreDir: String = RANK_IMAGE_STORE_DIR + fileType.value
