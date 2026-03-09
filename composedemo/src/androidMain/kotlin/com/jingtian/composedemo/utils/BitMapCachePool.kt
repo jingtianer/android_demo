@@ -4,10 +4,14 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.annotation.IntRange
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import com.jingtian.composedemo.base.app
 import com.jingtian.composedemo.dao.DataBase
 import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.FileType
+import com.jingtian.composedemo.multiplatform.MultiplatformFile
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -37,16 +41,16 @@ object BitMapCachePool {
     }
 
     class BitMapCache(private val fileType: FileType) {
-        private val imagePool = ConcurrentHashMap<Long, ArrayList<Pair<Int, SoftReference<Bitmap?>>>>()
+        private val imagePool = ConcurrentHashMap<Long, ArrayList<Pair<Int, SoftReference<ImageBitmap?>>>>()
 
         @Synchronized
-        private fun getQueue(id: Long): ArrayList<Pair<Int, SoftReference<Bitmap?>>> {
+        private fun getQueue(id: Long): ArrayList<Pair<Int, SoftReference<ImageBitmap?>>> {
             return imagePool.computeIfAbsent(id) { k->
                 ArrayList()
             }
         }
 
-        private fun getIfNotNull(queue: ArrayList<Pair<Int, SoftReference<Bitmap?>>>, index: Int): Pair<Int, Bitmap>? {
+        private fun getIfNotNull(queue: ArrayList<Pair<Int, SoftReference<ImageBitmap?>>>, index: Int): Pair<Int, ImageBitmap>? {
             queue.lastOrNull()?.let { last->
                 last.second.get()?.let { bitmap ->
                     return last.first to bitmap
@@ -55,30 +59,30 @@ object BitMapCachePool {
             return null
         }
 
-        private fun tryGetNeighborBitmap(queue: ArrayList<Pair<Int, SoftReference<Bitmap?>>>, id: Long, scaleFactor: Int, insertPos: Int, bitmapCreator: () -> Bitmap?): Pair<Int, Bitmap>? {
+        private fun tryGetNeighborBitmap(queue: ArrayList<Pair<Int, SoftReference<ImageBitmap?>>>, id: Long, scaleFactor: Int, insertPos: Int, bitmapCreator: () -> ImageBitmap?): Pair<Int, ImageBitmap>? {
             getIfNotNull(queue, insertPos-1)?.let { (neighborScaleFactor, bitmap)->
                 CoroutineUtils.runIOTask({
-                    createAndStoreBitmap(id, scaleFactor, -insertPos-1, queue, bitmapCreator).toImmutable()
+                    createAndStoreBitmap(id, scaleFactor, -insertPos-1, queue, bitmapCreator)
                 })
                 return neighborScaleFactor to bitmap
             }
             getIfNotNull(queue, insertPos)?.let { (neighborScaleFactor, bitmap)->
                 CoroutineUtils.runIOTask({
-                    createAndStoreBitmap(id, scaleFactor, -insertPos-1, queue, bitmapCreator).toImmutable()
+                    createAndStoreBitmap(id, scaleFactor, -insertPos-1, queue, bitmapCreator)
                 })
                 return neighborScaleFactor to bitmap
             }
             return null
         }
 
-        fun put(id: Long, scaleFactor: Int = -1, bitmapCreator: () -> Bitmap?): Bitmap? {
+        fun put(id: Long, scaleFactor: Int = -1, bitmapCreator: () -> ImageBitmap?): ImageBitmap? {
             val queue = getQueue(id)
             synchronized(queue) {
                 if (scaleFactor == -1) {
                     getIfNotNull(queue, 0)?.let { (scaleFactor, bitmap)->
                         return bitmap
                     }
-                    return bitmapCreator().toImmutable()
+                    return bitmapCreator()
                 }
                 val insertPos = queue.binarySearch {
                     scaleFactor - it.first
@@ -90,11 +94,11 @@ object BitMapCachePool {
                     return createAndStoreBitmap(id, scaleFactor, -insertPos-1, queue, bitmapCreator)
                 }
                 val cachedBitmap = queue[insertPos].second.get()
-                if (cachedBitmap == null || cachedBitmap.isRecycled) {
+                if (cachedBitmap == null) {
                     tryGetNeighborBitmap(queue, id, scaleFactor, insertPos, bitmapCreator)?.let { (scaleFactor, bitmap)->
                         return bitmap
                     }
-                    val bitmap = bitmapCreator().toImmutable()
+                    val bitmap = bitmapCreator()
                     if (bitmap != null) {
                         queue[insertPos] = scaleFactor to SoftReference(bitmap)
                     }
@@ -112,11 +116,11 @@ object BitMapCachePool {
             getCacheDir(fileType.value, id).takeIf { it.exists() }?.deleteRecursively()
         }
 
-        private fun createAndStoreBitmap(id: Long, scaleFactor: Int, @IntRange(from = 0) insertPos: Int, queue: ArrayList<Pair<Int, SoftReference<Bitmap?>>>, bitmapCreator: () -> Bitmap?): Bitmap? {
+        private fun createAndStoreBitmap(id: Long, scaleFactor: Int, @IntRange(from = 0) insertPos: Int, queue: ArrayList<Pair<Int, SoftReference<ImageBitmap?>>>, bitmapCreator: () -> ImageBitmap?): ImageBitmap? {
             val cacheFile = getCacheFile(fileType.value, id, scaleFactor)
             if (cacheFile?.exists() == true) {
                 FileInputStream(cacheFile).use {
-                    BitmapFactory.decodeStream(it)?.let {
+                    BitmapFactory.decodeStream(it)?.asImageBitmap()?.let {
                         queue.add(insertPos, scaleFactor to SoftReference(it))
                         return@createAndStoreBitmap it
                     }
@@ -131,7 +135,7 @@ object BitMapCachePool {
                         return@runIOTask
                     }
                     FileOutputStream(file).use {
-                        bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)
+                        bitmap.asAndroidBitmap().compress(Bitmap.CompressFormat.PNG, 100, it)
                         it.flush()
                     }
                 }, { e->
@@ -181,18 +185,6 @@ object BitMapCachePool {
         return File(getCacheStoreRoot(fileType), "bitmap_cache/bitmap_${fileType}/${storageId}")
     }
 
-    fun getImageRatio(uri: Uri): Pair<Int, Int> {
-        val options = BitmapFactory.Options().apply {
-            inJustDecodeBounds = true // 只获取尺寸，不加载像素
-        }
-        val (width, height) =  app.contentResolver.openInputStream(uri)?.use { `is`->
-            // 第一步：仅解码边界，获取图片原始宽高
-            BitmapFactory.decodeStream(`is`, null, options)
-            options.outWidth to options.outHeight
-        } ?: (-1 to -1)
-        return width to height
-    }
-
     fun invalid(id: Long, fileType: FileType) {
         getBitMapCachePool(fileType).clear(id)
     }
@@ -218,7 +210,7 @@ object BitMapCachePool {
         return max(1,  max(widthScaleFactor,heightScaleFactor) / 2)
     }
 
-    fun toBitMap(scope: CoroutineScope, uri: Uri, maxWidth: Int = -1, maxHeight: Int = -1, onImageResult: (Int, Bitmap?)->Unit) {
+    fun toBitMap(scope: CoroutineScope, uri: MultiplatformFile, maxWidth: Int = -1, maxHeight: Int = -1, onImageResult: (Int, ImageBitmap?)->Unit) {
         scope.launch(Dispatchers.IO) {
             val (scaleFactor, bitmap) = BitMapCachePool.toBitMap(uri, maxWidth, maxHeight)
             withContext(Dispatchers.Main) {
@@ -227,17 +219,17 @@ object BitMapCachePool {
         }
     }
 
-    fun toBitMap(image: Uri, maxWidth: Int = -1, maxHeight: Int = -1): Pair<Int, Bitmap?> {
+    fun toBitMap(image: MultiplatformFile, maxWidth: Int = -1, maxHeight: Int = -1): Pair<Int, ImageBitmap?> {
         val options = BitmapFactory.Options().apply {
             inJustDecodeBounds = true // 只获取尺寸，不加载像素
         }
-        val scaleFactor =  app.contentResolver.openInputStream(image)?.use { `is`->
+        val scaleFactor =  image.inputStream?.use { `is`->
             // 第一步：仅解码边界，获取图片原始宽高
             BitmapFactory.decodeStream(`is`, null, options)
             // 第二步：计算缩放比例（避免图片过大导致 OOM）
             calculateScaleFactor(options.outWidth, options.outHeight, maxWidth, maxHeight)
         } ?: -1
-        val bitmap = app.contentResolver.openInputStream(image)?.use { `is`->
+        val bitmap = image.inputStream?.use { `is`->
 //            Log.d("TAG", "loadImage failed: $image, $scaleFactor, $image")
             // 第三步：按缩放比例解码图片
             options.apply {
@@ -246,7 +238,7 @@ object BitMapCachePool {
                 inPreferredConfig = Bitmap.Config.RGB_565 // 可选：使用 RGB_565 节省内存（比 ARGB_8888 节省一半）
             }
             BitmapFactory.decodeStream(`is`, null, options)
-        }
+        }?.asImageBitmap()
         return scaleFactor to bitmap
     }
 
@@ -254,8 +246,8 @@ object BitMapCachePool {
         fileInfo: FileInfo,
         maxWidth: Int = -1,
         maxHeight: Int = -1,
-        creator: () -> Bitmap?,
-    ): Pair<Int, Bitmap?> {
+        creator: () -> ImageBitmap?,
+    ): Pair<Int, ImageBitmap?> {
         val scaleFactor = if (fileInfo.fileType == FileType.HTML) {
             2
         } else {
@@ -269,20 +261,20 @@ object BitMapCachePool {
         fileInfo: FileInfo,
         maxWidth: Int = -1,
         maxHeight: Int = -1,
-    ): Pair<Int, Bitmap?> {
+    ): Pair<Int, ImageBitmap?> {
         val options = BitmapFactory.Options().apply {
             inJustDecodeBounds = true // 只获取尺寸，不加载像素
         }
         val image = fileInfo.getFileUri()?.takeIf { it != Uri.EMPTY } ?: return -1 to null
         val id = fileInfo.storageId.takeIf { it != DataBase.INVALID_ID } ?: return -1 to null
-        val scaleFactor =  app.contentResolver.openInputStream(image)?.use { `is`->
+        val scaleFactor =  image.inputStream?.use { `is`->
             // 第一步：仅解码边界，获取图片原始宽高
             BitmapFactory.decodeStream(`is`, null, options)
             // 第二步：计算缩放比例（避免图片过大导致 OOM）
             calculateScaleFactor(options.outWidth, options.outHeight, maxWidth, maxHeight)
         } ?: -1
         val bitmap = getBitMapCachePool(fileInfo.fileType).put(id, scaleFactor) {
-            app.contentResolver.openInputStream(image)?.use { `is`->
+            fileInfo.getFileUri()?.inputStream?.use { `is`->
                 // 第三步：按缩放比例解码图片
                 options.apply {
                     inJustDecodeBounds = false // 实际加载像素
@@ -290,7 +282,7 @@ object BitMapCachePool {
                     inPreferredConfig = Bitmap.Config.RGB_565 // 可选：使用 RGB_565 节省内存（比 ARGB_8888 节省一半）
                     inMutable = false // 不可变
                 }
-                BitmapFactory.decodeStream(`is`, null, options)
+                BitmapFactory.decodeStream(`is`, null, options)?.asImageBitmap()
             }
         }
         return scaleFactor to bitmap

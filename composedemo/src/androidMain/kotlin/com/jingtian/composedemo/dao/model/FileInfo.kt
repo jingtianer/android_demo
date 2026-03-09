@@ -6,6 +6,7 @@ import androidx.room.Ignore
 import androidx.room.PrimaryKey
 import com.jingtian.composedemo.dao.DataBase
 import com.jingtian.composedemo.dao.FileInfoDao
+import com.jingtian.composedemo.multiplatform.MultiplatformFile
 import com.jingtian.composedemo.utils.FileStorageUtils
 import com.jingtian.composedemo.utils.FileStorageUtils.extension
 
@@ -22,7 +23,7 @@ class FileInfo(
 ) {
     @Deprecated("unused field")
     var extension: String? = null
-    fun getFileUri(): Uri? {
+    fun getFileUri(): MultiplatformFile? {
         return FileStorageUtils.getStorage(fileType)?.get(storageId)
     }
 }

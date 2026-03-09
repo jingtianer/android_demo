@@ -1,21 +1,17 @@
 package com.jingtian.composedemo.utils
 
-import android.content.ContentResolver
 import android.content.Context
-import android.database.Cursor
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.graphics.Matrix
-import android.media.MediaMetadataRetriever
-import android.net.Uri
-import android.os.Build
-import android.provider.DocumentsContract
-import android.provider.MediaStore
 import android.webkit.MimeTypeMap
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.core.net.toUri
 import com.jingtian.composedemo.base.app
 import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.FileType
+import com.jingtian.composedemo.multiplatform.MultiplatformFile
+import com.jingtian.composedemo.multiplatform.MultiplatformFileImpl
 import com.jingtian.composedemo.utils.BitMapCachePool.toImmutable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -40,35 +36,6 @@ object FileStorageUtils {
 
     private val storage = ConcurrentHashMap<FileType, SoftReference<FileStorage>>()
 
-    fun getFileNameFromUri(uri: Uri): String? {
-        // 方案1：直接通过ContentResolver查询DISPLAY_NAME
-        val projection = arrayOf(MediaStore.MediaColumns.DISPLAY_NAME)
-        val cursor: Cursor? = app.contentResolver.query(uri, projection, null, null, null)
-
-        cursor?.use {
-            if (it.moveToFirst()) {
-                val nameIndex = it.getColumnIndex(MediaStore.MediaColumns.DISPLAY_NAME)
-                if (nameIndex != -1) {
-                    return it.getString(nameIndex)
-                }
-            }
-        }
-
-        // 方案2：如果上面的方式失败，尝试从Uri路径中提取
-        return runCatching {
-            when {
-                // 处理DocumentProvider
-                DocumentsContract.isDocumentUri(app, uri) -> {
-                    val docId = DocumentsContract.getDocumentId(uri)
-                    val split = docId.split(":")
-                    if (split.size >= 2) split[1] else null
-                }
-                // 处理普通Uri
-                else -> uri.lastPathSegment
-            }
-        }.getOrNull()
-    }
-
     fun checkRootDir() {
         val storeDir = File(app.filesDir, RANK_IMAGE_STORE_ROOT_DIR)
         if (storeDir.exists()) {
@@ -91,82 +58,7 @@ object FileStorageUtils {
         }?.get()
     }
 
-
-    fun Uri.safeToFile(): File? {
-        return if ("file".equals(scheme, ignoreCase = true)) {
-            path?.let { File(it) }
-        } else {
-            null
-        }
-    }
-
-    fun Uri.isHidden(): Boolean {
-        val file = safeToFile()
-        if (file != null) {
-            return file.let { it.exists() && it.isHidden }
-        }
-        val filePath = getRealPathFromContentUri(app, this)
-        if (filePath != null) {
-            return File(filePath).let { it.exists() && it.isHidden }
-        }
-
-        val fileName = getFileNameFromContentUri(app, this)
-        if (fileName != null && fileName.startsWith(".")) {
-            return true
-        }
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            try {
-                app.contentResolver.openInputStream(this)?.use { `is` ->
-                    val path: Path = Paths.get(this.path)
-                    return Files.isHidden(path)
-                }
-            } catch (e: FileNotFoundException) {
-            } catch (e: IOException) {
-            }
-        }
-        return false
-    }
-
-    /**
-     * 从Content URI获取文件真实路径（适配媒体文件）
-     */
-    private fun getRealPathFromContentUri(context: Context, uri: Uri): String? {
-        val projection = arrayOf(MediaStore.Images.Media.DATA)
-        var cursor: Cursor? = null
-        try {
-            cursor = context.contentResolver.query(uri, projection, null, null, null)
-            if (cursor != null && cursor.moveToFirst()) {
-                val columnIndex = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA)
-                return cursor.getString(columnIndex)
-            }
-        } catch (e: java.lang.Exception) {
-        } finally {
-            cursor?.close()
-        }
-        return null
-    }
-
-    /**
-     * 从Content URI获取文件名
-     */
-    private fun getFileNameFromContentUri(context: Context, uri: Uri): String? {
-        val projection = arrayOf(MediaStore.MediaColumns.DISPLAY_NAME)
-        var cursor: Cursor? = null
-        try {
-            cursor = context.contentResolver.query(uri, projection, null, null, null)
-            if (cursor != null && cursor.moveToFirst()) {
-                val columnIndex = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DISPLAY_NAME)
-                return cursor.getString(columnIndex)
-            }
-        } catch (e: Exception) {
-        } finally {
-            cursor?.close()
-        }
-        return null
-    }
-
-    fun Uri.extension(): String {
+    fun MultiplatformFile.extension(): String {
         return MimeTypeMap.getFileExtensionFromUrl(this.toString())
     }
 
@@ -179,13 +71,13 @@ object FileStorageUtils {
 
         private val rankImageStoreDir: String = RANK_IMAGE_STORE_DIR + fileType.value
 
-        private val uriCache = ConcurrentHashMap<Long, Uri>()
+        private val uriCache = ConcurrentHashMap<Long, MultiplatformFile>()
 
         private fun rankImagePrefix(id: Long): String {
             return "${RANK_IMAGE_STORE_PREFIX}_${id}"
         }
 
-        fun get(id: Long): Uri? {
+        fun get(id: Long): MultiplatformFile? {
             if (id == -1L) {
                 return null
             }
@@ -196,7 +88,7 @@ object FileStorageUtils {
             val storeDir = File(app.filesDir, rankImageStoreDir)
             val storageFile = File(storeDir, rankImagePrefix(id))
             return if (storageFile.exists()) {
-                storageFile.toUri()
+                MultiplatformFileImpl(storageFile.toUri())
             } else {
                 null
             }
@@ -210,10 +102,7 @@ object FileStorageUtils {
             }
         }
 
-        fun asyncStore(oldId: Long, uri: Uri): Long {
-            if (uri == Uri.EMPTY) {
-                return -1
-            }
+        fun asyncStore(oldId: Long, uri: MultiplatformFile): Long {
             val id = synchronized(this) {
                 if (oldId >= this.id || oldId < 0) {
                     this.id++
@@ -225,11 +114,11 @@ object FileStorageUtils {
             uriCache[id] = uri
             CoroutineUtils.runIOTask({
                 val storageFile = getStoreFile(id)
-                if (uri.safeToFile()?.absolutePath?.equals(storageFile.absolutePath) != true) {
+                if (uri.file?.absolutePath?.equals(storageFile.absolutePath) != true) {
                     if (storageFile.exists()) {
                         storageFile.delete()
                     }
-                    app.contentResolver.openInputStream(uri)?.use { input ->
+                    uri.inputStream?.use { input ->
                         innerStoreImage(id, input, storageFile)
                     }
                 }
@@ -237,10 +126,7 @@ object FileStorageUtils {
             return id
         }
 
-        fun asyncStore(uri: Uri): Long {
-            if (uri == Uri.EMPTY) {
-                return -1
-            }
+        fun asyncStore(uri: MultiplatformFile): Long {
             val id = synchronized(this) {
                 this.id++
             }
@@ -248,7 +134,7 @@ object FileStorageUtils {
             CoroutineUtils.runIOTask({
                 val storageFile = getStoreFile(id)
                 storageFile.delete()
-                app.contentResolver.openInputStream(uri)?.use { input ->
+                uri.inputStream?.use { input ->
                     innerStoreImage(id, input, storageFile)
                 }
             }, {})
@@ -274,46 +160,17 @@ object FileStorageUtils {
             storageFile.outputStream().use { output ->
                 input.copyTo(output)
             }
-            val uri = storageFile.toUri()
+            val uri = MultiplatformFileImpl(storageFile.toUri())
             uriCache[id] = uri
             return FileInfo(storageId = id, fileType = fileType)
         }
     }
 
-    fun getMediaType(uri: Uri): FileType {
-        // 方式1：通过ContentResolver获取MIME类型（推荐，最可靠）
-        val contentResolver: ContentResolver = app.contentResolver
-        val mimeType = contentResolver.getType(uri)
-        return when {
-            // 判断是否为图片
-            mimeType?.startsWith("image/") == true -> FileType.IMAGE
-            // 判断是否为视频
-            mimeType?.startsWith("video/") == true -> FileType.VIDEO
-            mimeType?.startsWith("audio/") == true -> FileType.AUDIO
-            mimeType?.startsWith("text/html") == true -> FileType.HTML
-            // 方式2：兜底方案（通过文件扩展名判断，防止ContentResolver获取失败）
-            else -> {
-                val extension = MimeTypeMap.getFileExtensionFromUrl(uri.toString())
-                val fallbackMimeType = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension)
-                when {
-                    fallbackMimeType?.startsWith("image/") == true -> FileType.IMAGE
-                    fallbackMimeType?.startsWith("video/") == true -> FileType.VIDEO
-                    fallbackMimeType?.startsWith("audio/") == true -> FileType.AUDIO
-                    fallbackMimeType?.startsWith("text/html") == true -> FileType.HTML
-                    else -> when {
-                        extension.equals("jfif") -> FileType.IMAGE // 二进制先按照图片处理
-                        else -> FileType.RegularFile
-                    }
-                }
-            }
-        }
-    }
-
-    private fun getThumbnailByType(fileType: FileType, uri: Uri): Bitmap? {
+    private fun getThumbnailByType(fileType: FileType, uri: MultiplatformFile): ImageBitmap? {
         return when (fileType) {
-            FileType.VIDEO -> getVideoThumbnail(uri)
-            FileType.AUDIO -> getAudioThumbnail(uri)
-            FileType.HTML -> getWebThumbnail(uri)
+            FileType.VIDEO -> uri.videoThumbnail
+            FileType.AUDIO -> uri.audioThumbnail
+            FileType.HTML -> null
             FileType.RegularFile -> null
             FileType.IMAGE -> null
         }
@@ -323,7 +180,7 @@ object FileStorageUtils {
     fun getThumbnail(
         fileType: FileType,
         coroutineScope: CoroutineScope,
-        videoUri: Uri,
+        videoUri: MultiplatformFile,
         maxWidth: Int = -1,
         maxHeight: Int = -1,
         onLoadBitmap: suspend (Bitmap?)->Unit
@@ -350,11 +207,12 @@ object FileStorageUtils {
         }
 
         // 3. 压缩并返回新Bitmap（注意回收原始Bitmap避免内存泄漏）
+        val androidBitmap = bitmap.asAndroidBitmap()
         val compressedBitmap = Bitmap.createBitmap(
-            bitmap, 0, 0, width, height, matrix, true
+            androidBitmap, 0, 0, width, height, matrix, true
         )
-        if (compressedBitmap != bitmap) {
-            bitmap.recycle() // 回收原始Bitmap
+        if (compressedBitmap != androidBitmap) {
+            androidBitmap.recycle() // 回收原始Bitmap
         }
         withContext(Dispatchers.Main) {
             onLoadBitmap(compressedBitmap.toImmutable())
@@ -364,15 +222,13 @@ object FileStorageUtils {
     fun getThumbnail(
         fileInfo: FileInfo,
         coroutineScope: CoroutineScope,
-        videoUri: Uri,
+        videoUri: MultiplatformFile,
         maxWidth: Int = -1,
         maxHeight: Int = -1,
-        onLoadBitmap: suspend (Bitmap?)->Unit
+        onLoadBitmap: suspend (ImageBitmap?)->Unit
     ): Job = coroutineScope.launch(Dispatchers.IO) {
         BitMapCachePool.loadImage(fileInfo, maxWidth, maxHeight) {
-            getThumbnailByType(fileInfo.fileType, videoUri)?.apply {
-                this.toImmutable()
-            }
+            getThumbnailByType(fileInfo.fileType, videoUri)
         }.second?.let {
             withContext(Dispatchers.Main) {
                 onLoadBitmap(it)
@@ -385,71 +241,19 @@ object FileStorageUtils {
         }
     }
 
-    private fun getVideoThumbnail(videoUri: Uri): Bitmap? {
-        val retriever = MediaMetadataRetriever()
-        return try {
-            retriever.setDataSource(app, videoUri)
-            // 获取第一帧作为封面
-            retriever.frameAtTime
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        } finally {
-            try {
-                retriever.release()
-            } catch (e: Exception) {
-            }
-        }
-    }
-
-    private fun getAudioThumbnail(uri: Uri): Bitmap? {
-        val retriever = MediaMetadataRetriever()
-        return try {
-            retriever.setDataSource(app, uri)
-            val coverBytes = retriever.embeddedPicture
-            coverBytes?.let { BitmapFactory.decodeByteArray(it, 0, it.size) }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        } finally {
-            retriever.release()
-        }
-    }
-
-    private fun getWebThumbnail(uri: Uri): Bitmap? {
-        return null
-    }
-
-    private suspend fun getVideoThumbnailIntrinsicSize(videoUri: Uri): Pair<Int, Int> {
-        return withContext(Dispatchers.IO) {
-            val retriever = MediaMetadataRetriever()
-            return@withContext try {
-                retriever.setDataSource(app, videoUri)
-                // 获取第一帧作为封面
-                retriever.frameAtTime
-            } catch (e: Exception) {
-                e.printStackTrace()
-                null
-            } finally {
-                try {
-                    retriever.release()
-                } catch (e: Exception) {
-                }
-            }
-        }?.let {
-            it.width to it.height
-        } ?: (-1 to -1)
-    }
-
-    suspend fun getFileIntrinsicSize(uri: Uri, mediaType: FileType) = when(mediaType) {
+    fun getFileIntrinsicSize(uri: MultiplatformFile, mediaType: FileType) = when(mediaType) {
         FileType.IMAGE -> {
-            BitMapCachePool.getImageRatio(uri)
+            uri.imageRatio
         }
         FileType.VIDEO -> {
-            getVideoThumbnailIntrinsicSize(uri)
+            uri.videoThumbnail?.let {
+                it.width to it.height
+            } ?: (-1 to -1)
         }
         FileType.AUDIO -> {
-            getVideoThumbnailIntrinsicSize(uri)
+            uri.audioThumbnail?.let {
+                it.width to it.height
+            } ?: (-1 to -1)
         }
         FileType.HTML -> {
             1 to 1

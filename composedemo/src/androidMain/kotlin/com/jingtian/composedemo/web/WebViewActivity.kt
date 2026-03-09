@@ -14,12 +14,15 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.jingtian.composedemo.base.BaseActivity
 import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.FileType
+import com.jingtian.composedemo.multiplatform.MultiplatformFile
+import com.jingtian.composedemo.multiplatform.MultiplatformFileImpl
 import com.jingtian.composedemo.ui.theme.LocalAppColorScheme
 import com.jingtian.composedemo.ui.theme.appBackground
 import com.jingtian.composedemo.ui.widget.CommonWebView
@@ -62,7 +65,7 @@ class WebViewActivity: BaseActivity() {
 
     @Composable
     override fun Content() {
-        CommonWebView(Modifier.fillMaxSize().background(LocalAppColorScheme.current.background).appBackground().windowInsetsPadding(WindowInsets.systemBars), uri) {
+        CommonWebView(Modifier.fillMaxSize().background(LocalAppColorScheme.current.background).appBackground().windowInsetsPadding(WindowInsets.systemBars), MultiplatformFileImpl(uri)) {
             webView = this
         }
     }
@@ -76,7 +79,7 @@ class WebViewActivity: BaseActivity() {
                     storageId = storageId,
                     fileType = FileType.HTML,
                 )) {
-                    bitmap
+                    bitmap.asImageBitmap()
                 }
             }
         }, onFailure = {
@@ -95,7 +98,8 @@ class WebViewActivity: BaseActivity() {
 }
 
 @Composable
-fun CommonWebView(modifier: Modifier = Modifier, uri: Uri?, enabled: Boolean = true, width: Dp? = null, height: Dp? = null, viewScope: CommonWebView.()->Unit = {}) {
+fun CommonWebView(modifier: Modifier = Modifier, file: MultiplatformFile?, enabled: Boolean = true, width: Dp? = null, height: Dp? = null, viewScope: CommonWebView.()->Unit = {}) {
+    val uri = (file as? MultiplatformFileImpl)?.uri
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     fun CommonWebView.init() {

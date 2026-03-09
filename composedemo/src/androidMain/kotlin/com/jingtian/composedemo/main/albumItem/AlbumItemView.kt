@@ -136,7 +136,7 @@ class AlbumItemViewStateHolder(
                         albumItemRelation.fileInfo,
                         size.dpValue.toInt(),
                     )
-                    val bitmap = image?.asImageBitmap()
+                    val bitmap = image
                     withContext(Dispatchers.Main) {
                         imageBitmap = bitmap
                         imageBitmap?.aspectRatio()?.let {
@@ -151,7 +151,7 @@ class AlbumItemViewStateHolder(
                         scope, uri,
                         maxWidth = size.dpValue.toInt(),
                     ) { bitmap ->
-                        imageBitmap = bitmap?.asImageBitmap()
+                        imageBitmap = bitmap
                         imageBitmap?.aspectRatio()?.let {
                             intrinsicRatio = it
                         }
@@ -165,7 +165,7 @@ class AlbumItemViewStateHolder(
                         scope, uri,
                         maxWidth = size.dpValue.toInt(),
                     ) { bitmap ->
-                        imageBitmap = bitmap?.asImageBitmap()
+                        imageBitmap = bitmap
                         imageBitmap?.aspectRatio()?.let {
                             intrinsicRatio = it
                         }
@@ -187,7 +187,7 @@ class AlbumItemViewStateHolder(
                         scope, uri,
                         maxWidth = size.dpValue.toInt(),
                     ) { bitmap ->
-                        imageBitmap = bitmap?.asImageBitmap()
+                        imageBitmap = bitmap
                     }
                 }
             }

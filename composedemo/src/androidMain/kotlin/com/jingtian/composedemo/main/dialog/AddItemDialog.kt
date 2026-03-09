@@ -58,6 +58,8 @@ import com.jingtian.composedemo.dao.model.ItemRank
 import com.jingtian.composedemo.main.drawer.ImmutableDrawerMenuItem
 import com.jingtian.composedemo.main.labels.CheckableLabelView
 import com.jingtian.composedemo.main.labels.EditableLabelView
+import com.jingtian.composedemo.multiplatform.MultiplatformFile
+import com.jingtian.composedemo.navigation.rememberDocumentPicker
 import com.jingtian.composedemo.ui.theme.LocalAppPalette
 import com.jingtian.composedemo.ui.theme.LocalAppUIConstants
 import com.jingtian.composedemo.ui.widget.RankTypeChooser
@@ -65,7 +67,6 @@ import com.jingtian.composedemo.ui.widget.StarRateView
 import com.jingtian.composedemo.utils.AppTheme
 import com.jingtian.composedemo.utils.BitMapCachePool
 import com.jingtian.composedemo.utils.FileStorageUtils
-import com.jingtian.composedemo.utils.FileStorageUtils.isHidden
 import com.jingtian.composedemo.utils.ViewUtils.commonEditableConfig
 import com.jingtian.composedemo.utils.ViewUtils.dpValue
 import com.jingtian.composedemo.utils.splitByWhiteSpace
@@ -89,7 +90,7 @@ fun AddItemDialog(album: Album, totalLabelList: List<String>, albumData: List<Al
     val itemLabelSet = remember { mutableStateMapOf<String, String>() }
     var webSnapShotTaker: (suspend ()-> Bitmap)? by remember { mutableStateOf(null) }
 
-    var selectedUri by remember { mutableStateOf<Uri?>(null) }
+    var selectedUri by remember { mutableStateOf<MultiplatformFile?>(null) }
     val scope = rememberCoroutineScope()
     var imageResource by remember { mutableStateOf(R.drawable.upload_to_cloud) }
     val viewModel: AlbumViewModel = viewModel()
@@ -119,18 +120,17 @@ fun AddItemDialog(album: Album, totalLabelList: List<String>, albumData: List<Al
         }
     }
 
-    val multipleImagePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument(),
-        onResult = { uri: Uri? ->
-            uri?.takeIf { !it.isHidden() } ?: return@rememberLauncherForActivityResult
-            when (FileStorageUtils.getMediaType(uri)) {
+    val multipleImagePickerLauncher by rememberDocumentPicker(
+        onResult = { uri: MultiplatformFile? ->
+            uri?.takeIf { !it.isHidden } ?: return@rememberDocumentPicker
+            when (uri.mediaType) {
                 FileType.IMAGE -> {
                     BitMapCachePool.toBitMap(
                         scope,
                         uri,
                         maxWidth = imageWidth.dpValue.toInt()
                     ) { _, bitmap ->
-                        pickedImage = bitmap?.asImageBitmap()
+                        pickedImage = bitmap
                     }
                 }
 
@@ -177,11 +177,11 @@ fun AddItemDialog(album: Album, totalLabelList: List<String>, albumData: List<Al
                 }
             }
             if (itemName.isNullOrBlank()) {
-                itemName = FileStorageUtils.getFileNameFromUri(uri) ?: ""
+                itemName = uri.fileName ?: ""
             }
             selectedUri = uri
             selectedUri?.let { selectedUri ->
-                selectedFileType = FileStorageUtils.getMediaType(selectedUri)
+                selectedFileType = selectedUri.mediaType
             }
         }
     )

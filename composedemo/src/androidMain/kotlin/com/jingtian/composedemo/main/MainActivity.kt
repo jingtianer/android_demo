@@ -55,9 +55,9 @@ import com.jingtian.composedemo.dao.model.FileType.*
 import com.jingtian.composedemo.main.drawer.MainDrawer
 import com.jingtian.composedemo.main.gallery.Gallery
 import com.jingtian.composedemo.main.gallery.GalleryStateHolder
+import com.jingtian.composedemo.multiplatform.MultiplatformFileImpl
 import com.jingtian.composedemo.ui.theme.LocalAppPalette
 import com.jingtian.composedemo.utils.AppTheme
-import com.jingtian.composedemo.utils.FileStorageUtils.safeToFile
 import com.jingtian.composedemo.utils.observeAsState
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
 import com.jingtian.composedemo.viewmodels.AlbumViewModel.Companion.observeAsState
@@ -188,7 +188,7 @@ fun Main() {
 fun systemFallbackIntent(context: Context, fileInfo: FileInfo): Intent? {
     val mediaType = fileInfo.fileType.mimeType
     val originFileUri = fileInfo.getFileUri()
-    val originFile = originFileUri?.safeToFile()
+    val originFile = originFileUri?.file
     val mediaUri: Uri = if (originFile != null) {
         FileProvider.getUriForFile(
             context,
@@ -196,7 +196,7 @@ fun systemFallbackIntent(context: Context, fileInfo: FileInfo): Intent? {
             originFile
         )
     } else {
-        originFileUri
+        (originFileUri as MultiplatformFileImpl)?.uri
     } ?: return null
     return Intent(Intent.ACTION_VIEW).apply {
         // 设置Uri和媒体类型
@@ -212,7 +212,7 @@ fun systemFallbackIntent(context: Context, fileInfo: FileInfo): Intent? {
 
 fun webIntent(context: Context, fileInfo: FileInfo) : Intent {
     return Intent(context, WebViewActivity::class.java).apply {
-        putExtra(WebViewActivity.KEY_WEB_URI, fileInfo.getFileUri())
+        putExtra(WebViewActivity.KEY_WEB_URI, (fileInfo.getFileUri() as? MultiplatformFileImpl)?.uri)
         putExtra(WebViewActivity.KEY_STORAGE_ID, fileInfo.storageId)
     }
 }

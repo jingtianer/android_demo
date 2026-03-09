@@ -54,6 +54,8 @@ import com.jingtian.composedemo.dao.model.DEFAULT_DESC
 import com.jingtian.composedemo.dao.model.DEFAULT_USER_NAME
 import com.jingtian.composedemo.dao.model.FileType
 import com.jingtian.composedemo.main.playIntent
+import com.jingtian.composedemo.multiplatform.MultiplatformFile
+import com.jingtian.composedemo.navigation.rememberImagePicker
 import com.jingtian.composedemo.ui.theme.LocalAppPalette
 import com.jingtian.composedemo.ui.theme.LocalSecondaryTextStyle
 import com.jingtian.composedemo.ui.theme.drawerBackground
@@ -61,7 +63,6 @@ import com.jingtian.composedemo.ui.theme.goldenRatio
 import com.jingtian.composedemo.utils.BitMapCachePool
 import com.jingtian.composedemo.utils.CoroutineUtils
 import com.jingtian.composedemo.utils.FileStorageUtils
-import com.jingtian.composedemo.utils.FileStorageUtils.isHidden
 import com.jingtian.composedemo.utils.UserStorage
 import com.jingtian.composedemo.utils.ViewUtils.dpValue
 import kotlinx.coroutines.Dispatchers
@@ -98,39 +99,35 @@ fun DrawerHeader() {
             )
             image
         }
-        userAvatarImage = bitmap?.asImageBitmap()
+        userAvatarImage = bitmap
     }
-
-    val multipleImagePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickVisualMedia(),
-        onResult = { uri: Uri? ->
-            uri?.takeIf { !it.isHidden() } ?: return@rememberLauncherForActivityResult
-            scope.launch(Dispatchers.IO) {
-                val imageStorage = FileStorageUtils.getStorage(FileType.IMAGE) ?: return@launch
-                val currentUser = UserStorage.userInstance
-                val currentImageId =
-                    currentUser.userAvatar.storageId.takeIf { it != DataBase.INVALID_ID }
-                val nextId = if (currentImageId != null) {
-                    BitMapCachePool.invalid(currentImageId, FileType.IMAGE)
-                    imageStorage.asyncStore(currentImageId, uri)
-                } else {
-                    imageStorage.asyncStore(uri)
-                }
-                currentUser.userAvatar.storageId = nextId
-                currentUser.userAvatar.fileType = FileType.IMAGE
-                UserStorage.userInstance = currentUser
-                val (_, image) = BitMapCachePool.loadImage(
-                    currentUser.userAvatar,
-                    avatarSize.dpValue.toInt(),
-                    avatarSize.dpValue.toInt()
-                )
-                val bitmap = image?.asImageBitmap()
-                withContext(Dispatchers.Main) {
-                    userAvatarImage = bitmap
-                }
+    val multipleImagePickerLauncher by rememberImagePicker { uri: MultiplatformFile?->
+        uri?.takeIf { !it.isHidden } ?: return@rememberImagePicker
+        scope.launch(Dispatchers.IO) {
+            val imageStorage = FileStorageUtils.getStorage(FileType.IMAGE) ?: return@launch
+            val currentUser = UserStorage.userInstance
+            val currentImageId =
+                currentUser.userAvatar.storageId.takeIf { it != DataBase.INVALID_ID }
+            val nextId = if (currentImageId != null) {
+                BitMapCachePool.invalid(currentImageId, FileType.IMAGE)
+                imageStorage.asyncStore(currentImageId, uri)
+            } else {
+                imageStorage.asyncStore(uri)
+            }
+            currentUser.userAvatar.storageId = nextId
+            currentUser.userAvatar.fileType = FileType.IMAGE
+            UserStorage.userInstance = currentUser
+            val (_, image) = BitMapCachePool.loadImage(
+                currentUser.userAvatar,
+                avatarSize.dpValue.toInt(),
+                avatarSize.dpValue.toInt()
+            )
+            val bitmap = image
+            withContext(Dispatchers.Main) {
+                userAvatarImage = bitmap
             }
         }
-    )
+    }
 
     var enableEdit by remember { mutableStateOf(false) }
 
@@ -155,11 +152,7 @@ fun DrawerHeader() {
     }
 
     fun pickImage() {
-        multipleImagePickerLauncher.launch(
-            PickVisualMediaRequest.Builder()
-                .setMediaType(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                .build()
-        )
+        multipleImagePickerLauncher.launch()
     }
 
     fun circleOffset(R: Dp, r: Dp, halfBorder: Dp): Dp {

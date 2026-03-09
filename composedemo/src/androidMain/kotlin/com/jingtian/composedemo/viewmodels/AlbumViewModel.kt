@@ -7,6 +7,7 @@ import androidx.compose.runtime.MutableLongState
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -19,13 +20,12 @@ import com.jingtian.composedemo.dao.model.FileType
 import com.jingtian.composedemo.dao.model.ItemRank
 import com.jingtian.composedemo.dao.model.LabelInfo
 import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
+import com.jingtian.composedemo.multiplatform.MultiplatformFile
+import com.jingtian.composedemo.multiplatform.MultiplatformFileImpl
 import com.jingtian.composedemo.utils.BitMapCachePool
 import com.jingtian.composedemo.utils.CoroutineUtils
 import com.jingtian.composedemo.utils.FileStorageUtils
 import com.jingtian.composedemo.utils.FileStorageUtils.getFileIntrinsicSize
-import com.jingtian.composedemo.utils.FileStorageUtils.getFileNameFromUri
-import com.jingtian.composedemo.utils.FileStorageUtils.getMediaType
-import com.jingtian.composedemo.utils.FileStorageUtils.isHidden
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -157,7 +157,7 @@ class AlbumViewModel : ViewModel() {
 
     fun addItem(
         album: Album,
-        selectedUri: Uri,
+        selectedUri: MultiplatformFile,
         itemName: String,
         itemRank: ItemRank,
         itemDesc: String,
@@ -168,7 +168,7 @@ class AlbumViewModel : ViewModel() {
         val albumId = album.albumId ?: return
         val uri = selectedUri
         CoroutineUtils.runIOTask({
-            val mediaType = FileStorageUtils.getMediaType(uri)
+            val mediaType = selectedUri.mediaType
             val imageStorage =
                 FileStorageUtils.getStorage(mediaType) ?: return@runIOTask
             val nextId = imageStorage.asyncStore(uri)
@@ -192,7 +192,7 @@ class AlbumViewModel : ViewModel() {
             val labelInfo = itemLabel.map { LabelInfo(label = it, albumItemId = albumItemId) }
             DataBase.dbImpl.getLabelInfoDao().insertAllLabel(labelInfo)
             if (webSnapShot != null) {
-                BitMapCachePool.loadImage(file) { webSnapShot }
+                BitMapCachePool.loadImage(file) { webSnapShot.asImageBitmap() }
             }
         }) {
             albumItemListChange.notifyChange()
@@ -227,12 +227,12 @@ class AlbumViewModel : ViewModel() {
                 traverseUri(file, album, fileInfoList)
             }
         } else {
-            val uri = documentFile.uri
-            if (uri.isHidden()) {
+            val uri = MultiplatformFileImpl(documentFile.uri)
+            if (uri.isHidden) {
                 return
             }
-            val type = getMediaType(uri)
-            val fileName = getFileNameFromUri(uri) ?: ""
+            val type = uri.mediaType
+            val fileName = uri.fileName ?: ""
             val fileStorageId = FileStorageUtils.getStorage(type)?.asyncStore(uri) ?: DataBase.INVALID_ID
             val (width, height) = getFileIntrinsicSize(uri, type)
             val fileInfo = FileInfo(storageId = fileStorageId, fileType = type, intrinsicWidth = width, intrinsicHeight = height)
@@ -244,7 +244,7 @@ class AlbumViewModel : ViewModel() {
 
     fun updateItem(
         albumItemRelation: AlbumItemRelation,
-        selectedUri: Uri,
+        selectedUri: MultiplatformFile,
         selectedFileType: FileType,
         itemName: String,
         itemRank: ItemRank,
@@ -303,7 +303,7 @@ class AlbumViewModel : ViewModel() {
             DataBase.dbImpl.getLabelInfoDao().insertAllLabel(itemLabel.map { LabelInfo(albumItemId = albumItemId, label = it) })
 
             if (selectedFileType == FileType.HTML) {
-                BitMapCachePool.loadImage(file) { webBitmap }
+                BitMapCachePool.loadImage(file) { webBitmap?.asImageBitmap() }
             }
         }) {
             albumItemListChange.notifyChange()

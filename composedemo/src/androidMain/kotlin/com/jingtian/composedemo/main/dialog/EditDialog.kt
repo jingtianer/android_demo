@@ -61,6 +61,8 @@ import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
 import com.jingtian.composedemo.main.drawer.ImmutableDrawerMenuItem
 import com.jingtian.composedemo.main.labels.CheckableLabelView
 import com.jingtian.composedemo.main.labels.EditableLabelView
+import com.jingtian.composedemo.multiplatform.MultiplatformFile
+import com.jingtian.composedemo.navigation.rememberDocumentPicker
 import com.jingtian.composedemo.ui.theme.LocalAppPalette
 import com.jingtian.composedemo.ui.theme.LocalMiddleButtonConfig
 import com.jingtian.composedemo.ui.widget.RankTypeChooser
@@ -68,7 +70,6 @@ import com.jingtian.composedemo.ui.widget.StarRateView
 import com.jingtian.composedemo.utils.AppTheme
 import com.jingtian.composedemo.utils.BitMapCachePool
 import com.jingtian.composedemo.utils.FileStorageUtils
-import com.jingtian.composedemo.utils.FileStorageUtils.isHidden
 import com.jingtian.composedemo.utils.ViewUtils.commonEditableConfig
 import com.jingtian.composedemo.utils.ViewUtils.dpValue
 import com.jingtian.composedemo.utils.splitByWhiteSpace
@@ -150,7 +151,7 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
         }
     }
 
-    suspend fun updateImage(uri: Uri, fileType: FileType, fileInfo: FileInfo?) {
+    suspend fun updateImage(uri: MultiplatformFile, fileType: FileType, fileInfo: FileInfo?) {
         withContext(Dispatchers.IO) {
             when (fileType) {
                 FileType.IMAGE -> {
@@ -158,12 +159,12 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
                         BitMapCachePool.loadImage(
                             fileInfo,
                             maxWidth = imageWidth.dpValue.toInt()
-                        ).second?.asImageBitmap()
+                        ).second
                     } else {
                         BitMapCachePool.toBitMap(
                             uri,
                             maxWidth = imageWidth.dpValue.toInt()
-                        ).second?.asImageBitmap()
+                        ).second
                     }
                     withContext(Dispatchers.Main) {
                         pickedImage = bitmap
@@ -179,7 +180,7 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
                             maxWidth = imageWidth.dpValue.toInt()
                         ) { bitmap ->
                             withContext(Dispatchers.Main) {
-                                pickedImage = bitmap?.asImageBitmap()
+                                pickedImage = bitmap
                             }
                         }
                     } else {
@@ -206,7 +207,7 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
                             maxWidth = imageWidth.dpValue.toInt()
                         ) { bitmap ->
                             withContext(Dispatchers.Main) {
-                                pickedImage = bitmap?.asImageBitmap()
+                                pickedImage = bitmap
                             }
                         }
                     } else {
@@ -236,7 +237,7 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
                             maxWidth = imageWidth.dpValue.toInt()
                         ) { bitmap ->
                             withContext(Dispatchers.Main) {
-                                pickedImage = bitmap?.asImageBitmap()
+                                pickedImage = bitmap
                             }
                         }
                     } else {
@@ -272,7 +273,7 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
             imageResource = R.drawable.load_failed
         }
         if (itemName.isBlank() && uri != null) {
-            itemName = FileStorageUtils.getFileNameFromUri(uri) ?: ""
+            itemName = uri.fileName ?: ""
         }
     }
 
@@ -285,21 +286,18 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
             imageResource = R.drawable.load_failed
         }
         if (itemName.isNullOrBlank() && uri != null) {
-            itemName = FileStorageUtils.getFileNameFromUri(uri) ?: ""
+            itemName = uri.fileName ?: ""
         }
     }
 
-    val multipleImagePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument(),
-        onResult = { uri: Uri? ->
-            uri?.takeIf { !it.isHidden() } ?: return@rememberLauncherForActivityResult
-            selectedFileType = FileStorageUtils.getMediaType(uri)
-            selectedUri = uri
-            scope.launch {
-                onSelectedUriChange()
-            }
+    val multipleImagePickerLauncher by rememberDocumentPicker { uri: MultiplatformFile? ->
+        uri?.takeIf { !it.isHidden } ?: return@rememberDocumentPicker
+        selectedFileType = uri.mediaType
+        selectedUri = uri
+        scope.launch {
+            onSelectedUriChange()
         }
-    )
+    }
 
     fun pickImage() {
         multipleImagePickerLauncher.launch(FileType.mimes)
