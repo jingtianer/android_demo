@@ -25,6 +25,11 @@ abstract class DataBase: RoomDatabase() {
     companion object {
         const val INVALID_ID = -1L
         val dbImpl = dbImplCreator()
+            .addTypeConverter(DateTypeConverter())
+            .addTypeConverter(FileTypeConverter())
+            .addTypeConverter(ItemRankConverter())
+            .build()
+
     }
     abstract fun getAlbumDao(): AlbumDao
     abstract fun getAlbumItemDao(): AlbumItemDao
@@ -32,4 +37,4 @@ abstract class DataBase: RoomDatabase() {
     abstract fun getLabelInfoDao(): LabelInfoDao
 }
 
-expect fun dbImplCreator() : DataBase
+expect fun dbImplCreator() : RoomDatabase.Builder<DataBase>

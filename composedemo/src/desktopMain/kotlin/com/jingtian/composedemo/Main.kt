@@ -9,7 +9,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.window.ApplicationScope
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
-import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.jingtian.composedemo.main.Main
 import com.jingtian.composedemo.ui.theme.DemoAppTheme

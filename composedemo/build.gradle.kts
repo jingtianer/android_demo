@@ -1,3 +1,4 @@
+import org.gradle.internal.impldep.org.junit.experimental.categories.Categories.CategoryFilter.exclude
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import java.io.FileInputStream
 import java.util.Properties
@@ -61,6 +62,8 @@ kotlin {
                 api("androidx.lifecycle:lifecycle-viewmodel:2.8.1")
                 api("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.1")
                 implementation("org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose:2.8.1")
+                implementation("androidx.sqlite:sqlite-bundled:2.6.2")
+//                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.1.0")
             }
         }
 
@@ -78,6 +81,17 @@ kotlin {
                 implementation("androidx.room:room-runtime:$room_version")
                 implementation("androidx.room:room-compiler:$room_version")
                 implementation("androidx.room:room-ktx:$room_version")
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-swing:1.7.3") {
+                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
+                }
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3") {
+                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
+                }
+            }
+            configurations {
+                all {
+                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
+                }
             }
         }
     }
