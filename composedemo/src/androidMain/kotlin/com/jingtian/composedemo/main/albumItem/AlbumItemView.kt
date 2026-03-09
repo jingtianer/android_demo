@@ -1,8 +1,6 @@
 package com.jingtian.composedemo.main.albumItem
 
 import android.app.Activity
-import android.view.View
-import android.view.ViewGroup
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -50,14 +48,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.jingtian.composedemo.R
 import com.jingtian.composedemo.base.AppThemeText
 import com.jingtian.composedemo.dao.DataBase
 import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.FileType
-import com.jingtian.composedemo.dao.model.ItemRank
 import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
 import com.jingtian.composedemo.main.labels.LabelView
 import com.jingtian.composedemo.main.widget.RankLabel
@@ -65,22 +60,15 @@ import com.jingtian.composedemo.main.widget.ScoreStar
 import com.jingtian.composedemo.navigation.rememberAlbumLauncher
 import com.jingtian.composedemo.ui.theme.LocalAppPalette
 import com.jingtian.composedemo.ui.theme.LocalSecondaryTextStyle
-import com.jingtian.composedemo.ui.widget.RankTypeChooser
-import com.jingtian.composedemo.ui.widget.StarRateView
-import com.jingtian.composedemo.utils.AppTheme
 import com.jingtian.composedemo.utils.BitMapCachePool
 import com.jingtian.composedemo.utils.FileStorageUtils
-import com.jingtian.composedemo.utils.ViewUtils.commonConfig
 import com.jingtian.composedemo.utils.ViewUtils.dpValue
 import com.jingtian.composedemo.utils.getOrPutRef
-import com.jingtian.composedemo.viewmodels.AppThemeViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.lang.ref.SoftReference
-import kotlin.math.max
-import kotlin.math.roundToInt
 
 class AlbumItemViewStateHolder(
     val albumItemRelation: AlbumItemRelation,

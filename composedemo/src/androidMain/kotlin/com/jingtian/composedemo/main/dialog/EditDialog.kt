@@ -61,6 +61,8 @@ import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
 import com.jingtian.composedemo.main.drawer.ImmutableDrawerMenuItem
 import com.jingtian.composedemo.main.labels.CheckableLabelView
 import com.jingtian.composedemo.main.labels.EditableLabelView
+import com.jingtian.composedemo.main.widget.RankChooser
+import com.jingtian.composedemo.main.widget.ScoreChooser
 import com.jingtian.composedemo.multiplatform.MultiplatformFile
 import com.jingtian.composedemo.navigation.rememberDocumentPicker
 import com.jingtian.composedemo.ui.theme.LocalAppPalette
@@ -118,7 +120,7 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
         ) / 2
     }, 180).dp
 
-    var webSnapShotTaker: (suspend ()-> Bitmap)? by remember { mutableStateOf(null) }
+    var webSnapShotTaker: (suspend ()-> ImageBitmap)? by remember { mutableStateOf(null) }
 
     var currentSelectedAlbum by remember { mutableStateOf(relatedAlbum) }
 
@@ -396,51 +398,14 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
 
                     item {
                         Column(Modifier.fillMaxWidth()) {
-                            val viewModel: AppThemeViewModel = viewModel()
-                            val appTheme by remember { viewModel.currentAppTheme }
-                            val isSystemDark = isSystemInDarkTheme()
-                            val isDark = AppTheme.isDark(appTheme, isSystemDark)
-                            AndroidView({ context ->
-                                StarRateView(context).commonEditableConfig(isDark).apply {
-                                    onScoreChange = StarRateView.Companion.OnScoreChange { score: Float ->
-                                        itemScore = score
-                                    }
-                                    layoutParams = ViewGroup.LayoutParams(
-                                        ViewGroup.LayoutParams.WRAP_CONTENT,
-                                        ViewGroup.LayoutParams.MATCH_PARENT
-                                    )
-                                }
-                            },
-                                Modifier
-                                    .wrapContentWidth()
-                                    .height(30.dp)
-                                    .align(Alignment.CenterHorizontally),
-                                update = {
-                                    it.commonEditableConfig(isDark)
-                                    it.setScore(itemScore)
-                                })
+                            ScoreChooser(itemScore) { value->
+                                itemScore = value
+                            }
                             Spacer(Modifier.height(4.dp))
 
-                            AndroidView({ context ->
-                                RankTypeChooser(context).apply {
-                                    layoutParams = ViewGroup.LayoutParams(
-                                        ViewGroup.LayoutParams.WRAP_CONTENT,
-                                        ViewGroup.LayoutParams.MATCH_PARENT,
-                                    )
-                                    onRankChange = RankTypeChooser.Companion.OnRankTypeChange { value ->
-                                        itemRank = value
-                                    }
-                                    init(isDark)
-                                }
-                            },
-                                Modifier
-                                    .wrapContentWidth()
-                                    .height(30.dp)
-                                    .align(Alignment.CenterHorizontally),
-                                update = {
-                                    it.init(isDark)
-                                    it.setRankType(itemRank)
-                                })
+                            RankChooser(itemRank) { value->
+                                itemRank = value
+                            }
                             Spacer(Modifier.height(4.dp))
                         }
                     }
@@ -552,9 +517,9 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
                         width = imageWidth,
                         height = imageWidth,
                     ) {
-                        initForSnapShot(imageWidth.dpValue.toInt(), imageWidth.dpValue.toInt())
+                        initForSnapShot(imageWidth, imageWidth, false)
                         webSnapShotTaker = suspend {
-                            this.takeSnapShot()
+                            this.tackSnapShot()
                         }
                     }
                 } else {

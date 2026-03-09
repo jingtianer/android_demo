@@ -2,15 +2,11 @@ package com.jingtian.composedemo.main.dialog
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.net.Uri
 import android.view.ViewGroup
 import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -58,20 +54,18 @@ import com.jingtian.composedemo.dao.model.ItemRank
 import com.jingtian.composedemo.main.drawer.ImmutableDrawerMenuItem
 import com.jingtian.composedemo.main.labels.CheckableLabelView
 import com.jingtian.composedemo.main.labels.EditableLabelView
+import com.jingtian.composedemo.main.widget.RankChooser
+import com.jingtian.composedemo.main.widget.ScoreChooser
 import com.jingtian.composedemo.multiplatform.MultiplatformFile
 import com.jingtian.composedemo.navigation.rememberDocumentPicker
 import com.jingtian.composedemo.ui.theme.LocalAppPalette
 import com.jingtian.composedemo.ui.theme.LocalAppUIConstants
 import com.jingtian.composedemo.ui.widget.RankTypeChooser
-import com.jingtian.composedemo.ui.widget.StarRateView
-import com.jingtian.composedemo.utils.AppTheme
 import com.jingtian.composedemo.utils.BitMapCachePool
 import com.jingtian.composedemo.utils.FileStorageUtils
-import com.jingtian.composedemo.utils.ViewUtils.commonEditableConfig
 import com.jingtian.composedemo.utils.ViewUtils.dpValue
 import com.jingtian.composedemo.utils.splitByWhiteSpace
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
-import com.jingtian.composedemo.viewmodels.AppThemeViewModel
 import com.jingtian.composedemo.web.CommonWebView
 import kotlinx.coroutines.launch
 import kotlin.math.min
@@ -83,12 +77,11 @@ fun AddItemDialog(album: Album, totalLabelList: List<String>, albumData: List<Al
     var itemName by remember { mutableStateOf("") }
     var itemDesc by remember { mutableStateOf("") }
     var itemRank by remember { mutableStateOf(ItemRank.NONE) }
-    val filteredTotalLabelList = remember { mutableStateMapOf(*totalLabelList.map { it to it }.toTypedArray()) }
     val selectedTotalLabelList = remember { mutableStateMapOf<String, String>() }
     var itemScore by remember { mutableFloatStateOf(0.0f) }
     val itemLabel = remember { mutableStateListOf<String>() }
     val itemLabelSet = remember { mutableStateMapOf<String, String>() }
-    var webSnapShotTaker: (suspend ()-> Bitmap)? by remember { mutableStateOf(null) }
+    var webSnapShotTaker: (suspend ()-> ImageBitmap)? by remember { mutableStateOf(null) }
 
     var selectedUri by remember { mutableStateOf<MultiplatformFile?>(null) }
     val scope = rememberCoroutineScope()
@@ -244,7 +237,7 @@ fun AddItemDialog(album: Album, totalLabelList: List<String>, albumData: List<Al
                     items(albumData.size,
                         key = { index: Int ->
                             albumData[index].let {
-                                it.albumId ?: DataBase.INVALID_ID to it.albumName
+                                (it.albumId ?: DataBase.INVALID_ID) to it.albumName
                             }
                         }
                     ) { index ->
@@ -263,51 +256,14 @@ fun AddItemDialog(album: Album, totalLabelList: List<String>, albumData: List<Al
 
                 item {
                     Column(Modifier.fillMaxWidth()) {
-                        val viewModel: AppThemeViewModel = viewModel()
-                        val appTheme by remember { viewModel.currentAppTheme }
-                        val isSystemDark = isSystemInDarkTheme()
-                        val isDark = AppTheme.isDark(appTheme ?: AppTheme.currentAppTheme(), isSystemDark)
-                        AndroidView({ context ->
-                            StarRateView(context).commonEditableConfig(isDark).apply {
-                                onScoreChange = StarRateView.Companion.OnScoreChange { score: Float ->
-                                    itemScore = score
-                                }
-                                layoutParams = ViewGroup.LayoutParams(
-                                    ViewGroup.LayoutParams.WRAP_CONTENT,
-                                    ViewGroup.LayoutParams.MATCH_PARENT
-                                )
-                            }
-                        },
-                            Modifier
-                                .wrapContentWidth()
-                                .height(30.dp)
-                                .align(Alignment.CenterHorizontally),
-                            update = {
-                                it.setScore(itemScore)
-                                it.commonEditableConfig(isDark)
-                            })
+                        ScoreChooser(itemScore) { score->
+                            itemScore = score
+                        }
                         Spacer(Modifier.height(4.dp))
 
-                        AndroidView({ context ->
-                            RankTypeChooser(context).apply {
-                                layoutParams = ViewGroup.LayoutParams(
-                                    ViewGroup.LayoutParams.WRAP_CONTENT,
-                                    ViewGroup.LayoutParams.MATCH_PARENT,
-                                )
-                                onRankChange = RankTypeChooser.Companion.OnRankTypeChange { value ->
-                                    itemRank = value
-                                }
-                                init(isDark)
-                            }
-                        },
-                            Modifier
-                                .wrapContentWidth()
-                                .height(30.dp)
-                                .align(Alignment.CenterHorizontally),
-                            update = {
-                                it.setRankType(itemRank)
-                                it.init(isDark)
-                            })
+                        RankChooser(itemRank) { value->
+                            itemRank = value
+                        }
                         Spacer(Modifier.height(4.dp))
                     }
                 }
@@ -416,9 +372,9 @@ fun AddItemDialog(album: Album, totalLabelList: List<String>, albumData: List<Al
                     width = imageWidth,
                     height = imageWidth,
                 ) {
-                    initForSnapShot(imageWidth.dpValue.toInt(), imageWidth.dpValue.toInt())
+                    initForSnapShot(imageWidth, imageWidth, false)
                     webSnapShotTaker = suspend {
-                        this.takeSnapShot()
+                        this.tackSnapShot()
                     }
                 }
             } else {

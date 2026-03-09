@@ -65,7 +65,7 @@ class WebViewActivity: BaseActivity() {
 
     @Composable
     override fun Content() {
-        CommonWebView(Modifier.fillMaxSize().background(LocalAppColorScheme.current.background).appBackground().windowInsetsPadding(WindowInsets.systemBars), MultiplatformFileImpl(uri)) {
+        AndroidWebView(Modifier.fillMaxSize().background(LocalAppColorScheme.current.background).appBackground().windowInsetsPadding(WindowInsets.systemBars), MultiplatformFileImpl(uri)) {
             webView = this
         }
     }
@@ -98,7 +98,7 @@ class WebViewActivity: BaseActivity() {
 }
 
 @Composable
-fun CommonWebView(modifier: Modifier = Modifier, file: MultiplatformFile?, enabled: Boolean = true, width: Dp? = null, height: Dp? = null, viewScope: CommonWebView.()->Unit = {}) {
+fun AndroidWebView(modifier: Modifier = Modifier, file: MultiplatformFile?, enabled: Boolean = true, width: Dp? = null, height: Dp? = null, viewScope: CommonWebView.()->Unit = {}) {
     val uri = (file as? MultiplatformFileImpl)?.uri
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -113,7 +113,7 @@ fun CommonWebView(modifier: Modifier = Modifier, file: MultiplatformFile?, enabl
         CommonWebView(context).apply {
 //            layoutParams = ViewGroup.LayoutParams(width?.dpValue?.toInt()?:ViewGroup.LayoutParams.MATCH_PARENT, height?.dpValue?.toInt()?:ViewGroup.LayoutParams.MATCH_PARENT)
             init()
-            initForSnapShot(width?.dpValue?.toInt()?:ViewGroup.LayoutParams.MATCH_PARENT, height?.dpValue?.toInt()?:ViewGroup.LayoutParams.MATCH_PARENT, enable = enabled)
+            initForSnapShot(width?.dpValue?.toInt()?: ViewGroup.LayoutParams.MATCH_PARENT, height?.dpValue?.toInt()?: ViewGroup.LayoutParams.MATCH_PARENT, enable = enabled)
         }
     }, modifier = modifier)
 }

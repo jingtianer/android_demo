@@ -7,6 +7,7 @@ import androidx.compose.runtime.MutableLongState
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.ViewModel
@@ -163,7 +164,7 @@ class AlbumViewModel : ViewModel() {
         itemDesc: String,
         itemScore: Float,
         itemLabel: Set<String>,
-        webSnapShot: Bitmap?
+        webSnapShot: ImageBitmap?
     ) {
         val albumId = album.albumId ?: return
         val uri = selectedUri
@@ -192,7 +193,7 @@ class AlbumViewModel : ViewModel() {
             val labelInfo = itemLabel.map { LabelInfo(label = it, albumItemId = albumItemId) }
             DataBase.dbImpl.getLabelInfoDao().insertAllLabel(labelInfo)
             if (webSnapShot != null) {
-                BitMapCachePool.loadImage(file) { webSnapShot.asImageBitmap() }
+                BitMapCachePool.loadImage(file) { webSnapShot }
             }
         }) {
             albumItemListChange.notifyChange()
@@ -252,7 +253,7 @@ class AlbumViewModel : ViewModel() {
         itemScore: Float,
         itemLabel: Set<String>,
         targetAlbumId: Long?,
-        webBitmap: Bitmap?
+        webBitmap: ImageBitmap?
     ) {
         val album = albumItemRelation.albumItem
         val albumId = targetAlbumId ?: album.albumId
@@ -303,7 +304,7 @@ class AlbumViewModel : ViewModel() {
             DataBase.dbImpl.getLabelInfoDao().insertAllLabel(itemLabel.map { LabelInfo(albumItemId = albumItemId, label = it) })
 
             if (selectedFileType == FileType.HTML) {
-                BitMapCachePool.loadImage(file) { webBitmap?.asImageBitmap() }
+                BitMapCachePool.loadImage(file) { webBitmap }
             }
         }) {
             albumItemListChange.notifyChange()
