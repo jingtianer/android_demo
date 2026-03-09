@@ -200,8 +200,8 @@ class AlbumViewModel : ViewModel() {
         }
     }
 
-    fun importFiles(album: Album, uri: Uri) {
-        val documentFile = DocumentFile.fromTreeUri(app, uri)
+    fun importFiles(album: Album, uri: MultiplatformFile) {
+        val documentFile = DocumentFile.fromTreeUri(app, (uri as MultiplatformFileImpl).uri)
         CoroutineUtils.runIOTask({
             documentFile ?: return@runIOTask
             val fileInfoList: MutableList<Pair<FileInfo, AlbumItem>> = mutableListOf()

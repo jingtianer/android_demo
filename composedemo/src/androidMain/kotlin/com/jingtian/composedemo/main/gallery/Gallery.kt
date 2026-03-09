@@ -86,6 +86,7 @@ import com.jingtian.composedemo.main.gallery.GalleryFunctions.SELECT_ALL
 import com.jingtian.composedemo.main.gallery.GalleryFunctions.SELECT_NONE
 import com.jingtian.composedemo.main.dialog.MoveToDialog
 import com.jingtian.composedemo.main.albumItem.AlbumItemViewStateHolder
+import com.jingtian.composedemo.navigation.rememberDocumentTreePicker
 import com.jingtian.composedemo.ui.theme.LocalAppColorScheme
 import com.jingtian.composedemo.ui.theme.LocalAppPalette
 import com.jingtian.composedemo.ui.theme.LocalAppUIConstants
@@ -135,10 +136,8 @@ fun GalleryStateHolder.Gallery() {
         onAlbumNameChanged()
     }
 
-    val importDirLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocumentTree(),
-    ) {uri: Uri? ->
-        uri ?: return@rememberLauncherForActivityResult
+    val importDirLauncher by rememberDocumentTreePicker { uri->
+        uri ?: return@rememberDocumentTreePicker
         viewModel.importFiles(album.value, uri)
     }
 

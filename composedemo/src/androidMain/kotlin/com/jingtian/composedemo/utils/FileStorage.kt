@@ -11,6 +11,7 @@ import com.jingtian.composedemo.base.app
 import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.FileType
 import com.jingtian.composedemo.multiplatform.MultiplatformFile
+import com.jingtian.composedemo.multiplatform.MultiplatformFileFactory
 import com.jingtian.composedemo.multiplatform.MultiplatformFileImpl
 import com.jingtian.composedemo.utils.BitMapCachePool.toImmutable
 import kotlinx.coroutines.CoroutineScope
@@ -19,13 +20,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.io.FileNotFoundException
-import java.io.IOException
 import java.io.InputStream
 import java.lang.ref.SoftReference
-import java.nio.file.Files
-import java.nio.file.Path
-import java.nio.file.Paths
 import java.util.concurrent.ConcurrentHashMap
 
 
@@ -88,7 +84,7 @@ object FileStorageUtils {
             val storeDir = File(app.filesDir, rankImageStoreDir)
             val storageFile = File(storeDir, rankImagePrefix(id))
             return if (storageFile.exists()) {
-                MultiplatformFileImpl(storageFile.toUri())
+                MultiplatformFileFactory.fromFile(storageFile)
             } else {
                 null
             }
@@ -160,7 +156,7 @@ object FileStorageUtils {
             storageFile.outputStream().use { output ->
                 input.copyTo(output)
             }
-            val uri = MultiplatformFileImpl(storageFile.toUri())
+            val uri = MultiplatformFileFactory.fromFile(storageFile)
             uriCache[id] = uri
             return FileInfo(storageId = id, fileType = fileType)
         }

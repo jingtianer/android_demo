@@ -2,7 +2,6 @@ package com.jingtian.composedemo.utils
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.net.Uri
 import androidx.annotation.IntRange
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asAndroidBitmap
@@ -265,7 +264,7 @@ object BitMapCachePool {
         val options = BitmapFactory.Options().apply {
             inJustDecodeBounds = true // 只获取尺寸，不加载像素
         }
-        val image = fileInfo.getFileUri()?.takeIf { it != Uri.EMPTY } ?: return -1 to null
+        val image = fileInfo.getFileUri() ?: return -1 to null
         val id = fileInfo.storageId.takeIf { it != DataBase.INVALID_ID } ?: return -1 to null
         val scaleFactor =  image.inputStream?.use { `is`->
             // 第一步：仅解码边界，获取图片原始宽高
