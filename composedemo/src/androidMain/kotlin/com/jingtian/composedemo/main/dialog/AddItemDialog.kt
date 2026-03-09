@@ -133,8 +133,8 @@ fun AddItemDialog(album: Album, totalLabelList: List<String>, albumData: List<Al
                         scope,
                         uri,
                         maxWidth = imageWidth.dpValue.toInt()
-                    ) { bitmap: Bitmap? ->
-                        pickedImage = bitmap?.asImageBitmap()
+                    ) { bitmap ->
+                        pickedImage = bitmap
                     }
                 }
 
@@ -146,8 +146,8 @@ fun AddItemDialog(album: Album, totalLabelList: List<String>, albumData: List<Al
                         scope,
                         uri,
                         maxWidth = imageWidth.dpValue.toInt()
-                    ) { bitmap: Bitmap? ->
-                        pickedImage = bitmap?.asImageBitmap()
+                    ) { bitmap ->
+                        pickedImage = bitmap
                     }
                 }
 
@@ -159,8 +159,8 @@ fun AddItemDialog(album: Album, totalLabelList: List<String>, albumData: List<Al
                         scope,
                         uri,
                         maxWidth = imageWidth.dpValue.toInt()
-                    ) { bitmap: Bitmap? ->
-                        pickedImage = bitmap?.asImageBitmap()
+                    ) { bitmap ->
+                        pickedImage = bitmap
                     }
                 }
 

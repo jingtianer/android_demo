@@ -15,7 +15,6 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import com.jingtian.composedemo.base.app
 import com.jingtian.composedemo.dao.model.FileType
-import com.jingtian.composedemo.utils.BitMapCachePool.toImmutable
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.IOException
@@ -220,4 +219,15 @@ class MultiplatformFileImpl(val uri: Uri) : MultiplatformFile {
 
     override val file: File?
         get() = uri.safeToFile()
+
+    override val extension: String
+        get() = MimeTypeMap.getFileExtensionFromUrl(uri.toString())
+}
+
+fun Bitmap?.toImmutable(): Bitmap? {
+    return if (this != null && this.isMutable) {
+        return this.copy(this.config, false)
+    } else {
+        this
+    }
 }

@@ -191,9 +191,9 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
                             scope,
                             uri,
                             maxWidth = imageWidth.dpValue.toInt()
-                        ) { bitmap: Bitmap? ->
+                        ) { bitmap ->
                             withContext(Dispatchers.Main) {
-                                pickedImage = bitmap?.asImageBitmap()
+                                pickedImage = bitmap
                             }
                         }
                     }
@@ -218,9 +218,9 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
                             scope,
                             uri,
                             maxWidth = imageWidth.dpValue.toInt()
-                        ) { bitmap: Bitmap? ->
+                        ) { bitmap ->
                             withContext(Dispatchers.Main) {
-                                pickedImage = bitmap?.asImageBitmap()
+                                pickedImage = bitmap
                             }
                         }
                     }
@@ -248,9 +248,9 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
                             scope,
                             uri,
                             maxWidth = imageWidth.dpValue.toInt()
-                        ) { bitmap: Bitmap? ->
+                        ) { bitmap ->
                             withContext(Dispatchers.Main) {
-                                pickedImage = bitmap?.asImageBitmap()
+                                pickedImage = bitmap
                             }
                         }
                     }

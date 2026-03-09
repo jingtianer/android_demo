@@ -1,9 +1,7 @@
 package com.jingtian.composedemo.utils
 
-import android.content.Context
 import com.google.gson.GsonBuilder
 import com.google.gson.reflect.TypeToken
-import com.jingtian.composedemo.base.app
 import com.jingtian.composedemo.dao.model.User
 import com.jingtian.composedemo.multiplatform.getJsonStorage
 import com.jingtian.composedemo.multiplatform.getLongStorage

@@ -52,7 +52,7 @@ class NullableStringSharedPreferencesImpl(
     SharedPreferences.Editor::putString,
 )
 
-fun getJsonStorage(storageName: String): MultiplatformSharedPreferencesImpl<String> {
+actual fun getJsonStorage(storageName: String): IMultiplatformSharedPreferences<String> {
     return StringSharedPreferencesImpl(
         app.getSharedPreferences(
             storageName,
@@ -61,7 +61,7 @@ fun getJsonStorage(storageName: String): MultiplatformSharedPreferencesImpl<Stri
     )
 }
 
-fun getLongStorage(storageName: String): MultiplatformSharedPreferencesImpl<Long> {
+actual fun getLongStorage(storageName: String): IMultiplatformSharedPreferences<Long> {
     return LongSharedPreferencesImpl(
         app.getSharedPreferences(
             storageName,

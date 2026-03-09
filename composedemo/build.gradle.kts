@@ -26,6 +26,7 @@ if (configFile.exists()) {
 val appName = configProps.getProperty("APP_NAME")
 val version = configProps.getProperty("APP_VERSION")
 val aid = configProps.getProperty("AID")
+val room_version = "2.7.1"
 
 kotlin {
     jvmToolchain(17)
@@ -67,6 +68,11 @@ kotlin {
         val desktopMain by getting {
             dependencies {
                 implementation(compose.desktop.currentOs)
+                implementation("org.jetbrains:annotations:24.0.1")
+                implementation("com.google.code.gson:gson:2.8.8")
+                implementation("androidx.room:room-runtime:$room_version")
+                implementation("androidx.room:room-compiler:$room_version")
+                implementation("androidx.room:room-ktx:$room_version")
             }
         }
     }
