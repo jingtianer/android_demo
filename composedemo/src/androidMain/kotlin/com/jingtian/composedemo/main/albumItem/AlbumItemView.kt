@@ -60,6 +60,8 @@ import com.jingtian.composedemo.dao.model.FileType
 import com.jingtian.composedemo.dao.model.ItemRank
 import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
 import com.jingtian.composedemo.main.labels.LabelView
+import com.jingtian.composedemo.main.widget.RankLabel
+import com.jingtian.composedemo.main.widget.ScoreStar
 import com.jingtian.composedemo.navigation.rememberAlbumLauncher
 import com.jingtian.composedemo.ui.theme.LocalAppPalette
 import com.jingtian.composedemo.ui.theme.LocalSecondaryTextStyle
@@ -358,35 +360,7 @@ fun AlbumItemViewStateHolder.AlbumItemView() {
 //                    enabled = false,
 //                )
             }
-
-            val appThemeViewModel: AppThemeViewModel = viewModel()
-            val appTheme by remember { appThemeViewModel.currentAppTheme }
-            val isSystemDark = isSystemInDarkTheme()
-            val isNight = AppTheme.isDark(appTheme ?: AppTheme.currentAppTheme(), isSystemDark)
-            if (itemRank != ItemRank.NONE) {
-                fun View.initRankView(isNight: Boolean): View {
-                    val bg = RankTypeChooser.createBg(itemRank, context, isNight)
-                    val paddingHorizontal = 4.dp.dpValue.roundToInt()
-                    val width = max(
-                        bg.getWidth(),
-                        bg.getHeight()
-                    ).roundToInt() + paddingHorizontal + paddingHorizontal
-                    layoutParams = ViewGroup.LayoutParams(width, bg.getHeight().roundToInt())
-                    setPadding(paddingHorizontal, 0, paddingHorizontal, 0)
-                    background = bg
-                    return this
-                }
-                AndroidView({ context ->
-                    View(context).initRankView(isNight)
-                },
-                    Modifier
-                        .wrapContentSize()
-                        .align(Alignment.TopEnd)
-                        .clip(RoundedCornerShape(bottomStart = padding * 2)),
-                    update = {
-                        it.initRankView(isNight)
-                    })
-            }
+            RankLabel(itemRank, padding)
         }
 
         AppThemeText(
@@ -421,35 +395,7 @@ fun AlbumItemViewStateHolder.AlbumItemView() {
             )
         }
 
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .padding(top = 4.dp)
-                .wrapContentHeight()
-                .align(Alignment.CenterHorizontally)
-        ) {
-            val viewModel: AppThemeViewModel = viewModel()
-            val appTheme by remember { viewModel.currentAppTheme }
-            val isSystemDark = isSystemInDarkTheme()
-            val isDark = AppTheme.isDark(appTheme ?: AppTheme.currentAppTheme(), isSystemDark)
-            AndroidView({ context ->
-                StarRateView(context).commonConfig(isDark).apply {
-                    layoutParams = ViewGroup.LayoutParams(
-                        ViewGroup.LayoutParams.WRAP_CONTENT,
-                        ViewGroup.LayoutParams.MATCH_PARENT
-                    )
-                }
-            },
-                Modifier
-                    .wrapContentWidth()
-                    .height(30.dp)
-                    .align(Alignment.Center)
-                    .padding(bottom = 4.dp, start = padding, end = padding),
-                update = {
-                    it.commonConfig(isDark)
-                    it.setScore(itemScore)
-                })
-        }
+        ScoreStar(itemScore, padding)
 
         if (itemLabel.isNotEmpty()) {
             LazyRow(
