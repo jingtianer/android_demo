@@ -30,8 +30,6 @@ import com.jingtian.composedemo.utils.FileStorageUtils.getFileIntrinsicSize
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -49,15 +47,14 @@ class AlbumViewModel : ViewModel() {
     }
     val albumDao = DataBase.dbImpl.getAlbumDao()
     val albumItemDao = DataBase.dbImpl.getAlbumItemDao()
-    val menuItemsFlow: Flow<List<Album>>
-        get() = albumDao.getAllAlbum()
+    suspend fun menuItems(): List<Album> = albumDao.getAllAlbum()
 
-    fun getLabelList(album: Album): Flow<List<String>> {
-        return DataBase.dbImpl.getAlbumItemDao().getLabelList(album.albumId ?: return flow {  })
+    suspend fun getLabelList(album: Album): List<String> {
+        return DataBase.dbImpl.getAlbumItemDao().getLabelList(album.albumId ?: return listOf())
     }
 
-    fun getAllAlbumItem(album: Album): Flow<List<AlbumItemRelation>> {
-        return albumItemDao.getAllAlbumItemWithExtra(albumId = album.albumId ?: return flow {  })
+    suspend fun getAllAlbumItem(album: Album): List<AlbumItemRelation> {
+        return albumItemDao.getAllAlbumItemWithExtra(albumId = album.albumId ?: return listOf())
     }
 
     val albumListChange = mutableLongStateOf(0L)
@@ -65,7 +62,7 @@ class AlbumViewModel : ViewModel() {
     val albumItemListChange = mutableLongStateOf(0L)
     val filterCheckChanged = mutableLongStateOf(0L)
 
-    fun getAlbumName(albumId: Long): Album {
+    suspend fun getAlbumName(albumId: Long): Album {
         return albumDao.getAlbum(albumId)
     }
 

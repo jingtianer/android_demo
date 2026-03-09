@@ -7,7 +7,6 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 import com.jingtian.composedemo.dao.model.Album
-import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface AlbumDao {
@@ -16,30 +15,29 @@ interface AlbumDao {
     }
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
-    fun insertAlbum(album: Album)
+    suspend fun insertAlbum(album: Album)
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    fun insertAllAlbum(album: List<Album>)
+    suspend fun insertAllAlbum(album: List<Album>)
 
     @Delete
-    fun deleteAlbum(album: Album)
-
+    suspend fun deleteAlbum(album: Album)
 
     @Query("delete from $TABLE_NAME")
-    fun deleteAllAlbum()
+    suspend fun deleteAllAlbum()
 
     @Query("select * from $TABLE_NAME")
-    fun getAllAlbum(): Flow<List<Album>>
+    suspend fun getAllAlbum(): List<Album>
 
     @Query("select * from $TABLE_NAME where albumId = :albumId")
-    fun getAlbum(albumId: Long): Album
+    suspend fun getAlbum(albumId: Long): Album
 
     @Update
-    fun updateAlbum(album: Album)
+    suspend fun updateAlbum(album: Album)
 
     @Query("select * from $TABLE_NAME limit :maxSize")
-    fun getAlbumList(maxSize: Int): List<Album>
+    suspend fun getAlbumList(maxSize: Int): List<Album>
 
     @Query("select count(*) from $TABLE_NAME")
-    fun getSize(): Int
+    suspend fun getSize(): Int
 }

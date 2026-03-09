@@ -118,15 +118,14 @@ fun Main() {
 
     LaunchedEffect(albumListChange) {
         withContext(Dispatchers.IO) {
-            viewModel.menuItemsFlow.collect { value ->
-                val nextSelectedAlbum = updateSelectedValue(value)
-                withContext(Dispatchers.Main) {
-                    menuItemsEntity = value
-                    currentSelectedAlbum = nextSelectedAlbum
-                }
-                if (value.isEmpty()) {
-                    drawerState.snapTo(DrawerValue.Open)
-                }
+            val value = viewModel.menuItems()
+            val nextSelectedAlbum = updateSelectedValue(value)
+            withContext(Dispatchers.Main) {
+                menuItemsEntity = value
+                currentSelectedAlbum = nextSelectedAlbum
+            }
+            if (value.isEmpty()) {
+                drawerState.snapTo(DrawerValue.Open)
             }
         }
     }

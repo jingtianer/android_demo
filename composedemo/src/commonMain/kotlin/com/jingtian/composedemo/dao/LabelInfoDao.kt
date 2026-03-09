@@ -13,12 +13,12 @@ interface LabelInfoDao {
     }
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    fun insertAllLabel(labelList: List<LabelInfo>)
+    suspend fun insertAllLabel(labelList: List<LabelInfo>)
 
     @Query("delete from $TABLE_NAME where albumItemId = :albumItemId")
-    fun deleteAllLabel(albumItemId: Long)
+    suspend fun deleteAllLabel(albumItemId: Long)
 
 
     @Query("delete from $TABLE_NAME where albumItemId in (:albumItemIdList)")
-    fun deleteAllLabelOfAlbumItemIdList(albumItemIdList: List<Long>)
+    suspend fun deleteAllLabelOfAlbumItemIdList(albumItemIdList: List<Long>)
 }

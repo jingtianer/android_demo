@@ -117,30 +117,28 @@ class GalleryStateHolder(val album: IndexedValue<Album>, val albumList: List<Alb
         coroutineScope {
             launch {
                 withContext(Dispatchers.IO) {
-                    viewModel.getAllAlbumItem(album.value).collect {
-                        withContext(Dispatchers.Main) {
-                            itemList = it
-                            albumViewMap.clear()
-                        }
-                        updateFilterList()
+                    val value = viewModel.getAllAlbumItem(album.value)
+                    withContext(Dispatchers.Main) {
+                        itemList = value
+                        albumViewMap.clear()
                     }
+                    updateFilterList()
                 }
             }
             launch {
                 withContext(Dispatchers.IO) {
-                    viewModel.getLabelList(album.value).collect { value->
-                        withContext(Dispatchers.Main) {
-                            Log.d("jingtian", "onAlbumDataChanged: ${value.joinToString { it }}")
-                            albumName = album.value.albumName
+                    val value = viewModel.getLabelList(album.value)
+                    withContext(Dispatchers.Main) {
+                        Log.d("jingtian", "onAlbumDataChanged: ${value.joinToString { it }}")
+                        albumName = album.value.albumName
 //                labelFilterCheckedInfo = checkList
-                            totalLabelList.clear()
-                            totalLabelList.addAll(value)
-                        }
-                        updateFilterList()
-                        withContext(Dispatchers.Main) {
-                            currentSelectedItem.clear()
-                            itemSelectStateChange++
-                        }
+                        totalLabelList.clear()
+                        totalLabelList.addAll(value)
+                    }
+                    updateFilterList()
+                    withContext(Dispatchers.Main) {
+                        currentSelectedItem.clear()
+                        itemSelectStateChange++
                     }
                 }
             }

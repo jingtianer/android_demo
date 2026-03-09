@@ -1,6 +1,5 @@
 package com.jingtian.composedemo.dao.model
 
-import android.net.Uri
 import androidx.room.Entity
 import androidx.room.Ignore
 import androidx.room.PrimaryKey

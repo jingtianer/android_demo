@@ -14,20 +14,20 @@ interface FileInfoDao {
     }
 
     @Query("select * from $TABLE_NAME where id = :fileId")
-    fun getFileInfo(fileId: Long): FileInfo
+    suspend fun getFileInfo(fileId: Long): FileInfo
 
     @Delete
-    fun deleteFileInfo(fileInfo: FileInfo)
+    suspend fun deleteFileInfo(fileInfo: FileInfo)
 
     @Delete
-    fun deleteAllFileInfo(fileIdList: List<FileInfo>)
+    suspend fun deleteAllFileInfo(fileIdList: List<FileInfo>)
 
     @Update
-    fun updateFileInfo(fileInfo: FileInfo)
+    suspend fun updateFileInfo(fileInfo: FileInfo)
 
     @Insert
-    fun insertFileInfo(fileInfo: FileInfo): Long
+    suspend fun insertFileInfo(fileInfo: FileInfo): Long
 
     @Insert
-    fun insertAllFileInfo(fileInfo: List<FileInfo>): List<Long>
+    suspend fun insertAllFileInfo(fileInfo: List<FileInfo>): List<Long>
 }
