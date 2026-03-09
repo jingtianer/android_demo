@@ -8,6 +8,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
 import com.jingtian.composedemo.dao.DataBase
 import com.jingtian.composedemo.dao.model.Album
 import com.jingtian.composedemo.dao.model.AlbumItem
@@ -35,6 +37,12 @@ class AlbumViewModel : ViewModel() {
 
         fun MutableLongState.notifyChange() {
             this.value += 1
+        }
+
+        val viewModelFactory = viewModelFactory {
+            initializer {
+                AlbumViewModel()
+            }
         }
 
         @Composable

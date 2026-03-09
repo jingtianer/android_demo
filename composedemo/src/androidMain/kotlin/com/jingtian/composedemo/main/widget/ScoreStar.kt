@@ -25,7 +25,7 @@ import com.jingtian.composedemo.utils.ViewUtils.commonConfig
 import com.jingtian.composedemo.viewmodels.AppThemeViewModel
 
 @Composable
-fun ColumnScope.ScoreStar(itemScore: Float, padding: Dp) {
+actual fun ColumnScope.ScoreStar(itemScore: Float, padding: Dp) {
     Box(
         Modifier
             .fillMaxWidth()
@@ -33,7 +33,7 @@ fun ColumnScope.ScoreStar(itemScore: Float, padding: Dp) {
             .wrapContentHeight()
             .align(Alignment.CenterHorizontally)
     ) {
-        val viewModel: AppThemeViewModel = viewModel()
+        val viewModel: AppThemeViewModel = viewModel(factory = AppThemeViewModel.viewModelFactory)
         val appTheme by remember { viewModel.currentAppTheme }
         val isSystemDark = isSystemInDarkTheme()
         val isDark = AppTheme.isDark(appTheme, isSystemDark)

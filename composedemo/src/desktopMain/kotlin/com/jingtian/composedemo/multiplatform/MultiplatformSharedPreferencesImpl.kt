@@ -4,7 +4,7 @@ package com.jingtian.composedemo.multiplatform
 class FakeMultiplatformSharedPreferencesImpl<T> : IMultiplatformSharedPreferences<T> {
     val value: MutableMap<String, Any?> = mutableMapOf()
     override fun getValue(key: String, defaultValue: T): T {
-        return value[key] as T
+        return (value[key] as? T) ?: defaultValue
     }
 
     override fun setValue(key: String, t: T) {

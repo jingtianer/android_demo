@@ -19,6 +19,7 @@ import com.jingtian.composedemo.ui.theme.AppThemeScope
 import com.jingtian.composedemo.ui.theme.DemoAppTheme
 import com.jingtian.composedemo.utils.AppTheme
 import com.jingtian.composedemo.viewmodels.AppThemeViewModel
+import demoapp.composedemo.generated.resources.Res
 
 abstract class BaseActivity : AppCompatActivity() {
     private var onConfigurationChangeCallback = { newConfig: Configuration->
@@ -71,7 +72,7 @@ abstract class BaseActivity : AppCompatActivity() {
 
     @Composable
     fun AppThemeScope.AppThemeSwitcher() {
-        val viewModel: AppThemeViewModel = viewModel()
+        val viewModel: AppThemeViewModel = viewModel(factory = AppThemeViewModel.viewModelFactory)
         val currentAppTheme by remember { viewModel.currentAppTheme }
         val isSystemDark = isSystemInDarkTheme()
         onConfigurationChangeCallback = { newConfig->

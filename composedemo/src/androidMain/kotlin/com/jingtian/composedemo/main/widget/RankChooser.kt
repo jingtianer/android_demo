@@ -19,8 +19,8 @@ import com.jingtian.composedemo.utils.AppTheme
 import com.jingtian.composedemo.viewmodels.AppThemeViewModel
 
 @Composable
-fun ColumnScope.RankChooser(itemRank: ItemRank, onRankUpdate: (ItemRank)->Unit) {
-    val viewModel: AppThemeViewModel = viewModel()
+actual fun ColumnScope.RankChooser(itemRank: ItemRank, onRankUpdate: (ItemRank)->Unit) {
+    val viewModel: AppThemeViewModel = viewModel(factory = AppThemeViewModel.viewModelFactory)
     val appTheme by remember { viewModel.currentAppTheme }
     val isSystemDark = isSystemInDarkTheme()
     val isDark = AppTheme.isDark(appTheme, isSystemDark)

@@ -60,7 +60,7 @@ kotlin {
                 implementation("androidx.compose.ui:ui-tooling-preview:$composeVersion")
                 api("androidx.lifecycle:lifecycle-viewmodel:2.8.1")
                 api("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.1")
-                api("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.1")
+                implementation("org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose:2.8.1")
             }
         }
 
@@ -175,9 +175,11 @@ dependencies {
 }
 
 compose {
+    resources {
+        generateResClass = auto
+    }
     desktop.application {
         mainClass = "$appName.app.MainKt"
-
         nativeDistributions {
             targetFormats(TargetFormat.Msi, TargetFormat.Deb, TargetFormat.Dmg)
             packageName = appName

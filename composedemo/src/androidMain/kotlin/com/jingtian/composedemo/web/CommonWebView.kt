@@ -16,13 +16,8 @@ import com.jingtian.composedemo.ui.widget.CommonWebView
 import com.jingtian.composedemo.utils.ViewUtils.dpValue
 import kotlinx.coroutines.launch
 
-interface ICommonWebViewScope {
-    suspend fun tackSnapShot(): ImageBitmap
-    fun initForSnapShot(width: Dp?, height: Dp?, enabled: Boolean)
-}
-
 @Composable
-fun CommonWebView(modifier: Modifier = Modifier, file: MultiplatformFile?, enabled: Boolean = true, width: Dp? = null, height: Dp? = null, viewScope: ICommonWebViewScope.()->Unit = {}) {
+actual fun CommonWebView(modifier: Modifier, file: MultiplatformFile?, enabled: Boolean, width: Dp?, height: Dp?, viewScope: ICommonWebViewScope.()->Unit) {
     val uri = (file as? MultiplatformFileImpl)?.uri
     val context = LocalContext.current
     val scope = rememberCoroutineScope()

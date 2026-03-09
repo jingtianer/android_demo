@@ -36,7 +36,7 @@ private fun Modifier.appBackground(context: Context, @DrawableRes resource: Int,
 
 @Composable
 actual fun Modifier.appBackground(heightScale: Float): Modifier {
-    val viewModel: AppThemeViewModel = viewModel()
+    val viewModel: AppThemeViewModel = viewModel(factory = AppThemeViewModel.viewModelFactory)
     val currentTheme by remember { viewModel.currentAppTheme }
     val isSystemDark = isSystemInDarkTheme()
     return appBackground(LocalContext.current, if (AppTheme.isDark(currentTheme, isSystemDark)) R.drawable.rectangle_16_night else R.drawable.rectangle_16, heightScale = heightScale)

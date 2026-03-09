@@ -24,7 +24,7 @@ import com.jingtian.composedemo.viewmodels.AppThemeViewModel
 
 @Composable
 actual fun Modifier.appBackground(heightScale: Float): Modifier {
-    val viewModel: AppThemeViewModel = viewModel()
+    val viewModel: AppThemeViewModel = viewModel(factory = AppThemeViewModel.viewModelFactory)
     val currentTheme by remember { viewModel.currentAppTheme }
     val isSystemDark = isSystemInDarkTheme()
     return this

@@ -19,8 +19,8 @@ import com.jingtian.composedemo.utils.ViewUtils.commonEditableConfig
 import com.jingtian.composedemo.viewmodels.AppThemeViewModel
 
 @Composable
-fun ColumnScope.ScoreChooser(itemScore: Float, onScoreUpdate: (Float)->Unit) {
-    val viewModel: AppThemeViewModel = viewModel()
+actual fun ColumnScope.ScoreChooser(itemScore: Float, onScoreUpdate: (Float)->Unit) {
+    val viewModel: AppThemeViewModel = viewModel(factory = AppThemeViewModel.viewModelFactory)
     val appTheme by remember { viewModel.currentAppTheme }
     val isSystemDark = isSystemInDarkTheme()
     val isDark = AppTheme.isDark(appTheme, isSystemDark)
