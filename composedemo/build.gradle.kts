@@ -27,6 +27,7 @@ val appName = configProps.getProperty("APP_NAME")
 val version = configProps.getProperty("APP_VERSION")
 val aid = configProps.getProperty("AID")
 val room_version = "2.7.1"
+val composeVersion = "1.7.6"
 
 kotlin {
     jvmToolchain(17)
@@ -53,9 +54,13 @@ kotlin {
             dependencies {
                 implementation(compose.runtime)
                 implementation(compose.foundation)
-                implementation(compose.material)
+                implementation(compose.material3)
                 implementation(compose.ui)
                 implementation(compose.components.resources)
+                implementation("androidx.compose.ui:ui-tooling-preview:$composeVersion")
+                api("androidx.lifecycle:lifecycle-viewmodel:2.8.1")
+                api("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.1")
+                api("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.1")
             }
         }
 
@@ -137,12 +142,8 @@ dependencies {
     implementation("androidx.recyclerview:recyclerview:1.2.0")
     implementation("androidx.documentfile:documentfile:1.0.0")
 
-    val composeVersion = "1.7.6"
-
     implementation("androidx.compose.ui:ui:$composeVersion")
     implementation("androidx.compose.ui:ui-graphics:$composeVersion")
-    implementation("androidx.compose.ui:ui-tooling-preview:$composeVersion")
-    implementation("androidx.compose.material3:material3:1.2.0")
 
     // 测试依赖（版本适配）
     testImplementation("junit:junit:4.13.2")

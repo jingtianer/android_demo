@@ -11,11 +11,6 @@ import androidx.compose.runtime.remember
 import com.jingtian.composedemo.multiplatform.MultiplatformFile
 import com.jingtian.composedemo.multiplatform.MultiplatformFileImpl
 
-
-interface IDocumentPicker {
-    fun launch(mimes : Array<String>)
-}
-
 class DocumentPicker(val launcher: ManagedActivityResultLauncher<Array<String>, Uri?>): IDocumentPicker {
     override fun launch(mimes : Array<String>) {
         launcher.launch(mimes)
@@ -23,7 +18,7 @@ class DocumentPicker(val launcher: ManagedActivityResultLauncher<Array<String>, 
 }
 
 @Composable
-fun rememberDocumentPicker(onResult: (MultiplatformFile?)->Unit): MutableState<IDocumentPicker> {
+actual fun rememberDocumentPicker(onResult: (MultiplatformFile?)->Unit): MutableState<IDocumentPicker> {
     val multipleImagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
         onResult = { uri->

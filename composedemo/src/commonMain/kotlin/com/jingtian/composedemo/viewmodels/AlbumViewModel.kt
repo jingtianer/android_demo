@@ -1,18 +1,13 @@
 package com.jingtian.composedemo.viewmodels
 
-import android.graphics.Bitmap
-import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableLongState
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.jingtian.composedemo.base.app
 import com.jingtian.composedemo.dao.DataBase
 import com.jingtian.composedemo.dao.model.Album
 import com.jingtian.composedemo.dao.model.AlbumItem
@@ -22,7 +17,6 @@ import com.jingtian.composedemo.dao.model.ItemRank
 import com.jingtian.composedemo.dao.model.LabelInfo
 import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
 import com.jingtian.composedemo.multiplatform.MultiplatformFile
-import com.jingtian.composedemo.multiplatform.MultiplatformFileImpl
 import com.jingtian.composedemo.utils.BitMapCachePool
 import com.jingtian.composedemo.utils.CoroutineUtils
 import com.jingtian.composedemo.utils.FileStorageUtils
@@ -32,6 +26,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+expect suspend fun traverseUri(album: Album, uri: MultiplatformFile, fileInfoList: MutableList<Pair<FileInfo, AlbumItem>>, sendMessage: (String)->Unit)
 
 class AlbumViewModel : ViewModel() {
     companion object {
@@ -199,11 +195,9 @@ class AlbumViewModel : ViewModel() {
     }
 
     fun importFiles(album: Album, uri: MultiplatformFile) {
-        val documentFile = DocumentFile.fromTreeUri(app, (uri as MultiplatformFileImpl).uri)
         CoroutineUtils.runIOTask({
-            documentFile ?: return@runIOTask
             val fileInfoList: MutableList<Pair<FileInfo, AlbumItem>> = mutableListOf()
-            traverseUri(documentFile, album, fileInfoList)
+            traverseUri(album, uri, fileInfoList, ::sendMessage)
             sendMessage("批量导入: 正在写入数据库")
             val idList = DataBase.dbImpl.getFileInfoDao().insertAllFileInfo(fileInfoList.map { it.first })
             val albumItemList = fileInfoList.mapIndexed { index: Int, pair: Pair<FileInfo, AlbumItem> ->
@@ -214,29 +208,7 @@ class AlbumViewModel : ViewModel() {
             DataBase.dbImpl.getAlbumItemDao().insertAllAlbumItem(albumItemList)
         }) {
             albumItemListChange.notifyChange()
-            sendMessage("批量导入 ${documentFile?.name} 成功!")
-        }
-    }
-
-    private suspend fun traverseUri(documentFile: DocumentFile, album: Album, fileInfoList: MutableList<Pair<FileInfo, AlbumItem>>) {
-        if (documentFile.isDirectory) {
-            sendMessage("导入目录: ${documentFile.name}")
-            documentFile.listFiles().forEach {file->
-                traverseUri(file, album, fileInfoList)
-            }
-        } else {
-            val uri = MultiplatformFileImpl(documentFile.uri)
-            if (uri.isHidden) {
-                return
-            }
-            val type = uri.mediaType
-            val fileName = uri.fileName ?: ""
-            val fileStorageId = FileStorageUtils.getStorage(type)?.asyncStore(uri) ?: DataBase.INVALID_ID
-            val (width, height) = getFileIntrinsicSize(uri, type)
-            val fileInfo = FileInfo(storageId = fileStorageId, fileType = type, intrinsicWidth = width, intrinsicHeight = height)
-            val albumItem = AlbumItem(itemName = fileName, albumId = album.albumId ?: DataBase.INVALID_ID)
-            sendMessage("正在导入: ${documentFile.name}")
-            fileInfoList.add(fileInfo to albumItem)
+            sendMessage("批量导入 ${uri.fileName} 成功!")
         }
     }
 

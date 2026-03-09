@@ -5,7 +5,15 @@ import android.graphics.Matrix
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.documentfile.provider.DocumentFile
 import com.jingtian.composedemo.base.app
+import com.jingtian.composedemo.dao.DataBase
+import com.jingtian.composedemo.dao.model.Album
+import com.jingtian.composedemo.dao.model.AlbumItem
+import com.jingtian.composedemo.dao.model.FileInfo
+import com.jingtian.composedemo.multiplatform.MultiplatformFile
+import com.jingtian.composedemo.multiplatform.MultiplatformFileImpl
+import com.jingtian.composedemo.utils.FileStorageUtils.getFileIntrinsicSize
 import java.io.File
 
 actual fun getFileStorageRootDir(): File = app.filesDir

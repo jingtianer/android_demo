@@ -12,10 +12,6 @@ import com.jingtian.composedemo.multiplatform.MultiplatformFile
 import com.jingtian.composedemo.multiplatform.MultiplatformFileImpl
 
 
-interface IDocumentTreePicker {
-    fun launch(mimes: MultiplatformFile?)
-}
-
 class DocumentTreePicker(val launcher: ManagedActivityResultLauncher<Uri?, Uri?>) :
     IDocumentTreePicker {
     override fun launch(mimes: MultiplatformFile?) {
@@ -24,7 +20,7 @@ class DocumentTreePicker(val launcher: ManagedActivityResultLauncher<Uri?, Uri?>
 }
 
 @Composable
-fun rememberDocumentTreePicker(onResult: (MultiplatformFile?) -> Unit): MutableState<IDocumentTreePicker> {
+actual fun rememberDocumentTreePicker(onResult: (MultiplatformFile?) -> Unit): MutableState<IDocumentTreePicker> {
     val multipleImagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree(),
         onResult = { uri ->

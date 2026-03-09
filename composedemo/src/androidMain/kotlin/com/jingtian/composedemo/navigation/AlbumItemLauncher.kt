@@ -14,11 +14,6 @@ import androidx.compose.ui.platform.LocalContext
 import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.FileType
 import com.jingtian.composedemo.main.playIntent
-import kotlinx.coroutines.launch
-
-interface IAlbumItemLauncher {
-    fun launch(fileInfo: FileInfo)
-}
 
 class AlbumItemLauncher(
     val context: Context,
@@ -37,7 +32,7 @@ class AlbumItemLauncher(
 }
 
 @Composable
-fun rememberAlbumLauncher(onResult: (Long)->Unit): MutableState<IAlbumItemLauncher> {
+actual fun rememberAlbumLauncher(onResult: (Long)->Unit): MutableState<IAlbumItemLauncher> {
     val context = LocalContext.current
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()

@@ -12,11 +12,6 @@ import androidx.compose.runtime.remember
 import com.jingtian.composedemo.multiplatform.MultiplatformFile
 import com.jingtian.composedemo.multiplatform.MultiplatformFileImpl
 
-
-interface IImagePicker {
-    fun launch()
-}
-
 class ImagePicker(val launcher: ManagedActivityResultLauncher<PickVisualMediaRequest, Uri?>): IImagePicker {
     override fun launch() {
         launcher.launch(
@@ -28,7 +23,7 @@ class ImagePicker(val launcher: ManagedActivityResultLauncher<PickVisualMediaReq
 }
 
 @Composable
-fun rememberImagePicker(onResult: (MultiplatformFile?)->Unit): MutableState<IImagePicker> {
+actual fun rememberImagePicker(onResult: (MultiplatformFile?)->Unit): MutableState<IImagePicker> {
     val multipleImagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
         onResult = { uri->

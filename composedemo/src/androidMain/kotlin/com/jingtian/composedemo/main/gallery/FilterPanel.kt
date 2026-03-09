@@ -62,7 +62,7 @@ fun FilterPanel(
             .fillMaxWidth()
             .fillMaxHeight(sqrt(goldenRatio)),
         containerColor = LocalAppPalette.current.bottomSheetBackgroundColor,
-        windowInsets = WindowInsets.navigationBars
+        contentWindowInsets = { WindowInsets.navigationBars }
     ) {
         val scope = rememberCoroutineScope()
 
