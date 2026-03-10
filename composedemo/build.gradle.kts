@@ -1,3 +1,5 @@
+import org.gradle.internal.fingerprint.classpath.impl.ClasspathFingerprintingStrategy.runtimeClasspath
+import org.gradle.internal.impldep.org.junit.experimental.categories.Categories
 import org.gradle.internal.impldep.org.junit.experimental.categories.Categories.CategoryFilter.exclude
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import java.io.FileInputStream
@@ -53,25 +55,50 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
-                implementation(compose.runtime)
-                implementation(compose.foundation)
-                implementation(compose.material3)
-                implementation(compose.ui)
-                implementation(compose.components.resources)
+                implementation(compose.runtime) {
+                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
+                }
+                implementation(compose.foundation) {
+                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
+                }
+                implementation(compose.material3) {
+                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
+                }
+                implementation(compose.ui) {
+                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
+                }
+                implementation(compose.components.resources) {
+                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
+                }
 
-                implementation("androidx.compose.ui:ui-tooling-preview:$composeVersion")
-                api("androidx.lifecycle:lifecycle-viewmodel:2.8.1")
-                api("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.1")
-                implementation("org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose:2.8.1")
-                implementation("androidx.sqlite:sqlite-bundled:2.6.2")
-//                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.1.0")
+                implementation("androidx.compose.ui:ui-tooling-preview:$composeVersion") {
+                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
+                }
+                api("androidx.lifecycle:lifecycle-viewmodel:2.8.1") {
+                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
+                }
+                api("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.1") {
+                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
+                }
+                implementation("org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose:2.8.1") {
+                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
+                }
+                implementation("androidx.sqlite:sqlite-bundled:2.6.2") {
+                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
+                }
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3") {
+                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
+                }
             }
         }
 
         val androidMain by getting {
             kotlin.exclude("composeResources/drawable")
             dependencies {
+                implementation("androidx.core:core-ktx:1.8.0")
+                implementation("androidx.appcompat:appcompat:1.4.1")
                 implementation(compose.uiTooling)
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
             }
         }
 
@@ -79,20 +106,25 @@ kotlin {
             dependencies {
                 implementation(compose.desktop.currentOs)
 
-                implementation("org.jetbrains:annotations:24.0.1")
-                implementation("com.google.code.gson:gson:2.8.8")
-                implementation("androidx.room:room-runtime:$room_version")
-                implementation("androidx.room:room-compiler:$room_version")
-                implementation("androidx.room:room-ktx:$room_version")
+                implementation("org.jetbrains:annotations:24.0.1") {
+                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
+                }
+                implementation("com.google.code.gson:gson:2.8.8") {
+                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
+                }
+                implementation("androidx.room:room-runtime:$room_version") {
+                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
+                }
+                implementation("androidx.room:room-compiler:$room_version") {
+                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
+                }
+                implementation("androidx.room:room-ktx:$room_version") {
+                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
+                }
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-swing:1.7.3") {
                     exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
                 }
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3") {
-                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
-                }
-            }
-            configurations {
-                all {
                     exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
                 }
             }
@@ -123,8 +155,8 @@ android {
             resValue("string", "app_name", "${appName}.debug")
         }
         release {
-            isMinifyEnabled = true
-            isShrinkResources = true
+//            isMinifyEnabled = true
+//            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -152,8 +184,6 @@ android {
 //执行python 接入文档: https://chaquo.com/chaquopy/doc/15.0/android.html
 
 dependencies {
-    implementation("androidx.core:core-ktx:1.8.0")
-    implementation("androidx.appcompat:appcompat:1.4.1")
 //    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.10.0")
     // activity-compose 版本需适配 Compose 和 AGP，1.4.0 是 AGP 7.0.4 兼容的稳定版
     implementation("androidx.activity:activity-compose:1.8.0")
@@ -199,15 +229,19 @@ compose {
     desktop.application {
         mainClass = "com.jingtian.composedemo.MainKt"
         nativeDistributions {
-            targetFormats(TargetFormat.Msi, TargetFormat.Deb, TargetFormat.Dmg)
+            targetFormats(TargetFormat.Msi, TargetFormat.Exe, TargetFormat.Deb, TargetFormat.Dmg)
             packageName = appName
             packageVersion = version
 
             includeAllModules = true
 
+            vendor = "jingtian.meow"
+
             windows {
+                shortcut = true
+                dirChooser = true
 //                iconFile.set(project.file("src/commonMain/composeResources/drawable/icon.ico"))
-                this.perUserInstall = false
+                perUserInstall = false
             }
             linux {
 //                iconFile.set(project.file("src/commonMain/composeResources/drawable/icon.png"))
@@ -221,6 +255,7 @@ compose {
         buildTypes {
             release {
                 proguard {
+                    isEnabled = false
                     obfuscate.set(true)
                     optimize.set(false)
                     configurationFiles.from(project.file("proguard-desktop.pro"))
