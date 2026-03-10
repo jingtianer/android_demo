@@ -84,13 +84,14 @@ fun DrawerHeader() {
         userName = innerUserInfo.userName
         userDesc = innerUserInfo.userDesc
     }
+    val imageDpSize = avatarSize.dpValue()
     LaunchedEffect(Unit) {
         val fileInfo = UserStorage.userInstance.userAvatar
         val bitmap = withContext(Dispatchers.IO) {
             val (_, image) = BitMapCachePool.loadImage(
                 fileInfo,
-                avatarSize.dpValue().toInt(),
-                avatarSize.dpValue().toInt()
+                imageDpSize.toInt(),
+                imageDpSize.toInt()
             )
             image
         }
@@ -114,8 +115,8 @@ fun DrawerHeader() {
             UserStorage.userInstance = currentUser
             val (_, image) = BitMapCachePool.loadImage(
                 currentUser.userAvatar,
-                avatarSize.dpValue().toInt(),
-                avatarSize.dpValue().toInt()
+                imageDpSize.toInt(),
+                imageDpSize.toInt()
             )
             val bitmap = image
             withContext(Dispatchers.Main) {

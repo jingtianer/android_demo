@@ -5,6 +5,7 @@ import android.util.TypedValue
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.content.res.ResourcesCompat
@@ -15,4 +16,5 @@ import com.jingtian.composedemo.ui.widget.StarRateView
 import com.jingtian.composedemo.utils.ViewUtils.dpValue
 import kotlin.math.abs
 
+@Composable
 actual fun Dp.dpValue(): Float = this.dpValue

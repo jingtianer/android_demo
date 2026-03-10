@@ -8,7 +8,6 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewModelScope
@@ -24,8 +23,14 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.lang.ref.SoftReference
+import kotlin.math.max
 
-class GalleryStateHolder(val album: IndexedValue<Album>, val albumList: List<Album>, val drawerState: DrawerState, val viewModel: AlbumViewModel) {
+class GalleryDpConstants(
+    val scrollBarWidthDp: Float,
+    val scrollBarHeightDp: Float,
+    val scrollAreaWidthDp : Float
+)
+class GalleryStateHolder(val album: IndexedValue<Album>, val albumList: List<Album>, val drawerState: DrawerState, val viewModel: AlbumViewModel, val galleryDpConstants: GalleryDpConstants) {
     var addImageDialogState by mutableStateOf(false)
     var itemList by mutableStateOf(emptyList<AlbumItemRelation>())
     val filteredItemList = mutableStateListOf<AlbumItemRelation>()
@@ -52,9 +57,9 @@ class GalleryStateHolder(val album: IndexedValue<Album>, val albumList: List<Alb
     val size = 160.dp
     val galleryItemPadding = 4.dp
     var scrollOffsetY by mutableFloatStateOf(0f)
-    val scrollBarSize = mutableStateListOf(6.dp.dpValue(), 64.dp.dpValue())
+    val scrollBarSize = mutableStateListOf(galleryDpConstants.scrollBarWidthDp, galleryDpConstants.scrollBarHeightDp)
     val scrollAreaWidth = 28.dp
-    val scrollBarOffset = mutableStateListOf(scrollAreaWidth.dpValue() - scrollBarSize[0], 0f)
+    val scrollBarOffset = mutableStateListOf(galleryDpConstants.scrollAreaWidthDp - scrollBarSize[0], 0f)
     val galleryScrollState = LazyStaggeredGridState(0, 0)
 
     var showEditDialog by mutableStateOf(false)
@@ -98,7 +103,8 @@ class GalleryStateHolder(val album: IndexedValue<Album>, val albumList: List<Alb
     fun updateScrollOffset() {
         val y = scrollOffsetY - scrollBarSize[1] / 2
 //        Log.d("jingtian", "updateScrollOffset: $y")
-        scrollBarOffset[1] = y.coerceIn(0f, galleryScrollState.layoutInfo.viewportSize.height.toFloat() - scrollBarSize[1])
+//        println("updateScrollOffset ${galleryScrollState.layoutInfo.viewportSize.height.toFloat() - scrollBarSize[1]}, ${galleryScrollState.layoutInfo.viewportSize.height.toFloat()}, ${scrollBarSize[1]}")
+        scrollBarOffset[1] = y.coerceIn(0f, max(0f, galleryScrollState.layoutInfo.viewportSize.height.toFloat() - scrollBarSize[1]))
     }
 
     init {

@@ -213,6 +213,7 @@ object BitMapCachePool {
             // 第二步：计算缩放比例（避免图片过大导致 OOM）
             calculateScaleFactor(outWidth, outHeight, maxWidth, maxHeight)
         } ?: -1
+//        println("scale factor: $scaleFactor")
         val bitmap = image.inputStream?.use { `is`->
 //            Log.d("TAG", "loadImage failed: $image, $scaleFactor, $image")
             // 第三步：按缩放比例解码图片
@@ -232,6 +233,7 @@ object BitMapCachePool {
         } else {
             calculateScaleFactor(fileInfo.intrinsicWidth, fileInfo.intrinsicHeight, maxWidth, maxHeight)
         }
+//        println("scale factor: $scaleFactor")
         val bitmap =  getBitMapCachePool(fileInfo.fileType).put(fileInfo.storageId, scaleFactor, creator)
         return scaleFactor to bitmap
     }
@@ -249,6 +251,7 @@ object BitMapCachePool {
             // 第二步：计算缩放比例（避免图片过大导致 OOM）
             calculateScaleFactor(outWidth, outHeight, maxWidth, maxHeight)
         } ?: -1
+//        println("scale factor: $scaleFactor")
         val bitmap = getBitMapCachePool(fileInfo.fileType).put(id, scaleFactor) {
             fileInfo.getFileUri()?.inputStream?.use { `is`->
                 uriToImageBitmap(`is`, scaleFactor)

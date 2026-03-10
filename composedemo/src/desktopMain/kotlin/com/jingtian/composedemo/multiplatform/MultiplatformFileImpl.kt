@@ -8,17 +8,17 @@ import java.io.InputStream
 
 class MultiplatformFileImpl(val realFile: File) : MultiplatformFile {
     companion object {
-        val imageExtensions = arrayOf("png", "jpg", "jpeg", "bmp", "gif")
-        val videoExtensions = arrayOf("mp4")
-        val audioExtensions = arrayOf("mp3")
-        val htmlExtensions = arrayOf("html")
+        val imageExtensions = arrayOf("jpg", "jpeg", "png", "gif", "bmp", "webp", "tiff", "ico", "heic", "heif", "jfif")
+        val videoExtensions = arrayOf("mp4", "mov", "mkv", "avi", "webm", "flv", "wmv")
+        val audioExtensions = arrayOf("mp3", "wav", "flac", "aac", "m4a", "ogg", "wma", "amr", "mid")
+        val htmlExtensions = arrayOf("html", "svg")
     }
     override val fileName: String?
         get() = realFile.name
     override val isHidden: Boolean
         get() = realFile.isHidden
     override val mediaType: FileType
-        get() = when(realFile.extension) {
+        get() = when(realFile.extension.lowercase()) {
             in imageExtensions -> FileType.IMAGE
             in videoExtensions -> FileType.VIDEO
             in audioExtensions -> FileType.AUDIO

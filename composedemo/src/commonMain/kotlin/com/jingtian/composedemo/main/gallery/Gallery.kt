@@ -103,11 +103,17 @@ fun Gallery(galleryStateHolderMap: SnapshotStateMap<Long, SoftReference<GalleryS
         return
     }
     val albumId: Long = album.value.albumId ?: return
+    val scrollAreaWidth = 28.dp
+    val galleryDpConstants =  GalleryDpConstants(
+        scrollBarWidthDp = 6.dp.dpValue(),
+        scrollBarHeightDp = 64.dp.dpValue(),
+        scrollAreaWidthDp = scrollAreaWidth.dpValue()
+    )
     val viewModel: AlbumViewModel = viewModel(factory = AlbumViewModel.viewModelFactory)
     val galleryStateHolder by remember(album, albumList) {
         mutableStateOf(
             galleryStateHolderMap.getOrPutRef(albumId) {
-                GalleryStateHolder(album, albumList, drawerState, viewModel)
+                GalleryStateHolder(album, albumList, drawerState, viewModel, galleryDpConstants)
             }
         )
     }
@@ -263,6 +269,9 @@ fun GalleryStateHolder.Gallery() {
                 }
             }
             val scrollBarColor = LocalAppPalette.current.labelTextColor.copy(alpha = 0.85f)
+            val dp16 = 16.dp.dpValue()
+            val dp6 = 6.dp.dpValue()
+            val scrollAreaWidthDp = scrollAreaWidth.dpValue()
             Box(
                 Modifier
                     .width(scrollAreaWidth)
@@ -272,8 +281,8 @@ fun GalleryStateHolder.Gallery() {
                         detectDragGestures(
                             onDragStart = { offset ->
                                 scrollOffsetY = offset.y
-                                scrollBarSize[0] = 16.dp.dpValue()
-                                scrollBarOffset[0] = scrollAreaWidth.dpValue() - scrollBarSize[0]
+                                scrollBarSize[0] = dp16
+                                scrollBarOffset[0] = scrollAreaWidthDp - scrollBarSize[0]
                                 updateScrollOffset()
                                 scope.launch {
                                     updateScrollItem()
@@ -281,20 +290,20 @@ fun GalleryStateHolder.Gallery() {
                             },
                             onDrag = { pointerInputChange, offset ->
                                 scrollOffsetY += offset.y
-                                scrollBarSize[0] = 16.dp.dpValue()
-                                scrollBarOffset[0] = scrollAreaWidth.dpValue() - scrollBarSize[0]
+                                scrollBarSize[0] = dp16
+                                scrollBarOffset[0] = scrollAreaWidthDp - scrollBarSize[0]
                                 updateScrollOffset()
                                 scope.launch {
                                     updateScrollItem()
                                 }
                             },
                             onDragEnd = {
-                                scrollBarSize[0] = 6.dp.dpValue()
-                                scrollBarOffset[0] = scrollAreaWidth.dpValue() - scrollBarSize[0]
+                                scrollBarSize[0] = dp6
+                                scrollBarOffset[0] = scrollAreaWidthDp - scrollBarSize[0]
                             },
                             onDragCancel = {
-                                scrollBarSize[0] = 6.dp.dpValue()
-                                scrollBarOffset[0] = scrollAreaWidth.dpValue() - scrollBarSize[0]
+                                scrollBarSize[0] = dp6
+                                scrollBarOffset[0] = scrollAreaWidthDp - scrollBarSize[0]
                             }
                         )
                     }
@@ -304,8 +313,8 @@ fun GalleryStateHolder.Gallery() {
                             scrollOffsetY = downEvent.position.y
                             scope.launch {
                                 withContext(Dispatchers.Main) {
-                                    scrollBarSize[0] = 16.dp.dpValue()
-                                    scrollBarOffset[0] = scrollAreaWidth.dpValue() - scrollBarSize[0]
+                                    scrollBarSize[0] = dp16
+                                    scrollBarOffset[0] = scrollAreaWidthDp - scrollBarSize[0]
                                     updateScrollOffset()
                                     updateScrollItem()
                                 }
@@ -318,8 +327,8 @@ fun GalleryStateHolder.Gallery() {
                             scrollOffsetY = upOrCancel?.position?.y ?: scrollOffsetY
                             scope.launch {
                                 withContext(Dispatchers.Main) {
-                                    scrollBarSize[0] = 6.dp.dpValue()
-                                    scrollBarOffset[0] = scrollAreaWidth.dpValue() - scrollBarSize[0]
+                                    scrollBarSize[0] = dp6
+                                    scrollBarOffset[0] = scrollAreaWidthDp - scrollBarSize[0]
                                     updateScrollOffset()
                                     updateScrollItem()
                                 }

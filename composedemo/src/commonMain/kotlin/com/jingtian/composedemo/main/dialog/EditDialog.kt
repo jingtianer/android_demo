@@ -137,6 +137,7 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
         }
     }
 
+    val imageDpSize = imageWidth.dpValue()
     suspend fun updateImage(uri: MultiplatformFile, fileType: FileType, fileInfo: FileInfo?) {
         withContext(Dispatchers.IO) {
             when (fileType) {
@@ -144,12 +145,12 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
                     val bitmap = if (fileInfo != null) {
                         BitMapCachePool.loadImage(
                             fileInfo,
-                            maxWidth = imageWidth.dpValue().toInt()
+                            maxWidth = imageDpSize.toInt()
                         ).second
                     } else {
                         BitMapCachePool.toBitMap(
                             uri,
-                            maxWidth = imageWidth.dpValue().toInt()
+                            maxWidth = imageDpSize.toInt()
                         ).second
                     }
                     withContext(Dispatchers.Main) {
@@ -163,7 +164,7 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
                             fileInfo,
                             scope,
                             uri,
-                            maxWidth = imageWidth.dpValue().toInt()
+                            maxWidth = imageDpSize.toInt()
                         ) { bitmap ->
                             withContext(Dispatchers.Main) {
                                 pickedImage = bitmap
@@ -174,7 +175,7 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
                             FileType.VIDEO,
                             scope,
                             uri,
-                            maxWidth = imageWidth.dpValue().toInt()
+                            maxWidth = imageDpSize.toInt()
                         ) { bitmap ->
                             withContext(Dispatchers.Main) {
                                 pickedImage = bitmap
@@ -190,7 +191,7 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
                             fileInfo,
                             scope,
                             uri,
-                            maxWidth = imageWidth.dpValue().toInt()
+                            maxWidth = imageDpSize.toInt()
                         ) { bitmap ->
                             withContext(Dispatchers.Main) {
                                 pickedImage = bitmap
@@ -201,7 +202,7 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
                             FileType.AUDIO,
                             scope,
                             uri,
-                            maxWidth = imageWidth.dpValue().toInt()
+                            maxWidth = imageDpSize.toInt()
                         ) { bitmap ->
                             withContext(Dispatchers.Main) {
                                 pickedImage = bitmap
@@ -220,7 +221,7 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
                             fileInfo,
                             scope,
                             uri,
-                            maxWidth = imageWidth.dpValue().toInt()
+                            maxWidth = imageDpSize.toInt()
                         ) { bitmap ->
                             withContext(Dispatchers.Main) {
                                 pickedImage = bitmap
@@ -231,7 +232,7 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
                             FileType.HTML,
                             scope,
                             uri,
-                            maxWidth = imageWidth.dpValue().toInt()
+                            maxWidth = imageDpSize.toInt()
                         ) { bitmap ->
                             withContext(Dispatchers.Main) {
                                 pickedImage = bitmap

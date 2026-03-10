@@ -67,6 +67,7 @@ import com.jingtian.composedemo.base.resources.DrawableIcon
 class AlbumItemViewStateHolder(
     val albumItemRelation: AlbumItemRelation,
     val size: Dp,
+    val dpSize: Float,
     val padding: Dp,
     val currentSelectedItem: SnapshotStateMap<Long, AlbumItemRelation>,
     val enterEditState: MutableState<Boolean>,
@@ -116,7 +117,7 @@ class AlbumItemViewStateHolder(
                 FileType.IMAGE -> {
                     val (_, image) = BitMapCachePool.loadImage(
                         albumItemRelation.fileInfo,
-                        size.dpValue().toInt(),
+                        dpSize.toInt(),
                     )
                     val bitmap = image
                     withContext(Dispatchers.Main) {
@@ -131,7 +132,7 @@ class AlbumItemViewStateHolder(
                     FileStorageUtils.getThumbnail(
                         albumItemRelation.fileInfo,
                         scope, uri,
-                        maxWidth = size.dpValue().toInt(),
+                        maxWidth = dpSize.toInt(),
                     ) { bitmap ->
                         imageBitmap = bitmap
                         imageBitmap?.aspectRatio()?.let {
@@ -145,7 +146,7 @@ class AlbumItemViewStateHolder(
                     FileStorageUtils.getThumbnail(
                         albumItemRelation.fileInfo,
                         scope, uri,
-                        maxWidth = size.dpValue().toInt(),
+                        maxWidth = dpSize.toInt(),
                     ) { bitmap ->
                         imageBitmap = bitmap
                         imageBitmap?.aspectRatio()?.let {
@@ -167,7 +168,7 @@ class AlbumItemViewStateHolder(
                     FileStorageUtils.getThumbnail(
                         albumItemRelation.fileInfo,
                         scope, uri,
-                        maxWidth = size.dpValue().toInt(),
+                        maxWidth = dpSize.toInt(),
                     ) { bitmap ->
                         imageBitmap = bitmap
                     }
@@ -189,6 +190,7 @@ fun AlbumItemView(
     showEditDialogState: MutableState<AlbumItemRelation?>
 ) {
     val itemId = albumItemRelation.albumItem.itemId ?: return
+    val dpSize = size.dpValue()
     val stateHolder by remember(itemId) {
         mutableStateOf(
             albumViewMap.getOrPutRef(itemId) {
@@ -196,6 +198,7 @@ fun AlbumItemView(
                 AlbumItemViewStateHolder(
                     albumItemRelation,
                     size,
+                    dpSize,
                     padding,
                     currentSelectedItem,
                     enterEditState,

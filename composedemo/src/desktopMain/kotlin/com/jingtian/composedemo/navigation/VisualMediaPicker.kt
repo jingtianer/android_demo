@@ -22,7 +22,7 @@ class ImagePicker(
             isVisible = true
         }
         val file = File(dialog.directory, dialog.file ?: return).takeIf {
-            print("${dialog.directory}, ${dialog.file}")
+//            print("${dialog.directory}, ${dialog.file}")
             it.extension in extensions
         } ?: return
         onResult.invoke(MultiplatformFileImpl(file))

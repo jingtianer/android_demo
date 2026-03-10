@@ -105,6 +105,7 @@ fun AddItemDialog(album: Album, totalLabelList: List<String>, albumData: List<Al
         }
     }
 
+    val imageDpSize = imageWidth.dpValue()
     val multipleImagePickerLauncher by rememberDocumentPicker(
         onResult = { uri: MultiplatformFile? ->
             uri?.takeIf { !it.isHidden } ?: return@rememberDocumentPicker
@@ -113,7 +114,7 @@ fun AddItemDialog(album: Album, totalLabelList: List<String>, albumData: List<Al
                     BitMapCachePool.toBitMap(
                         scope,
                         uri,
-                        maxWidth = imageWidth.dpValue().toInt()
+                        maxWidth = imageDpSize.toInt()
                     ) { _, bitmap ->
                         pickedImage = bitmap
                     }
@@ -124,7 +125,7 @@ fun AddItemDialog(album: Album, totalLabelList: List<String>, albumData: List<Al
                         FileType.VIDEO,
                         scope,
                         uri,
-                        maxWidth = imageWidth.dpValue().toInt()
+                        maxWidth = imageDpSize.toInt()
                     ) { bitmap ->
                         pickedImage = bitmap
                     }
@@ -137,7 +138,7 @@ fun AddItemDialog(album: Album, totalLabelList: List<String>, albumData: List<Al
                         FileType.AUDIO,
                         scope,
                         uri,
-                        maxWidth = imageWidth.dpValue().toInt()
+                        maxWidth = imageDpSize.toInt()
                     ) { bitmap ->
                         pickedImage = bitmap
                     }
@@ -150,7 +151,7 @@ fun AddItemDialog(album: Album, totalLabelList: List<String>, albumData: List<Al
                         FileType.HTML,
                         scope,
                         uri,
-                        maxWidth = imageWidth.dpValue().toInt()
+                        maxWidth = imageDpSize.toInt()
                     ) { bitmap ->
                         pickedImage = bitmap
                     }
