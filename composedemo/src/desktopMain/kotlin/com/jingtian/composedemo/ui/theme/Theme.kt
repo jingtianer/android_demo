@@ -3,6 +3,7 @@ package com.jingtian.composedemo.ui.theme
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -29,3 +30,10 @@ actual fun Modifier.appBackground(heightScale: Float): Modifier {
     val isSystemDark = isSystemInDarkTheme()
     return this
 }
+
+data class DesktopConst(
+    val screenWidthDp: Dp = 800.dp,
+    val screenHeightDp: Dp = 600.dp,
+)
+
+val LocalDesktopConst = compositionLocalOf(structuralEqualityPolicy()) { DesktopConst() }

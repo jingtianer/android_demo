@@ -15,6 +15,7 @@ import androidx.compose.ui.window.rememberWindowState
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.jingtian.composedemo.main.Main
 import com.jingtian.composedemo.ui.theme.DemoAppTheme
+import com.jingtian.composedemo.ui.theme.LocalDesktopConst
 import com.jingtian.composedemo.utils.AppTheme
 import com.jingtian.composedemo.viewmodels.AppThemeViewModel
 
@@ -34,14 +35,22 @@ fun ApplicationScope.MainWindow() {
         title = "ComposeDemo"
     ) {
         DemoAppTheme {
-            Main()
-            val viewModel: AppThemeViewModel = viewModel(factory = AppThemeViewModel.viewModelFactory)
-            val currentAppTheme by remember { viewModel.currentAppTheme }
-            val isSystemDark = isSystemInDarkTheme()
-            LaunchedEffect(currentAppTheme) {
-                AppTheme.setAppTheme(currentAppTheme)
-                val isDark = AppTheme.isDark(currentAppTheme, isSystemDark)
-                this@DemoAppTheme.setCurrentDark(isDark)
+
+            CompositionLocalProvider(
+                LocalDesktopConst provides LocalDesktopConst.current.copy(
+                    screenWidthDp = windowState.size.width,
+                    screenHeightDp = windowState.size.height,
+                )
+            ) {
+                Main()
+                val viewModel: AppThemeViewModel = viewModel(factory = AppThemeViewModel.viewModelFactory)
+                val currentAppTheme by remember { viewModel.currentAppTheme }
+                val isSystemDark = isSystemInDarkTheme()
+                LaunchedEffect(currentAppTheme) {
+                    AppTheme.setAppTheme(currentAppTheme)
+                    val isDark = AppTheme.isDark(currentAppTheme, isSystemDark)
+                    this@DemoAppTheme.setCurrentDark(isDark)
+                }
             }
         }
 

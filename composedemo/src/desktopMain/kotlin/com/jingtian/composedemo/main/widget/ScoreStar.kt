@@ -6,5 +6,5 @@ import androidx.compose.ui.unit.Dp
 
 @Composable
 actual fun ColumnScope.ScoreStar(itemScore: Float, padding: Dp) {
-
+    DesktopStarRateView(enable = false, initialScore = itemScore)
 }
