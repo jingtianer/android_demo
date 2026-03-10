@@ -207,6 +207,7 @@ compose {
 
             windows {
 //                iconFile.set(project.file("src/commonMain/composeResources/drawable/icon.ico"))
+                this.perUserInstall = false
             }
             linux {
 //                iconFile.set(project.file("src/commonMain/composeResources/drawable/icon.png"))
