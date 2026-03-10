@@ -57,6 +57,8 @@ kotlin {
                 implementation(compose.foundation)
                 implementation(compose.material3)
                 implementation(compose.ui)
+                implementation(compose.components.resources)
+
                 implementation("androidx.compose.ui:ui-tooling-preview:$composeVersion")
                 api("androidx.lifecycle:lifecycle-viewmodel:2.8.1")
                 api("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.1")
@@ -76,7 +78,6 @@ kotlin {
         val desktopMain by getting {
             dependencies {
                 implementation(compose.desktop.currentOs)
-                implementation(compose.components.resources)
 
                 implementation("org.jetbrains:annotations:24.0.1")
                 implementation("com.google.code.gson:gson:2.8.8")
