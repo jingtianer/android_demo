@@ -3,6 +3,7 @@ package com.jingtian.composedemo.multiplatform
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.jingtian.composedemo.utils.CoroutineUtils
+import com.jingtian.composedemo.utils.globalWorkDir
 import kotlinx.coroutines.Job
 import java.io.File
 import java.io.FileReader
@@ -38,7 +39,7 @@ class MultiplatformSharedPreferencesImpl<T>(name: String) : IMultiplatformShared
     }
 
     companion object {
-        val spDir = File("./properties")
+        val spDir = File(globalWorkDir, "properties")
         init {
             if (!spDir.exists()) {
                 spDir.mkdirs()

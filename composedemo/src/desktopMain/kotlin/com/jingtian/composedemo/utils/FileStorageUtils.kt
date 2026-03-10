@@ -13,8 +13,10 @@ import org.jetbrains.skia.Rect
 import org.jetbrains.skiko.toImage
 import java.io.File
 
-actual fun getFileStorageRootDir(): File = File("./filestore")
-actual fun getFileCacheStorageRootDir(): File = File("./cache")
+val globalWorkDir = File("./ComposeDemo")
+
+actual fun getFileStorageRootDir(): File = File(globalWorkDir, "filestore")
+actual fun getFileCacheStorageRootDir(): File = File(globalWorkDir, "cache")
 actual fun compressImageBitmap(bitmap: ImageBitmap, width: Int, height: Int, scale: Float): ImageBitmap {
     val image = bitmap.toAwtImage().toImage()
     val originWidth = image.width

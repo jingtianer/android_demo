@@ -6,9 +6,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.FileType
+import com.jingtian.composedemo.utils.globalWorkDir
 import java.awt.Desktop
 import java.io.File
-import java.net.URI
 import java.nio.file.Files
 import kotlin.io.path.Path
 import kotlin.random.Random
@@ -16,7 +16,7 @@ import kotlin.random.nextULong
 
 class AlbumItemLauncher : IAlbumItemLauncher {
     companion object {
-        private val linkDir = File("./tmp/links")
+        private val linkDir = File(globalWorkDir, "tmp/links")
         init {
             if (linkDir.exists()) {
                 if (linkDir.isFile) {

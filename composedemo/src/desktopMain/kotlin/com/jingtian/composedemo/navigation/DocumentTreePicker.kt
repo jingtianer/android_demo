@@ -9,10 +9,10 @@ import com.jingtian.composedemo.multiplatform.MultiplatformFileImpl
 import java.io.File
 import javax.swing.JFileChooser
 
-class DocumentTreePicker(private val onResult: (MultiplatformFile?) -> Unit) : IDocumentTreePicker {
+class DocumentTreePicker(val title: String, private val onResult: (MultiplatformFile?) -> Unit) : IDocumentTreePicker {
     override fun launch(mimes: MultiplatformFile?) {
         val chooser = JFileChooser().apply {
-            dialogTitle = "导入目录"
+            dialogTitle = title
             fileSelectionMode = JFileChooser.DIRECTORIES_ONLY
         }
         val result = chooser.showOpenDialog(null)
@@ -20,10 +20,9 @@ class DocumentTreePicker(private val onResult: (MultiplatformFile?) -> Unit) : I
             onResult(MultiplatformFileImpl(chooser.selectedFile))
         }
     }
-
 }
 
 @Composable
 actual fun rememberDocumentTreePicker(onResult: (MultiplatformFile?) -> Unit): MutableState<IDocumentTreePicker>  {
-    return remember { mutableStateOf(DocumentTreePicker(onResult)) }
+    return remember { mutableStateOf(DocumentTreePicker("导入目录", onResult)) }
 }

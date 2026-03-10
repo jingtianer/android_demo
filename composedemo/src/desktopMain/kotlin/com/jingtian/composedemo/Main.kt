@@ -17,7 +17,6 @@ import com.jingtian.composedemo.main.Main
 import com.jingtian.composedemo.ui.theme.DemoAppTheme
 import com.jingtian.composedemo.utils.AppTheme
 import com.jingtian.composedemo.viewmodels.AppThemeViewModel
-import com.jingtian.composedemo.viewmodels.DesktopViewModel
 
 fun main(args: Array<String>) {
     application {
