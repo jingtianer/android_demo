@@ -27,13 +27,17 @@ class AlbumItemLauncher : IAlbumItemLauncher {
             }
             linkDir.mkdirs()
         }
+
+        fun browse(file: File) {
+            runCatching {
+                val linkedFile = Files.createLink(Path(linkDir.path, file.name + "_link_${Random.nextULong()}.html"), Path(file.parentFile.path, file.name))
+                linkedFile.toFile().deleteOnExit()
+                Desktop.getDesktop().browse(linkedFile.toUri())
+            }
+        }
     }
     private fun openUrl(file: File) {
-        runCatching {
-            val linkedFile = Files.createLink(Path(linkDir.path, file.name + "_link_${Random.nextULong()}.html"), Path(file.parentFile.path, file.name))
-            linkedFile.toFile().deleteOnExit()
-            Desktop.getDesktop().browse(linkedFile.toUri())
-        }
+        browse(file)
     }
 
     private fun openFile(file: File) {
