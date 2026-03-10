@@ -13,7 +13,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jingtian.composedemo.base.AppThemeText
-import org.jetbrains.compose.resources.painterResource
 
 @Composable
 fun RowScope.GalleryFunctionView(func: GalleryFunctions, onClick: ()->Unit) {
@@ -23,7 +22,7 @@ fun RowScope.GalleryFunctionView(func: GalleryFunctions, onClick: ()->Unit) {
             .padding(horizontal = 6.dp)
             .clickable { onClick() }) {
         Icon(
-            painter = painterResource(func.resId),
+            painter = func.iconProvider(),
             contentDescription = "${func.functionName}功能",
             modifier = Modifier
                 .size(32.dp)

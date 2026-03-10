@@ -56,13 +56,13 @@ import com.jingtian.composedemo.utils.BitMapCachePool
 import com.jingtian.composedemo.utils.FileStorageUtils
 import com.jingtian.composedemo.utils.dpValue
 import com.jingtian.composedemo.utils.getOrPutRef
-import demoapp.composedemo.generated.resources.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.jetbrains.compose.resources.painterResource
 import java.lang.ref.SoftReference
+import com.jingtian.composedemo.base.resources.getPainter
+import com.jingtian.composedemo.base.resources.DrawableIcon
 
 class AlbumItemViewStateHolder(
     val albumItemRelation: AlbumItemRelation,
@@ -79,7 +79,7 @@ class AlbumItemViewStateHolder(
     var itemRank by mutableStateOf(albumItemRelation.albumItem.rank)
     var itemScore by mutableFloatStateOf(albumItemRelation.albumItem.score)
     var itemLabel by mutableStateOf(albumItemRelation.labelInfos)
-    var imageResource by mutableStateOf(Res.drawable.load_failed)
+    var imageResource by mutableStateOf(DrawableIcon.DrawableLoadFailed)
     var intrinsicRatio by mutableFloatStateOf(
         albumItemRelation.fileInfo.aspectRatio()
     )
@@ -141,7 +141,7 @@ class AlbumItemViewStateHolder(
                 }
 
                 FileType.AUDIO -> {
-                    imageResource = Res.drawable.music
+                    imageResource = DrawableIcon.DrawableMusic
                     FileStorageUtils.getThumbnail(
                         albumItemRelation.fileInfo,
                         scope, uri,
@@ -156,13 +156,13 @@ class AlbumItemViewStateHolder(
 
                 FileType.RegularFile -> {
                     intrinsicRatio = 1f
-                    imageResource = Res.drawable.file
+                    imageResource = DrawableIcon.DrawableFile
                     imageBitmap = null
                 }
 
                 FileType.HTML -> {
                     intrinsicRatio = 1f
-                    imageResource = Res.drawable.chrome
+                    imageResource = DrawableIcon.DrawableChrome
                     imageBitmap = null
                     FileStorageUtils.getThumbnail(
                         albumItemRelation.fileInfo,
@@ -220,11 +220,11 @@ fun AlbumItemViewStateHolder.AlbumItemView() {
     val fileTypeIcon by remember(albumItemRelation.fileInfo.fileType) {
         mutableStateOf(
             when (albumItemRelation.fileInfo.fileType) {
-                FileType.IMAGE -> Res.drawable.pic_icon
-                FileType.VIDEO -> Res.drawable.video_icon
-                FileType.AUDIO -> Res.drawable.music_icon
-                FileType.HTML -> Res.drawable.web_icon
-                FileType.RegularFile -> Res.drawable.doc_icon
+                FileType.IMAGE -> DrawableIcon.DrawablePicIcon
+                FileType.VIDEO -> DrawableIcon.DrawableVideoIcon
+                FileType.AUDIO -> DrawableIcon.DrawableMusicIcon
+                FileType.HTML -> DrawableIcon.DrawableWebIcon
+                FileType.RegularFile -> DrawableIcon.DrawableDocIcon
             }
         )
     }
@@ -273,7 +273,7 @@ fun AlbumItemViewStateHolder.AlbumItemView() {
 
         Box(Modifier.fillMaxWidth()) {
             Icon(
-                painter = painterResource(fileTypeIcon),
+                painter = getPainter(fileTypeIcon),
                 contentDescription = "文件类型图标",
                 modifier = Modifier
                     .padding(vertical = 4.dp)
@@ -281,7 +281,7 @@ fun AlbumItemViewStateHolder.AlbumItemView() {
                     .align(Alignment.Center)
             )
             if (enterEditState.value) {
-                Icon(painter = painterResource(Res.drawable.check), contentDescription = "复选框",
+                Icon(painter = getPainter(DrawableIcon.DrawableCheck), contentDescription = "复选框",
                     Modifier
                         .padding(4.dp)
                         .align(Alignment.CenterEnd)
@@ -324,7 +324,7 @@ fun AlbumItemViewStateHolder.AlbumItemView() {
                 )
             } else if (imageResource != null) {
                 Image(
-                    painter = painterResource(imageResource),
+                    painter = getPainter(imageResource),
                     contentDescription = "文件缩略图",
                     Modifier
                         .fillMaxWidth()

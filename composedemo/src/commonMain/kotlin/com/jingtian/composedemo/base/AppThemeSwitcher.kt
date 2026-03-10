@@ -25,8 +25,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.jingtian.composedemo.ui.theme.LocalAppPalette
 import com.jingtian.composedemo.utils.AppTheme
 import com.jingtian.composedemo.viewmodels.AppThemeViewModel
-import demoapp.composedemo.generated.resources.*
-import org.jetbrains.compose.resources.painterResource
+import com.jingtian.composedemo.base.resources.getPainter
+import com.jingtian.composedemo.base.resources.DrawableIcon
 
 
 @Composable
@@ -75,7 +75,7 @@ fun AppThemeSwitcher() {
                 .align(Alignment.CenterEnd)
         ) {
             Image(
-                painter = painterResource(Res.drawable.app_theme_auto),
+                painter = getPainter(DrawableIcon.DrawableAppThemeAuto),
                 contentDescription = "自动",
                 Modifier
                     .size(width = autoWidth, size)
@@ -83,7 +83,7 @@ fun AppThemeSwitcher() {
             )
             Spacer(Modifier.width(8.dp))
             Image(
-                painter = painterResource(Res.drawable.app_theme_light),
+                painter = getPainter(DrawableIcon.DrawableAppThemeLight),
                 contentDescription = "浅色",
                 Modifier
                     .size(size)
@@ -91,7 +91,7 @@ fun AppThemeSwitcher() {
             )
             Spacer(Modifier.width(8.dp))
             Image(
-                painter = painterResource(Res.drawable.app_theme_night),
+                painter = getPainter(DrawableIcon.DrawableAppThemeNight),
                 contentDescription = "深色",
                 Modifier
                     .size(size)

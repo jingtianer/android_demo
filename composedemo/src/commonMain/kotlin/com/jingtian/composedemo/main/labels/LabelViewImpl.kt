@@ -19,9 +19,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jingtian.composedemo.base.AppThemeBasicTextField
 import com.jingtian.composedemo.base.AppThemeText
+import com.jingtian.composedemo.base.resources.DrawableIcon
 import com.jingtian.composedemo.ui.theme.LocalAppPalette
-import demoapp.composedemo.generated.resources.*
-import org.jetbrains.compose.resources.painterResource
+import com.jingtian.composedemo.base.resources.getPainter
 
 @Composable
 fun LabelViewImpl(label: String, editable: Boolean = false, enableEdit: Boolean = false, checkable: Boolean = false, isChecked: Boolean = false, onRemove: ()->Unit = {}, onCheckStateChange: (Boolean) -> Unit = {}, onValueChange: (String)->Unit = {}) {
@@ -99,10 +99,8 @@ fun LabelViewImpl(label: String, editable: Boolean = false, enableEdit: Boolean 
         if (editable) {
             Spacer(Modifier.padding(2.dp))
             Image(
-                painter = painterResource(
-                    if (enableEdit) Res.drawable.add_green
-                    else Res.drawable.close
-                ),
+                painter = if (enableEdit) getPainter(DrawableIcon.DrawableAddGreen)
+                    else getPainter(DrawableIcon.DrawableClose),
                 contentDescription = if (enableEdit) "添加标签" else "删除标签",
                 Modifier
                     .padding(end = 4.dp)

@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jingtian.composedemo.base.AppThemeBasicTextField
 import com.jingtian.composedemo.base.AppThemeText
+import com.jingtian.composedemo.base.resources.DrawableIcon
 import com.jingtian.composedemo.dao.DataBase
 import com.jingtian.composedemo.dao.model.DEFAULT_DESC
 import com.jingtian.composedemo.dao.model.DEFAULT_USER_NAME
@@ -57,14 +58,13 @@ import com.jingtian.composedemo.utils.CoroutineUtils
 import com.jingtian.composedemo.utils.FileStorageUtils
 import com.jingtian.composedemo.utils.UserStorage
 import com.jingtian.composedemo.utils.dpValue
-import demoapp.composedemo.generated.resources.*
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.jetbrains.compose.resources.painterResource
 import kotlin.math.sqrt
+import com.jingtian.composedemo.base.resources.getPainter
 
 @Composable
 fun DrawerHeader() {
@@ -193,7 +193,7 @@ fun DrawerHeader() {
                 Box {
                     if (currentUserAvatarImage == null) {
                         Image(
-                            painter = painterResource(Res.drawable.user),
+                            painter = getPainter(DrawableIcon.DrawableUser),
                             contentDescription = "头像",
                             modifier = imageModifier,
                             contentScale = ContentScale.Crop,
@@ -208,9 +208,7 @@ fun DrawerHeader() {
                     }
                     if (enableEdit) {
                         Image(
-                            painter = painterResource(
-                                Res.drawable.edit
-                            ),
+                            painter = getPainter(DrawableIcon.DrawableEdit),
                             contentDescription = "编辑用户信息",
                             Modifier
                                 .size(iconSize, iconSize)
@@ -295,13 +293,11 @@ fun DrawerHeader() {
                 }
             }
             Image(
-                painter = painterResource(
-                    if (enableEdit) {
-                        Res.drawable.close
+                painter = if (enableEdit) {
+                        getPainter(DrawableIcon.DrawableClose)
                     } else {
-                        Res.drawable.edit
-                    }
-                ),
+                        getPainter(DrawableIcon.DrawableEdit)
+                    },
                 contentDescription = "编辑用户信息",
                 Modifier
                     .size(16.dp)

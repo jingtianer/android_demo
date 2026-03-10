@@ -5,8 +5,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import com.jingtian.composedemo.base.resources.DrawableIcon
 import com.jingtian.composedemo.main.dialog.AddOrEditAlbumDialog
-import demoapp.composedemo.generated.resources.*
+import com.jingtian.composedemo.base.resources.getPainter
 
 @Composable
 fun DrawerFunctionArea() {
@@ -15,7 +16,7 @@ fun DrawerFunctionArea() {
         onClick = {
             dialogState = true
         },
-        drawableId = Res.drawable.add,
+        painter = getPainter(DrawableIcon.DrawableAdd),
         text = "添加合集",
     )
 

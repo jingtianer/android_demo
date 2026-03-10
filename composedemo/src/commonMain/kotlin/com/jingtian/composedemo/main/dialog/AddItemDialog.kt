@@ -57,10 +57,10 @@ import com.jingtian.composedemo.utils.dpValue
 import com.jingtian.composedemo.utils.splitByWhiteSpace
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
 import com.jingtian.composedemo.web.CommonWebView
-import demoapp.composedemo.generated.resources.*
 import kotlinx.coroutines.launch
-import org.jetbrains.compose.resources.painterResource
 import kotlin.math.min
+import com.jingtian.composedemo.base.resources.getPainter
+import com.jingtian.composedemo.base.resources.DrawableIcon
 
 @Composable
 fun AddItemDialog(album: Album, totalLabelList: List<String>, albumData: List<Album>, onDismiss: () -> Unit) {
@@ -77,7 +77,7 @@ fun AddItemDialog(album: Album, totalLabelList: List<String>, albumData: List<Al
 
     var selectedUri by remember { mutableStateOf<MultiplatformFile?>(null) }
     val scope = rememberCoroutineScope()
-    var imageResource by remember { mutableStateOf(Res.drawable.upload_to_cloud) }
+    var imageResource by remember { mutableStateOf(DrawableIcon.DrawableUploadToCloud) }
     val viewModel: AlbumViewModel = viewModel(factory = AlbumViewModel.viewModelFactory)
     val imageWidth = min(
         min(
@@ -131,7 +131,7 @@ fun AddItemDialog(album: Album, totalLabelList: List<String>, albumData: List<Al
                 }
 
                 FileType.AUDIO -> {
-                    imageResource = Res.drawable.music
+                    imageResource = DrawableIcon.DrawableMusic
                     pickedImage = null
                     FileStorageUtils.getThumbnail(
                         FileType.AUDIO,
@@ -144,7 +144,7 @@ fun AddItemDialog(album: Album, totalLabelList: List<String>, albumData: List<Al
                 }
 
                 FileType.HTML -> {
-                    imageResource = Res.drawable.chrome
+                    imageResource = DrawableIcon.DrawableChrome
                     pickedImage = null
                     FileStorageUtils.getThumbnail(
                         FileType.HTML,
@@ -157,7 +157,7 @@ fun AddItemDialog(album: Album, totalLabelList: List<String>, albumData: List<Al
                 }
 
                 FileType.RegularFile -> {
-                    imageResource = Res.drawable.file
+                    imageResource = DrawableIcon.DrawableFile
                     pickedImage = null
                 }
             }
@@ -370,7 +370,7 @@ fun AddItemDialog(album: Album, totalLabelList: List<String>, albumData: List<Al
                 }
             } else {
                 Image(
-                    painter = painterResource(imageResource),
+                    painter = getPainter(imageResource),
                     contentDescription = "上传照片",
                     Modifier
                         .size(imageWidth)

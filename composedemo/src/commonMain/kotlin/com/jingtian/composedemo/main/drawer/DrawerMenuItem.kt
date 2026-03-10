@@ -31,12 +31,12 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.jingtian.composedemo.base.AppThemeConfirmDialog
 import com.jingtian.composedemo.base.AppThemeText
+import com.jingtian.composedemo.base.resources.DrawableIcon
 import com.jingtian.composedemo.dao.model.Album
 import com.jingtian.composedemo.ui.theme.LocalAppPalette
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
-import demoapp.composedemo.generated.resources.*
 import kotlinx.coroutines.Job
-import org.jetbrains.compose.resources.painterResource
+import com.jingtian.composedemo.base.resources.getPainter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -76,7 +76,7 @@ fun DrawerMenuItem(
             backgroundContent = {
                 Row {
                     Image(
-                        painter = painterResource(Res.drawable.trash_bin),
+                        painter = getPainter(DrawableIcon.DrawableTrashBin),
                         contentDescription = "删除",
                         Modifier
                             .align(Alignment.CenterVertically)

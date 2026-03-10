@@ -62,6 +62,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.jingtian.composedemo.base.AppThemeConfirmDialog
 import com.jingtian.composedemo.base.AppThemeText
 import com.jingtian.composedemo.base.BackPressHandler
+import com.jingtian.composedemo.base.resources.DrawableIcon
 import com.jingtian.composedemo.dao.DataBase
 import com.jingtian.composedemo.dao.model.Album
 import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
@@ -90,12 +91,11 @@ import com.jingtian.composedemo.utils.dpValue
 import com.jingtian.composedemo.utils.getOrPutRef
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
 import com.jingtian.composedemo.viewmodels.AlbumViewModel.Companion.observeAsState
-import demoapp.composedemo.generated.resources.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.jetbrains.compose.resources.painterResource
 import java.lang.ref.SoftReference
+import com.jingtian.composedemo.base.resources.getPainter
 
 @Composable
 fun Gallery(galleryStateHolderMap: SnapshotStateMap<Long, SoftReference<GalleryStateHolder>>, album: IndexedValue<Album>?, albumList: List<Album>, drawerState: DrawerState) {
@@ -155,7 +155,7 @@ fun GalleryStateHolder.Gallery() {
                     .wrapContentHeight()
             ) {
                 Icon(
-                    painter = painterResource(Res.drawable.drawer),
+                    painter = getPainter(DrawableIcon.DrawableDrawer),
                     contentDescription = "打开drawer",
                     modifier = Modifier
                         .align(Alignment.CenterVertically)
@@ -183,7 +183,7 @@ fun GalleryStateHolder.Gallery() {
                 )
                 Spacer(Modifier.width(6.dp))
                 Icon(
-                    painter = painterResource(Res.drawable.edit_normal),
+                    painter = getPainter(DrawableIcon.DrawableEditNormal),
                     contentDescription = "编辑模式",
                     modifier = Modifier
                         .size(LocalAppUIConstants.current.filterLabelHeight)
@@ -212,7 +212,7 @@ fun GalleryStateHolder.Gallery() {
                     }
 
                     Icon(
-                        painter = painterResource(Res.drawable.down),
+                        painter = getPainter(DrawableIcon.DrawableDown),
                         contentDescription = "过滤器",
                         modifier = Modifier
                             .size(LocalAppUIConstants.current.filterLabelHeight)

@@ -60,12 +60,12 @@ import com.jingtian.composedemo.utils.dpValue
 import com.jingtian.composedemo.utils.splitByWhiteSpace
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
 import com.jingtian.composedemo.web.CommonWebView
-import demoapp.composedemo.generated.resources.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.jetbrains.compose.resources.painterResource
 import kotlin.math.min
+import com.jingtian.composedemo.base.resources.getPainter
+import com.jingtian.composedemo.base.resources.DrawableIcon
 
 @Composable
 fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumData: List<Album>, totalLabelList: List<String>, onDismiss: ()->Unit) {
@@ -87,7 +87,7 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
     var selectedUri by remember { mutableStateOf(albumItemRelation.fileInfo?.getFileUri()) }
     var selectedFileType by remember { mutableStateOf(albumItemRelation.fileInfo?.fileType) }
     val scope = rememberCoroutineScope()
-    var imageResource by remember { mutableStateOf(Res.drawable.upload_to_cloud) }
+    var imageResource by remember { mutableStateOf(DrawableIcon.DrawableUploadToCloud) }
 
     val totalLabelList =
         remember { mutableStateMapOf(*(totalLabelList.map { it to it }).toTypedArray()) }
@@ -184,7 +184,7 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
                 }
 
                 FileType.AUDIO -> {
-                    imageResource = Res.drawable.music
+                    imageResource = DrawableIcon.DrawableMusic
                     if (fileInfo != null) {
                         FileStorageUtils.getThumbnail(
                             fileInfo,
@@ -212,7 +212,7 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
 
                 FileType.HTML -> {
                     withContext(Dispatchers.Main) {
-                        imageResource = Res.drawable.chrome
+                        imageResource = DrawableIcon.DrawableChrome
                         pickedImage = null
                     }
                     if (fileInfo != null) {
@@ -242,7 +242,7 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
 
                 FileType.RegularFile -> {
                     withContext(Dispatchers.Main) {
-                        imageResource = Res.drawable.file
+                        imageResource = DrawableIcon.DrawableFile
                         pickedImage = null
                     }
                 }
@@ -256,7 +256,7 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
         if (uri != null && fileType != null) {
             updateImage(uri, fileType, null)
         } else {
-            imageResource = Res.drawable.load_failed
+            imageResource = DrawableIcon.DrawableLoadFailed
         }
         if (itemName.isBlank() && uri != null) {
             itemName = uri.fileName ?: ""
@@ -269,7 +269,7 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
         if (uri != null && fileType != null) {
             updateImage(uri, fileType, albumItemRelation.fileInfo)
         } else {
-            imageResource = Res.drawable.load_failed
+            imageResource = DrawableIcon.DrawableLoadFailed
         }
         if (itemName.isNullOrBlank() && uri != null) {
             itemName = uri.fileName ?: ""
@@ -506,7 +506,7 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
                     }
                 } else {
                     Image(
-                        painter = painterResource(imageResource),
+                        painter = getPainter(imageResource),
                         contentDescription = "上传照片",
                         Modifier
                             .size(imageWidth)

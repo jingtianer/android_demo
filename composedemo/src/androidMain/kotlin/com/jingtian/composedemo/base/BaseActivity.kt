@@ -19,7 +19,6 @@ import com.jingtian.composedemo.ui.theme.AppThemeScope
 import com.jingtian.composedemo.ui.theme.DemoAppTheme
 import com.jingtian.composedemo.utils.AppTheme
 import com.jingtian.composedemo.viewmodels.AppThemeViewModel
-import demoapp.composedemo.generated.resources.Res
 
 abstract class BaseActivity : AppCompatActivity() {
     private var onConfigurationChangeCallback = { newConfig: Configuration->

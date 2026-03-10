@@ -13,11 +13,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jingtian.composedemo.base.AppThemeText
-import org.jetbrains.compose.resources.DrawableResource
-import org.jetbrains.compose.resources.painterResource
+import androidx.compose.ui.graphics.painter.Painter
 
 @Composable
-fun DrawerFunctionView(onClick: () -> Unit, drawableId: DrawableResource, text: String) {
+fun DrawerFunctionView(onClick: () -> Unit, painter: Painter, text: String) {
     Row(
         Modifier
             .fillMaxWidth()
@@ -25,7 +24,7 @@ fun DrawerFunctionView(onClick: () -> Unit, drawableId: DrawableResource, text: 
             .padding(vertical = 8.dp, horizontal = 8.dp)
     ) {
         Icon(
-            painter = painterResource(drawableId),
+            painter = painter,
             contentDescription = "leadingIcon",
             Modifier
                 .size(26.dp)
