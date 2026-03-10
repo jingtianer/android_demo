@@ -13,7 +13,7 @@ import org.jetbrains.skia.Rect
 import org.jetbrains.skiko.toImage
 import java.io.File
 
-val globalWorkDir = File("./ComposeDemo")
+val globalWorkDir = File("./ComposeDemo/workdir")
 
 actual fun getFileStorageRootDir(): File = File(globalWorkDir, "filestore")
 actual fun getFileCacheStorageRootDir(): File = File(globalWorkDir, "cache")
