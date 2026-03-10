@@ -35,7 +35,6 @@ fun ApplicationScope.MainWindow() {
         title = "ComposeDemo"
     ) {
         DemoAppTheme {
-            val desktopViewModel: DesktopViewModel = viewModel(factory = DesktopViewModel.Factory(windowState))
             Main()
             val viewModel: AppThemeViewModel = viewModel(factory = AppThemeViewModel.viewModelFactory)
             val currentAppTheme by remember { viewModel.currentAppTheme }
