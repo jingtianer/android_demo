@@ -197,7 +197,7 @@ compose {
         generateResClass = auto
     }
     desktop.application {
-        mainClass = "$appName.app.MainKt"
+        mainClass = "com.jingtian.composedemo.MainKt"
         nativeDistributions {
             targetFormats(TargetFormat.Msi, TargetFormat.Deb, TargetFormat.Dmg)
             packageName = appName
