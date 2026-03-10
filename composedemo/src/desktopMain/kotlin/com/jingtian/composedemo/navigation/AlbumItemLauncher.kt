@@ -9,11 +9,30 @@ import com.jingtian.composedemo.dao.model.FileType
 import java.awt.Desktop
 import java.io.File
 import java.net.URI
+import java.nio.file.Files
+import kotlin.io.path.Path
+import kotlin.random.Random
+import kotlin.random.nextULong
 
 class AlbumItemLauncher : IAlbumItemLauncher {
+    companion object {
+        private val linkDir = File("./tmp/links")
+        init {
+            if (linkDir.exists()) {
+                if (linkDir.isFile) {
+                    linkDir.delete()
+                } else if (linkDir.isDirectory) {
+                    linkDir.deleteRecursively()
+                }
+            }
+            linkDir.mkdirs()
+        }
+    }
     private fun openUrl(file: File) {
         runCatching {
-            Desktop.getDesktop().browse(file.toURI())
+            val linkedFile = Files.createLink(Path(linkDir.path, file.name + "_link_${Random.nextULong()}.html"), Path(file.parentFile.path, file.name))
+            linkedFile.toFile().deleteOnExit()
+            Desktop.getDesktop().browse(linkedFile.toUri())
         }
     }
 
