@@ -17,7 +17,7 @@ class DocumentTreePicker(val title: String, private val onResult: (Multiplatform
         }
         val result = chooser.showOpenDialog(null)
         if (result == JFileChooser.APPROVE_OPTION) {
-            onResult(MultiplatformFileImpl(chooser.selectedFile))
+            onResult(MultiplatformFileImpl(chooser.selectedFile, chooser.selectedFile.extension))
         }
     }
 }

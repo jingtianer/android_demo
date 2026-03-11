@@ -27,7 +27,7 @@ class DocumentPicker(
             isVisible = true
         }
         val file = File(dialog.directory, dialog.file ?: return)
-        onResult.invoke(MultiplatformFileImpl(file))
+        onResult.invoke(MultiplatformFileImpl(file, file.extension))
     }
 }
 

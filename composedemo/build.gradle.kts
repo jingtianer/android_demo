@@ -127,6 +127,12 @@ kotlin {
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3") {
                     exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
                 }
+                // 处理视频帧
+                implementation("org.bytedeco:javacv:1.5.9")
+                implementation("org.bytedeco:ffmpeg-platform:6.0-1.5.9")
+
+                // 处理音频封面
+                implementation("net.jthink:jaudiotagger:3.0.1")
             }
         }
     }

@@ -33,7 +33,13 @@ private suspend fun realTraverseUri(documentFile: DocumentFile, album: Album, fi
         val fileName = uri.fileName ?: ""
         val fileStorageId = FileStorageUtils.getStorage(type)?.asyncStore(uri) ?: DataBase.INVALID_ID
         val (width, height) = getFileIntrinsicSize(uri, type)
-        val fileInfo = FileInfo(storageId = fileStorageId, fileType = type, intrinsicWidth = width, intrinsicHeight = height)
+        val fileInfo = FileInfo(
+            storageId = fileStorageId,
+            fileType = type,
+            intrinsicWidth = width,
+            intrinsicHeight = height,
+            extension = uri.extension
+        )
         val albumItem = AlbumItem(itemName = fileName, albumId = album.albumId ?: DataBase.INVALID_ID)
         sendMessage("正在导入: ${documentFile.name}")
         fileInfoList.add(fileInfo to albumItem)

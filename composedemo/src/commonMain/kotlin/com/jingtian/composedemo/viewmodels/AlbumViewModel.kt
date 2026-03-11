@@ -180,6 +180,7 @@ class AlbumViewModel : ViewModel() {
                 fileType = mediaType,
                 intrinsicWidth = width,
                 intrinsicHeight = height,
+                extension = selectedUri.extension
             )
             val fileId = DataBase.dbImpl.getFileInfoDao().insertFileInfo(file)
             val albumItem = AlbumItem(
@@ -263,7 +264,14 @@ class AlbumViewModel : ViewModel() {
             } ?: DataBase.INVALID_ID
 
             val (width, height) = getFileIntrinsicSize(uri, mediaType)
-            val file = FileInfo(id = albumItemRelation.fileInfo?.id, storageId = nextId, fileType = mediaType, intrinsicWidth = width, intrinsicHeight = height)
+            val file = FileInfo(
+                id = albumItemRelation.fileInfo?.id,
+                storageId = nextId,
+                fileType = mediaType,
+                intrinsicWidth = width,
+                intrinsicHeight = height,
+                extension = selectedUri.extension,
+            )
             DataBase.dbImpl.getFileInfoDao().updateFileInfo(file)
             val albumItemId = albumItemRelation.albumItem.itemId ?: DataBase.INVALID_ID
             val fileId = albumItemRelation.fileInfo?.id ?: DataBase.INVALID_ID

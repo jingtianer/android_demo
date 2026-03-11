@@ -19,11 +19,10 @@ class FileInfo(
     var fileType: FileType = FileType.RegularFile,
     var intrinsicWidth: Int = -1,
     var intrinsicHeight: Int = -1,
+    var extension: String? = null,
 ) {
-    @Deprecated("unused field")
-    var extension: String? = null
     fun getFileUri(): MultiplatformFile? {
-        return FileStorageUtils.getStorage(fileType)?.get(storageId)
+        return FileStorageUtils.getStorage(fileType)?.get(storageId, this)
     }
 }
 

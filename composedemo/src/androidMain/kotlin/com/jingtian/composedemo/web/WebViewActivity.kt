@@ -78,6 +78,7 @@ class WebViewActivity: BaseActivity() {
                 BitMapCachePool.loadImage(FileInfo(
                     storageId = storageId,
                     fileType = FileType.HTML,
+                    extension = "html"
                 )) {
                     bitmap.asImageBitmap()
                 }

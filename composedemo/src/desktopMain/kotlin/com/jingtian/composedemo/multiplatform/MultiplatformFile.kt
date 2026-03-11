@@ -5,7 +5,10 @@ import java.io.File
 actual fun getMultiplatformFileFactory() : IMultiplatformFileFactory {
     return object : IMultiplatformFileFactory {
         override fun fromFile(file: File): MultiplatformFile {
-            return MultiplatformFileImpl(file)
+            return MultiplatformFileImpl(file, file.extension)
+        }
+        override fun fromFile(file: File, extension: String?): MultiplatformFile {
+            return MultiplatformFileImpl(file, extension ?: file.extension)
         }
     }
 }

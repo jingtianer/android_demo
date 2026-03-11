@@ -1,18 +1,69 @@
 package com.jingtian.composedemo.multiplatform
 
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.toComposeImageBitmap
 import com.jingtian.composedemo.dao.model.FileType
+import org.bytedeco.javacv.FFmpegFrameGrabber
+import org.bytedeco.javacv.Java2DFrameConverter
+import org.jaudiotagger.audio.AudioFileIO
+import org.jaudiotagger.tag.images.Artwork
+import java.awt.image.BufferedImage
 import java.io.File
 import java.io.FileInputStream
 import java.io.InputStream
+import javax.imageio.ImageIO
 
-class MultiplatformFileImpl(val realFile: File) : MultiplatformFile {
+class MultiplatformFileImpl(val realFile: File, val realExtension: String) : MultiplatformFile {
     companion object {
         val imageExtensions = arrayOf("jpg", "jpeg", "png", "gif", "bmp", "webp", "tiff", "ico", "heic", "heif", "jfif")
         val videoExtensions = arrayOf("mp4", "mov", "mkv", "avi", "webm", "flv", "wmv")
         val audioExtensions = arrayOf("mp3", "wav", "flac", "aac", "m4a", "ogg", "wma", "amr", "mid")
         val htmlExtensions = arrayOf("html", "svg")
     }
+
+    // 视频第一帧提取函数
+    private fun extractVideoFirstFrame(videoFile: File): ImageBitmap? {
+        val grabber = FFmpegFrameGrabber(videoFile)
+
+        return try {
+            grabber.start()
+
+            val converter = Java2DFrameConverter()
+
+            val bufferedImage = converter.convert(grabber.grabImage())
+
+            bufferedImage?.toComposeImageBitmap()
+        } catch (e: Exception) {
+            null
+        } finally {
+            grabber.stop()
+            grabber.release()
+        }
+    }
+
+    // 音频封面提取函数
+    private fun extractAudioCover(audioFile: File): ImageBitmap? {
+        return try {
+            val audioFileObj = AudioFileIO.readAs(audioFile, realExtension)
+            val tag = audioFileObj.tag
+            // 获取第一个封面图片
+            val artworkList = tag?.artworkList ?: return null
+            if (artworkList.isEmpty()) return null
+
+            val artwork: Artwork = artworkList[0]
+            val imageBytes = artwork.binaryData
+            val inputStream = imageBytes.inputStream()
+            val bufferedImage = ImageIO.read(inputStream)
+
+            // 转换为Compose的ImageBitmap
+            bufferedImage?.toComposeImageBitmap()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+
     override val fileName: String?
         get() = realFile.name
     override val isHidden: Boolean
@@ -28,9 +79,9 @@ class MultiplatformFileImpl(val realFile: File) : MultiplatformFile {
     override val inputStream: InputStream
         get() = FileInputStream(realFile)
     override val videoThumbnail: ImageBitmap?
-        get() = null
+        get() = extractVideoFirstFrame(realFile)
     override val audioThumbnail: ImageBitmap?
-        get() = null
+        get() = extractAudioCover(realFile)
     override val imageRatio: Pair<Int, Int>
         get() = 1 to 1
     override val file: File

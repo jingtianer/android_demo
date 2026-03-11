@@ -70,7 +70,7 @@ object FileStorageUtils {
             return "${RANK_IMAGE_STORE_PREFIX}_${id}"
         }
 
-        fun get(id: Long): MultiplatformFile? {
+        fun get(id: Long, fileInfo: FileInfo): MultiplatformFile? {
             if (id == -1L) {
                 return null
             }
@@ -81,7 +81,7 @@ object FileStorageUtils {
             val storeDir = File(getFileStorageRootDir(), rankImageStoreDir)
             val storageFile = File(storeDir, rankImagePrefix(id))
             return if (storageFile.exists()) {
-                getMultiplatformFileFactory().fromFile(storageFile)
+                getMultiplatformFileFactory().fromFile(storageFile, fileInfo.extension)
             } else {
                 null
             }
@@ -112,7 +112,7 @@ object FileStorageUtils {
                         storageFile.delete()
                     }
                     uri.inputStream?.use { input ->
-                        innerStoreImage(id, input, storageFile)
+                        innerStoreImage(id, input, storageFile, uri.extension())
                     }
                 }
             }) {}
@@ -128,7 +128,7 @@ object FileStorageUtils {
                 val storageFile = getStoreFile(id)
                 storageFile.delete()
                 uri.inputStream?.use { input ->
-                    innerStoreImage(id, input, storageFile)
+                    innerStoreImage(id, input, storageFile, uri.extension())
                 }
             }, {})
             return id
@@ -148,14 +148,15 @@ object FileStorageUtils {
         private fun innerStoreImage(
             id: Long,
             input: InputStream,
-            storageFile: File
+            storageFile: File,
+            extension: String,
         ): FileInfo {
             storageFile.outputStream().use { output ->
                 input.copyTo(output)
             }
-            val uri = getMultiplatformFileFactory().fromFile(storageFile)
+            val uri = getMultiplatformFileFactory().fromFile(storageFile, extension)
             uriCache[id] = uri
-            return FileInfo(storageId = id, fileType = fileType)
+            return FileInfo(storageId = id, fileType = fileType, extension = extension)
         }
     }
 
