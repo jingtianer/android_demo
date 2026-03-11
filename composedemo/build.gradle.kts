@@ -1,6 +1,3 @@
-import org.gradle.internal.fingerprint.classpath.impl.ClasspathFingerprintingStrategy.runtimeClasspath
-import org.gradle.internal.impldep.org.junit.experimental.categories.Categories
-import org.gradle.internal.impldep.org.junit.experimental.categories.Categories.CategoryFilter.exclude
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import java.io.FileInputStream
 import java.util.Properties
@@ -12,36 +9,49 @@ plugins {
     id("com.google.devtools.ksp")
     id("org.jetbrains.compose")
     id("com.android.application")
-//    id("org.jetbrains.kotlin.android")
-//    id("com.chaquo.python")
 }
 
+// ======================== 版本常量管理 ========================
 val configFile = project.file("app-config.properties")
 val configProps = Properties()
 if (configFile.exists()) {
-    FileInputStream(configFile).use {
-        configProps.load(it)
-    }
+    FileInputStream(configFile).use { configProps.load(it) }
 } else {
-    throw GradleException("配置文件 config.properties 不存在！")
+    throw GradleException("配置文件 app-config.properties 不存在！")
 }
 
+// 应用配置
 val appName = configProps.getProperty("APP_NAME")
-val version = configProps.getProperty("APP_VERSION")
-val aid = configProps.getProperty("AID")
-val room_version = "2.7.1"
-val composeVersion = "1.7.6"
+val appVersion = configProps.getProperty("APP_VERSION")
+val appAid = configProps.getProperty("AID")
 
+// 第三方库版本
+object Versions {
+    const val kotlinCoroutines = "1.7.3"
+    const val compose = "1.7.6"
+    const val room = "2.7.1"
+    const val androidCore = "1.8.0"
+    const val appCompat = "1.4.1"
+    const val javacv = "1.5.9"
+    const val ffmpegPlatform = "6.0-1.5.9"
+    const val jaudiotagger = "3.0.1"
+    const val junit = "4.13.2"
+    const val androidJunit = "1.3.0"
+    const val espresso = "3.7.0"
+    const val annotations = "24.0.1"
+    const val gson = "2.8.8"
+    const val activityCompose = "1.8.0"
+    const val recyclerView = "1.2.0"
+    const val documentFile = "1.0.0"
+    const val lifecycle = "2.8.1"
+    const val constraintLayoutCompose = "1.0.1"
+}
+
+// ======================== Kotlin 多平台配置 ========================
 kotlin {
     jvmToolchain(17)
 
-    androidTarget {
-//        compilations.all {
-//            kotlinOptions {
-//                jvmTarget = "17"
-//            }
-//        }
-    }
+    androidTarget()
 
     jvm("desktop") {
         compilations.all {
@@ -49,117 +59,159 @@ kotlin {
                 jvmTarget = "17"
             }
         }
-
     }
 
     sourceSets {
+        // 通用依赖 (CommonMain)
         val commonMain by getting {
             dependencies {
+                // Compose 核心
                 implementation(compose.runtime) {
                     exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
+                    exclude(group = "com.intellij", module = "annotations")
                 }
                 implementation(compose.foundation) {
                     exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
+                    exclude(group = "com.intellij", module = "annotations")
                 }
                 implementation(compose.material3) {
                     exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
+                    exclude(group = "com.intellij", module = "annotations")
                 }
                 implementation(compose.ui) {
                     exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
+                    exclude(group = "com.intellij", module = "annotations")
                 }
                 implementation(compose.components.resources) {
                     exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
+                    exclude(group = "com.intellij", module = "annotations")
                 }
-                implementation("com.google.code.gson:gson:2.8.8")
-                implementation("androidx.compose.ui:ui-tooling-preview:$composeVersion") {
+                implementation("androidx.compose.ui:ui-tooling-preview:${Versions.compose}") {
+                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
+                    exclude(group = "com.intellij", module = "annotations")
+                }
+
+                // 协程核心
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:${Versions.kotlinCoroutines}") {
+                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
+                    exclude(group = "com.intellij", module = "annotations")
+                }
+
+                // 数据库 - Room
+                implementation("androidx.room:room-runtime:${Versions.room}") {
+                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
+                    exclude(group = "com.intellij", module = "annotations")
+                }
+                implementation("androidx.room:room-ktx:${Versions.room}") {
+                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
+                    exclude(group = "com.intellij", module = "annotations")
+                }
+
+                // 生命周期
+                implementation("androidx.lifecycle:lifecycle-viewmodel:${Versions.lifecycle}") {
+                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
+                    exclude(group = "com.intellij", module = "annotations")
+                }
+                implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:${Versions.lifecycle}") {
+                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
+                    exclude(group = "com.intellij", module = "annotations")
+                }
+                implementation("org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose:${Versions.lifecycle}") {
+                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
+                    exclude(group = "com.intellij", module = "annotations")
+                }
+
+                // 工具类
+                implementation("com.google.code.gson:gson:${Versions.gson}") {
+                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
+                    exclude(group = "com.intellij", module = "annotations")
+                }
+
+            }
+        }
+
+        // Android 平台依赖 (AndroidMain)
+        val androidMain by getting {
+            kotlin.exclude("composeResources/drawable")
+            dependencies {
+                // Android 核心
+                implementation("androidx.core:core-ktx:${Versions.androidCore}")
+                implementation("androidx.appcompat:appcompat:${Versions.appCompat}")
+                implementation(compose.uiTooling)
+
+                // Android 协程
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:${Versions.kotlinCoroutines}")
+
+                // UI 组件
+                implementation("androidx.activity:activity-compose:${Versions.activityCompose}")
+                implementation("androidx.recyclerview:recyclerview:${Versions.recyclerView}")
+                implementation("androidx.documentfile:documentfile:${Versions.documentFile}")
+            }
+        }
+
+        // Desktop 平台依赖 (DesktopMain)
+        val desktopMain by getting {
+            dependencies {
+                // Compose Desktop 核心
+                implementation(compose.desktop.currentOs) {
                     exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
                 }
-                implementation("androidx.lifecycle:lifecycle-viewmodel:2.8.1") {
+
+                // 注解
+                implementation("org.jetbrains:annotations:${Versions.annotations}") {
                     exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
                 }
-                implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.1") {
-                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
-                }
-                implementation("org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose:2.8.1") {
+
+                // 工具类
+                implementation("com.google.code.gson:gson:${Versions.gson}") {
                     exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
                 }
                 implementation("androidx.sqlite:sqlite-bundled:2.6.2") {
                     exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
                 }
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3") {
-                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
-                }
-                implementation("androidx.room:room-runtime:$room_version") {
-                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
-                    exclude(group = "com.intellij", module = "annotations")
-                }
-                implementation("androidx.room:room-compiler:$room_version") {
-                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
-                    exclude(group = "com.intellij", module = "annotations")
-                }
-                implementation("androidx.room:room-ktx:$room_version") {
-                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
-                    exclude(group = "com.intellij", module = "annotations")
-                }
-            }
-        }
 
-        val androidMain by getting {
-            kotlin.exclude("composeResources/drawable")
-            dependencies {
-                implementation("androidx.core:core-ktx:1.8.0")
-                implementation("androidx.appcompat:appcompat:1.4.1")
-                implementation(compose.uiTooling)
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
-            }
-        }
+                // 数据库 - Room (仅声明运行时，编译器通过 KSP 处理)
+                implementation("androidx.room:room-runtime:${Versions.room}") {
+                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
+                }
+                implementation("androidx.room:room-ktx:${Versions.room}") {
+                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
+                }
 
-        val desktopMain by getting {
-            dependencies {
-                implementation(compose.desktop.currentOs)
+                // Desktop 协程
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-swing:${Versions.kotlinCoroutines}") {
+                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
+                }
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:${Versions.kotlinCoroutines}") {
+                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
+                }
 
-                implementation("org.jetbrains:annotations:24.0.1") {
+                // 多媒体处理
+                implementation("org.bytedeco:javacv:${Versions.javacv}") {
                     exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
                 }
-                implementation("com.google.code.gson:gson:2.8.8") {
+                implementation("org.bytedeco:ffmpeg-platform:${Versions.ffmpegPlatform}") {
                     exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
                 }
-                implementation("androidx.room:room-runtime:$room_version") {
+                implementation("net.jthink:jaudiotagger:${Versions.jaudiotagger}") {
                     exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
                 }
-                implementation("androidx.room:room-compiler:$room_version") {
-                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
-                }
-                implementation("androidx.room:room-ktx:$room_version") {
-                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
-                }
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-swing:1.7.3") {
-                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
-                }
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3") {
-                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
-                }
-                // 处理视频帧
-                implementation("org.bytedeco:javacv:1.5.9")
-                implementation("org.bytedeco:ffmpeg-platform:6.0-1.5.9")
-
-                // 处理音频封面
-                implementation("net.jthink:jaudiotagger:3.0.1")
             }
         }
     }
 }
 
+// ======================== Android 配置 ========================
 android {
-    namespace = aid
+    namespace = appAid
     compileSdk = 34
 
     defaultConfig {
-        applicationId = aid
+        applicationId = appAid
         minSdk = 24
         targetSdk = 34
         versionCode = 1
-        versionName = version
+        versionName = appVersion
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -173,77 +225,71 @@ android {
             resValue("string", "app_name", "${appName}.debug")
         }
         release {
-//            isMinifyEnabled = true
-//            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            resValue("string", "app_name", "$appName")
+            resValue("string", "app_name", appName)
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+
     buildFeatures {
         compose = true
         viewBinding = true
     }
+
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.7.6"
+        kotlinCompilerExtensionVersion = Versions.compose
     }
-//    packagingOptions {
-//        resources {
-//            excludes += "/META-INF/{AL2.0,LGPL2.1}"
-//        }
-//    }
 }
-//执行python 接入文档: https://chaquo.com/chaquopy/doc/15.0/android.html
 
+// ======================== 全局依赖 ========================
 dependencies {
-//    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.10.0")
-    // activity-compose 版本需适配 Compose 和 AGP，1.4.0 是 AGP 7.0.4 兼容的稳定版
-    implementation("androidx.activity:activity-compose:1.8.0")
-    implementation("androidx.recyclerview:recyclerview:1.2.0")
-    implementation("androidx.documentfile:documentfile:1.0.0")
+    // Room 编译器 (KSP)
+    ksp("androidx.room:room-compiler:${Versions.room}")
 
-    implementation("androidx.compose.ui:ui:$composeVersion")
-    implementation("androidx.compose.ui:ui-graphics:$composeVersion")
+    // Room 扩展
+    implementation("androidx.room:room-rxjava2:${Versions.room}")
+    implementation("androidx.room:room-paging:${Versions.room}")
 
-    // 测试依赖（版本适配）
-    testImplementation("junit:junit:4.13.2")
-    androidTestImplementation("androidx.test.ext:junit:1.3.0")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.7.0")
-    androidTestImplementation("androidx.compose.ui:ui-test-junit4:$composeVersion")
-    debugImplementation("androidx.compose.ui:ui-tooling:$composeVersion")
-    debugImplementation("androidx.compose.ui:ui-test-manifest:$composeVersion")
-
-    ksp("androidx.room:room-compiler:$room_version")
-    implementation("androidx.room:room-ktx:$room_version")
-    implementation("androidx.room:room-rxjava2:$room_version")
-    implementation("androidx.room:room-paging:$room_version")
-
-
-    implementation("androidx.lifecycle:lifecycle-viewmodel:2.8.1")
-    implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.8.1")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.1")
+    // 生命周期扩展
+    implementation("androidx.lifecycle:lifecycle-livedata-ktx:${Versions.lifecycle}")
     implementation("androidx.compose.runtime:runtime-livedata:1.0.0")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.1")
 
-    implementation("androidx.constraintlayout:constraintlayout-compose:1.0.1")
+    // Compose 布局
+    implementation("androidx.constraintlayout:constraintlayout-compose:${Versions.constraintLayoutCompose}")
+
+    // Compose UI 核心
+    implementation("androidx.compose.ui:ui:${Versions.compose}")
+    implementation("androidx.compose.ui:ui-graphics:${Versions.compose}")
+
+    // 测试依赖
+    testImplementation("junit:junit:${Versions.junit}")
+    androidTestImplementation("androidx.test.ext:junit:${Versions.androidJunit}")
+    androidTestImplementation("androidx.test.espresso:espresso-core:${Versions.espresso}")
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4:${Versions.compose}")
+    debugImplementation("androidx.compose.ui:ui-tooling:${Versions.compose}")
+    debugImplementation("androidx.compose.ui:ui-test-manifest:${Versions.compose}")
 }
 
+// ======================== Compose Desktop 配置 ========================
 compose {
     resources {
         generateResClass = auto
     }
+
     desktop.application {
         mainClass = "com.jingtian.composedemo.MainKt"
+
         nativeDistributions {
             targetFormats(TargetFormat.Msi, TargetFormat.Exe, TargetFormat.Deb, TargetFormat.Dmg)
             packageName = appName
-            packageVersion = version
+            packageVersion = appVersion
             description = "Compose Desktop Demo App"
             includeAllModules = true
             copyright = "© 2778 jingtian.meow. All rights reserved."
@@ -252,15 +298,13 @@ compose {
             windows {
                 shortcut = true
                 dirChooser = true
-//                iconFile.set(project.file("src/commonMain/composeResources/drawable/icon.ico"))
                 perUserInstall = false
             }
-            linux {
-//                iconFile.set(project.file("src/commonMain/composeResources/drawable/icon.png"))
-            }
+
+            linux {}
+
             macOS {
-                bundleID = aid
-//                iconFile.set(project.file("src/commonMain/composeResources/drawable/icon.icns"))
+                bundleID = appAid
             }
         }
 
