@@ -232,9 +232,9 @@ compose {
             targetFormats(TargetFormat.Msi, TargetFormat.Exe, TargetFormat.Deb, TargetFormat.Dmg)
             packageName = appName
             packageVersion = version
-
+            description = "Compose Desktop Demo App"
             includeAllModules = true
-
+            copyright = "© 2778 jingtian.meow. All rights reserved."
             vendor = "jingtian.meow"
 
             windows {
