@@ -10,5 +10,5 @@ actual fun screenWidth(): Int {
 
 @Composable
 actual fun screenHeight(): Int {
-    return LocalDesktopConst.current.screenWidthDp.value.toInt()
+    return LocalDesktopConst.current.screenHeightDp.value.toInt()
 }
