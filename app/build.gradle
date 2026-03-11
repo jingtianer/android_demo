@@ -1,8 +1,8 @@
 plugins {
-    id "com.android.application"
-    id "org.jetbrains.kotlin.android"
-    id "com.jingtian.asmplugin.AsmPlugin" version "1.0.0"
-    id 'com.google.devtools.ksp'
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.asm.plugin)
+    alias(libs.plugins.ksp)
 }
 
 android {
@@ -55,32 +55,30 @@ AsmPlugin {
 }
 
 dependencies {
-    implementation "androidx.core:core-ktx:1.8.0"
-    implementation "androidx.appcompat:appcompat:1.4.1"
-    implementation "com.google.android.material:material:1.6.0"
+    implementation libs.androidx.core.ktx
+    implementation libs.androidx.appcompat
+    implementation libs.material
 //    implementation "junit:junit:4.13.2"
 //    implementation "androidx.test.ext:junit:1.1.5"
 //    implementation "androidx.test.espresso:espresso-core:3.3.0"
 
-    implementation "io.reactivex.rxjava2:rxandroid:2.1.0"
-    implementation "io.reactivex.rxjava2:rxkotlin:2.2.0"
+    implementation libs.rxandroid
+    implementation libs.rxkotlin
 
-    implementation 'com.github.ChickenHook:RestrictionBypass:2.2'
+    implementation libs.restriction.bypass
 
-    implementation "androidx.recyclerview:recyclerview:1.2.0"
-    implementation "androidx.activity:activity:1.7.1"
+    implementation libs.androidx.recyclerview
+    implementation libs.androidx.activity
 
-    implementation 'com.google.code.gson:gson:2.8.8'
+    implementation libs.gson
 
 //    implementation "com.jingtian.asmplugin:AsmPlugin:1.0.0"
 
 //    implementation libs.wrangler.core
 
-    def room_version = "2.7.1"
-
-    implementation("androidx.room:room-runtime:$room_version")
-    ksp "androidx.room:room-compiler:$room_version"
-    implementation("androidx.room:room-ktx:$room_version")
-    implementation("androidx.room:room-rxjava2:$room_version")
-    implementation("androidx.room:room-paging:$room_version")
+    implementation libs.androidx.room.runtime
+    ksp libs.androidx.room.compiler
+    implementation libs.androidx.room.ktx
+    implementation libs.androidx.room.rxjava2
+    implementation libs.androidx.room.paging
 }

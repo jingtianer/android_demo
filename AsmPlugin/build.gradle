@@ -1,7 +1,7 @@
 plugins {
     id 'java-gradle-plugin'
     id 'maven-publish'
-    id 'org.jetbrains.kotlin.jvm'
+    alias(libs.plugins.kotlin.jvm)
 }
 
 dependencies {
@@ -10,12 +10,12 @@ dependencies {
     //groovy sdk
     implementation localGroovy()
     //引入asm框架内容
-    implementation 'org.ow2.asm:asm:9.7'
-    implementation 'org.ow2.asm:asm-commons:9.7'
-    implementation 'org.ow2.asm:asm-analysis:9.7'
-    implementation 'org.ow2.asm:asm-util:9.7'
-    implementation 'org.ow2.asm:asm-tree:9.7'
-    implementation 'com.android.tools.build:gradle:4.1.2', {
+    implementation libs.asm
+    implementation libs.asm.commons
+    implementation libs.asm.analysis
+    implementation libs.asm.util
+    implementation libs.asm.tree
+    implementation libs.gradle.tools, {
         exclude group: 'org.ow2.asm'
     }
 }
