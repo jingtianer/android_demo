@@ -25,14 +25,14 @@ actual fun dbImplCreator() : RoomDatabase.Builder<DataBase>  {
         }
         Unit
     }
-    val oldDb = app.getDatabasePath("app_db")
-    if (oldDb.exists()) {
-        oldDb.parentFile?.let { privateDir->
-            val targetDir = dbDir
-            copyDir(privateDir, targetDir)
-            privateDir.deleteRecursively()
-        }
-    }
+//    val oldDb = app.getDatabasePath("app_db")
+//    if (oldDb.exists()) {
+//        oldDb.parentFile?.let { privateDir->
+//            val targetDir = dbDir
+//            copyDir(privateDir, targetDir)
+//            privateDir.deleteRecursively()
+//        }
+//    }
     val openHelperFactory = SupportSQLiteOpenHelper.Factory { config ->
         FrameworkSQLiteOpenHelperFactory().create(
             SupportSQLiteOpenHelper.Configuration.builder(config.context)

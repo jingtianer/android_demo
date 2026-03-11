@@ -56,24 +56,24 @@ class MultiplatformSharedPreferencesImpl<T>(name: String, val async: Boolean = t
                 spDir.delete()
                 spDir.mkdirs()
             }
-            arrayOf(
-                "user_info",
-                "user_config",
-                "file-store_id"
-            ).forEach {
-                migrate(it)
-            }
-            app.filesDir.parentFile?.let {
-                File(it, "shared_prefs").deleteRecursively()
-            }
+//            arrayOf(
+//                "user_info",
+//                "user_config",
+//                "file-store_id"
+//            ).forEach {
+//                migrate(it)
+//            }
+//            app.filesDir.parentFile?.let {
+//                File(it, "shared_prefs").deleteRecursively()
+//            }
         }
 
-        fun migrate(name: String) {
-            val sp = MultiplatformSharedPreferencesImpl<Any?>(name, async = false)
-            app.getSharedPreferences(name, Context.MODE_PRIVATE).all?.entries?.forEach { (k, v)->
-                sp.setValue(k, v)
-            }
-        }
+//        fun migrate(name: String) {
+//            val sp = MultiplatformSharedPreferencesImpl<Any?>(name, async = false)
+//            app.getSharedPreferences(name, Context.MODE_PRIVATE).all?.entries?.forEach { (k, v)->
+//                sp.setValue(k, v)
+//            }
+//        }
     }
 }
 

@@ -51,7 +51,7 @@ class MainActivity : BaseActivity() {
             Manifest.permission.READ_EXTERNAL_STORAGE,
             Manifest.permission.WRITE_EXTERNAL_STORAGE,
         )
-        migrateData()
+//        migrateData()
     }
 
     private fun checkAndRequestMediaPermissions(vararg requiredPermissions: String) {
@@ -68,36 +68,39 @@ class MainActivity : BaseActivity() {
             )
         }
     }
-    private val viewModel: AndroidMigrateViewModel by viewModels()
-    private fun migrateData() {
-        CoroutineUtils.runIOTask({
-            val targetDir = getFileStorageRootDir()
-            val privateDir = app.filesDir
-            if (targetDir == privateDir) {
-                return@runIOTask
-            }
-            copyDir(privateDir, targetDir)
-            privateDir.deleteRecursively()
-        }, onFailure = { e->
-            e.printStackTrace()
-            viewModel.isMigrationFinished.intValue = 1
-        }) {
-            viewModel.isMigrationFinished.intValue = 1
-        }
-    }
+//    private val viewModel: AndroidMigrateViewModel by viewModels()
+//    private fun migrateData() {
+//        CoroutineUtils.runIOTask({
+//            val targetDir = getFileStorageRootDir()
+//            val privateDir = app.filesDir
+//            if (targetDir == privateDir) {
+//                return@runIOTask
+//            }
+//            copyDir(privateDir, targetDir)
+//            privateDir.deleteRecursively()
+//        }, onFailure = { e->
+//            e.printStackTrace()
+//            viewModel.isMigrationFinished.intValue = 1
+//        }) {
+//            viewModel.isMigrationFinished.intValue = 1
+//        }
+//    }
 
+
+//    @Composable
+//    override fun Content() {
+//        val isMigrateFinish by remember { viewModel.isMigrationFinished }
+//        if (isMigrateFinish > 0) {
+//            Main()
+//        } else {
+//            LaunchedEffect(Unit) {
+//                Toast.makeText(this@MainActivity, "正在迁移", Toast.LENGTH_SHORT)
+//            }
+//        }
+//    }
 
     @Composable
-    override fun Content() {
-        val isMigrateFinish by remember { viewModel.isMigrationFinished }
-        if (isMigrateFinish > 0) {
-            Main()
-        } else {
-            LaunchedEffect(Unit) {
-                Toast.makeText(this@MainActivity, "正在迁移", Toast.LENGTH_SHORT)
-            }
-        }
-    }
+    override fun Content() = Main()
 
     override fun shouldFitSystemBars(): Boolean = false
 }
