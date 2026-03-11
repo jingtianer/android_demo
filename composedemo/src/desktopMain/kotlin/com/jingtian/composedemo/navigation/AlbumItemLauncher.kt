@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.FileType
+import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
 import com.jingtian.composedemo.multiplatform.MultiplatformFile
 import com.jingtian.composedemo.multiplatform.MultiplatformFileImpl
 import com.jingtian.composedemo.utils.globalWorkDir
@@ -31,35 +32,41 @@ class AlbumItemLauncher : IAlbumItemLauncher {
             linkDir.mkdirs()
         }
 
-        fun File.tmpLinkFileAs(extension: String): Path {
-            val linkedFile = Files.createLink(Path(linkDir.path, this.name + "_link_${Random.nextULong()}.${extension}"), Path(this.parentFile.path, this.name))
+        fun FileInfo.tmpLinkFile(fileName: String, defaultExtension: String = ""): Path? {
+            val originalFile = this.getFileUri()?.file ?: return null
+            val linkedFile = Files.createLink(Path(linkDir.path, fileName + "_tmplink_${Random.nextULong()}.${extension ?: defaultExtension}"), Path(originalFile.parentFile.path, originalFile.name))
             linkedFile.toFile().deleteOnExit()
             return linkedFile
         }
 
-        fun browse(file: File, extension: String) {
+        fun FileInfo.browse(fileName: String) {
             runCatching {
-                val linkedFile = file.tmpLinkFileAs(extension)
+                val linkedFile = this.tmpLinkFile(fileName, defaultExtension = "html") ?: return@runCatching
                 Desktop.getDesktop().browse(linkedFile.toUri())
             }
         }
     }
-    private fun openUrl(file: File, extension: String?) {
-        browse(file, extension ?: "html")
+    private fun openUrl(fileName: String, file: FileInfo) {
+        file.browse(fileName)
     }
 
-    private fun openFile(file: File, extension: String?) {
+    private fun openFile(fileName: String, file: FileInfo) {
         runCatching {
-            Desktop.getDesktop().open(file.tmpLinkFileAs(extension ?: file.extension).toFile())
+            Desktop.getDesktop().open(file.tmpLinkFile(fileName)?.toFile() ?: return)
         }
     }
 
-    override fun launch(fileInfo: FileInfo) {
-        val file = fileInfo.getFileUri()?.file ?: return
+    override fun launch(fileName: String, fileInfo: FileInfo) {
         when(fileInfo.fileType) {
-            FileType.HTML -> openUrl(file, fileInfo.extension)
-            else -> openFile(file, fileInfo.extension)
+            FileType.HTML -> openUrl(fileName, fileInfo)
+            else -> openFile(fileName, fileInfo)
         }
+    }
+
+    override fun launch(albumItemRelation: AlbumItemRelation) {
+        val fileInfo = albumItemRelation.fileInfo
+        val name = albumItemRelation.albumItem.itemName
+        launch(name, fileInfo)
     }
 }
 

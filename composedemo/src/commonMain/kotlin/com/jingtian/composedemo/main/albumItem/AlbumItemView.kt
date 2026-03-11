@@ -259,7 +259,7 @@ fun AlbumItemViewStateHolder.AlbumItemView() {
                         }
                         itemSelectStateChangeState.value += 1
                     } else {
-                        albumItemLauncher.launch(albumItemRelation.fileInfo)
+                        albumItemLauncher.launch(albumItemRelation)
                         scope.launch(Dispatchers.IO) {
                             fetchImage(scope)
                         }
