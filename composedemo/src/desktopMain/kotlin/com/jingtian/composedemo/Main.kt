@@ -7,6 +7,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.ApplicationScope
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowPosition
@@ -17,6 +19,7 @@ import com.jingtian.composedemo.main.Main
 import com.jingtian.composedemo.ui.theme.DemoAppTheme
 import com.jingtian.composedemo.ui.theme.LocalDesktopConst
 import com.jingtian.composedemo.utils.AppTheme
+import com.jingtian.composedemo.utils.DesktopStorage
 import com.jingtian.composedemo.viewmodels.AppThemeViewModel
 
 fun main(args: Array<String>) {
@@ -26,8 +29,20 @@ fun main(args: Array<String>) {
 }
 @Composable
 fun ApplicationScope.MainWindow() {
-    val windowState = rememberWindowState()
-    windowState.position = WindowPosition(Alignment.Center)
+    val windowState = rememberWindowState(
+        placement = DesktopStorage.desktopConfig.windowPlacement,
+        size = DpSize(DesktopStorage.desktopConfig.screenWidthDp.dp, DesktopStorage.desktopConfig.screenHeightDp.dp),
+        position = WindowPosition(Alignment.Center)
+    )
+    LaunchedEffect(windowState.size, windowState.placement) {
+        DesktopStorage.updateDesktopConfig {
+            windowPlacement = windowState.placement
+            screenWidthDp = windowState.size.width.value
+            screenHeightDp = windowState.size.height.value
+            this
+        }
+    }
+
     Window(onCloseRequest = {
         this.exitApplication()
     },
