@@ -25,15 +25,17 @@ import java.nio.file.Paths
 
 class MultiplatformFileImpl(val uri: Uri) : MultiplatformFile {
     private fun getFileNameFromUri(uri: Uri): String? {
-        // 方案1：直接通过ContentResolver查询DISPLAY_NAME
-        val projection = arrayOf(MediaStore.MediaColumns.DISPLAY_NAME)
-        val cursor: Cursor? = app.contentResolver.query(uri, projection, null, null, null)
+        runCatching {
+            // 方案1：直接通过ContentResolver查询DISPLAY_NAME
+            val projection = arrayOf(MediaStore.MediaColumns.DISPLAY_NAME)
+            val cursor: Cursor? = app.contentResolver.query(uri, projection, null, null, null)
 
-        cursor?.use {
-            if (it.moveToFirst()) {
-                val nameIndex = it.getColumnIndex(MediaStore.MediaColumns.DISPLAY_NAME)
-                if (nameIndex != -1) {
-                    return it.getString(nameIndex)
+            cursor?.use {
+                if (it.moveToFirst()) {
+                    val nameIndex = it.getColumnIndex(MediaStore.MediaColumns.DISPLAY_NAME)
+                    if (nameIndex != -1) {
+                        return it.getString(nameIndex)
+                    }
                 }
             }
         }
