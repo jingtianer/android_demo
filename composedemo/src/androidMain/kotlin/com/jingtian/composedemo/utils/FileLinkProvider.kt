@@ -13,7 +13,7 @@ import kotlin.random.nextUInt
 import kotlin.random.nextULong
 
 object FileLinkProvider {
-//    private val fileLinkDir = File(getFileStorageRootDir(), "tmplink")
+//    private val fileLinkDir = File(getFileCacheStorageRootDir(), "tmplink")
     fun init() {
 //        if (fileLinkDir.exists()) {
 //            if (fileLinkDir.isDirectory) {
@@ -32,15 +32,10 @@ object FileLinkProvider {
         return null
 //        val originalFile = (fileInfo.getFileUri() as? MultiplatformFileImpl)?.uri ?: return null
 //        val tmpLinkFile = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-//            try {
-//                Files.createLink(
-//                    Path(fileLinkDir.path, "${fileName}_tmplink_${Random.nextULong()}.${fileInfo.extension ?: defaultExtension}"),
-//                    Path(originalFile.path ?: return null)
-//                ).toFile()
-//                Files.createTempFile()
-//            } catch (e : Exception) {
-//                throw  e
-//            }
+//            Files.createLink(
+//                Path(fileLinkDir.path, "${fileName}_tmplink_${Random.nextULong()}.${fileInfo.extension ?: defaultExtension}"),
+//                Path(originalFile.path ?: return null)
+//            ).toFile()
 //        } else {
 //            return originalFile
 //        }

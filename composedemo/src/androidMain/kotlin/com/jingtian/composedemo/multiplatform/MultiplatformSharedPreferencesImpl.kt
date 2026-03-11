@@ -1,71 +1,86 @@
 package com.jingtian.composedemo.multiplatform
 
 import android.content.Context
-import android.content.SharedPreferences
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import com.jingtian.composedemo.base.app
+import com.jingtian.composedemo.utils.CoroutineUtils
+import com.jingtian.composedemo.utils.copyDir
+import com.jingtian.composedemo.utils.getFileStorageRootDir
+import kotlinx.coroutines.Job
+import java.io.File
+import java.io.FileReader
+import java.io.FileWriter
 
-open class MultiplatformSharedPreferencesImpl<T>(
-    private val sp: SharedPreferences,
-    private val getValue: SharedPreferences.(String, T) -> T,
-    private val putValue: SharedPreferences.Editor.(String, T) -> SharedPreferences.Editor,
-) : IMultiplatformSharedPreferences<T> {
+class MultiplatformSharedPreferencesImpl<T>(name: String, val async: Boolean = true) : IMultiplatformSharedPreferences<T> {
+    private val outfile = File(spDir, name)
+    init {
+        if (!outfile.exists()) {
+            outfile.createNewFile()
+        } else if (outfile.isDirectory) {
+            outfile.deleteRecursively()
+            outfile.createNewFile()
+        }
+    }
+    private val value: MutableMap<String, T?> = FileReader(outfile).use {
+        Gson().fromJson(it, TypeToken.get(MutableMap::class.java).type) ?: mutableMapOf()
+    }
+
+    private var job: Job? = null
     override fun getValue(key: String, defaultValue: T): T {
-        return sp.getValue(key, defaultValue)
+        return value[key] ?: defaultValue
     }
 
     override fun setValue(key: String, t: T) {
-        sp.edit().putValue(key, t).commit()
+        value[key] = t
+        if (async) {
+            job?.cancel()
+            job = CoroutineUtils.runIOTask({
+                FileWriter(outfile).use {
+                    it.write(Gson().toJson(value))
+                }
+            })
+        } else {
+            FileWriter(outfile).use {
+                it.write(Gson().toJson(value))
+            }
+        }
+    }
+
+    companion object {
+        val spDir = File(getFileStorageRootDir(), "properties")
+        init {
+            if (!spDir.exists()) {
+                spDir.mkdirs()
+            } else if (!spDir.isDirectory) {
+                spDir.delete()
+                spDir.mkdirs()
+            }
+            arrayOf(
+                "user_info",
+                "user_config",
+                "file-store_id"
+            ).forEach {
+                migrate(it)
+            }
+            app.filesDir.parentFile?.let {
+                File(it, "shared_prefs").deleteRecursively()
+            }
+        }
+
+        fun migrate(name: String) {
+            val sp = MultiplatformSharedPreferencesImpl<Any?>(name, async = false)
+            app.getSharedPreferences(name, Context.MODE_PRIVATE).all?.entries?.forEach { (k, v)->
+                sp.setValue(k, v)
+            }
+        }
     }
 }
 
-class BooleanSharedPreferencesImpl(
-    private val sp: SharedPreferences,
-) : MultiplatformSharedPreferencesImpl<Boolean>(
-    sp,
-    SharedPreferences::getBoolean,
-    SharedPreferences.Editor::putBoolean,
-)
-
-class LongSharedPreferencesImpl(
-    private val sp: SharedPreferences,
-) : MultiplatformSharedPreferencesImpl<Long>(
-    sp,
-    SharedPreferences::getLong,
-    SharedPreferences.Editor::putLong,
-)
-
-class StringSharedPreferencesImpl(
-    private val sp: SharedPreferences,
-) : MultiplatformSharedPreferencesImpl<String>(
-    sp,
-    { key, def ->
-        sp.getString(key, def) ?: def
-    },
-    SharedPreferences.Editor::putString,
-)
-
-class NullableStringSharedPreferencesImpl(
-    private val sp: SharedPreferences,
-) : MultiplatformSharedPreferencesImpl<String?>(
-    sp,
-    SharedPreferences::getString,
-    SharedPreferences.Editor::putString,
-)
-
 actual fun getJsonStorage(storageName: String): IMultiplatformSharedPreferences<String> {
-    return StringSharedPreferencesImpl(
-        app.getSharedPreferences(
-            storageName,
-            Context.MODE_PRIVATE
-        )
-    )
+    return MultiplatformSharedPreferencesImpl(storageName)
 }
 
 actual fun getLongStorage(storageName: String): IMultiplatformSharedPreferences<Long> {
-    return LongSharedPreferencesImpl(
-        app.getSharedPreferences(
-            storageName,
-            Context.MODE_PRIVATE
-        )
-    )
+    return MultiplatformSharedPreferencesImpl(storageName)
 }
