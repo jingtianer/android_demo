@@ -70,14 +70,14 @@ kotlin {
                 implementation(compose.components.resources) {
                     exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
                 }
-
+                implementation("com.google.code.gson:gson:2.8.8")
                 implementation("androidx.compose.ui:ui-tooling-preview:$composeVersion") {
                     exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
                 }
-                api("androidx.lifecycle:lifecycle-viewmodel:2.8.1") {
+                implementation("androidx.lifecycle:lifecycle-viewmodel:2.8.1") {
                     exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
                 }
-                api("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.1") {
+                implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.1") {
                     exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
                 }
                 implementation("org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose:2.8.1") {
@@ -88,6 +88,18 @@ kotlin {
                 }
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3") {
                     exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
+                }
+                implementation("androidx.room:room-runtime:$room_version") {
+                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
+                    exclude(group = "com.intellij", module = "annotations")
+                }
+                implementation("androidx.room:room-compiler:$room_version") {
+                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
+                    exclude(group = "com.intellij", module = "annotations")
+                }
+                implementation("androidx.room:room-ktx:$room_version") {
+                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
+                    exclude(group = "com.intellij", module = "annotations")
                 }
             }
         }
@@ -207,16 +219,10 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling:$composeVersion")
     debugImplementation("androidx.compose.ui:ui-test-manifest:$composeVersion")
 
-    val room_version = "2.7.1"
-    implementation("androidx.room:room-runtime:$room_version")
-    add("kspAndroid", "androidx.room:room-compiler:$room_version")
-    add("kspDesktop", "androidx.room:room-compiler:$room_version")
     ksp("androidx.room:room-compiler:$room_version")
     implementation("androidx.room:room-ktx:$room_version")
     implementation("androidx.room:room-rxjava2:$room_version")
     implementation("androidx.room:room-paging:$room_version")
-
-    implementation("com.google.code.gson:gson:2.8.8")
 
 
     implementation("androidx.lifecycle:lifecycle-viewmodel:2.8.1")
