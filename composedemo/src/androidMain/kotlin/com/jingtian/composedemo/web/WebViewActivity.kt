@@ -36,11 +36,13 @@ class WebViewActivity: BaseActivity() {
     private lateinit var uri: Uri
     private var storageId: Long = -1
     private var webView: CommonWebView? = null
+    private var uriExtension: String? = null
 
     companion object {
         private const val TAG = "WebViewActivity"
         const val KEY_WEB_URI = "web_uri"
         const val KEY_STORAGE_ID = "web_storage_id"
+        const val KEY_WEB_URI_EXTENSION = "web_uri_extension"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -55,6 +57,9 @@ class WebViewActivity: BaseActivity() {
         } else {
             intent.getParcelableExtra(KEY_WEB_URI)
         }
+
+        this.uriExtension = intent.getStringExtra(KEY_WEB_URI_EXTENSION)
+
         storageId = intent.getLongExtra(KEY_STORAGE_ID, -1)
         if (uri == null) {
             finish()
@@ -78,7 +83,7 @@ class WebViewActivity: BaseActivity() {
                 BitMapCachePool.loadImage(FileInfo(
                     storageId = storageId,
                     fileType = FileType.HTML,
-                    extension = "html"
+                    extension = uriExtension ?: "html"
                 )) {
                     bitmap.asImageBitmap()
                 }

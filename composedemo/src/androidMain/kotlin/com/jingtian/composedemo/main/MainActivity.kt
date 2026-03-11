@@ -104,6 +104,7 @@ fun webIntent(context: Context, fileInfo: FileInfo) : Intent {
     return Intent(context, WebViewActivity::class.java).apply {
         putExtra(WebViewActivity.KEY_WEB_URI, (fileInfo.getFileUri() as? MultiplatformFileImpl)?.uri)
         putExtra(WebViewActivity.KEY_STORAGE_ID, fileInfo.storageId)
+        putExtra(WebViewActivity.KEY_WEB_URI_EXTENSION, fileInfo.extension ?: "html")
     }
 }
 

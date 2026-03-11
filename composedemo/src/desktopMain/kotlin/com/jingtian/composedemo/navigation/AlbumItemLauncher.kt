@@ -6,10 +6,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.FileType
+import com.jingtian.composedemo.multiplatform.MultiplatformFile
+import com.jingtian.composedemo.multiplatform.MultiplatformFileImpl
 import com.jingtian.composedemo.utils.globalWorkDir
 import java.awt.Desktop
 import java.io.File
 import java.nio.file.Files
+import java.nio.file.Path
 import kotlin.io.path.Path
 import kotlin.random.Random
 import kotlin.random.nextULong
@@ -28,29 +31,34 @@ class AlbumItemLauncher : IAlbumItemLauncher {
             linkDir.mkdirs()
         }
 
-        fun browse(file: File) {
+        fun File.tmpLinkFileAs(extension: String): Path {
+            val linkedFile = Files.createLink(Path(linkDir.path, this.name + "_link_${Random.nextULong()}.${extension}"), Path(this.parentFile.path, this.name))
+            linkedFile.toFile().deleteOnExit()
+            return linkedFile
+        }
+
+        fun browse(file: File, extension: String) {
             runCatching {
-                val linkedFile = Files.createLink(Path(linkDir.path, file.name + "_link_${Random.nextULong()}.html"), Path(file.parentFile.path, file.name))
-                linkedFile.toFile().deleteOnExit()
+                val linkedFile = file.tmpLinkFileAs(extension)
                 Desktop.getDesktop().browse(linkedFile.toUri())
             }
         }
     }
-    private fun openUrl(file: File) {
-        browse(file)
+    private fun openUrl(file: File, extension: String?) {
+        browse(file, extension ?: "html")
     }
 
-    private fun openFile(file: File) {
+    private fun openFile(file: File, extension: String?) {
         runCatching {
-            Desktop.getDesktop().open(file)
+            Desktop.getDesktop().open(file.tmpLinkFileAs(extension ?: file.extension).toFile())
         }
     }
 
     override fun launch(fileInfo: FileInfo) {
         val file = fileInfo.getFileUri()?.file ?: return
         when(fileInfo.fileType) {
-            FileType.HTML -> openUrl(file)
-            else -> openFile(file)
+            FileType.HTML -> openUrl(file, fileInfo.extension)
+            else -> openFile(file, fileInfo.extension)
         }
     }
 }
