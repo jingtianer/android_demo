@@ -54,12 +54,10 @@ object FileStorageUtils {
 
     class FileStorage(val fileType: FileType) {
 
-        private var id by SharedPreferenceUtils.SynchronizedProperty(
-            SharedPreferenceUtils.StorageLong(
-                getLongStorage("file-store_id"),
-                "file_id_${fileType.value}",
-                0L
-            )
+        private var id by SharedPreferenceUtils.StorageLong(
+            getLongStorage("file-store_id"),
+            "file_id_${fileType.value}",
+            0L
         )
 
         private val rankImageStoreDir: String = RANK_IMAGE_STORE_DIR + fileType.value

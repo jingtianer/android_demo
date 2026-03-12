@@ -7,18 +7,16 @@ import com.jingtian.composedemo.multiplatform.getJsonStorage
 import com.jingtian.composedemo.multiplatform.getLongStorage
 
 object UserStorage {
-    var userInstance by SharedPreferenceUtils.SynchronizedProperty(
-        SharedPreferenceUtils.StorageJson(
-            getJsonStorage("user_info"),
-            "user",
-            User(),
-            TypeToken.get(User::class.java),
-            gson = GsonBuilder()
-                .create(),
-        )
+    var userInstance: User by SharedPreferenceUtils.StorageJson(
+        getJsonStorage("user_info"),
+        "user",
+        User(),
+        TypeToken.get(User::class.java),
+        gson = GsonBuilder()
+            .create(),
     )
 
-    private var _userAppThemeConfig by SharedPreferenceUtils.StorageLong(
+    private var _userAppThemeConfig: Long by SharedPreferenceUtils.StorageLong(
         getLongStorage("user_config"),
         "theme_config",
         AppTheme.AUTO.value,

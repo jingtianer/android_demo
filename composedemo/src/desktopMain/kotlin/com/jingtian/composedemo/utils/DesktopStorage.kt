@@ -10,19 +10,20 @@ import com.jingtian.composedemo.utils.model.converter.WindowPlacementConverter
 object DesktopStorage {
 
 
-    var desktopConfig by SharedPreferenceUtils.SynchronizedProperty(
-        SharedPreferenceUtils.StorageJson(
-            getJsonStorage("desktop_config"),
-            "desktop_config",
-            DesktopConfig(),
-            TypeToken.get(DesktopConfig::class.java),
-            gson = GsonBuilder()
-                .registerTypeAdapter(TypeToken.get(WindowPlacement::class.java).type, WindowPlacementConverter())
-                .create(),
-        )
+    var desktopConfig by SharedPreferenceUtils.StorageJson(
+        getJsonStorage("desktop_config"),
+        "desktop_config",
+        DesktopConfig(),
+        TypeToken.get(DesktopConfig::class.java),
+        gson = GsonBuilder()
+            .registerTypeAdapter(
+                TypeToken.get(WindowPlacement::class.java).type,
+                WindowPlacementConverter()
+            )
+            .create(),
     )
 
-    fun updateDesktopConfig(updater: DesktopConfig.()->DesktopConfig) {
+    fun updateDesktopConfig(updater: DesktopConfig.() -> DesktopConfig) {
         desktopConfig = desktopConfig.updater()
     }
 }

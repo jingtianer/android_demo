@@ -38,22 +38,6 @@ class SharedPreferenceUtils {
         sp, key, defaultValue,
     )
 
-    class SynchronizedProperty<T, V>(
-        private val property: ReadWriteProperty<T, V>
-    ) : ReadWriteProperty<T, V> {
-
-        @Synchronized
-        override fun getValue(thisRef: T, property: KProperty<*>): V {
-            return this.property.getValue(thisRef, property)
-        }
-
-        @Synchronized
-        override fun setValue(thisRef: T, property: KProperty<*>, value: V) {
-            this.property.setValue(thisRef, property, value)
-        }
-
-    }
-
     class StorageNullableString<T>(
         sp: IMultiplatformSharedPreferences<String?>,
         key: String,
