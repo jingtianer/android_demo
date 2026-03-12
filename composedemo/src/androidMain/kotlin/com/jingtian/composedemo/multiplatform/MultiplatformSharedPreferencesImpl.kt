@@ -11,8 +11,11 @@ import kotlinx.coroutines.Job
 import java.io.File
 import java.io.FileReader
 import java.io.FileWriter
+import java.util.concurrent.ConcurrentHashMap
 
-class MultiplatformSharedPreferencesImpl<T>(name: String, val async: Boolean = true) : IMultiplatformSharedPreferences<T> {
+private val spInstance = ConcurrentHashMap<String, MultiplatformSharedPreferences>()
+
+class MultiplatformSharedPreferences(name: String, val async: Boolean = true) {
     private val outfile = File(spDir, name)
     init {
         if (!outfile.exists()) {
@@ -22,33 +25,43 @@ class MultiplatformSharedPreferencesImpl<T>(name: String, val async: Boolean = t
             outfile.createNewFile()
         }
     }
-    private val value: MutableMap<String, T?> = FileReader(outfile).use {
-        Gson().fromJson(it, TypeToken.get(MutableMap::class.java).type) ?: mutableMapOf()
-    }
+    val gson = Gson()
+    private val value: MutableMap<String, Any?> = ConcurrentHashMap(
+        FileReader(outfile).use {
+            gson.fromJson(it, TypeToken.get(MutableMap::class.java).type) ?: mutableMapOf()
+        }
+    )
 
     private var job: Job? = null
-    override fun getValue(key: String, defaultValue: T): T {
-        return value[key] ?: defaultValue
-    }
 
-    override fun setValue(key: String, t: T) {
-        value[key] = t
-        if (async) {
-            job?.cancel()
-            job = CoroutineUtils.runIOTask({
-                FileWriter(outfile).use {
-                    it.write(Gson().toJson(value))
+    fun <T> editor(): IMultiplatformSharedPreferences<T> {
+        return object : IMultiplatformSharedPreferences<T> {
+            override fun getValue(key: String, defaultValue: T): T {
+                return (value[key] as? T) ?: defaultValue
+            }
+
+            override fun setValue(key: String, t: T) {
+                value[key] = t
+                if (async) {
+                    job?.cancel()
+                    job = CoroutineUtils.runIOTask({
+                        FileWriter(outfile).use {
+                            gson.toJson(value, it)
+                            it.flush()
+                        }
+                    })
+                } else {
+                    FileWriter(outfile).use {
+                        gson.toJson(value, it)
+                        it.flush()
+                    }
                 }
-            })
-        } else {
-            FileWriter(outfile).use {
-                it.write(Gson().toJson(value))
             }
         }
     }
 
     companion object {
-        val spDir = File(getFileStorageRootDir(), "properties")
+        private val spDir = File(getFileStorageRootDir(), "properties")
         init {
             if (!spDir.exists()) {
                 spDir.mkdirs()
@@ -78,9 +91,13 @@ class MultiplatformSharedPreferencesImpl<T>(name: String, val async: Boolean = t
 }
 
 actual fun getJsonStorage(storageName: String): IMultiplatformSharedPreferences<String> {
-    return MultiplatformSharedPreferencesImpl(storageName)
+    return spInstance.computeIfAbsent(storageName) { old->
+        MultiplatformSharedPreferences(storageName)
+    }.editor()
 }
 
 actual fun getLongStorage(storageName: String): IMultiplatformSharedPreferences<Long> {
-    return MultiplatformSharedPreferencesImpl(storageName)
+    return spInstance.computeIfAbsent(storageName) { old->
+        MultiplatformSharedPreferences(storageName)
+    }.editor()
 }
