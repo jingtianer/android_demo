@@ -24,6 +24,7 @@ if (configFile.exists()) {
 val appName = configProps.getProperty("APP_NAME")
 val appVersion = configProps.getProperty("APP_VERSION")
 val appAid = configProps.getProperty("AID")
+val targetPlatform = configProps.getProperty("TARGET_PLATFORM")
 
 // ======================== Kotlin 多平台配置 ========================
 kotlin {
@@ -39,69 +40,64 @@ kotlin {
         }
     }
 
+    if (targetPlatform == "desktop") {
+        configurations {
+            all {
+                exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
+            }
+        }
+    }
+
     sourceSets {
         // 通用依赖 (CommonMain)
         val commonMain by getting {
             dependencies {
                 // Compose 核心
                 implementation(compose.runtime) {
-                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
                     exclude(group = "com.intellij", module = "annotations")
                 }
                 implementation(compose.foundation) {
-                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
                     exclude(group = "com.intellij", module = "annotations")
                 }
                 implementation(compose.material3) {
-                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
                     exclude(group = "com.intellij", module = "annotations")
                 }
                 implementation(compose.ui) {
-                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
                     exclude(group = "com.intellij", module = "annotations")
                 }
                 implementation(compose.components.resources) {
-                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
                     exclude(group = "com.intellij", module = "annotations")
                 }
                 implementation(libs.androidx.compose.ui.tooling.preview.get().toString()) {
-                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
                     exclude(group = "com.intellij", module = "annotations")
                 }
 
                 // 协程核心
                 implementation(libs.kotlinx.coroutines.core.get().toString()) {
-                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
                     exclude(group = "com.intellij", module = "annotations")
                 }
 
                 // 数据库 - Room
                 implementation(libs.androidx.room.runtime.get().toString()) {
-                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
                     exclude(group = "com.intellij", module = "annotations")
                 }
                 implementation(libs.androidx.room.ktx.get().toString()) {
-                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
                     exclude(group = "com.intellij", module = "annotations")
                 }
 
                 // 生命周期
                 implementation(libs.androidx.lifecycle.viewmodel.core.get().toString()) {
-                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
                     exclude(group = "com.intellij", module = "annotations")
                 }
                 implementation(libs.androidx.lifecycle.viewmodel.ktx.get().toString()) {
-                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
                     exclude(group = "com.intellij", module = "annotations")
                 }
                 implementation(libs.androidx.lifecycle.viewmodel.compose.get().toString()) {
-                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
                     exclude(group = "com.intellij", module = "annotations")
                 }
 
                 // 工具类
                 implementation(libs.gson.get().toString()) {
-                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
                     exclude(group = "com.intellij", module = "annotations")
                 }
 
@@ -131,49 +127,27 @@ kotlin {
         val desktopMain by getting {
             dependencies {
                 // Compose Desktop 核心
-                implementation(compose.desktop.currentOs) {
-                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
-                }
+                implementation(compose.desktop.currentOs)
 
                 // 注解
-                implementation(libs.annotations.get().toString()) {
-                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
-                }
+                implementation(libs.annotations.get().toString())
 
                 // 工具类
-                implementation(libs.gson.get().toString()) {
-                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
-                }
-                implementation(libs.androidx.sqlite.bundled.get().toString()) {
-                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
-                }
+                implementation(libs.gson.get().toString())
+                implementation(libs.androidx.sqlite.bundled.get().toString())
 
                 // 数据库 - Room (仅声明运行时，编译器通过 KSP 处理)
-                implementation(libs.androidx.room.runtime.get().toString()) {
-                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
-                }
-                implementation(libs.androidx.room.ktx.get().toString()) {
-                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
-                }
+                implementation(libs.androidx.room.runtime.get().toString())
+                implementation(libs.androidx.room.ktx.get().toString())
 
                 // Desktop 协程
-                implementation(libs.kotlinx.coroutines.swing.get().toString()) {
-                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
-                }
-                implementation(libs.kotlinx.coroutines.core.get().toString()) {
-                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
-                }
+                implementation(libs.kotlinx.coroutines.swing.get().toString())
+                implementation(libs.kotlinx.coroutines.core.get().toString())
 
                 // 多媒体处理
-                implementation(libs.javacv.get().toString()) {
-                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
-                }
-                implementation(libs.ffmpeg.platform.get().toString()) {
-                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
-                }
-                implementation(libs.jaudiotagger.get().toString()) {
-                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
-                }
+                implementation(libs.javacv.get().toString())
+                implementation(libs.ffmpeg.platform.get().toString())
+                implementation(libs.jaudiotagger.get().toString())
             }
         }
     }
