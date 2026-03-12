@@ -8,9 +8,13 @@ import com.jingtian.composedemo.multiplatform.MultiplatformFile
 import com.jingtian.composedemo.multiplatform.MultiplatformFileImpl
 import java.io.File
 import javax.swing.JFileChooser
+import javax.swing.UIManager
 
 class DocumentTreePicker(val title: String, private val onResult: (MultiplatformFile?) -> Unit) : IDocumentTreePicker {
     override fun launch(mimes: MultiplatformFile?) {
+        runCatching {
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName())
+        }
         val chooser = JFileChooser().apply {
             dialogTitle = title
             fileSelectionMode = JFileChooser.DIRECTORIES_ONLY
