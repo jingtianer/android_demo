@@ -151,6 +151,7 @@ object FileStorageUtils {
         ): FileInfo {
             storageFile.outputStream().use { output ->
                 input.copyTo(output)
+                output.flush()
             }
             val uri = getMultiplatformFileFactory().fromFile(storageFile, extension)
             uriCache[id] = uri
