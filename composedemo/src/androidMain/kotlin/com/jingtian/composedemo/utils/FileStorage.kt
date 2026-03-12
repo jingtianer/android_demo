@@ -84,7 +84,6 @@ fun File.ensureFile():File {
 fun copyDir(from : File, to: File) {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
         traverseDirNio(from.toPath()) { dir, file->
-            Log.d("copyDir", "onCreate: ${file}, ${dir}, ${file.fileName}")
             file.inputStream().use { `is`->
                 File(to, "${dir}/${file.fileName}").ensureFile().outputStream().use { os->
                     `is`.copyTo(os)
@@ -94,7 +93,6 @@ fun copyDir(from : File, to: File) {
         }
     } else {
         traverseDirFiles(from) { dir, file->
-            Log.d("copyDir", "onCreate: ${file}, ${dir}, ${file.name}")
             file.inputStream().use { `is`->
                 File(to, "${dir}/${file.name}").ensureFile().outputStream().use { os->
                     `is`.copyTo(os)

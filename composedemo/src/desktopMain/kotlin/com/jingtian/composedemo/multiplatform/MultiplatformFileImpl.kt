@@ -7,9 +7,11 @@ import org.bytedeco.javacv.FFmpegFrameGrabber
 import org.bytedeco.javacv.Java2DFrameConverter
 import org.jaudiotagger.audio.AudioFileIO
 import org.jaudiotagger.tag.images.Artwork
+import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.FileInputStream
 import java.io.InputStream
+import java.nio.charset.StandardCharsets
 import javax.imageio.ImageIO
 import javax.imageio.ImageReader
 
@@ -114,6 +116,8 @@ class MultiplatformFileImpl(val realFile: File, val realExtension: String) : Mul
         get() = extractAudioCover(realFile)
     override val imageRatio: Pair<Int, Int>
         get() = getImageSize(realFile) ?: (1 to 1)
+    override val fileStoreInputStream: InputStream
+        get() = ByteArrayInputStream(realFile.absolutePath.toByteArray(StandardCharsets.UTF_8))
     override val file: File
         get() = realFile
     override val extension: String = realFile.extension

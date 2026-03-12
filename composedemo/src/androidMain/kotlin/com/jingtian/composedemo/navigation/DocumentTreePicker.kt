@@ -1,5 +1,6 @@
 package com.jingtian.composedemo.navigation
 
+import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -8,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import com.jingtian.composedemo.base.app
 import com.jingtian.composedemo.multiplatform.MultiplatformFile
 import com.jingtian.composedemo.multiplatform.MultiplatformFileImpl
 
@@ -24,7 +26,10 @@ actual fun rememberDocumentTreePicker(onResult: (MultiplatformFile?) -> Unit): M
     val multipleImagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree(),
         onResult = { uri ->
-            onResult(uri?.let { MultiplatformFileImpl(uri) })
+            uri ?: return@rememberLauncherForActivityResult
+            val takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+            app.contentResolver.takePersistableUriPermission(uri, takeFlags)
+            onResult(MultiplatformFileImpl(uri))
         }
     )
     return remember {

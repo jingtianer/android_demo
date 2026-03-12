@@ -16,6 +16,8 @@ interface MultiplatformFile {
 
     val inputStream: InputStream?
 
+    val fileStoreInputStream: InputStream?
+
     val videoThumbnail: ImageBitmap?
 
     val audioThumbnail: ImageBitmap?

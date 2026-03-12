@@ -199,6 +199,9 @@ class MultiplatformFileImpl(val uri: Uri) : MultiplatformFile {
     override val inputStream: InputStream?
         get() = app.contentResolver.openInputStream(uri)
 
+    override val fileStoreInputStream: InputStream?
+        get() = app.contentResolver.openInputStream(uri)
+
     override val videoThumbnail: ImageBitmap?
         get() = getVideoThumbnail(uri)?.asImageBitmap()
 

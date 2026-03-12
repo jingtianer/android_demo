@@ -38,10 +38,8 @@ data class RankItemImage(
                 // 第二步：计算缩放比例（避免图片过大导致 OOM）
                 calculateScaleFactor(options.outWidth, options.outHeight, maxWidth, maxHeight)
             } ?: -1
-            Log.d("TAG", "loadImage: $id, $scaleFactor, $image")
             return@runIOTask scaleFactor to Utils.DataHolder.ImagePool.put(id, scaleFactor) {
                 app.contentResolver.openInputStream(image)?.use { `is`->
-                    Log.d("TAG", "loadImage failed: $id, $scaleFactor, $image")
                     // 第三步：按缩放比例解码图片
                     options.apply {
                         inJustDecodeBounds = false // 实际加载像素

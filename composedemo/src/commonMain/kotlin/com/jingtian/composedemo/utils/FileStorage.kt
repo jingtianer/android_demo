@@ -109,10 +109,12 @@ object FileStorageUtils {
                     if (storageFile.exists()) {
                         storageFile.delete()
                     }
-                    uri.inputStream?.use { input ->
+                    uri.fileStoreInputStream?.use { input ->
                         innerStoreImage(id, input, storageFile, uri.extension())
                     }
                 }
+            }, { e->
+                throw e
             }) {}
             return id
         }
@@ -125,10 +127,10 @@ object FileStorageUtils {
             CoroutineUtils.runIOTask({
                 val storageFile = getStoreFile(id)
                 storageFile.delete()
-                uri.inputStream?.use { input ->
+                uri.fileStoreInputStream?.use { input ->
                     innerStoreImage(id, input, storageFile, uri.extension())
                 }
-            }, {})
+            })
             return id
         }
 
