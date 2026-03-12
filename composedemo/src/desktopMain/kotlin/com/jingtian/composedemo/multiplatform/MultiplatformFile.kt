@@ -8,7 +8,7 @@ actual fun getMultiplatformFileFactory() : IMultiplatformFileFactory {
     return object : IMultiplatformFileFactory {
         override fun fromFile(file: File): MultiplatformFile {
             val realFile = FileInputStream(file).use { fis->
-                File(fis.readBytes().decodeToString())
+                File(fis.readBytes().toString(StandardCharsets.UTF_8))
             }
             return MultiplatformFileImpl(realFile, realFile.extension)
         }
