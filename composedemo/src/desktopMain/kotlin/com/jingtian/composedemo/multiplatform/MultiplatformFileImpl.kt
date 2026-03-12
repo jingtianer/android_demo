@@ -7,11 +7,12 @@ import org.bytedeco.javacv.FFmpegFrameGrabber
 import org.bytedeco.javacv.Java2DFrameConverter
 import org.jaudiotagger.audio.AudioFileIO
 import org.jaudiotagger.tag.images.Artwork
-import java.awt.image.BufferedImage
 import java.io.File
 import java.io.FileInputStream
 import java.io.InputStream
 import javax.imageio.ImageIO
+import javax.imageio.ImageReader
+
 
 class MultiplatformFileImpl(val realFile: File, val realExtension: String) : MultiplatformFile {
     companion object {
@@ -63,6 +64,35 @@ class MultiplatformFileImpl(val realFile: File, val realExtension: String) : Mul
         }
     }
 
+    private fun getImageSize(imageFile: File): Pair<Int, Int>? {
+        if (!imageFile.exists() || !imageFile.isFile) {
+            return null
+        }
+
+        ImageIO.createImageInputStream(imageFile).use { iis ->
+            // 获取该图片格式对应的ImageReader
+            val readers: Iterator<ImageReader> = ImageIO.getImageReaders(iis)
+            if (!readers.hasNext()) {
+                return null
+            }
+
+            val reader: ImageReader = readers.next()
+            try {
+                reader.setInput(iis, true) // true = 只读取元数据，不读取像素
+
+                // 读取宽高（索引0表示第一张图片，单张图片文件默认索引0）
+                val width: Int = reader.getWidth(0)
+                val height: Int = reader.getHeight(0)
+
+                return width to height
+            } catch (e: Exception) {
+                return null
+            } finally {
+                reader.dispose() // 释放资源
+            }
+        }
+    }
+
 
     override val fileName: String?
         get() = realFile.name
@@ -83,7 +113,7 @@ class MultiplatformFileImpl(val realFile: File, val realExtension: String) : Mul
     override val audioThumbnail: ImageBitmap?
         get() = extractAudioCover(realFile)
     override val imageRatio: Pair<Int, Int>
-        get() = 1 to 1
+        get() = getImageSize(realFile) ?: (1 to 1)
     override val file: File
         get() = realFile
     override val extension: String = realFile.extension
