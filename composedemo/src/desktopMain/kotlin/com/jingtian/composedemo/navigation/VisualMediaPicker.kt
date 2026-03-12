@@ -8,6 +8,7 @@ import com.jingtian.composedemo.multiplatform.MultiplatformFile
 import com.jingtian.composedemo.multiplatform.MultiplatformFileImpl
 import java.awt.FileDialog
 import java.io.File
+import java.io.FilenameFilter
 
 class ImagePicker(
     private val extensions: Array<String> = MultiplatformFileImpl.imageExtensions,
@@ -17,7 +18,10 @@ class ImagePicker(
         val window = getComposeWindow() ?: return
         val dialog = FileDialog(window, "导入图片", FileDialog.LOAD).apply {
             if (extensions.isNotEmpty()) {
-                file = extensions.joinToString(",") { "*.$it" }
+                filenameFilter = FilenameFilter { dir, name ->
+                    val file = File(dir, name)
+                    file.isDirectory || file.extension in extensions
+                }
             }
             isVisible = true
         }

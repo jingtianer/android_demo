@@ -32,17 +32,16 @@ class AlbumItemLauncher : IAlbumItemLauncher {
             linkDir.mkdirs()
         }
 
-        fun FileInfo.tmpLinkFile(fileName: String, defaultExtension: String = ""): Path? {
-            val originalFile = this.getFileUri()?.file ?: return null
-            val linkedFile = Files.createLink(Path(linkDir.path, fileName + "_tmplink_${Random.nextULong()}.${extension ?: defaultExtension}"), Path(originalFile.parentFile.path, originalFile.name))
-            linkedFile.toFile().deleteOnExit()
-            return linkedFile
-        }
+//        fun FileInfo.tmpLinkFile(fileName: String, defaultExtension: String = ""): Path? {
+//            val originalFile = this.getFileUri()?.file ?: return null
+//            val linkedFile = Files.createLink(Path(linkDir.path, fileName + "_tmplink_${Random.nextULong()}.${extension ?: defaultExtension}"), Path(originalFile.parentFile.path, originalFile.name))
+//            linkedFile.toFile().deleteOnExit()
+//            return originalFile.toPath()
+//        }
 
         fun FileInfo.browse(fileName: String) {
             runCatching {
-                val linkedFile = this.tmpLinkFile(fileName, defaultExtension = "html") ?: return@runCatching
-                Desktop.getDesktop().browse(linkedFile.toUri())
+                Desktop.getDesktop().browse(this.getFileUri()?.file?.toURI() ?: return)
             }
         }
     }
@@ -52,7 +51,7 @@ class AlbumItemLauncher : IAlbumItemLauncher {
 
     private fun openFile(fileName: String, file: FileInfo) {
         runCatching {
-            Desktop.getDesktop().open(file.tmpLinkFile(fileName)?.toFile() ?: return)
+            Desktop.getDesktop().open(file.getFileUri()?.file ?: return)
         }
     }
 
