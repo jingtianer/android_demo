@@ -45,7 +45,7 @@ class GalleryStateHolder(val album: IndexedValue<Album>, val albumList: List<Alb
     val currentSelectedItem = mutableStateMapOf<Long, AlbumItemRelation>()
     val itemSelectStateChangeState = mutableLongStateOf(0L)
     var itemSelectStateChange by itemSelectStateChangeState
-    val currentFunctions = mutableStateMapOf<GalleryFunctions, GalleryFunctions>()
+    val currentFunctions = mutableStateListOf<GalleryFunctions>()
     val enterEditModeState = mutableStateOf(false)
     var enterEditMode by enterEditModeState
     var editAlbumDialogState by mutableStateOf(false)

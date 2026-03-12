@@ -381,8 +381,7 @@ fun GalleryStateHolder.Gallery() {
                             .padding(vertical = 6.dp)
                             .align(Alignment.Center)
                     ) {
-                        for (item in currentFunctions) {
-                            val func = item.key
+                        for (func in currentFunctions) {
                             when (func) {
                                 ADD -> {
                                     GalleryFunctionView(func) {
@@ -441,13 +440,13 @@ fun GalleryStateHolder.Gallery() {
             val selectedCount = currentSelectedItem.size
             when(selectedCount) {
                 0 -> {
-                    currentFunctions.putAll(GalleryFunctions.albumFunctions)
+                    currentFunctions.addAll(GalleryFunctions.albumFunctions)
                 }
                 1 -> {
-                    currentFunctions.putAll(GalleryFunctions.itemFunctions)
+                    currentFunctions.addAll(GalleryFunctions.itemFunctions)
                 }
                 else -> {
-                    currentFunctions.putAll(GalleryFunctions.batchFunctions)
+                    currentFunctions.addAll(GalleryFunctions.batchFunctions)
                 }
             }
         } else {

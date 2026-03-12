@@ -18,8 +18,8 @@ enum class GalleryFunctions(val functionName: String, val iconProvider: @Composa
         // 0 -> 添加, 导入, 修改相册名称
         // 1 -> 编辑, 删除, 移动
         // >1 -> 删除, 移动
-        val albumFunctions = listOf(RENAME, ADD, IMPORT).map { it to it }
-        val itemFunctions = listOf(EDIT, DELETE, MOVE).map { it to it }
-        val batchFunctions = listOf(DELETE, MOVE).map { it to it }
+        val albumFunctions = listOf(RENAME, ADD, IMPORT)
+        val itemFunctions = listOf(EDIT, DELETE, MOVE)
+        val batchFunctions = listOf(DELETE, MOVE)
     }
 }
