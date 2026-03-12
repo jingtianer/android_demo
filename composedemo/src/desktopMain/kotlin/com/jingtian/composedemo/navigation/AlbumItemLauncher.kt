@@ -7,16 +7,11 @@ import androidx.compose.runtime.remember
 import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.FileType
 import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
-import com.jingtian.composedemo.multiplatform.MultiplatformFile
-import com.jingtian.composedemo.multiplatform.MultiplatformFileImpl
 import com.jingtian.composedemo.utils.globalWorkDir
 import java.awt.Desktop
 import java.io.File
 import java.nio.file.Files
-import java.nio.file.Path
-import kotlin.io.path.Path
-import kotlin.random.Random
-import kotlin.random.nextULong
+import kotlin.io.path.exists
 
 class AlbumItemLauncher : IAlbumItemLauncher {
     companion object {
@@ -46,12 +41,32 @@ class AlbumItemLauncher : IAlbumItemLauncher {
         }
     }
     private fun openUrl(fileName: String, file: FileInfo) {
-        file.browse(fileName)
+        runCatching {
+            val f = file.getFileUri()?.file ?: return
+            var path = f.toPath()
+            var depth = 0
+            while (path.exists() && Files.isSymbolicLink(path) && depth <= 6) {
+                path = Files.readSymbolicLink(path)
+                depth++
+            }
+            Desktop.getDesktop().browse(path.toUri())
+        }
     }
 
     private fun openFile(fileName: String, file: FileInfo) {
         runCatching {
-            Desktop.getDesktop().open(file.getFileUri()?.file ?: return)
+            if (file.fileType == FileType.RegularFile) {
+                Desktop.getDesktop().browseFileDirectory(file.getFileUri()?.file ?: return@runCatching)
+            } else {
+                val f = file.getFileUri()?.file ?: return
+                var path = f.toPath()
+                var depth = 0
+                while (path.exists() && Files.isSymbolicLink(path) && depth <= 6) {
+                    path = Files.readSymbolicLink(path)
+                    depth++
+                }
+                Desktop.getDesktop().open(path.toFile())
+            }
         }
     }
 
