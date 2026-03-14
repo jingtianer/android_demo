@@ -1,3 +1,4 @@
+import com.codingfeline.buildkonfig.compiler.FieldSpec
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import java.io.FileInputStream
 import java.util.Properties
@@ -9,6 +10,7 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.jetbrains.compose)
     alias(libs.plugins.android.application)
+    alias(libs.plugins.buildkonfig.gradle.plugin)
 }
 
 // ======================== 版本常量管理 ========================
@@ -25,6 +27,8 @@ val appName = configProps.getProperty("APP_NAME")
 val appVersion = configProps.getProperty("APP_VERSION")
 val appAid = configProps.getProperty("AID")
 val targetPlatform = configProps.getProperty("TARGET_PLATFORM")
+val isRemote = configProps.getProperty("IS_REMOTE").toBoolean()
+
 
 // ======================== Kotlin 多平台配置 ========================
 kotlin {
@@ -153,6 +157,20 @@ kotlin {
     }
 }
 
+buildkonfig {
+    packageName = appAid
+
+    defaultConfigs {
+        buildConfigField(FieldSpec.Type.BOOLEAN, "isRemote", "$isRemote")
+    }
+    targetConfigs {
+        // names in create should be the same as target names you specified
+        create("android") {
+            buildConfigField(FieldSpec.Type.BOOLEAN, "isRemote", "$isRemote")
+        }
+    }
+}
+
 // ======================== Android 配置 ========================
 android {
     namespace = appAid
@@ -172,18 +190,26 @@ android {
     }
 
     buildTypes {
+        val suffix = StringBuilder()
+        if (isRemote) {
+            suffix.append(".remote")
+        }
         debug {
-            applicationIdSuffix = ".debug"
-            resValue("string", "app_name", "${appName}.debug")
+            suffix.append(".debug")
+            applicationIdSuffix = suffix.toString()
+            resValue("string", "app_name", "${appName}$suffix")
         }
         release {
+            if (suffix.isNotBlank()) {
+                applicationIdSuffix = suffix.toString()
+            }
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            resValue("string", "app_name", appName)
+            resValue("string", "app_name", "${appName}$suffix")
         }
     }
 

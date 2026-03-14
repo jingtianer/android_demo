@@ -96,3 +96,4 @@ ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 jetbrains-compose = { id = "org.jetbrains.compose", version.ref = "compose-mpp" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 asm-plugin = { id = "com.jingtian.asmplugin.AsmPlugin", version.ref = "asm-plugin" }
+buildkonfig-gradle-plugin = { id = "com.codingfeline.buildkonfig", version = "0.15.0" }
