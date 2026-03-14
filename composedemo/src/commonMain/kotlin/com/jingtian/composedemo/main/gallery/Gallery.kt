@@ -416,6 +416,9 @@ fun GalleryStateHolder.Gallery() {
                                 else -> {}
                             }
                         }
+                        for (func in platformFunctions) {
+                            PlatformGalleryFunctionView(this@Gallery, func) {  }
+                        }
                     }
                     Row(Modifier.align(Alignment.CenterEnd)) {
                         GalleryFunctionView(EXIT) {
@@ -429,6 +432,7 @@ fun GalleryStateHolder.Gallery() {
 
     LaunchedEffect(currentSelectedItem, enterEditMode, itemSelectStateChange) {
         currentFunctions.clear()
+        platformFunctions.clear()
         if (currentSelectedItem.size == filteredItemList.size) {
             selectNone = true
             selectAll = false
@@ -441,6 +445,7 @@ fun GalleryStateHolder.Gallery() {
             when(selectedCount) {
                 0 -> {
                     currentFunctions.addAll(GalleryFunctions.albumFunctions)
+                    platformFunctions.addAll(platformExtraAlbumFunctions())
                 }
                 1 -> {
                     currentFunctions.addAll(GalleryFunctions.itemFunctions)

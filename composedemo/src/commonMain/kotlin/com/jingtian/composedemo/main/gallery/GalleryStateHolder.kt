@@ -30,6 +30,11 @@ class GalleryDpConstants(
     val scrollBarHeightDp: Float,
     val scrollAreaWidthDp : Float
 )
+
+interface IPlatformExtra
+
+expect fun getPlatformExtra(): IPlatformExtra
+
 class GalleryStateHolder(val album: IndexedValue<Album>, val albumList: List<Album>, val drawerState: DrawerState, val viewModel: AlbumViewModel, val galleryDpConstants: GalleryDpConstants) {
     var addImageDialogState by mutableStateOf(false)
     var itemList by mutableStateOf(emptyList<AlbumItemRelation>())
@@ -46,6 +51,7 @@ class GalleryStateHolder(val album: IndexedValue<Album>, val albumList: List<Alb
     val itemSelectStateChangeState = mutableLongStateOf(0L)
     var itemSelectStateChange by itemSelectStateChangeState
     val currentFunctions = mutableStateListOf<GalleryFunctions>()
+    val platformFunctions = mutableStateListOf<GalleryFunctions>()
     val enterEditModeState = mutableStateOf(false)
     var enterEditMode by enterEditModeState
     var editAlbumDialogState by mutableStateOf(false)
@@ -65,6 +71,8 @@ class GalleryStateHolder(val album: IndexedValue<Album>, val albumList: List<Alb
     var showEditDialog by mutableStateOf(false)
     var showConfirmDeleteDialog by mutableStateOf(false)
     var showMoveToDialog by mutableStateOf(false)
+
+    var platformExtraModel by mutableStateOf(getPlatformExtra())
 
     val albumViewMap = mutableStateMapOf<Long, SoftReference<AlbumItemViewStateHolder>>()
 

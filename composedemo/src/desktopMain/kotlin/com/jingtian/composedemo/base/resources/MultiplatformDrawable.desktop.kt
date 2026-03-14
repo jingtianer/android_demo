@@ -91,3 +91,6 @@ actual fun getDocIcon(): Painter = painterResource(Res.drawable.doc_icon)
 
 @Composable
 actual fun getEditIcon(): Painter = painterResource(Res.drawable.edit)
+
+@Composable
+actual fun getCifsIcon(): Painter = painterResource(Res.drawable.CIFS)
