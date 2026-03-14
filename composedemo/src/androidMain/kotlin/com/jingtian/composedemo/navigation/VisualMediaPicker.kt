@@ -30,8 +30,7 @@ actual fun rememberImagePicker(onResult: (MultiplatformFile?)->Unit): MutableSta
         contract = ActivityResultContracts.PickVisualMedia(),
         onResult = { uri->
             uri ?: return@rememberLauncherForActivityResult
-            val takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION
-            app.contentResolver.takePersistableUriPermission(uri, takeFlags)
+            app.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
             onResult(MultiplatformFileImpl(uri))
         }
     )

@@ -13,8 +13,10 @@ import android.provider.MediaStore
 import android.webkit.MimeTypeMap
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import com.jingtian.composedemo.BuildKonfig
 import com.jingtian.composedemo.base.app
 import com.jingtian.composedemo.dao.model.FileType
+import com.jingtian.composedemo.utils.SerializationUtils.toInputStream
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.IOException
@@ -92,10 +94,8 @@ class MultiplatformFileImpl(val uri: Uri) : MultiplatformFile {
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 try {
-                    app.contentResolver.openInputStream(this)?.use { `is` ->
-                        val path: Path = Paths.get(this.path)
-                        return Files.isHidden(path)
-                    }
+                    val path: Path = Paths.get(this.path)
+                    return Files.isHidden(path)
                 } catch (e: FileNotFoundException) {
                 } catch (e: IOException) {
                 }
@@ -200,7 +200,13 @@ class MultiplatformFileImpl(val uri: Uri) : MultiplatformFile {
         get() = app.contentResolver.openInputStream(uri)
 
     override val fileStoreInputStream: InputStream?
-        get() = app.contentResolver.openInputStream(uri)
+        get() {
+            return if (BuildKonfig.isRemote) {
+                uri.toInputStream()
+            } else {
+                return app.contentResolver.openInputStream(uri)
+            }
+        }
 
     override val videoThumbnail: ImageBitmap?
         get() = getVideoThumbnail(uri)?.asImageBitmap()
@@ -220,6 +226,10 @@ class MultiplatformFileImpl(val uri: Uri) : MultiplatformFile {
             val index = (fileName.lastIndexOf(".") + 1).takeIf { it >= 0 && it < fileName.length } ?: return@let ""
             fileName.substring(index)
         } ?: ""
+    }
+
+    override fun toString(): String {
+        return "fileName=$fileName, isHidden=$isHidden, mediaType=$mediaType, extension=$extension, file=$file, uri=$uri"
     }
 }
 
