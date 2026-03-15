@@ -22,6 +22,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -227,7 +228,9 @@ fun ImportRemoteDialogStateHolder.SftpServerEditDialog(sftpServer: SftpServerSta
             item {
                 OutlinedTextField(sftpServer.serverName, {
                     sftpServer.serverName = it
-                }, modifier = Modifier.fillMaxWidth().wrapContentHeight(), maxLines = 1, label = {
+                }, modifier = Modifier
+                    .fillMaxWidth()
+                    .wrapContentHeight(), maxLines = 1, label = {
                     AppThemeText("serverName")
                 })
             }
@@ -235,7 +238,9 @@ fun ImportRemoteDialogStateHolder.SftpServerEditDialog(sftpServer: SftpServerSta
             item {
                 OutlinedTextField(sftpServer.ip, {
                     sftpServer.ip = it
-                }, modifier = Modifier.fillMaxWidth().wrapContentHeight(), maxLines = 1, label = {
+                }, modifier = Modifier
+                    .fillMaxWidth()
+                    .wrapContentHeight(), maxLines = 1, label = {
                     AppThemeText("host")
                 })
             }
@@ -243,7 +248,9 @@ fun ImportRemoteDialogStateHolder.SftpServerEditDialog(sftpServer: SftpServerSta
             item {
                 OutlinedTextField(sftpServer.port.toString(), {
                     sftpServer.port = it.toIntOrNull() ?: 22
-                }, modifier = Modifier.fillMaxWidth().wrapContentHeight(), maxLines = 1, label = {
+                }, modifier = Modifier
+                    .fillMaxWidth()
+                    .wrapContentHeight(), maxLines = 1, label = {
                     AppThemeText("port")
                 })
             }
@@ -251,7 +258,9 @@ fun ImportRemoteDialogStateHolder.SftpServerEditDialog(sftpServer: SftpServerSta
             item {
                 OutlinedTextField(sftpServer.path, {
                     sftpServer.path = it
-                }, modifier = Modifier.fillMaxWidth().wrapContentHeight(), maxLines = 1, label = {
+                }, modifier = Modifier
+                    .fillMaxWidth()
+                    .wrapContentHeight(), maxLines = 1, label = {
                     AppThemeText("path")
                 })
             }
@@ -259,7 +268,9 @@ fun ImportRemoteDialogStateHolder.SftpServerEditDialog(sftpServer: SftpServerSta
             item {
                 OutlinedTextField(sftpServer.userName, {
                     sftpServer.userName = it
-                }, modifier = Modifier.fillMaxWidth().wrapContentHeight(), maxLines = 1, label = {
+                }, modifier = Modifier
+                    .fillMaxWidth()
+                    .wrapContentHeight(), maxLines = 1, label = {
                     AppThemeText("userName")
                 })
             }
@@ -267,7 +278,9 @@ fun ImportRemoteDialogStateHolder.SftpServerEditDialog(sftpServer: SftpServerSta
             item {
                 OutlinedTextField(sftpServer.password, {
                     sftpServer.password = it
-                }, modifier = Modifier.fillMaxWidth().wrapContentHeight(), maxLines = 1, label = {
+                }, modifier = Modifier
+                    .fillMaxWidth()
+                    .wrapContentHeight(), maxLines = 1, label = {
                     AppThemeText("password")
                 })
             }
@@ -288,7 +301,8 @@ fun ImportRemoteDialogStateHolder.SftpServerEditDialog(sftpServer: SftpServerSta
 fun ColumnScope.SftpServerDescView(sftpServer: SftpServerStateHolder, onClick: ()->Unit, onLongPress: ()->Unit) {
     Column(
         modifier = Modifier
-            .fillMaxSize(0.9f)
+            .fillMaxWidth()
+            .wrapContentHeight()
             .pointerInput(sftpServer) {
                 detectTapGestures(
                     onTap = {
@@ -300,10 +314,16 @@ fun ColumnScope.SftpServerDescView(sftpServer: SftpServerStateHolder, onClick: (
                 )
             }
     ) {
-        OutlinedTextField(sftpServer.serverName, {}, modifier = Modifier.fillMaxWidth().wrapContentHeight(), enabled = false, readOnly = true, maxLines = 1, label = {
-            AppThemeText(sftpServer.serverId)
+        OutlinedTextField(sftpServer.serverName, {}, modifier = Modifier
+            .fillMaxWidth(0.9f)
+            .align(Alignment.CenterHorizontally)
+            .wrapContentHeight(), enabled = false, readOnly = true, maxLines = 1, label = {
+            AppThemeText("${sftpServer.ip}:${sftpServer.port}")
         })
-        OutlinedTextField(sftpServer.userName, {}, modifier = Modifier.fillMaxWidth().wrapContentHeight(), enabled = false, readOnly = true, maxLines = 1, label = {
+        OutlinedTextField(sftpServer.userName, {}, modifier = Modifier
+            .fillMaxWidth(0.9f)
+            .align(Alignment.CenterHorizontally)
+            .wrapContentHeight(), enabled = false, readOnly = true, maxLines = 1, label = {
             AppThemeText(sftpServer.path)
         })
     }
