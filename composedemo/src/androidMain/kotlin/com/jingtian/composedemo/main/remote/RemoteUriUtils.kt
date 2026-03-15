@@ -29,27 +29,30 @@ class RemoteSftpFileImpl(
             RemoteFileStore(ServerType.SFTP)
         }
     }
-    val path = originUri.path ?: "/"
-
     private val realUri = fileStore.get(originUri).toUri()
 
     private val contentFile by lazy {
+        val originFile = realUri.toFile()
         runBlocking {
-            val originFile = realUri.toFile()
             withContext(Dispatchers.IO) {
                 originFile.ensureFileExist { file->
-                    val path = originUri.path ?: "/"
-                    server.connect({ _, msg ->
-                        Log.d("jingtian", "读取文件 $path $msg")
-                    })?.use { channel ->
-                        val bos = FileOutputStream(file)
-                        channel.get(path, bos)
-                        Log.d("jingtian", "读取文件 $path 完成")
+                    val fail = runCatching {
+                        val path = originUri.path ?: "/"
+                        server.connect({ _, msg ->
+                            Log.e("jingtian", "读取文件 $path $msg")
+                        })?.use { channel ->
+                            val bos = FileOutputStream(file)
+                            channel.get(path, bos)
+                            Log.e("jingtian", "读取文件 $path 完成")
+                        } ?: throw RuntimeException("连接失败")
+                    }.exceptionOrNull()
+                    if (fail != null) {
+                        Log.e("jingtian", "读取文件 ${originUri.lastPathSegment} 失败 $fail")
                     }
                 }
             }
-            originFile
         }
+        originFile
     }
 
     private fun getOrignExtension(): String {
@@ -108,9 +111,9 @@ object RemoteUriUtils {
             .path(root)
             .appendPath(entry.filename)
             .build()
-        Log.d("jingtian", "fromSftpEntry: $uri")
+        Log.e("jingtian", "fromSftpEntry: $uri")
         return RemoteSftpFileImpl(uri, server).apply {
-            Log.d("jingtian", "fromSftpEntry: $this")
+            Log.e("jingtian", "fromSftpEntry: $this")
         }
     }
 

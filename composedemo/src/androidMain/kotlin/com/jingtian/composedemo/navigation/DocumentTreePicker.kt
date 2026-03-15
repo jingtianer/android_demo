@@ -9,20 +9,30 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import com.jingtian.composedemo.base.app
 import com.jingtian.composedemo.multiplatform.MultiplatformFile
 import com.jingtian.composedemo.multiplatform.MultiplatformFileImpl
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 
-class DocumentTreePicker(val launcher: ManagedActivityResultLauncher<Uri?, Uri?>) :
+class DocumentTreePicker(val launcher: ManagedActivityResultLauncher<Uri?, Uri?>, val scope: CoroutineScope) :
     IDocumentTreePicker {
     override fun launch(mimes: MultiplatformFile?) {
-        launcher.launch((mimes as? MultiplatformFileImpl)?.uri)
+        scope.launch(Dispatchers.Main) {
+            launcher.launch(withContext(Dispatchers.IO) {
+                (mimes as? MultiplatformFileImpl)?.uri
+            })
+        }
     }
 }
 
 @Composable
 actual fun rememberDocumentTreePicker(onResult: (MultiplatformFile?) -> Unit): MutableState<IDocumentTreePicker> {
+    val scope = rememberCoroutineScope()
     val multipleImagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree(),
         onResult = { uri ->
@@ -32,6 +42,6 @@ actual fun rememberDocumentTreePicker(onResult: (MultiplatformFile?) -> Unit): M
         }
     )
     return remember {
-        mutableStateOf(DocumentTreePicker(multipleImagePickerLauncher))
+        mutableStateOf(DocumentTreePicker(multipleImagePickerLauncher, scope))
     }
 }

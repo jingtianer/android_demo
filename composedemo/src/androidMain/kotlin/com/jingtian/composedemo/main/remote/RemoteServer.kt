@@ -60,7 +60,6 @@ class SftpServer(
         if (session != null && session.isConnected) {
             return session
         } else {
-            session?.disconnect()
             return newSession(logger).also {
                 this.session = it
             }
@@ -76,7 +75,7 @@ class SftpServer(
             sftpChannel
         }.getOrElse {
             session.disconnect()
-            logger("jingtian", "session连接失败")
+            logger("jingtian", "session连接失败 $it")
             null
         }
     }
@@ -139,7 +138,7 @@ class SftpServer(
         withContext(Dispatchers.IO) {
             val sftpChannel = connect { tag, msg ->
                 viewModel.sendMessage("$tag: $msg")
-                Log.d(tag, msg)
+                Log.e(tag, msg)
             } ?: return@withContext
             runCatching {
                 val fileInfoList: MutableList<Pair<FileInfo, AlbumItem>> = mutableListOf()
@@ -163,7 +162,7 @@ class SftpServer(
             } else {
                 readFile(sftpChannel, viewModel, root, entry, album, fileInfoList)
             }
-            Log.d("jingtian", "导入: ${entry.filename}: $root")
+            Log.e("jingtian", "导入: ${entry.filename}: $root")
         }
     }
 

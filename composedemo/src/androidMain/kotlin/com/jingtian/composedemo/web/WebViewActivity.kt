@@ -29,7 +29,9 @@ import com.jingtian.composedemo.ui.widget.CommonWebView
 import com.jingtian.composedemo.utils.BitMapCachePool
 import com.jingtian.composedemo.utils.CoroutineUtils
 import com.jingtian.composedemo.utils.ViewUtils.dpValue
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class WebViewActivity: BaseActivity() {
 
@@ -105,12 +107,16 @@ class WebViewActivity: BaseActivity() {
 
 @Composable
 fun AndroidWebView(modifier: Modifier = Modifier, file: MultiplatformFile?, enabled: Boolean = true, width: Dp? = null, height: Dp? = null, viewScope: CommonWebView.()->Unit = {}) {
-    val uri = (file as? MultiplatformFileImpl)?.uri
+    val uri = suspend {
+        withContext(Dispatchers.IO) {
+            (file as? MultiplatformFileImpl)?.uri
+        }
+    }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     fun CommonWebView.init() {
         scope.launch {
-            suspendLoadUri(uri)
+            suspendLoadUri(uri())
         }
         isEnabled = enabled
         viewScope()

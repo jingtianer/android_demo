@@ -14,16 +14,22 @@ import com.jingtian.composedemo.multiplatform.MultiplatformFile
 import com.jingtian.composedemo.multiplatform.MultiplatformFileImpl
 import com.jingtian.composedemo.ui.widget.CommonWebView
 import com.jingtian.composedemo.utils.ViewUtils.dpValue
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 actual fun CommonWebView(modifier: Modifier, file: MultiplatformFile?, enabled: Boolean, width: Dp?, height: Dp?, viewScope: ICommonWebViewScope.()->Unit) {
-    val uri = (file as? MultiplatformFileImpl)?.uri
+    val uri = suspend {
+        withContext(Dispatchers.IO) {
+            (file as? MultiplatformFileImpl)?.uri
+        }
+    }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     fun CommonWebView.init() {
         scope.launch {
-            suspendLoadUri(uri)
+            suspendLoadUri(uri())
         }
         isEnabled = enabled
         viewScope(object : ICommonWebViewScope {
