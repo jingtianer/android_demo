@@ -14,7 +14,10 @@ import com.jingtian.composedemo.multiplatform.MultiplatformFileImpl
 import com.jingtian.composedemo.utils.FileStorageUtils
 import com.jingtian.composedemo.utils.FileStorageUtils.getFileIntrinsicSize
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
+import com.jingtian.composedemo.viewmodels.AlbumViewModel.Companion.notifyChange
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Properties
 import kotlin.math.log
@@ -141,10 +144,10 @@ class SftpServer(
             runCatching {
                 val fileInfoList: MutableList<Pair<FileInfo, AlbumItem>> = mutableListOf()
                 traverseEntry(sftpChannel, viewModel, path, album, fileInfoList)
+                viewModel.sendMessage("正在写入数据库")
                 viewModel.importFiles(album, fileInfoList)
-                viewModel.sendMessage("连接结束")
             }.getOrElse {
-                viewModel.sendMessage("连接失败 $it")
+                viewModel.sendMessage("导入失败 $it")
             }
             sftpChannel.disconnect()
         }
