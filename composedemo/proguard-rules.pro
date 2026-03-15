@@ -22,3 +22,6 @@
 
 -keep class com.jingtian.composedemo.dao.** { *; }
 -keep class com.jingtian.composedemo.utils.model.** { *; }
+-keep class com.jingtian.composedemo.main.remote.ServerStorage
+-keepclassmembers class com.jingtian.composedemo.main.remote.RemoteServer {<fields>;}
+-keepclassmembers class com.jingtian.composedemo.main.remote.SftpServer {<fields>;}

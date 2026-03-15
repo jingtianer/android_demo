@@ -12,7 +12,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 private val spInstance = ConcurrentHashMap<String, MultiplatformSharedPreferences<*>>()
 
-class MultiplatformSharedPreferences<V>(name: String, val gson: Gson = Gson(), typeToken: TypeToken<Map<String, V>> = object : TypeToken<Map<String, V>>() {}, val async: Boolean = true) {
+class MultiplatformSharedPreferences<V>(name: String, val gson: Gson = Gson(), typeToken: TypeToken<Map<String, V>> = TypeToken.getParameterized(Map::class.java, String::class.java, Any::class.java) as TypeToken<Map<String, V>>, val async: Boolean = true) {
     private val outfile = File(spDir, name)
     init {
         if (!outfile.exists()) {
