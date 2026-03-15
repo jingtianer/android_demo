@@ -239,6 +239,17 @@ class AlbumViewModel : ViewModel() {
         }
     }
 
+    fun updateAspectRatio(fileInfo: FileInfo, newWidth: Int, newHeight: Int) {
+        if (fileInfo.intrinsicWidth == newWidth && fileInfo.intrinsicHeight == newHeight) {
+            return
+        }
+        fileInfo.intrinsicWidth = newWidth
+        fileInfo.intrinsicHeight = newHeight
+        CoroutineUtils.runIOTask({
+            DataBase.dbImpl.getFileInfoDao().updateFileInfo(fileInfo)
+        })
+    }
+
     fun updateItem(
         albumItemRelation: AlbumItemRelation,
         selectedUri: MultiplatformFile,

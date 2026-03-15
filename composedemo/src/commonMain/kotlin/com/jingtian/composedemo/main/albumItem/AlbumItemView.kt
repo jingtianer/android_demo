@@ -41,6 +41,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.jingtian.composedemo.base.AppThemeText
 import com.jingtian.composedemo.dao.DataBase
 import com.jingtian.composedemo.dao.model.FileInfo
@@ -63,8 +64,10 @@ import kotlinx.coroutines.withContext
 import java.lang.ref.SoftReference
 import com.jingtian.composedemo.base.resources.getPainter
 import com.jingtian.composedemo.base.resources.DrawableIcon
+import com.jingtian.composedemo.viewmodels.AlbumViewModel
 
 class AlbumItemViewStateHolder(
+    val viewModel: AlbumViewModel,
     val albumItemRelation: AlbumItemRelation,
     val size: Dp,
     val dpSize: Float,
@@ -122,7 +125,8 @@ class AlbumItemViewStateHolder(
                     val bitmap = image
                     withContext(Dispatchers.Main) {
                         imageBitmap = bitmap
-                        imageBitmap?.aspectRatio()?.let {
+                        bitmap?.aspectRatio()?.let {
+                            viewModel.updateAspectRatio(albumItemRelation.fileInfo, bitmap.width, bitmap.height)
                             intrinsicRatio = it
                         }
                     }
@@ -135,7 +139,8 @@ class AlbumItemViewStateHolder(
                         maxWidth = dpSize.toInt(),
                     ) { bitmap ->
                         imageBitmap = bitmap
-                        imageBitmap?.aspectRatio()?.let {
+                        bitmap?.aspectRatio()?.let {
+                            viewModel.updateAspectRatio(albumItemRelation.fileInfo, bitmap.width, bitmap.height)
                             intrinsicRatio = it
                         }
                     }
@@ -149,7 +154,8 @@ class AlbumItemViewStateHolder(
                         maxWidth = dpSize.toInt(),
                     ) { bitmap ->
                         imageBitmap = bitmap
-                        imageBitmap?.aspectRatio()?.let {
+                        bitmap?.aspectRatio()?.let {
+                            viewModel.updateAspectRatio(albumItemRelation.fileInfo, bitmap.width, bitmap.height)
                             intrinsicRatio = it
                         }
                     }
@@ -157,12 +163,14 @@ class AlbumItemViewStateHolder(
 
                 FileType.RegularFile -> {
                     intrinsicRatio = 1f
+                    viewModel.updateAspectRatio(albumItemRelation.fileInfo, 1, 1)
                     imageResource = DrawableIcon.DrawableFile
                     imageBitmap = null
                 }
 
                 FileType.HTML -> {
                     intrinsicRatio = 1f
+                    viewModel.updateAspectRatio(albumItemRelation.fileInfo, 1, 1)
                     imageResource = DrawableIcon.DrawableChrome
                     imageBitmap = null
                     FileStorageUtils.getThumbnail(
@@ -191,11 +199,13 @@ fun AlbumItemView(
 ) {
     val itemId = albumItemRelation.albumItem.itemId ?: return
     val dpSize = size.dpValue()
+    val viewModel: AlbumViewModel = viewModel(factory = AlbumViewModel.viewModelFactory)
     val stateHolder by remember(itemId) {
         mutableStateOf(
             albumViewMap.getOrPutRef(itemId) {
 //                Log.d("jingtian", "AlbumItemView: getOrPut ${itemId}, ${albumViewMap.hashCode()}")
                 AlbumItemViewStateHolder(
+                    viewModel,
                     albumItemRelation,
                     size,
                     dpSize,

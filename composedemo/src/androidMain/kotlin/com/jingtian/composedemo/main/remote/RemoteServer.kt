@@ -175,7 +175,7 @@ class SftpServer(
         val type = uri.mediaType
         val fileName = uri.fileName
         val fileStorageId = FileStorageUtils.getStorage(type)?.asyncStore(uri) ?: DataBase.INVALID_ID
-        val (width, height) = getFileIntrinsicSize(uri, type)
+        val (width, height) = (-1 to -1)//getFileIntrinsicSize(uri, type)
         val fileInfo = FileInfo(
             storageId = fileStorageId,
             fileType = type,

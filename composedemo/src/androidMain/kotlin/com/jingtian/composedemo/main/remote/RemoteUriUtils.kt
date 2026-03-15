@@ -52,11 +52,19 @@ class RemoteSftpFileImpl(
         }
     }
 
+    private fun getOrignExtension(): String {
+        return originUri.lastPathSegment?.split(".")?.lastOrNull() ?: ""
+    }
+
+    private fun getOrignFileName(): String {
+        return originUri.lastPathSegment ?: ""
+    }
+
     override val uri: Uri
         get() = contentFile.toUri()
 
     override val fileName: String
-        get() = contentFile.toUri().lastPathSegment ?: ""
+        get() = getOrignFileName()
 
     override val isHidden: Boolean
         get() = fileName.startsWith(".")
@@ -64,10 +72,10 @@ class RemoteSftpFileImpl(
                 && fileName != ".."
 
     override val mediaType: FileType
-        get() = getMediaTypeByExtension(contentFile.extension)
+        get() = getMediaTypeByExtension(getOrignExtension())
 
     override val extension: String
-        get() = contentFile.extension
+        get() = getOrignExtension()
 
     override val inputStream: InputStream
         get() = FileInputStream(contentFile)
