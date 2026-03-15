@@ -37,9 +37,6 @@ abstract class RemoteServer(
 fun <T> ChannelSftp.use(block: (ChannelSftp)->T): T? {
     return try {
         block(this)
-    } catch (e: Exception) {
-        e.printStackTrace()
-        null
     } finally {
         this.disconnect()
     }
