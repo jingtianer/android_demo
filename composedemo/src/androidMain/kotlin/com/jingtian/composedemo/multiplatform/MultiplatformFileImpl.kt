@@ -25,7 +25,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 
-open class MultiplatformFileImpl(val uri: Uri) : MultiplatformFile {
+open class MultiplatformFileImpl(open val uri: Uri) : MultiplatformFile {
     companion object {
         private fun getFileNameFromUri(uri: Uri): String? {
             runCatching {

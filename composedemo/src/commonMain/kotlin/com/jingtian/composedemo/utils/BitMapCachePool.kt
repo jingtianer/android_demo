@@ -245,12 +245,16 @@ object BitMapCachePool {
     ): Pair<Int, ImageBitmap?> {
         val image = fileInfo.getFileUri() ?: return -1 to null
         val id = fileInfo.storageId.takeIf { it != DataBase.INVALID_ID } ?: return -1 to null
-        val scaleFactor =  image.inputStream?.use { `is`->
-            // 第一步：仅解码边界，获取图片原始宽高
-            val (outWidth, outHeight) = uriToImageSize(`is`)
-            // 第二步：计算缩放比例（避免图片过大导致 OOM）
-            calculateScaleFactor(outWidth, outHeight, maxWidth, maxHeight)
-        } ?: -1
+        val scaleFactor =  if (fileInfo.intrinsicWidth > 0 && fileInfo.intrinsicHeight > 0) {
+            calculateScaleFactor(fileInfo.intrinsicWidth, fileInfo.intrinsicHeight, maxWidth, maxHeight)
+        } else {
+            image.inputStream?.use { `is`->
+                // 第一步：仅解码边界，获取图片原始宽高
+                val (outWidth, outHeight) = uriToImageSize(`is`)
+                // 第二步：计算缩放比例（避免图片过大导致 OOM）
+                calculateScaleFactor(outWidth, outHeight, maxWidth, maxHeight)
+            } ?: -1
+        }
 //        println("scale factor: $scaleFactor")
         val bitmap = getBitMapCachePool(fileInfo.fileType).put(id, scaleFactor) {
             fileInfo.getFileUri()?.inputStream?.use { `is`->

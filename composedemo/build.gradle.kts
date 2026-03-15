@@ -193,16 +193,18 @@ android {
 
     buildTypes {
         val remoteSuffix = if (isRemote) {
-            ".remote"
+            "remote"
         } else {
             ""
         }
         debug {
-            applicationIdSuffix = "${appName}$remoteSuffix.debug"
-            resValue("string", "app_name", "${appName}$remoteSuffix.debug")
+            applicationIdSuffix = ".$remoteSuffix.debug"
+            resValue("string", "app_name", "${appName}.$remoteSuffix.debug")
         }
         release {
-            applicationIdSuffix = "${appName}$remoteSuffix"
+            if (remoteSuffix.isNotBlank()) {
+                applicationIdSuffix = ".$remoteSuffix"
+            }
 
             isMinifyEnabled = true
             isShrinkResources = true
@@ -210,7 +212,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            resValue("string", "app_name", "${appName}$remoteSuffix")
+            resValue("string", "app_name", "${appName}.$remoteSuffix")
         }
     }
 

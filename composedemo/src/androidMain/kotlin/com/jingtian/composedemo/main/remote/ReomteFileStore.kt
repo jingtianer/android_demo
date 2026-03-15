@@ -15,10 +15,10 @@ class RemoteFileStore(serverType: ServerType) {
         storageRoot.ensureDirExist()
     }
 
-    fun get(originUri: Uri, onAbsent: (File)->Unit): File {
+    fun get(originUri: Uri): File {
         val fileName = originUri.lastPathSegment ?: ""
         val path = originUri.path ?: "/"
-        return File(storageRoot, "${filePathHashCode(fileName, path)}_$fileName").ensureFileExist(onAbsent)
+        return File(storageRoot, "${filePathHashCode(fileName, path)}_$fileName")
     }
 
     private fun filePathHashCode(fileName: String, path: String): Int {

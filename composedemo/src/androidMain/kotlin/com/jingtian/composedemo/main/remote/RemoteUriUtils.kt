@@ -11,6 +11,10 @@ import com.jcraft.jsch.ChannelSftp.LsEntry
 import com.jingtian.composedemo.dao.model.FileType
 import com.jingtian.composedemo.multiplatform.MultiplatformFileImpl
 import com.jingtian.composedemo.utils.SerializationUtils.toInputStream
+import com.jingtian.composedemo.utils.ensureFileExist
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -19,16 +23,7 @@ import java.io.InputStream
 class RemoteSftpFileImpl(
     private val originUri: Uri,
     val server: SftpServer,
-) : MultiplatformFileImpl(fileStore.get(originUri) { file->
-    val path = originUri.path ?: "/"
-    server.connect({ _, msg ->
-        Log.d("jingtian", "读取文件 $path $msg")
-    })?.use { channel ->
-        val bos = FileOutputStream(file)
-        channel.get(path, bos)
-        Log.d("jingtian", "读取文件 $path 完成")
-    }
-}.toUri()) {
+) : MultiplatformFileImpl(fileStore.get(originUri).toUri()) {
     companion object {
         private val fileStore by lazy {
             RemoteFileStore(ServerType.SFTP)
@@ -36,15 +31,32 @@ class RemoteSftpFileImpl(
     }
     val path = originUri.path ?: "/"
 
+    private val realUri = fileStore.get(originUri).toUri()
 
     private val contentFile by lazy {
-        val originFile = uri.toFile()
-
-        originFile
+        runBlocking {
+            val originFile = realUri.toFile()
+            withContext(Dispatchers.IO) {
+                originFile.ensureFileExist { file->
+                    val path = originUri.path ?: "/"
+                    server.connect({ _, msg ->
+                        Log.d("jingtian", "读取文件 $path $msg")
+                    })?.use { channel ->
+                        val bos = FileOutputStream(file)
+                        channel.get(path, bos)
+                        Log.d("jingtian", "读取文件 $path 完成")
+                    }
+                }
+            }
+            originFile
+        }
     }
 
+    override val uri: Uri
+        get() = contentFile.toUri()
+
     override val fileName: String
-        get() = uri.lastPathSegment ?: ""
+        get() = contentFile.toUri().lastPathSegment ?: ""
 
     override val isHidden: Boolean
         get() = fileName.startsWith(".")
@@ -52,10 +64,10 @@ class RemoteSftpFileImpl(
                 && fileName != ".."
 
     override val mediaType: FileType
-        get() = getMediaTypeByExtension(uri)
+        get() = getMediaTypeByExtension(contentFile.toUri())
 
     override val extension: String
-        get() = MimeTypeMap.getFileExtensionFromUrl(uri.toString())
+        get() = MimeTypeMap.getFileExtensionFromUrl(contentFile.toUri().toString())
 
     override val inputStream: InputStream
         get() = FileInputStream(contentFile)
