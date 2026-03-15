@@ -125,6 +125,7 @@ kotlin {
                 implementation(libs.androidx.recyclerview)
                 implementation(libs.androidx.documentfile)
                 implementation(libs.jsch)
+                implementation(libs.jzlib)
             }
         }
 

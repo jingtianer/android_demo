@@ -23,5 +23,12 @@
 -keep class com.jingtian.composedemo.dao.** { *; }
 -keep class com.jingtian.composedemo.utils.model.** { *; }
 -keep class com.jingtian.composedemo.main.remote.ServerStorage
+-keep class com.jcraft.jsch.** { *; }
+-keep class com.jcraft.jsch.jce.** { *; }
+-keep class com.jcraft.jzlib.** { *; }
+-keep interface com.jcraft.jsch.** { *; }
+-dontwarn org.ietf.jgss.**
+#-assumenosideeffects com.jcraft.jsch.jgss.**
+-keepattributes Signature, InnerClasses, EnclosingMethod
 -keepclassmembers class com.jingtian.composedemo.main.remote.RemoteServer {<fields>;}
 -keepclassmembers class com.jingtian.composedemo.main.remote.SftpServer {<fields>;}
