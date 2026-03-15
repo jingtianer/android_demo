@@ -64,10 +64,10 @@ class RemoteSftpFileImpl(
                 && fileName != ".."
 
     override val mediaType: FileType
-        get() = getMediaTypeByExtension(contentFile.toUri())
+        get() = getMediaTypeByExtension(contentFile.extension)
 
     override val extension: String
-        get() = MimeTypeMap.getFileExtensionFromUrl(contentFile.toUri().toString())
+        get() = contentFile.extension
 
     override val inputStream: InputStream
         get() = FileInputStream(contentFile)

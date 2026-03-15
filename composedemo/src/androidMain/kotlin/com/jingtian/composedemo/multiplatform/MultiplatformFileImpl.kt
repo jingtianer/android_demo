@@ -132,8 +132,7 @@ open class MultiplatformFileImpl(open val uri: Uri) : MultiplatformFile {
             }
         }
 
-        fun getMediaTypeByExtension(uri: Uri): FileType {
-            val extension = MimeTypeMap.getFileExtensionFromUrl(uri.toString())
+        fun getMediaTypeByExtension(extension: String): FileType {
             val fallbackMimeType = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension)
             return when {
                 fallbackMimeType?.startsWith("image/") == true -> FileType.IMAGE
