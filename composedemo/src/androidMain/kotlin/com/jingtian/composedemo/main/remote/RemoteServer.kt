@@ -138,7 +138,7 @@ class SftpServer(
         withContext(Dispatchers.IO) {
             val sftpChannel = connect { tag, msg ->
                 viewModel.sendMessage("$tag: $msg")
-                Log.e(tag, msg)
+                // Log.d(tag, msg)
             } ?: return@withContext
             runCatching {
                 val fileInfoList: MutableList<Pair<FileInfo, AlbumItem>> = mutableListOf()
@@ -162,7 +162,7 @@ class SftpServer(
             } else {
                 readFile(sftpChannel, viewModel, root, entry, album, fileInfoList)
             }
-            Log.e("jingtian", "导入: ${entry.filename}: $root")
+            // Log.d("jingtian", "导入: ${entry.filename}: $root")
         }
     }
 

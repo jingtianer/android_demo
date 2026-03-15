@@ -92,7 +92,7 @@ class WebViewActivity: BaseActivity() {
             }
         }, onFailure = {
             setResult(2)
-            Log.e(TAG, "WebViewActivity: onBackPressed: $it")
+            // Log.d(TAG, "WebViewActivity: onBackPressed: $it")
             super.onBackPressed()
         }) {
             setResult(Activity.RESULT_OK)

@@ -11,49 +11,25 @@ import com.jcraft.jsch.ChannelSftp.LsEntry
 import com.jingtian.composedemo.dao.model.FileType
 import com.jingtian.composedemo.multiplatform.MultiplatformFileImpl
 import com.jingtian.composedemo.utils.SerializationUtils.toInputStream
-import com.jingtian.composedemo.utils.ensureFileExist
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileInputStream
-import java.io.FileOutputStream
 import java.io.InputStream
-
 class RemoteSftpFileImpl(
     private val originUri: Uri,
-    val server: SftpServer,
+    private val server: SftpServer,
 ) : MultiplatformFileImpl(fileStore.get(originUri).toUri()) {
+
     companion object {
         private val fileStore by lazy {
             RemoteFileStore(ServerType.SFTP)
         }
     }
-    private val realUri = fileStore.get(originUri).toUri()
 
-    private val contentFile by lazy {
-        val originFile = realUri.toFile()
-        runBlocking {
-            withContext(Dispatchers.IO) {
-                originFile.ensureFileExist { file->
-                    val fail = runCatching {
-                        val path = originUri.path ?: "/"
-                        server.connect({ _, msg ->
-                            Log.e("jingtian", "读取文件 $path $msg")
-                        })?.use { channel ->
-                            val bos = FileOutputStream(file)
-                            channel.get(path, bos)
-                            Log.e("jingtian", "读取文件 $path 完成")
-                        } ?: throw RuntimeException("连接失败")
-                    }.exceptionOrNull()
-                    if (fail != null) {
-                        Log.e("jingtian", "读取文件 ${originUri.lastPathSegment} 失败 $fail")
-                    }
-                }
-            }
+    private val contentFile: File
+        get() {
+            return fileStore.loadFile(originUri, server)
         }
-        originFile
-    }
+
 
     private fun getOrignExtension(): String {
         return originUri.lastPathSegment?.split(".")?.lastOrNull() ?: ""
@@ -111,9 +87,9 @@ object RemoteUriUtils {
             .path(root)
             .appendPath(entry.filename)
             .build()
-        Log.e("jingtian", "fromSftpEntry: $uri")
+        // Log.d("jingtian", "fromSftpEntry: $uri")
         return RemoteSftpFileImpl(uri, server).apply {
-            Log.e("jingtian", "fromSftpEntry: $this")
+            // Log.d("jingtian", "fromSftpEntry: $this")
         }
     }
 
