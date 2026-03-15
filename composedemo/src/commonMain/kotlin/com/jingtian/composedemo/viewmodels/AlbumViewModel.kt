@@ -96,14 +96,16 @@ class AlbumViewModel : ViewModel() {
     val currentBackgroundTask = mutableStateOf<String?>(null)
 
     fun sendMessage(message: String) {
-        currentMessageDelayJob?.cancel()
-        currentMessageDelayJob = viewModelScope.launch(Dispatchers.Main) {
-            currentBackgroundTask.value = message
-            withContext(Dispatchers.IO) {
-                delay(2000)
+        viewModelScope.launch(Dispatchers.Main) {
+            currentMessageDelayJob?.cancel()
+            currentMessageDelayJob = viewModelScope.launch(Dispatchers.Main) {
+                currentBackgroundTask.value = message
+                withContext(Dispatchers.IO) {
+                    delay(2000)
+                }
+                currentBackgroundTask.value = null
+                currentMessageDelayJob = null
             }
-            currentBackgroundTask.value = null
-            currentMessageDelayJob = null
         }
     }
 
@@ -200,6 +202,22 @@ class AlbumViewModel : ViewModel() {
         }) {
             albumItemListChange.notifyChange()
             sendMessage("添加文件 ${album.albumName} 成功!")
+        }
+    }
+
+    suspend fun importFiles(album: Album, fileInfoList: MutableList<Pair<FileInfo, AlbumItem>>) {
+        withContext(Dispatchers.IO) {
+            val idList = DataBase.dbImpl.getFileInfoDao().insertAllFileInfo(fileInfoList.map { it.first })
+            val albumItemList = fileInfoList.mapIndexed { index: Int, pair: Pair<FileInfo, AlbumItem> ->
+                pair.second.also {
+                    it.fileId = idList[index]
+                }
+            }
+            DataBase.dbImpl.getAlbumItemDao().insertAllAlbumItem(albumItemList)
+        }
+        withContext(Dispatchers.Main) {
+            albumItemListChange.notifyChange()
+            sendMessage("批量导入 ${album.albumName} 成功!")
         }
     }
 

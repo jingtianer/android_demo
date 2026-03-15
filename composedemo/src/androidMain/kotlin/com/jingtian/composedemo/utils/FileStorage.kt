@@ -81,6 +81,32 @@ fun File.ensureFile():File {
     return this
 }
 
+fun File.ensureFileExist(onAbsent: (File)->Unit):File {
+    if (exists()) {
+        if (isDirectory) {
+            deleteRecursively()
+        } else {
+            return this
+        }
+    }
+    this.parentFile?.takeIf { !it.exists() }?.mkdirs()
+    this.createNewFile()
+    onAbsent(this)
+    return this
+}
+
+fun File.ensureDirExist():File {
+    if (exists()) {
+        if (isDirectory) {
+            return this
+        } else {
+            delete()
+        }
+    }
+    this.mkdirs()
+    return this
+}
+
 fun copyDir(from : File, to: File) {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
         traverseDirNio(from.toPath()) { dir, file->

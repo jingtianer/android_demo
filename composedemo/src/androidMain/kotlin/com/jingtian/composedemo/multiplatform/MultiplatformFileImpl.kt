@@ -25,7 +25,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 
-class MultiplatformFileImpl(val uri: Uri) : MultiplatformFile {
+open class MultiplatformFileImpl(val uri: Uri) : MultiplatformFile {
     companion object {
         private fun getFileNameFromUri(uri: Uri): String? {
             runCatching {
@@ -132,7 +132,23 @@ class MultiplatformFileImpl(val uri: Uri) : MultiplatformFile {
             }
         }
 
-        private fun getVideoThumbnail(videoUri: Uri): Bitmap? {
+        fun getMediaTypeByExtension(uri: Uri): FileType {
+            val extension = MimeTypeMap.getFileExtensionFromUrl(uri.toString())
+            val fallbackMimeType = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension)
+            return when {
+                fallbackMimeType?.startsWith("image/") == true -> FileType.IMAGE
+                fallbackMimeType?.startsWith("video/") == true -> FileType.VIDEO
+                fallbackMimeType?.startsWith("audio/") == true -> FileType.AUDIO
+                fallbackMimeType?.startsWith("text/html") == true -> FileType.HTML
+                else -> when {
+                    extension.equals("jfif") -> FileType.IMAGE // 二进制先按照图片处理
+                    else -> FileType.RegularFile
+                }
+            }
+        }
+
+        @JvmStatic
+        protected fun getVideoThumbnail(videoUri: Uri): Bitmap? {
             val retriever = MediaMetadataRetriever()
             return try {
                 retriever.setDataSource(app, videoUri)
@@ -149,7 +165,8 @@ class MultiplatformFileImpl(val uri: Uri) : MultiplatformFile {
             }
         }
 
-        private fun getAudioThumbnail(uri: Uri): Bitmap? {
+        @JvmStatic
+        protected fun getAudioThumbnail(uri: Uri): Bitmap? {
             val retriever = MediaMetadataRetriever()
             return try {
                 retriever.setDataSource(app, uri)
@@ -163,7 +180,8 @@ class MultiplatformFileImpl(val uri: Uri) : MultiplatformFile {
             }
         }
 
-        private fun getImageRatio(uri: Uri): Pair<Int, Int> {
+        @JvmStatic
+        protected fun getImageRatio(uri: Uri): Pair<Int, Int> {
             val options = BitmapFactory.Options().apply {
                 inJustDecodeBounds = true // 只获取尺寸，不加载像素
             }
@@ -228,9 +246,9 @@ class MultiplatformFileImpl(val uri: Uri) : MultiplatformFile {
         } ?: ""
     }
 
-    override fun toString(): String {
-        return "fileName=$fileName, isHidden=$isHidden, mediaType=$mediaType, extension=$extension, file=$file, uri=$uri"
-    }
+//    override fun toString(): String {
+//        return "fileName=$fileName, isHidden=$isHidden, mediaType=$mediaType, extension=$extension, file=$file, uri=$uri"
+//    }
 }
 
 fun Bitmap?.toImmutable(): Bitmap? {

@@ -28,16 +28,21 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
+import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.jingtian.composedemo.base.AppThemeDialog
 import com.jingtian.composedemo.base.AppThemeText
 import com.jingtian.composedemo.base.resources.DrawableIcon
 import com.jingtian.composedemo.base.resources.getPainter
 import com.jingtian.composedemo.dao.model.Album
 import com.jingtian.composedemo.main.drawer.DrawerFunctionView
+import com.jingtian.composedemo.main.gallery.PlatformExtra
 import com.jingtian.composedemo.ui.theme.LocalAppPalette
 import com.jingtian.composedemo.ui.theme.LocalAppUIConstants
 import com.jingtian.composedemo.ui.theme.LocalMiddleButtonConfig
 import com.jingtian.composedemo.ui.theme.dialogBackground
+import com.jingtian.composedemo.viewmodels.AlbumViewModel
+import kotlinx.coroutines.launch
 
 class ImportRemoteDialogStateHolder {
     val sftpServerHolderList = mutableStateListOf(*(ServerStorage.getStorage<SftpServer>(ServerType.SFTP).allServer().map { it.toHolder() }.toTypedArray()))
@@ -81,6 +86,10 @@ class SftpServerStateHolder(private val sftpServer: SftpServer = SftpServer()) :
     var password: String by mutableStateOf(sftpServer.password)
     var path: String by mutableStateOf(sftpServer.path)
 
+    suspend fun import(viewModel: AlbumViewModel, album: Album) {
+        sftpServer.importFiles(viewModel, album)
+    }
+
     override fun get(): SftpServer {
         super.get()
         sftpServer.userName = userName
@@ -107,6 +116,7 @@ fun ImportRemoteDialogStateHolder.ImportRemoteDialog(album: Album, onDismiss: ()
             onDismiss()
         }
     ) { _, actionButtons ->
+        val viewModel: AlbumViewModel = viewModel(factory = AlbumViewModel.viewModelFactory)
         LazyColumn(Modifier
             .fillMaxWidth()
             .wrapContentHeight()
@@ -129,7 +139,10 @@ fun ImportRemoteDialogStateHolder.ImportRemoteDialog(album: Album, onDismiss: ()
             ) { index->
                 val serverItem = sftpServerHolderList[index]
                 SftpServerDescView(serverItem, onClick = {
-
+                    viewModel.viewModelScope.launch {
+                        serverItem.import(viewModel, album)
+                    }
+                    onDismiss()
                 }, onLongPress = {
                     sftpEditServerDialog = serverItem
                 })

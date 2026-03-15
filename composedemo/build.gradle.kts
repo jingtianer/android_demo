@@ -124,6 +124,7 @@ kotlin {
                 implementation(libs.androidx.activity.compose)
                 implementation(libs.androidx.recyclerview)
                 implementation(libs.androidx.documentfile)
+                implementation(libs.jsch)
             }
         }
 
