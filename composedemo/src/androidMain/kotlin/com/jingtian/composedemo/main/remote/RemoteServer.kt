@@ -184,7 +184,6 @@ class SftpServer(
             extension = uri.extension
         )
         val albumItem = AlbumItem(itemName = fileName, albumId = album.albumId ?: DataBase.INVALID_ID)
-        viewModel.sendMessage("正在导入: $fileName")
         fileInfoList.add(fileInfo to albumItem)
     }
 }
