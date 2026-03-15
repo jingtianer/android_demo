@@ -2,6 +2,7 @@ package com.jingtian.composedemo.navigation
 
 import android.content.Context
 import android.content.Intent
+import android.widget.Toast
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResult
@@ -12,14 +13,19 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
+import com.jingtian.composedemo.base.app
 import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.FileType
 import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
 import com.jingtian.composedemo.main.playIntent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 
 class AlbumItemLauncher(
     val context: Context,
@@ -28,10 +34,20 @@ class AlbumItemLauncher(
 ) : IAlbumItemLauncher{
     override fun launch(fileName: String, fileInfo: FileInfo) {
         scope.launch(Dispatchers.Main) {
-            val playIntent = withContext(Dispatchers.IO) {
-                playIntent(context, fileName, fileInfo)
+            val timeoutJob = scope.launch(Dispatchers.Main) {
+                withContext(Dispatchers.IO) {
+                    delay(2000)
+                }
+                Toast.makeText(app, "创建intent超时 $fileName", Toast.LENGTH_SHORT).show()
+            }
+            val playIntent = withTimeoutOrNull(2000) {
+                val playIntent = withContext(Dispatchers.IO) {
+                    playIntent(context, fileName, fileInfo)
+                }
+                playIntent
             }
             if (playIntent != null) {
+                timeoutJob.cancel()
                 if (fileInfo.fileType == FileType.HTML) {
                     launcher.launch(playIntent)
                 } else {
