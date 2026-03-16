@@ -34,6 +34,8 @@ interface IMultiplatformFileFactory {
     fun fromFile(file: File, extension: String?): MultiplatformFile {
         return fromFile(file)
     }
+
+    fun shareFile(file: File): MultiplatformFile
 }
 
 expect fun getMultiplatformFileFactory() : IMultiplatformFileFactory

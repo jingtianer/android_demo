@@ -19,6 +19,10 @@ private object MultiplatformFileFactory : IMultiplatformFileFactory {
         }
         return MultiplatformFileImpl(file.toUri())
     }
+
+    override fun shareFile(file: File): MultiplatformFile {
+        return MultiplatformFileImpl(file.toUri())
+    }
 }
 
 actual fun getMultiplatformFileFactory() : IMultiplatformFileFactory = MultiplatformFileFactory

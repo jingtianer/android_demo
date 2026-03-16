@@ -1,14 +1,8 @@
 package com.jingtian.composedemo.utils.share
 
-import android.content.Context
-import android.content.Intent
-import android.net.Uri
-import android.os.Environment
-import androidx.core.content.FileProvider
 import com.google.gson.GsonBuilder
 import com.google.gson.reflect.TypeToken
 import com.google.gson.stream.JsonReader
-import com.jingtian.composedemo.base.app
 import com.jingtian.composedemo.dao.DataBase
 import com.jingtian.composedemo.dao.converter.DateTypeConverter
 import com.jingtian.composedemo.dao.converter.FileTypeConverter
@@ -18,8 +12,8 @@ import com.jingtian.composedemo.dao.model.FileType
 import com.jingtian.composedemo.dao.model.ItemRank
 import com.jingtian.composedemo.dao.model.LabelInfo
 import com.jingtian.composedemo.dao.model.relation.AlbumRelation
-import com.jingtian.composedemo.utils.CoroutineUtils
-import com.jingtian.composedemo.utils.ensureFile
+import com.jingtian.composedemo.multiplatform.MultiplatformFile
+import com.jingtian.composedemo.multiplatform.getMultiplatformFileFactory
 import com.jingtian.composedemo.utils.getFileCacheStorageRootDir
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
 import com.jingtian.composedemo.viewmodels.AlbumViewModel.Companion.notifyChange
@@ -33,22 +27,12 @@ import kotlin.random.Random
 import kotlin.random.nextULong
 
 object ShareUtils {
-    private val shareFileRootDir = File(app.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS) ?: getFileCacheStorageRootDir(), "share")
-    suspend fun shareDataBase(context: Context) {
+    private val shareFileRootDir =  File(getFileCacheStorageRootDir(), "share")
+    suspend fun shareDataBase(): MultiplatformFile {
         val file = withContext(Dispatchers.IO) {
             getShareFile()
         }
-        val uri = FileProvider.getUriForFile(
-            app,
-            app.packageName + ".fileprovider",
-            file
-        )
-        val shareIntent: Intent = Intent().apply {
-            action = Intent.ACTION_SEND
-            putExtra(Intent.EXTRA_STREAM, uri)
-            type = "*/*"
-        }
-        context.startActivity(Intent.createChooser(shareIntent, "导出数据"))
+        return getMultiplatformFileFactory().shareFile(file)
     }
 
     val gson = {
@@ -61,7 +45,16 @@ object ShareUtils {
 
     private suspend fun getShareFile(): File {
         return withContext(Dispatchers.IO) {
-            val file = File(shareFileRootDir, "share_${Random.nextULong()}.json").ensureFile()
+            val file = File(shareFileRootDir, "share_${Random.nextULong()}.json")
+            if (file.exists()) {
+                if (file.isFile) {
+                    file.delete()
+                } else if (file.isDirectory) {
+                    file.deleteRecursively()
+                }
+            }
+            file.parentFile?.mkdirs()
+            file.createNewFile()
             val dataList = DataBase.dbImpl.getAlbumDao().getAllAlbumInfoWithExtra()
             FileWriter(file).use { fw ->
                 gson().toJson(dataList, fw)
@@ -71,10 +64,10 @@ object ShareUtils {
         }
     }
 
-    suspend fun importSharedDb(albumViewModel: AlbumViewModel, uri: Uri) {
+    suspend fun importSharedDb(albumViewModel: AlbumViewModel, file: MultiplatformFile) {
         withContext(Dispatchers.IO) {
-            app.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            val importedAlbumList = app.contentResolver.openInputStream(uri)?.use { `is` ->
+            file.inputStream
+            val importedAlbumList = file.inputStream?.use { `is` ->
                 gson()
                     .fromJson<List<AlbumRelation>>(
                         JsonReader(InputStreamReader(`is`)),

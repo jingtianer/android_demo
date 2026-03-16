@@ -18,5 +18,9 @@ actual fun getMultiplatformFileFactory() : IMultiplatformFileFactory {
             }
             return MultiplatformFileImpl(realFile, extension ?: file.extension)
         }
+
+        override fun shareFile(file: File): MultiplatformFileImpl {
+            return MultiplatformFileImpl(file, file.extension)
+        }
     }
 }

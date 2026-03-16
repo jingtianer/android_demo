@@ -9,7 +9,7 @@
 
     <external-cache-path
         name="external_cache_files"
-        path="remote/share" />
+        path="share" />
 
     <external-files-path
         name="external_files_downloads"
