@@ -5,8 +5,10 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Update
 import com.jingtian.composedemo.dao.model.Album
+import com.jingtian.composedemo.dao.model.relation.AlbumRelation
 
 @Dao
 interface AlbumDao {
@@ -40,4 +42,8 @@ interface AlbumDao {
 
     @Query("select count(*) from $TABLE_NAME")
     suspend fun getSize(): Int
+
+    @Transaction
+    @Query("select * from $TABLE_NAME")
+    fun getAllAlbumInfoWithExtra(): List<AlbumRelation>
 }

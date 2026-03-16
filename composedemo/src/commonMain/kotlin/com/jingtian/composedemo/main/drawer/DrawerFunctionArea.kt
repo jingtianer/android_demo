@@ -20,9 +20,14 @@ fun DrawerFunctionArea() {
         text = "添加合集",
     )
 
+    PlatformDrawerFunctions()
+
     if (dialogState) {
         AddOrEditAlbumDialog {
             dialogState = false
         }
     }
 }
+
+@Composable
+expect fun PlatformDrawerFunctions()

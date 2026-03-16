@@ -1,11 +1,14 @@
 package com.jingtian.composedemo.dao.model.relation
 
+import androidx.room.DatabaseView
 import androidx.room.Embedded
 import androidx.room.Relation
+import com.jingtian.composedemo.dao.AlbumItemDao
 import com.jingtian.composedemo.dao.model.AlbumItem
 import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.LabelInfo
 
+@DatabaseView("select * from ${AlbumItemDao.TABLE_NAME}", "album_relation")
 class AlbumItemRelation(
     @Embedded
     val albumItem: AlbumItem,
