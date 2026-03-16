@@ -45,5 +45,5 @@ interface AlbumDao {
 
     @Transaction
     @Query("select * from $TABLE_NAME")
-    fun getAllAlbumInfoWithExtra(): List<AlbumRelation>
+    suspend fun getAllAlbumInfoWithExtra(): List<AlbumRelation>
 }
