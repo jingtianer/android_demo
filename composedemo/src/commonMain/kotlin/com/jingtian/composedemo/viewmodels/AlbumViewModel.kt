@@ -115,6 +115,7 @@ class AlbumViewModel : ViewModel() {
             val itemInfoList = albumItemDao.getAllAlbumItemListWithExtra(albumId)
             val files = itemInfoList.mapNotNull { it.albumItem.itemName to (it.fileInfo ?: return@mapNotNull null) }
             files.forEach {
+                it.second.getFileUri()?.onDelete()
                 FileStorageUtils.getStorage(it.second.fileType)?.delete(it.second.storageId)
                 BitMapCachePool.invalid(it.second.storageId, it.second.fileType)
                 sendMessage("正在删除文件: ${it.first}")
@@ -133,6 +134,7 @@ class AlbumViewModel : ViewModel() {
     fun deleteItems(albumList: Collection<AlbumItemRelation>) {
         CoroutineUtils.runIOTask({
             for (albumItemRelation in albumList) {
+                albumItemRelation.fileInfo.getFileUri()?.onDelete()
                 val album = albumItemRelation.albumItem
                 DataBase.dbImpl.getAlbumItemDao().deleteAllAlbumItem(album)
                 albumItemRelation.fileInfo.let {
@@ -272,6 +274,7 @@ class AlbumViewModel : ViewModel() {
             val nextId = if (uri != oldUri) {
                 val storage = FileStorageUtils.getStorage(mediaType)
                 if (oldUri != null) {
+                    albumItemRelation.fileInfo.getFileUri()?.onDelete()
                     val oldMediaType = albumItemRelation.fileInfo.fileType
                     BitMapCachePool.invalid(albumItemRelation.fileInfo.storageId, oldMediaType)
                     if (mediaType == oldMediaType) {

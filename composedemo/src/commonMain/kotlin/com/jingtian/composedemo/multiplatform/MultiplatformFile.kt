@@ -25,6 +25,8 @@ interface MultiplatformFile {
     val imageRatio: Pair<Int, Int>
 
     val file: File?
+
+    fun onDelete() {}
 }
 
 interface IMultiplatformFileFactory {

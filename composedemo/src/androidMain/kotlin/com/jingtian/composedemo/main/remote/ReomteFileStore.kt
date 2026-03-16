@@ -85,7 +85,19 @@ class RemoteFileStore(serverType: ServerType) {
             return@task realFile
         }
         return task.get()
+    }
 
+    fun delete(originUri: Uri) {
+        CoroutineUtils.runIOTaskLowPriority({
+            val lock = locks.computeIfAbsent(originUri.toString()) { ReentrantLock() }
+            try {
+                lock.lockInterruptibly()
+                get(originUri).delete()
+                getTmp(originUri).delete()
+            } finally {
+                lock.unlock()
+            }
+        })
     }
 
     fun get(originUri: Uri): File {

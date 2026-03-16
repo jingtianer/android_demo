@@ -77,6 +77,10 @@ class RemoteSftpFileImpl(
         }
     override val file: File
         get() = contentFile
+
+    override fun onDelete() {
+        fileStore.delete(originUri)
+    }
 }
 
 object RemoteUriUtils {
