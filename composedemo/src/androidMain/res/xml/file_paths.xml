@@ -3,6 +3,11 @@
     <files-path
         name="compose_demo_files"
         path="fileStorage" />
+
+    <external-files-path
+        name="compose_demo_external_files"
+        path="fileStorage" />
+
     <external-cache-path
         name="external_cache_files"
         path="remote" />
