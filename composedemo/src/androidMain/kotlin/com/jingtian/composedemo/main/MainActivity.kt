@@ -72,10 +72,9 @@ class MainActivity : BaseActivity() {
         val promptInfo = BiometricPrompt.PromptInfo.Builder()
             .setTitle("验证是你本人")
             .setAllowedAuthenticators(
-                BiometricManager.Authenticators.DEVICE_CREDENTIAL or
+                BiometricManager.Authenticators.BIOMETRIC_STRONG or
                 BiometricManager.Authenticators.DEVICE_CREDENTIAL
             )
-            .setNegativeButtonText("取消验证")
             .build()
 
         viewModel.bioticAuth = AndroidMigrateViewModel.Authenticator(biometricPrompt, promptInfo)
