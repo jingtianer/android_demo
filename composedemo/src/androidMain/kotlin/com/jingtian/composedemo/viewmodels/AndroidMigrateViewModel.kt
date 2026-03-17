@@ -3,12 +3,14 @@ package com.jingtian.composedemo.viewmodels
 import android.os.SystemClock
 import androidx.biometric.BiometricPrompt
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import javax.crypto.Cipher
 
 class AndroidMigrateViewModel : ViewModel() {
     val isMigrationFinished = mutableIntStateOf(0)
-
+    var isPasswordChecked = mutableStateOf(false)
     class Authenticator(
         val promptCreator: (BiometricPrompt.AuthenticationCallback)->BiometricPrompt,
         private val promptInfo: BiometricPrompt.PromptInfo

@@ -45,25 +45,26 @@ class MainActivity : BaseActivity() {
     companion object {
         private const val MEDIA_PERMISSION_REQUEST_CODE = 1001
     }
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        checkAndRequestMediaPermissions(
-            Manifest.permission.READ_MEDIA_AUDIO,
-            Manifest.permission.READ_MEDIA_IMAGES,
-            Manifest.permission.READ_MEDIA_VIDEO,
-            Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED,
-            Manifest.permission.READ_EXTERNAL_STORAGE,
-            Manifest.permission.WRITE_EXTERNAL_STORAGE,
-        )
-        val executor = ContextCompat.getMainExecutor(this)
-
-        val viewModel: AndroidMigrateViewModel by viewModels {
-            viewModelFactory {
-                initializer {
-                    AndroidMigrateViewModel()
-                }
+    private val viewModel: AndroidMigrateViewModel by viewModels {
+        viewModelFactory {
+            initializer {
+                AndroidMigrateViewModel()
             }
         }
+    }
+
+    private val requiredPermissions = arrayOf(
+        Manifest.permission.READ_MEDIA_AUDIO,
+        Manifest.permission.READ_MEDIA_IMAGES,
+        Manifest.permission.READ_MEDIA_VIDEO,
+        Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED,
+        Manifest.permission.READ_EXTERNAL_STORAGE,
+        Manifest.permission.WRITE_EXTERNAL_STORAGE
+    )
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        val executor = ContextCompat.getMainExecutor(this)
 
         val biometricPrompt = { callback: BiometricPrompt.AuthenticationCallback ->
             BiometricPrompt(this, executor, callback)
@@ -78,10 +79,41 @@ class MainActivity : BaseActivity() {
             .build()
 
         viewModel.bioticAuth = AndroidMigrateViewModel.Authenticator(biometricPrompt, promptInfo)
+
+        val authCallback = object : BiometricPrompt.AuthenticationCallback() {
+            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                super.onAuthenticationSucceeded(result)
+                viewModel.isPasswordChecked.value = true
+                checkAndRequestMediaPermissions()
+            }
+
+            override fun onAuthenticationFailed() {
+                super.onAuthenticationFailed()
+                finish()
+            }
+
+            override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                super.onAuthenticationError(errorCode, errString)
+                finish()
+            }
+        }
+        viewModel.bioticAuth.doAuth(authCallback)
 //        migrateData()
+//        viewModel.isPasswordChecked.value = true
     }
 
-    private fun checkAndRequestMediaPermissions(vararg requiredPermissions: String) {
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == MEDIA_PERMISSION_REQUEST_CODE) {
+            checkAndRequestMediaPermissions()
+        }
+    }
+
+    private fun checkAndRequestMediaPermissions() {
         // 判断是否已有所有需要的权限
         val allPermissionsGranted = requiredPermissions.all {
             ContextCompat.checkSelfPermission(this, it) == android.content.pm.PackageManager.PERMISSION_GRANTED
@@ -93,6 +125,8 @@ class MainActivity : BaseActivity() {
                 requiredPermissions,
                 MEDIA_PERMISSION_REQUEST_CODE
             )
+        } else {
+
         }
     }
 //    private val viewModel: AndroidMigrateViewModel by viewModels()
@@ -127,7 +161,12 @@ class MainActivity : BaseActivity() {
 //    }
 
     @Composable
-    override fun Content() = Main()
+    override fun Content() {
+        val isPasswordChecked by remember { viewModel.isPasswordChecked }
+        if (isPasswordChecked) {
+            Main()
+        }
+    }
 
     override fun shouldFitSystemBars(): Boolean = false
 }
