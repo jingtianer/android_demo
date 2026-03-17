@@ -66,7 +66,6 @@ object ShareUtils {
 
     suspend fun importSharedDb(albumViewModel: AlbumViewModel, file: MultiplatformFile) {
         withContext(Dispatchers.IO) {
-            file.inputStream
             val importedAlbumList = file.inputStream?.use { `is` ->
                 gson()
                     .fromJson<List<AlbumRelation>>(
