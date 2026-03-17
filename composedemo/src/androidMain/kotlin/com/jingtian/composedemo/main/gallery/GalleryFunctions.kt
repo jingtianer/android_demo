@@ -5,9 +5,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import com.jingtian.composedemo.BuildKonfig
 import com.jingtian.composedemo.main.remote.ImportRemoteDialog
 
-actual fun platformExtraAlbumFunctions() : List<GalleryFunctions> = listOf(GalleryFunctions.IMPORT_CIFS)
+actual fun platformExtraAlbumFunctions() : List<GalleryFunctions> = if (BuildKonfig.isRemote) listOf(GalleryFunctions.IMPORT_CIFS) else listOf()
 
 
 @Composable

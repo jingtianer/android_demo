@@ -167,6 +167,8 @@ buildkonfig {
 
     defaultConfigs {
         buildConfigField(FieldSpec.Type.BOOLEAN, "isRemote", "$isRemote")
+        buildConfigField(FieldSpec.Type.BOOLEAN, "isDektop", "${targetPlatform == "desktop"}")
+        buildConfigField(FieldSpec.Type.BOOLEAN, "isAndroid", "${targetPlatform == "android"}")
     }
     targetConfigs {
         // names in create should be the same as target names you specified
