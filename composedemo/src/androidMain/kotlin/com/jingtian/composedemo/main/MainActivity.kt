@@ -109,7 +109,6 @@ class MainActivity : BaseActivity() {
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == MEDIA_PERMISSION_REQUEST_CODE) {
-            checkAndRequestMediaPermissions()
         }
     }
 

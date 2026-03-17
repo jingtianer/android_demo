@@ -79,10 +79,10 @@ class ImportRemoteDialogStateHolder {
     var sftpEditServerDialog by mutableStateOf<SftpServerStateHolder?>(null)
 
 
-    fun addSftpServer(viewModel: AndroidMigrateViewModel, server: SftpServerStateHolder, context: Context, onSuccess: ()->Unit) {
-        sftpServerHolderList.add(0, server)
+    fun addSftpServer(viewModel: AndroidMigrateViewModel, serverHolder: SftpServerStateHolder, context: Context, onSuccess: ()->Unit) {
+        sftpServerHolderList.add(0, serverHolder)
         val storage = ServerStorage.getStorage<SftpServer>(ServerType.SFTP)
-        val server = server.get()
+        val server = serverHolder.get()
         storage.allocateServerId(server)
         val cipher = server.getCipher()
         val sk = server.getSecretKey(server)
@@ -184,6 +184,7 @@ class SftpServerStateHolder(private val sftpServer: SftpServer = SftpServer()) :
         ip = sftpServer.ip
         password = sftpServer.password
         path = sftpServer.path
+        authed = false
     }
 
     override fun get(): SftpServer {
