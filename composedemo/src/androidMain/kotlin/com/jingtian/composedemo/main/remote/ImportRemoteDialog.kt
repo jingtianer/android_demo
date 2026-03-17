@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -27,6 +28,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewModelScope
@@ -118,11 +122,12 @@ fun ImportRemoteDialogStateHolder.ImportRemoteDialog(album: Album, onDismiss: ()
         }
     ) { _, actionButtons ->
         val viewModel: AlbumViewModel = viewModel(factory = AlbumViewModel.viewModelFactory)
-        LazyColumn(Modifier
-            .fillMaxWidth()
-            .wrapContentHeight()
-            .clip(RoundedCornerShape(4.dp))
-            .background(LocalAppPalette.current.dialogBg)) {
+        LazyColumn(
+            Modifier
+                .fillMaxWidth()
+                .wrapContentHeight()
+                .clip(RoundedCornerShape(4.dp))
+                .background(LocalAppPalette.current.dialogBg)) {
 
             item {
                 DrawerFunctionView(
@@ -231,13 +236,13 @@ fun ImportRemoteDialogStateHolder.SftpServerEditDialog(sftpServer: SftpServerSta
                 }, modifier = Modifier
                     .fillMaxWidth()
                     .wrapContentHeight(), maxLines = 1, label = {
-                    AppThemeText("serverName")
+                    AppThemeText("名称")
                 })
             }
 
             item {
                 OutlinedTextField(sftpServer.ip, {
-                    sftpServer.ip = it
+                    sftpServer.ip = it.ifBlank { "localhost" }
                 }, modifier = Modifier
                     .fillMaxWidth()
                     .wrapContentHeight(), maxLines = 1, label = {
@@ -246,23 +251,36 @@ fun ImportRemoteDialogStateHolder.SftpServerEditDialog(sftpServer: SftpServerSta
             }
 
             item {
-                OutlinedTextField(sftpServer.port.toString(), {
-                    sftpServer.port = it.toIntOrNull() ?: 22
-                }, modifier = Modifier
-                    .fillMaxWidth()
-                    .wrapContentHeight(), maxLines = 1, label = {
-                    AppThemeText("port")
-                })
+                OutlinedTextField(sftpServer.port.toString(),
+                    {
+                        sftpServer.port = it.toIntOrNull() ?: 22
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .wrapContentHeight(),
+                    maxLines = 1,
+                    label = {
+                        AppThemeText("port")
+                    },
+                    keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
+                )
             }
 
             item {
-                OutlinedTextField(sftpServer.path, {
-                    sftpServer.path = it
-                }, modifier = Modifier
-                    .fillMaxWidth()
-                    .wrapContentHeight(), maxLines = 1, label = {
-                    AppThemeText("path")
-                })
+                OutlinedTextField(
+                    sftpServer.path,
+                    {
+                        sftpServer.path = it
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .wrapContentHeight(),
+                    maxLines = 1,
+                    label = {
+                        AppThemeText("路径")
+                    },
+                    keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Uri),
+                )
             }
 
             item {
@@ -271,18 +289,29 @@ fun ImportRemoteDialogStateHolder.SftpServerEditDialog(sftpServer: SftpServerSta
                 }, modifier = Modifier
                     .fillMaxWidth()
                     .wrapContentHeight(), maxLines = 1, label = {
-                    AppThemeText("userName")
+                    AppThemeText("用户名")
                 })
             }
 
             item {
-                OutlinedTextField(sftpServer.password, {
-                    sftpServer.password = it
-                }, modifier = Modifier
-                    .fillMaxWidth()
-                    .wrapContentHeight(), maxLines = 1, label = {
-                    AppThemeText("password")
-                })
+                OutlinedTextField(
+                    sftpServer.password,
+                    {
+                        sftpServer.password = it
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .wrapContentHeight(),
+                    maxLines = 1,
+                    label = {
+                        AppThemeText("password")
+                    },
+                    keyboardOptions = KeyboardOptions.Default.copy(
+                        keyboardType = KeyboardType.Password,
+                        capitalization = KeyboardCapitalization.None
+                    ),
+                    visualTransformation = PasswordVisualTransformation()
+                )
             }
 
             item {

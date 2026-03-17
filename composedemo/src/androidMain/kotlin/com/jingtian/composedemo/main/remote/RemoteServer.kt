@@ -47,7 +47,7 @@ class SftpServer(
     serverId: String = "",
     var userName: String = "",
     var port: Int = 22,
-    var ip: String = "",
+    var ip: String = "localhost",
     var password: String = "",
     var path: String = "/",
 ) : RemoteServer(serverName, serverId) {
