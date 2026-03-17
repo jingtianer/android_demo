@@ -9,6 +9,8 @@ import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.viewModels
+import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricPrompt
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -17,6 +19,8 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.core.net.toFile
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
 import com.jingtian.composedemo.base.BaseActivity
 import com.jingtian.composedemo.base.app
 import com.jingtian.composedemo.dao.model.FileInfo
@@ -51,6 +55,30 @@ class MainActivity : BaseActivity() {
             Manifest.permission.READ_EXTERNAL_STORAGE,
             Manifest.permission.WRITE_EXTERNAL_STORAGE,
         )
+        val executor = ContextCompat.getMainExecutor(this)
+
+        val viewModel: AndroidMigrateViewModel by viewModels {
+            viewModelFactory {
+                initializer {
+                    AndroidMigrateViewModel()
+                }
+            }
+        }
+
+        val biometricPrompt = { callback: BiometricPrompt.AuthenticationCallback ->
+            BiometricPrompt(this, executor, callback)
+        }
+
+        val promptInfo = BiometricPrompt.PromptInfo.Builder()
+            .setTitle("验证是你本人")
+            .setAllowedAuthenticators(
+                BiometricManager.Authenticators.DEVICE_CREDENTIAL or
+                BiometricManager.Authenticators.DEVICE_CREDENTIAL
+            )
+            .setNegativeButtonText("取消验证")
+            .build()
+
+        viewModel.bioticAuth = AndroidMigrateViewModel.Authenticator(biometricPrompt, promptInfo)
 //        migrateData()
     }
 

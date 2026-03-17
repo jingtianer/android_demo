@@ -6,6 +6,12 @@
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO"/>
     <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED"/>
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+
+    <!-- 生物识别权限 -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+    <!-- Android 11+ 面容识别需添加（可选） -->
+    <uses-permission android:name="android.permission.USE_FINGERPRINT" />
+
     <application
         android:name=".base.BaseApplication"
         android:icon="@mipmap/ic_launcher"

@@ -126,6 +126,9 @@ kotlin {
                 implementation(libs.androidx.documentfile)
                 implementation(libs.jsch)
                 implementation(libs.jzlib)
+
+
+                implementation(libs.androidx.biometric)
             }
         }
 

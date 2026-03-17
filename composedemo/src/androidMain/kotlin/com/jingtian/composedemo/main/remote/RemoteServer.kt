@@ -1,5 +1,8 @@
 package com.jingtian.composedemo.main.remote
 
+import android.os.Build
+import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyProperties
 import android.util.Log
 import com.jcraft.jsch.ChannelSftp
 import com.jcraft.jsch.ChannelSftp.LsEntry
@@ -11,6 +14,7 @@ import com.jingtian.composedemo.dao.model.Album
 import com.jingtian.composedemo.dao.model.AlbumItem
 import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.multiplatform.MultiplatformFileImpl
+import com.jingtian.composedemo.utils.Base64Utils
 import com.jingtian.composedemo.utils.FileStorageUtils
 import com.jingtian.composedemo.utils.FileStorageUtils.getFileIntrinsicSize
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
@@ -19,7 +23,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.nio.charset.Charset
+import java.security.KeyStore
 import java.util.Properties
+import javax.crypto.Cipher
+import javax.crypto.KeyGenerator
+import javax.crypto.SecretKey
+import javax.crypto.spec.GCMParameterSpec
+import javax.crypto.spec.IvParameterSpec
 import kotlin.math.log
 import kotlin.random.Random
 import kotlin.random.nextULong
@@ -49,6 +60,7 @@ class SftpServer(
     var port: Int = 22,
     var ip: String = "localhost",
     var password: String = "",
+    var passwordIv: String? = null,
     var path: String = "/",
 ) : RemoteServer(serverName, serverId) {
     private var session: Session? = null
@@ -89,6 +101,8 @@ class SftpServer(
                 ip,
                 port
             )
+            val decryptCipher = getDecryptCipher(this)
+            val password = decryptCipher?.doFinal(Base64Utils.decryptAsByteArray(password))?.toString(Charset.defaultCharset()) ?: password
             session.setPassword(password)
             val config = Properties()
 
@@ -181,6 +195,62 @@ class SftpServer(
         )
         val albumItem = AlbumItem(itemName = fileName, albumId = album.albumId ?: DataBase.INVALID_ID)
         fileInfoList.add(fileInfo to albumItem)
+    }
+
+    fun getSecretKey(server: RemoteServer, encrypt: Boolean = true): SecretKey {
+        val keyStore = KeyStore.getInstance("AndroidKeyStore")
+        keyStore.load(null)
+        if (encrypt) {
+            keyStore.deleteEntry(server.serverId)
+        }
+        if (!keyStore.containsAlias(server.serverId)) {
+            val keyGenerator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore")
+            val keySpec = KeyGenParameterSpec.Builder(
+                server.serverId,
+                KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
+            )
+                .setBlockModes(KeyProperties.BLOCK_MODE_CBC)
+                .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_PKCS7)
+//                .setUserAuthenticationRequired(true)
+//                .setInvalidatedByBiometricEnrollment(true)
+//                .let {
+//                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+//                        it.setUserAuthenticationParameters(0 /* duration */,
+//                        KeyProperties.AUTH_BIOMETRIC_STRONG or
+//                                KeyProperties.AUTH_DEVICE_CREDENTIAL
+//                        )
+//                    } else {
+//                        it
+//                    }
+//                }
+                .build()
+            keyGenerator.init(keySpec)
+            keyGenerator.generateKey()
+        }
+        return keyStore.getKey(server.serverId, null) as SecretKey
+    }
+
+    fun getCipher(): Cipher {
+        return Cipher.getInstance(
+            KeyProperties.KEY_ALGORITHM_AES + "/"
+                    + KeyProperties.BLOCK_MODE_CBC + "/"
+                    + KeyProperties.ENCRYPTION_PADDING_PKCS7)
+    }
+
+    fun getDecryptCipher(server: SftpServer): Cipher? {
+        val cipher = getCipher()
+        val sk = getSecretKey(server, false)
+        val iv = Base64Utils.decryptAsByteArray(server.passwordIv ?: return null)
+
+        // 兼容 AndroidKeyStore2：优先 GCMParameterSpec，失败则用 IvParameterSpec
+        try {
+            val gcmSpec = GCMParameterSpec(128, iv)
+            cipher.init(Cipher.DECRYPT_MODE, sk, gcmSpec)
+        } catch (e: Exception) {
+            val ivSpec = IvParameterSpec(iv)
+            cipher.init(Cipher.DECRYPT_MODE, sk, ivSpec)
+        }
+        return cipher
     }
 }
 

@@ -35,11 +35,14 @@ object ServerStorage {
             storageObject.editor<T>().setValue(serverId, sftpServer)
         }
 
-        fun addServer(server: T) {
+        fun allocateServerId(server: RemoteServer) {
             val nextId = storageId++
             val serverId = "${serverType.name.lowercase()}serve_$nextId"
             server.serverId = serverId
-            storageObject.editor<T>().setValue(serverId, server)
+        }
+
+        fun addServer(server: T) {
+            storageObject.editor<T>().setValue(server.serverId, server)
         }
 
         fun deleteServer(serverId: String) {
