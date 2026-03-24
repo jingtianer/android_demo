@@ -1,13 +1,11 @@
 package com.jingtian.composedemo.dao.model
 
 import androidx.room.Entity
-import androidx.room.Ignore
 import androidx.room.PrimaryKey
 import com.jingtian.composedemo.dao.DataBase
 import com.jingtian.composedemo.dao.FileInfoDao
 import com.jingtian.composedemo.multiplatform.MultiplatformFile
 import com.jingtian.composedemo.utils.FileStorageUtils
-import com.jingtian.composedemo.utils.FileStorageUtils.extension
 
 @Entity(
     tableName = FileInfoDao.TABLE_NAME,
@@ -16,6 +14,7 @@ class FileInfo(
     @PrimaryKey(autoGenerate = true)
     var id: Long? = null,
     var storageId: Long = DataBase.INVALID_ID,
+    var filePath: String = "/",
     var fileType: FileType = FileType.RegularFile,
     var intrinsicWidth: Int = -1,
     var intrinsicHeight: Int = -1,

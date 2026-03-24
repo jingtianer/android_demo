@@ -26,6 +26,8 @@ interface MultiplatformFile {
 
     val file: File?
 
+    val path: String
+
     fun onDelete() {}
 }
 

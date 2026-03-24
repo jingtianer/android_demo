@@ -132,7 +132,7 @@ class ImportRemoteDialogStateHolder {
                         server.passwordIv = Base64Utils.encrypt(cipher.iv)
                     }
                 }
-                storage.addServer(server)
+                storage.updateServer(server.serverId, server)
                 onSuccess()
             }
         })

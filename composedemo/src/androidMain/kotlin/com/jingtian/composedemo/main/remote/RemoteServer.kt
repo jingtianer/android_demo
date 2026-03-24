@@ -1,9 +1,7 @@
 package com.jingtian.composedemo.main.remote
 
-import android.os.Build
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
-import android.util.Log
 import com.jcraft.jsch.ChannelSftp
 import com.jcraft.jsch.ChannelSftp.LsEntry
 import com.jcraft.jsch.JSch
@@ -13,15 +11,10 @@ import com.jingtian.composedemo.dao.DataBase
 import com.jingtian.composedemo.dao.model.Album
 import com.jingtian.composedemo.dao.model.AlbumItem
 import com.jingtian.composedemo.dao.model.FileInfo
-import com.jingtian.composedemo.multiplatform.MultiplatformFileImpl
 import com.jingtian.composedemo.utils.Base64Utils
 import com.jingtian.composedemo.utils.FileStorageUtils
-import com.jingtian.composedemo.utils.FileStorageUtils.getFileIntrinsicSize
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
-import com.jingtian.composedemo.viewmodels.AlbumViewModel.Companion.notifyChange
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.nio.charset.Charset
 import java.security.KeyStore
@@ -31,7 +24,6 @@ import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.IvParameterSpec
-import kotlin.math.log
 import kotlin.random.Random
 import kotlin.random.nextULong
 
@@ -151,9 +143,10 @@ class SftpServer(
                 viewModel.sendMessage("$tag: $msg")
                 // Log.d(tag, msg)
             } ?: return@withContext
+            val pathSet = DataBase.dbImpl.getAlbumItemDao().getAllAlbumItemWithExtra(album.albumId ?: return@withContext).map { it.fileInfo.filePath }.toSet()
             runCatching {
                 val fileInfoList: MutableList<Pair<FileInfo, AlbumItem>> = mutableListOf()
-                traverseEntry(sftpChannel, viewModel, path, album, fileInfoList)
+                traverseEntry(sftpChannel, viewModel, pathSet, path, album, fileInfoList)
                 viewModel.sendMessage("正在写入数据库")
                 viewModel.importFiles(album, fileInfoList)
             }.getOrElse {
@@ -163,23 +156,23 @@ class SftpServer(
         }
     }
 
-    private fun traverseEntry(sftpChannel: ChannelSftp, viewModel: AlbumViewModel, root: String, album: Album, fileInfoList: MutableList<Pair<FileInfo, AlbumItem>>) {
+    private fun traverseEntry(sftpChannel: ChannelSftp, viewModel: AlbumViewModel, pathSet: Set<String>, root: String, album: Album, fileInfoList: MutableList<Pair<FileInfo, AlbumItem>>) {
         val ls = sftpChannel.ls(root)
         for (entry in ls) {
             val entry = (entry as? ChannelSftp.LsEntry) ?: continue
             viewModel.sendMessage("导入: ${entry.filename}: $root")
             if (entry.attrs.isDir) {
-                traverseEntry(sftpChannel, viewModel, "${root}/${entry.filename}", album, fileInfoList)
+                traverseEntry(sftpChannel, viewModel, pathSet, "${root}/${entry.filename}", album, fileInfoList)
             } else {
-                readFile(sftpChannel, viewModel, root, entry, album, fileInfoList)
+                readFile(sftpChannel, viewModel, pathSet, root, entry, album, fileInfoList)
             }
             // Log.d("jingtian", "导入: ${entry.filename}: $root")
         }
     }
 
-    private fun readFile(sftpChannel: ChannelSftp, viewModel: AlbumViewModel, root: String, entry: LsEntry, album: Album, fileInfoList: MutableList<Pair<FileInfo, AlbumItem>>) {
+    private fun readFile(sftpChannel: ChannelSftp, viewModel: AlbumViewModel, pathSet: Set<String>, root: String, entry: LsEntry, album: Album, fileInfoList: MutableList<Pair<FileInfo, AlbumItem>>) {
         val uri = RemoteUriUtils.fromSftpEntry(this, root, entry)
-        if (uri.isHidden) {
+        if (uri.isHidden || pathSet.contains(uri.path)) {
             return
         }
         val type = uri.mediaType
@@ -189,6 +182,7 @@ class SftpServer(
         val fileInfo = FileInfo(
             storageId = fileStorageId,
             fileType = type,
+            filePath = uri.path,
             intrinsicWidth = width,
             intrinsicHeight = height,
             extension = uri.extension

@@ -245,6 +245,9 @@ open class MultiplatformFileImpl(open val uri: Uri) : MultiplatformFile {
         } ?: ""
     }
 
+    override val path: String
+        get() = fileName ?: "/"
+
 //    override fun toString(): String {
 //        return "fileName=$fileName, isHidden=$isHidden, mediaType=$mediaType, extension=$extension, file=$file, uri=$uri"
 //    }

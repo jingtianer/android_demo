@@ -42,6 +42,7 @@ private fun realTraverseUri(
         val fileInfo = FileInfo(
             storageId = fileStorageId,
             fileType = type,
+            filePath = uri.path,
             intrinsicWidth = width,
             intrinsicHeight = height,
             extension = uri.extension

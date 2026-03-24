@@ -36,6 +36,7 @@ private suspend fun realTraverseUri(documentFile: DocumentFile, album: Album, fi
         val fileInfo = FileInfo(
             storageId = fileStorageId,
             fileType = type,
+            filePath = uri.path,
             intrinsicWidth = width,
             intrinsicHeight = height,
             extension = uri.extension

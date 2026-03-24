@@ -81,6 +81,9 @@ class RemoteSftpFileImpl(
     override fun onDelete() {
         fileStore.delete(originUri)
     }
+
+    override val path: String
+        get() = originUri.path ?: "/"
 }
 
 object RemoteUriUtils {

@@ -121,4 +121,6 @@ class MultiplatformFileImpl(val realFile: File, val realExtension: String) : Mul
     override val file: File
         get() = realFile
     override val extension: String = realFile.extension
+    override val path: String
+        get() = realFile.path
 }

@@ -181,6 +181,7 @@ class AlbumViewModel : ViewModel() {
             val (width, height) = getFileIntrinsicSize(uri, mediaType)
             val file = FileInfo(
                 storageId = nextId,
+                filePath = selectedUri.path,
                 fileType = mediaType,
                 intrinsicWidth = width,
                 intrinsicHeight = height,
@@ -299,6 +300,7 @@ class AlbumViewModel : ViewModel() {
             val file = FileInfo(
                 id = albumItemRelation.fileInfo?.id,
                 storageId = nextId,
+                filePath = selectedUri.path,
                 fileType = mediaType,
                 intrinsicWidth = width,
                 intrinsicHeight = height,
