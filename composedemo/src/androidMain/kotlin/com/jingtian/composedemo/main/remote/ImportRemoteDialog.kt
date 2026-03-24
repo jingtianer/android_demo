@@ -331,6 +331,7 @@ fun ImportRemoteDialogStateHolder.SftpServerEditDialog(sftpServer: SftpServerSta
         onPositive = {
             if (!isEdit) {
                 addSftpServer(viewModel, sftpServer, context) {
+                    sftpServer.authed = true
                     onDismiss()
                 }
             } else {
