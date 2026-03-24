@@ -337,7 +337,7 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
                             .fillMaxWidth()
                             .padding(horizontal = 6.dp), label = {
                             AppThemeText("文件名称")
-                        }, maxLines = Int.MAX_VALUE
+                        }, maxLines = Int.MAX_VALUE, enabled = false
                         )
 
                         OutlinedTextField(itemDesc, { value ->
