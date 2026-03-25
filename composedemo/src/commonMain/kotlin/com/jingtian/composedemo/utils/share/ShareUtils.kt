@@ -56,7 +56,7 @@ object ShareUtils {
             file.parentFile?.mkdirs()
             file.createNewFile()
             val dataList = DataBase.dbImpl.getAlbumDao().getAllAlbumInfoWithExtra()
-            FileWriter(file).use { fw ->
+            FileWriter(file, Charsets.UTF_8).use { fw ->
                 gson().toJson(dataList, fw)
                 fw.flush()
             }
@@ -69,7 +69,7 @@ object ShareUtils {
             val importedAlbumList = file.inputStream?.use { `is` ->
                 gson()
                     .fromJson<List<AlbumRelation>>(
-                        JsonReader(InputStreamReader(`is`)),
+                        JsonReader(InputStreamReader(`is`, Charsets.UTF_8)),
                         TypeToken.getParameterized(List::class.java, AlbumRelation::class.java).type
                     ).associate { albumRelation ->
                         val albumMap = albumRelation.albumItemList.withIndex().associate { (index, albumItem) ->
