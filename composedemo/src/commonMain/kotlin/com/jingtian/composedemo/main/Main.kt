@@ -124,47 +124,7 @@ fun Main(
         showSnackBar = !snackBarMessage.isNullOrBlank()
     }
     val scope = rememberCoroutineScope()
-    VisibilityBox(visible, onVisibleRequest) {
-        Scaffold(
-            snackbarHost = {
-                AnimatedVisibility(
-                    visible = showSnackBar,
-                    enter = if(showSnackBarAnim) fadeIn() + expandIn() else EnterTransition.None,
-                    exit = if(showSnackBarAnim) shrinkOut() + fadeOut() else ExitTransition.None,
-                ) {
-                    Snackbar(
-                        modifier = Modifier.padding(8.dp)
-                    ) {
-                        AppThemeText(snackBarMessage ?: "", style = LocalTextStyle.current.copy(color = LocalAppPalette.current.dialogBg), maxLines = 1)
-                    }
-                }
-            }
-        ) { _->
-            ModalNavigationDrawer(
-                drawerContent = {
-                    ModalDrawerSheet(drawerContainerColor = LocalAppPalette.current.drawerBg, windowInsets = WindowInsets.navigationBars.only(
-                        WindowInsetsSides.Vertical + WindowInsetsSides.Start)) {
-                        MainDrawer(menuItemsEntity) { index, album ->
-                            currentSelectedAlbum = IndexedValue(index, album)
-                            scope.launch {
-                                drawerState.close()
-                            }
-                        }
-                    }
-                },
-                Modifier.fillMaxSize(),
-                drawerState = drawerState,
-                gesturesEnabled = true
-            ) {
-                Gallery(galleryStateHolderMap, currentSelectedAlbum, menuItemsEntity, drawerState)
-            }
-        }
-    }
-}
-
-@Composable
-fun VisibilityBox(visible: Boolean, onVisibleRequest: ()->Unit, content: @Composable ()->Unit) {
-    Box(if (visible) {
+    val modifier = if (visible) {
         Modifier.fillMaxSize()
     } else {
         Modifier.fillMaxSize().blur(100.dp).pointerInput(Unit) {
@@ -172,15 +132,50 @@ fun VisibilityBox(visible: Boolean, onVisibleRequest: ()->Unit, content: @Compos
                 while (true) {
                     val event = awaitPointerEvent()
                     when (event.type) {
-                        PointerEventType.Press -> {
-                            onVisibleRequest()
+                        PointerEventType.Release -> {
+                            scope.launch {
+                                onVisibleRequest()
+                            }
                         }
                     }
                     event.changes.forEach { it.consume() }
                 }
             }
         }
-    }) {
-        content()
+    }
+    Scaffold(
+        modifier = modifier,
+        snackbarHost = {
+            AnimatedVisibility(
+                visible = showSnackBar,
+                enter = if(showSnackBarAnim) fadeIn() + expandIn() else EnterTransition.None,
+                exit = if(showSnackBarAnim) shrinkOut() + fadeOut() else ExitTransition.None,
+            ) {
+                Snackbar(
+                    modifier = Modifier.padding(8.dp)
+                ) {
+                    AppThemeText(snackBarMessage ?: "", style = LocalTextStyle.current.copy(color = LocalAppPalette.current.dialogBg), maxLines = 1)
+                }
+            }
+        }
+    ) { _->
+        ModalNavigationDrawer(
+            drawerContent = {
+                ModalDrawerSheet(drawerContainerColor = LocalAppPalette.current.drawerBg, windowInsets = WindowInsets.navigationBars.only(
+                    WindowInsetsSides.Vertical + WindowInsetsSides.Start)) {
+                    MainDrawer(menuItemsEntity) { index, album ->
+                        currentSelectedAlbum = IndexedValue(index, album)
+                        scope.launch {
+                            drawerState.close()
+                        }
+                    }
+                }
+            },
+            Modifier.fillMaxSize(),
+            drawerState = drawerState,
+            gesturesEnabled = true
+        ) {
+            Gallery(galleryStateHolderMap, currentSelectedAlbum, menuItemsEntity, drawerState)
+        }
     }
 }

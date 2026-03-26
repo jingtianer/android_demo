@@ -78,7 +78,7 @@ class MainActivity : BaseActivity() {
             )
             .build()
 
-        viewModel.bioticAuth = AndroidMigrateViewModel.Authenticator(biometricPrompt, promptInfo)
+        viewModel.bioticAuth = viewModel.Authenticator(biometricPrompt, promptInfo)
 //        migrateData()
 //        viewModel.isPasswordChecked.value = true
     }
@@ -164,6 +164,16 @@ class MainActivity : BaseActivity() {
         if (!viewModel.isPasswordChecked.value) {
             checkBioAuth()
         }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        viewModel.onPause()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        viewModel.onStop()
     }
 
     override fun shouldFitSystemBars(): Boolean = false
