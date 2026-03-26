@@ -79,27 +79,19 @@ class MainActivity : BaseActivity() {
             .build()
 
         viewModel.bioticAuth = AndroidMigrateViewModel.Authenticator(biometricPrompt, promptInfo)
+//        migrateData()
+//        viewModel.isPasswordChecked.value = true
+    }
 
+    private fun checkBioAuth() {
         val authCallback = object : BiometricPrompt.AuthenticationCallback() {
             override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
                 super.onAuthenticationSucceeded(result)
                 viewModel.isPasswordChecked.value = true
                 checkAndRequestMediaPermissions()
             }
-
-            override fun onAuthenticationFailed() {
-                super.onAuthenticationFailed()
-                finish()
-            }
-
-            override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
-                super.onAuthenticationError(errorCode, errString)
-                finish()
-            }
         }
         viewModel.bioticAuth.doAuth(authCallback)
-//        migrateData()
-//        viewModel.isPasswordChecked.value = true
     }
 
     override fun onRequestPermissionsResult(
@@ -162,8 +154,15 @@ class MainActivity : BaseActivity() {
     @Composable
     override fun Content() {
         val isPasswordChecked by remember { viewModel.isPasswordChecked }
-        if (isPasswordChecked) {
-            Main()
+        Main(isPasswordChecked) {
+            checkBioAuth()
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (!viewModel.isPasswordChecked.value) {
+            checkBioAuth()
         }
     }
 

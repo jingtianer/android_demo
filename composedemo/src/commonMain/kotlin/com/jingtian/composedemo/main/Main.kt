@@ -7,6 +7,7 @@ import androidx.compose.animation.expandIn
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkOut
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
@@ -29,6 +30,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.jingtian.composedemo.base.AppThemeText
@@ -46,7 +50,10 @@ import kotlinx.coroutines.withContext
 import java.lang.ref.SoftReference
 
 @Composable
-fun Main() {
+fun Main(
+    visible: Boolean = true,
+    onVisibleRequest: ()->Unit = {}
+) {
     val viewModel: AlbumViewModel = viewModel(factory = AlbumViewModel.viewModelFactory)
     var menuItemsEntity by remember { mutableStateOf(emptyList<Album>()) }
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed, confirmStateChange = { drawerValue: DrawerValue ->
@@ -117,38 +124,63 @@ fun Main() {
         showSnackBar = !snackBarMessage.isNullOrBlank()
     }
     val scope = rememberCoroutineScope()
-    Scaffold(
-        snackbarHost = {
-            AnimatedVisibility(
-                visible = showSnackBar,
-                enter = if(showSnackBarAnim) fadeIn() + expandIn() else EnterTransition.None,
-                exit = if(showSnackBarAnim) shrinkOut() + fadeOut() else ExitTransition.None,
-            ) {
-                Snackbar(
-                    modifier = Modifier.padding(8.dp)
+    VisibilityBox(visible, onVisibleRequest) {
+        Scaffold(
+            snackbarHost = {
+                AnimatedVisibility(
+                    visible = showSnackBar,
+                    enter = if(showSnackBarAnim) fadeIn() + expandIn() else EnterTransition.None,
+                    exit = if(showSnackBarAnim) shrinkOut() + fadeOut() else ExitTransition.None,
                 ) {
-                    AppThemeText(snackBarMessage ?: "", style = LocalTextStyle.current.copy(color = LocalAppPalette.current.dialogBg), maxLines = 1)
+                    Snackbar(
+                        modifier = Modifier.padding(8.dp)
+                    ) {
+                        AppThemeText(snackBarMessage ?: "", style = LocalTextStyle.current.copy(color = LocalAppPalette.current.dialogBg), maxLines = 1)
+                    }
+                }
+            }
+        ) { _->
+            ModalNavigationDrawer(
+                drawerContent = {
+                    ModalDrawerSheet(drawerContainerColor = LocalAppPalette.current.drawerBg, windowInsets = WindowInsets.navigationBars.only(
+                        WindowInsetsSides.Vertical + WindowInsetsSides.Start)) {
+                        MainDrawer(menuItemsEntity) { index, album ->
+                            currentSelectedAlbum = IndexedValue(index, album)
+                            scope.launch {
+                                drawerState.close()
+                            }
+                        }
+                    }
+                },
+                Modifier.fillMaxSize(),
+                drawerState = drawerState,
+                gesturesEnabled = true
+            ) {
+                Gallery(galleryStateHolderMap, currentSelectedAlbum, menuItemsEntity, drawerState)
+            }
+        }
+    }
+}
+
+@Composable
+fun VisibilityBox(visible: Boolean, onVisibleRequest: ()->Unit, content: @Composable ()->Unit) {
+    Box(if (visible) {
+        Modifier.fillMaxSize()
+    } else {
+        Modifier.fillMaxSize().blur(100.dp).pointerInput(Unit) {
+            awaitPointerEventScope {
+                while (true) {
+                    val event = awaitPointerEvent()
+                    when (event.type) {
+                        PointerEventType.Press -> {
+                            onVisibleRequest()
+                        }
+                    }
+                    event.changes.forEach { it.consume() }
                 }
             }
         }
-    ) { _->
-        ModalNavigationDrawer(
-            drawerContent = {
-                ModalDrawerSheet(drawerContainerColor = LocalAppPalette.current.drawerBg, windowInsets = WindowInsets.navigationBars.only(
-                    WindowInsetsSides.Vertical + WindowInsetsSides.Start)) {
-                    MainDrawer(menuItemsEntity) { index, album ->
-                        currentSelectedAlbum = IndexedValue(index, album)
-                        scope.launch {
-                            drawerState.close()
-                        }
-                    }
-                }
-            },
-            Modifier.fillMaxSize(),
-            drawerState = drawerState,
-            gesturesEnabled = true
-        ) {
-            Gallery(galleryStateHolderMap, currentSelectedAlbum, menuItemsEntity, drawerState)
-        }
+    }) {
+        content()
     }
 }
