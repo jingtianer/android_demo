@@ -10,9 +10,16 @@ import java.io.FileReader
 import java.io.FileWriter
 import java.util.concurrent.ConcurrentHashMap
 
-private val spInstance = ConcurrentHashMap<String, MultiplatformSharedPreferences<*>>()
-
-class MultiplatformSharedPreferences<V>(name: String, val gson: Gson = Gson(), typeToken: TypeToken<Map<String, V>> = TypeToken.getParameterized(Map::class.java, String::class.java, Any::class.java) as TypeToken<Map<String, V>>, val async: Boolean = true) {
+class MultiplatformSharedPreferences<V>(
+    name: String,
+    val gson: Gson = Gson(),
+    typeToken: TypeToken<Map<String, V>> = TypeToken.getParameterized(
+        Map::class.java,
+        String::class.java,
+        Any::class.java
+    ) as TypeToken<Map<String, V>>,
+    val async: Boolean = true
+) {
     private val outfile = File(spDir, name)
     init {
         if (!outfile.exists()) {
@@ -30,12 +37,15 @@ class MultiplatformSharedPreferences<V>(name: String, val gson: Gson = Gson(), t
     private val lock = Any()
     private var job: Job? = null
 
-    fun all(): Map<String, Any?> = value
+    fun all(): Map<String, V?> = value
 
-    fun <T> editor(): IMultiplatformSharedPreferences<T> {
+    fun <T : V?> editor(): IMultiplatformSharedPreferences<T> {
         return object : IMultiplatformSharedPreferences<T> {
             override fun getValue(key: String, defaultValue: T): T {
-                return (value[key] as? T) ?: defaultValue
+                return (value[key] as? T) ?: let {
+                    setValue(key, defaultValue)
+                    defaultValue
+                }
             }
 
             override fun toString(): String {
@@ -43,7 +53,7 @@ class MultiplatformSharedPreferences<V>(name: String, val gson: Gson = Gson(), t
             }
 
             override fun setValue(key: String, t: T) {
-                value[key] = t as V
+                value[key] = t
                 updateStore()
             }
 
@@ -86,14 +96,22 @@ class MultiplatformSharedPreferences<V>(name: String, val gson: Gson = Gson(), t
     }
 }
 
-fun getJsonStorage(storageName: String): IMultiplatformSharedPreferences<String> {
+private val spInstance = ConcurrentHashMap<String, MultiplatformSharedPreferences<*>>()
+
+private inline fun <V> getStorage(storageName: String, crossinline initializer: ()->MultiplatformSharedPreferences<V>) : MultiplatformSharedPreferences<V>{
     return spInstance.computeIfAbsent(storageName) { old->
+        initializer()
+    } as MultiplatformSharedPreferences<V>
+}
+
+fun getJsonStorage(storageName: String): IMultiplatformSharedPreferences<String> {
+    return getStorage(storageName) {
         MultiplatformSharedPreferences<Any?>(storageName)
     }.editor()
 }
 
 fun getLongStorage(storageName: String): IMultiplatformSharedPreferences<Long> {
-    return spInstance.computeIfAbsent(storageName) { old->
+    return getStorage(storageName) {
         MultiplatformSharedPreferences<Any?>(storageName)
     }.editor()
 }
@@ -103,7 +121,7 @@ fun <V> getRawStorage(
     gson: Gson = Gson(),
     typeToken: TypeToken<Map<String, V>>,
 ): MultiplatformSharedPreferences<V> {
-    return spInstance.computeIfAbsent(storageName) { old->
+    return getStorage(storageName) {
         MultiplatformSharedPreferences(storageName, gson, typeToken)
-    } as MultiplatformSharedPreferences<V>
+    }
 }

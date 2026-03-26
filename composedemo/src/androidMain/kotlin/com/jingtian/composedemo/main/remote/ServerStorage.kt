@@ -10,12 +10,12 @@ object ServerStorage {
 
     private val serverIdStorage = getLongStorage("server_id_storage")
 
-    class Storage<T : RemoteServer>(private val serverType: ServerType) {
+    class Storage<T : RemoteServer>(private val serverType: ServerType, serverClazz: Class<T>) {
         private val storageObject by lazy {
             getRawStorage(
                 "server_storage_${serverType.type}",
                 GsonBuilder().create(),
-                TypeToken.getParameterized(Map::class.java, String::class.java, SftpServer::class.java) as TypeToken<Map<String, SftpServer>>
+                TypeToken.getParameterized(Map::class.java, String::class.java, serverClazz) as TypeToken<Map<String, T>>
             )
         }
         private var storageId by SharedPreferenceUtils.StorageLong(
@@ -50,8 +50,7 @@ object ServerStorage {
         }
     }
 
-    private val sftpServerStorage = Storage<SftpServer>(ServerType.SFTP)
-
+    private val sftpServerStorage = Storage(ServerType.SFTP, SftpServer::class.java)
 
     fun <T: RemoteServer> getStorage(serverType: ServerType): Storage<T> {
         return when(serverType) {
