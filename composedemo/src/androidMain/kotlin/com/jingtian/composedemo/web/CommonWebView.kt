@@ -25,7 +25,6 @@ actual fun CommonWebView(modifier: Modifier, file: MultiplatformFile?, enabled: 
             (file as? MultiplatformFileImpl)?.uri
         }
     }
-    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     fun CommonWebView.init() {
         scope.launch {
@@ -42,7 +41,7 @@ actual fun CommonWebView(modifier: Modifier, file: MultiplatformFile?, enabled: 
             }
         })
     }
-    AndroidView(factory = {
+    AndroidView(factory = { context->
         CommonWebView(context).apply {
 //            layoutParams = ViewGroup.LayoutParams(width?.dpValue?.toInt()?:ViewGroup.LayoutParams.MATCH_PARENT, height?.dpValue?.toInt()?:ViewGroup.LayoutParams.MATCH_PARENT)
             init()

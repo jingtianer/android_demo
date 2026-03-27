@@ -112,7 +112,6 @@ fun AndroidWebView(modifier: Modifier = Modifier, file: MultiplatformFile?, enab
             (file as? MultiplatformFileImpl)?.uri
         }
     }
-    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     fun CommonWebView.init() {
         scope.launch {
@@ -121,7 +120,7 @@ fun AndroidWebView(modifier: Modifier = Modifier, file: MultiplatformFile?, enab
         isEnabled = enabled
         viewScope()
     }
-    AndroidView(factory = {
+    AndroidView(factory = { context->
         CommonWebView(context).apply {
 //            layoutParams = ViewGroup.LayoutParams(width?.dpValue?.toInt()?:ViewGroup.LayoutParams.MATCH_PARENT, height?.dpValue?.toInt()?:ViewGroup.LayoutParams.MATCH_PARENT)
             init()
