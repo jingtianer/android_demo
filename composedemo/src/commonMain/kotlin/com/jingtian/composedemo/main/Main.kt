@@ -7,6 +7,10 @@ import androidx.compose.animation.expandIn
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkOut
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
@@ -31,6 +35,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
@@ -127,19 +132,11 @@ fun Main(
     val modifier = if (visible) {
         Modifier.fillMaxSize()
     } else {
-        Modifier.fillMaxSize().blur(100.dp).pointerInput(Unit) {
-            awaitPointerEventScope {
-                while (true) {
-                    val event = awaitPointerEvent()
-                    when (event.type) {
-                        PointerEventType.Release -> {
-                            scope.launch {
-                                onVisibleRequest()
-                            }
-                        }
-                    }
-                    event.changes.forEach { it.consume() }
-                }
+        Modifier.fillMaxSize().blur(40.dp).pointerInput(Unit) {
+            awaitEachGesture {
+                awaitFirstDown(pass = PointerEventPass.Initial).consume()
+                waitForUpOrCancellation(pass = PointerEventPass.Initial)?.consume()
+                onVisibleRequest()
             }
         }
     }
