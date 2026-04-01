@@ -6,6 +6,8 @@ import android.content.SharedPreferences
 import android.graphics.Color
 import android.net.Uri
 import android.os.SystemClock
+import android.text.Spannable
+import android.text.SpannableStringBuilder
 import android.text.TextPaint
 import android.util.DisplayMetrics
 import android.util.Log
@@ -668,4 +670,19 @@ class Quadruple<A, B, C, D>(
     operator fun component2(): B = second
     operator fun component3(): C = third
     operator fun component4(): D = forth
+}
+
+object SpannableStringUtils {
+    fun SpannableStringBuilder.append(text: CharSequence, vararg spans: Any) {
+        val start = length
+        val end = start + text.length
+        append(text)
+        for (span in spans) {
+            try {
+                setSpan(span, start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+            } catch (ignore: Exception) {
+
+            }
+        }
+    }
 }

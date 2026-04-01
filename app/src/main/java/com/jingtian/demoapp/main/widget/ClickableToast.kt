@@ -16,7 +16,7 @@ object ToastQueue {
     private var toast: Toast? = null
 
     @Synchronized
-    fun show(toast: Toast, show: ()->Unit = toast::show) {
+    fun show(toast: Toast) {
         this.toast?.cancel()
         this.toast = toast
         toast.show()
@@ -24,19 +24,18 @@ object ToastQueue {
 }
 
 class ClickableSimpleToast : ClickableToast<CustomToastViewBinding> {
-    constructor() : super(app, CustomToastViewBinding.inflate(LayoutInflater.from(app), null, false))
-    constructor(context: Context) : super(context, CustomToastViewBinding.inflate(LayoutInflater.from(context), null, false))
+    private constructor() : super(app, CustomToastViewBinding.inflate(LayoutInflater.from(app), null, false))
+    private constructor(context: Context) : super(context, CustomToastViewBinding.inflate(LayoutInflater.from(context), null, false))
 
     companion object {
-        fun show(context: Context?, charSequence: CharSequence, duration: Int) {
-            ClickableSimpleToast(context ?: app).apply {
+        fun makeText(context: Context?, charSequence: CharSequence, duration: Int): Toast {
+            return ClickableSimpleToast(context ?: app).apply {
                 binding.root.apply {
                     highlightColor = Color.TRANSPARENT
                     movementMethod = LinkMovementMethod.getInstance()
                     text = charSequence
                 }
                 this.duration = duration
-                show()
             }
         }
     }
@@ -93,11 +92,5 @@ open class ClickableToast<B : ViewBinding>(context: Context, binding: B) : Custo
 open class CustomToast<B : ViewBinding>(context: Context, val binding: B) : Toast(context) {
     init {
         view = binding.root
-    }
-
-    override fun show() {
-        ToastQueue.show(this) {
-            super.show()
-        }
     }
 }

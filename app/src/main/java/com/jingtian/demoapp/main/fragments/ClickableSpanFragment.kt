@@ -2,7 +2,6 @@ package com.jingtian.demoapp.main.fragments
 
 import android.graphics.Color
 import android.os.Bundle
-import android.text.Spannable
 import android.text.SpannableStringBuilder
 import android.text.TextPaint
 import android.text.method.LinkMovementMethod
@@ -16,6 +15,7 @@ import android.widget.Toast
 import androidx.core.content.res.ResourcesCompat
 import com.jingtian.demoapp.R
 import com.jingtian.demoapp.databinding.FragmentClickableSpanBinding
+import com.jingtian.demoapp.main.SpannableStringUtils.append
 import com.jingtian.demoapp.main.dp
 import com.jingtian.demoapp.main.widget.ClickableSimpleToast
 import com.jingtian.demoapp.main.widget.ToastQueue
@@ -38,7 +38,7 @@ class ClickableSpanFragment : BaseFragment() {
         binding.text.text = buildClickableString()
         binding.text.highlightColor = Color.TRANSPARENT
         binding.button.setOnClickListener {
-            ClickableSimpleToast.show(context, buildClickableString(), Toast.LENGTH_LONG)
+            ToastQueue.show(ClickableSimpleToast.makeText(context, buildClickableString(), Toast.LENGTH_LONG))
         }
 //        binding.text.setOnClickListener {
 //            ToastQueue.show(Toast.makeText(context, "直接覆盖clickspan", Toast.LENGTH_SHORT))
@@ -46,21 +46,23 @@ class ClickableSpanFragment : BaseFragment() {
     }
     
     private fun buildClickableString(): CharSequence {
-        val sb = SpannableStringBuilder("啦啦啦，点击这里！>")
-        sb.setSpan(ForegroundColorSpan(Color.GREEN), 6, 8, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-        sb.setSpan(object : ClickableSpan() { // 点击文字有效，点击padding无效
-            override fun onClick(widget: View) {
-                ToastQueue.show(Toast.makeText(context, "点击了ClickableSpan", Toast.LENGTH_SHORT))
-            }
+        val sb = SpannableStringBuilder("啦啦啦，点击")
+        sb.append("这里！",
+            ForegroundColorSpan(Color.GREEN),
+            object : ClickableSpan() { // 点击文字有效，点击padding无效
+                override fun onClick(widget: View) {
+                    ToastQueue.show(Toast.makeText(context, "点击了ClickableSpan", Toast.LENGTH_SHORT))
+                }
 
-            override fun updateDrawState(ds: TextPaint) {
-                ds.isUnderlineText = false
-            }
+                override fun updateDrawState(ds: TextPaint) {
+                    ds.isUnderlineText = false
+                }
 
-        }, 6, 8, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-        sb.setSpan(ImageSpan(ResourcesCompat.getDrawable(requireContext().resources, R.drawable.arrow_down, null)?.mutate()?.apply {
+            }
+        )
+        sb.append(">", ImageSpan(ResourcesCompat.getDrawable(requireContext().resources, R.drawable.arrow_down, null)?.mutate()?.apply {
             setBounds(0, 0, 18f.dp.toInt(), 18f.dp.toInt())
-        } ?: return sb), 9, 10, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+        } ?: return sb))
         return sb
     }
 }
