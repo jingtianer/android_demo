@@ -1,6 +1,5 @@
 package com.jingtian.demoapp.main.widget
 
-import android.R
 import android.app.Activity
 import android.content.Context
 import android.graphics.Color
@@ -17,9 +16,10 @@ object ToastQueue {
     private var toast: Toast? = null
 
     @Synchronized
-    fun show(toast: Toast) {
+    fun show(toast: Toast, show: ()->Unit = toast::show) {
         this.toast?.cancel()
         this.toast = toast
+        toast.show()
     }
 }
 
@@ -57,7 +57,7 @@ open class ClickableToast<B : ViewBinding>(context: Context, binding: B) : Custo
         params.y = yOffset
         params.width = WindowManager.LayoutParams.WRAP_CONTENT
         params.height = WindowManager.LayoutParams.WRAP_CONTENT
-        params.windowAnimations = R.style.Animation_Toast
+        params.windowAnimations = android.R.style.Animation_Toast
         return params
     }
 
@@ -96,7 +96,8 @@ open class CustomToast<B : ViewBinding>(context: Context, val binding: B) : Toas
     }
 
     override fun show() {
-        ToastQueue.show(this)
-        super.show()
+        ToastQueue.show(this) {
+            super.show()
+        }
     }
 }

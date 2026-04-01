@@ -18,6 +18,7 @@ import com.jingtian.demoapp.R
 import com.jingtian.demoapp.databinding.FragmentClickableSpanBinding
 import com.jingtian.demoapp.main.dp
 import com.jingtian.demoapp.main.widget.ClickableSimpleToast
+import com.jingtian.demoapp.main.widget.ToastQueue
 
 class ClickableSpanFragment : BaseFragment() {
     private lateinit var binding: FragmentClickableSpanBinding
@@ -39,14 +40,17 @@ class ClickableSpanFragment : BaseFragment() {
         binding.button.setOnClickListener {
             ClickableSimpleToast.show(context, buildClickableString(), Toast.LENGTH_LONG)
         }
+//        binding.text.setOnClickListener {
+//            ToastQueue.show(Toast.makeText(context, "直接覆盖clickspan", Toast.LENGTH_SHORT))
+//        }
     }
     
     private fun buildClickableString(): CharSequence {
         val sb = SpannableStringBuilder("啦啦啦，点击这里！>")
         sb.setSpan(ForegroundColorSpan(Color.GREEN), 6, 8, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-        sb.setSpan(object : ClickableSpan() {
+        sb.setSpan(object : ClickableSpan() { // 点击文字有效，点击padding无效
             override fun onClick(widget: View) {
-                Toast.makeText(context, "点击了ClickableSpan", Toast.LENGTH_SHORT).show()
+                ToastQueue.show(Toast.makeText(context, "点击了ClickableSpan", Toast.LENGTH_SHORT))
             }
 
             override fun updateDrawState(ds: TextPaint) {
