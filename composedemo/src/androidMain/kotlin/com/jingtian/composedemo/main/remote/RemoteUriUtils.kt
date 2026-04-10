@@ -15,7 +15,7 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.InputStream
 class RemoteSftpFileImpl(
-    private val originUri: Uri,
+    val originUri: Uri,
     private val server: SftpServer,
 ) : MultiplatformFileImpl(fileStore.get(originUri).toUri()) {
 
@@ -113,7 +113,8 @@ object RemoteUriUtils {
     }
 
     fun serverTypeAndId(file: RemoteSftpFileImpl): Pair<ServerType, String>? {
-        val uri = file.uri
+        val uri = file.originUri
+        Log.d("jingtian", "serverTypeAndId: uri=$uri")
         val schema = uri.scheme ?: return null
         val serverId = uri.authority ?: return null
         return when(schema) {

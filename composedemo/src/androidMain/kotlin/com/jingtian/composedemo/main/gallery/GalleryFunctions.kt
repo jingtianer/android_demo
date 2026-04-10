@@ -1,5 +1,6 @@
 package com.jingtian.composedemo.main.gallery
 
+import android.util.Log
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -18,6 +19,7 @@ import com.jingtian.composedemo.main.remote.ServerStorage
 import com.jingtian.composedemo.main.remote.ServerType
 import com.jingtian.composedemo.ui.theme.LocalAppPalette
 import com.jingtian.composedemo.ui.theme.LocalMiddleButtonConfig
+import com.jingtian.composedemo.utils.CoroutineUtils
 
 actual fun platformExtraAlbumFunctions(selectCount: Int) : List<GalleryFunctions> {
     return if (BuildKonfig.isRemote) {
@@ -88,19 +90,25 @@ private fun RowScope.DeleteRemoteFileFunctionView(platformExtra: GalleryStateHol
                 )
             ) {
                 AppThemeConfirmDialog("确认删除$title", reversed = true, onPositive = null, onMiddleClick = {
-                    viewModel.deleteItems(currentSelectedItem.values)
-                    val remoteFiles = currentSelectedItem.values.mapNotNull { it.fileInfo.getFileUri() as? RemoteSftpFileImpl }
-                    val groupedFiles = remoteFiles
-                        .map { RemoteUriUtils.serverTypeAndId(it) to it }
-                        .groupBy { it.first?.first }
-                    for (serverType in groupedFiles.keys) {
-                        serverType ?: continue
-                        val groupByServerId = groupedFiles[serverType]?.groupBy { it.first?.second } ?: continue
-                        for (serverId in groupByServerId.keys) {
-                            serverId ?: continue
-                            ServerStorage.getStorage<RemoteServer>(serverType).getServer(serverId)?.deleteFiles(groupByServerId[serverId]?.map { it.second } ?: listOf())
+                    CoroutineUtils.runIOTask({
+                        val remoteFiles = currentSelectedItem.values.mapNotNull { it.fileInfo.getFileUri() as? RemoteSftpFileImpl }
+                        val groupedFiles = remoteFiles
+                            .map { RemoteUriUtils.serverTypeAndId(it) to it }
+                            .groupBy { it.first?.first }
+                        for (serverType in groupedFiles.keys) {
+                            Log.d("jingtian", "remote deleteFiles: serverType=$serverType")
+                            serverType ?: continue
+                            val groupByServerId = groupedFiles[serverType]?.groupBy { it.first?.second } ?: continue
+                            for (serverId in groupByServerId.keys) {
+                                Log.d("jingtian", "remote deleteFiles: serverId=$serverId")
+                                serverId ?: continue
+                                ServerStorage.getStorage<RemoteServer>(serverType).getServer(serverId)?.deleteFiles(groupByServerId[serverId]?.map { it.second } ?: listOf())
+                            }
                         }
-                    }
+                        viewModel.deleteItems(currentSelectedItem.values)
+                    }, onFailure = { t->
+                        Log.d("jingtian", "remote err=$t")
+                    })
                     showDialog = false
                 }, onNegative = {
                     showDialog = false
