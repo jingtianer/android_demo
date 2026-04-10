@@ -2,6 +2,7 @@ package com.jingtian.composedemo.main.remote
 
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
+import android.util.Log
 import com.jcraft.jsch.ChannelSftp
 import com.jcraft.jsch.ChannelSftp.LsEntry
 import com.jcraft.jsch.JSch
@@ -17,6 +18,7 @@ import com.jingtian.composedemo.viewmodels.AlbumViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.nio.charset.Charset
+import java.nio.file.Path
 import java.security.KeyStore
 import java.util.Properties
 import javax.crypto.Cipher
@@ -35,7 +37,9 @@ enum class ServerType(val type: Int) {
 abstract class RemoteServer(
     var serverName: String = "新建: ${Random.nextULong()}",
     var serverId: String = "",
-)
+) {
+    abstract fun deleteFiles(files: List<RemoteSftpFileImpl>)
+}
 
 fun <T> ChannelSftp.use(block: (ChannelSftp)->T): T? {
     return try {
@@ -141,7 +145,7 @@ class SftpServer(
         withContext(Dispatchers.IO) {
             val sftpChannel = connect { tag, msg ->
                 viewModel.sendMessage("$tag: $msg")
-                // Log.d(tag, msg)
+                 Log.d(tag, msg)
             } ?: return@withContext
             val pathSet = DataBase.dbImpl.getAlbumItemDao().getAllAlbumItemWithExtra(album.albumId ?: return@withContext).map { it.fileInfo.filePath }.toSet()
             runCatching {
@@ -245,6 +249,21 @@ class SftpServer(
             cipher.init(Cipher.DECRYPT_MODE, sk, ivSpec)
         }
         return cipher
+    }
+
+    override fun deleteFiles(files: List<RemoteSftpFileImpl>) {
+        connect { tag, msg ->
+            Log.d(tag, "deleteFiles: $msg")
+        }?.use { channel->
+            files.forEach {
+                runCatching {
+                    channel.rm(it.path)
+                    Log.d("jingtian", "deleteFiles: rm: ${it.path}")
+                }.onFailure { t->
+                    Log.e("jingtian", "deleteFiles: rm: ${it.path}, fail:\n $t")
+                }
+            }
+        }
     }
 }
 

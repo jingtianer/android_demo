@@ -445,13 +445,15 @@ fun GalleryStateHolder.Gallery() {
             when(selectedCount) {
                 0 -> {
                     currentFunctions.addAll(GalleryFunctions.albumFunctions)
-                    platformFunctions.addAll(platformExtraAlbumFunctions())
+                    platformFunctions.addAll(platformExtraAlbumFunctions(selectedCount))
                 }
                 1 -> {
                     currentFunctions.addAll(GalleryFunctions.itemFunctions)
+                    platformFunctions.addAll(platformExtraAlbumFunctions(selectedCount))
                 }
                 else -> {
                     currentFunctions.addAll(GalleryFunctions.batchFunctions)
+                    platformFunctions.addAll(platformExtraAlbumFunctions(selectedCount))
                 }
             }
         } else {

@@ -5,7 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.painter.Painter
 import com.jingtian.composedemo.base.resources.*
 
-actual fun platformExtraAlbumFunctions() : List<GalleryFunctions> = listOf()
+actual fun platformExtraAlbumFunctions(selectCount: Int) : List<GalleryFunctions> = listOf()
 
 
 @Composable

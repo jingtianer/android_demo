@@ -111,4 +111,16 @@ object RemoteUriUtils {
             else -> null
         }
     }
+
+    fun serverTypeAndId(file: RemoteSftpFileImpl): Pair<ServerType, String>? {
+        val uri = file.uri
+        val schema = uri.scheme ?: return null
+        val serverId = uri.authority ?: return null
+        return when(schema) {
+            "jingtianSftp" -> {
+                ServerType.SFTP to serverId
+            }
+            else -> null
+        }
+    }
 }

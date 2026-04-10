@@ -26,7 +26,9 @@ enum class GalleryFunctions(val functionName: String, val iconProvider: @Composa
     SELECT_ALL("全选", { getPainter(DrawableIcon.DrawableSelectAll) }),
     SELECT_NONE("全不选", { getPainter(DrawableIcon.DrawableSelectNone) }),
     MOVE("移动", { getPainter(DrawableIcon.DrawableMove) }),
-    IMPORT_CIFS("远程", { getPainter(DrawableIcon.DrawableCIFS) });
+    IMPORT_CIFS("远程", { getPainter(DrawableIcon.DrawableCIFS) }),
+    DELETE_CIFS_FILE("删除远程", { getPainter(DrawableIcon.DrawableCIFS) }),
+    ;
     companion object {
         // 0 -> 添加, 导入, 修改相册名称
         // 1 -> 编辑, 删除, 移动
@@ -37,7 +39,7 @@ enum class GalleryFunctions(val functionName: String, val iconProvider: @Composa
     }
 }
 
-expect fun platformExtraAlbumFunctions() : List<GalleryFunctions>
+expect fun platformExtraAlbumFunctions(selectCount: Int) : List<GalleryFunctions>
 
 @Composable
 expect fun RowScope.PlatformGalleryFunctionView(platformExtra: GalleryStateHolder, func: GalleryFunctions, onClick: ()->Unit)

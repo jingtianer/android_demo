@@ -5,6 +5,7 @@ import com.jingtian.composedemo.main.remote.ImportRemoteDialogStateHolder
 
 class PlatformExtra : IPlatformExtra {
     var showImportRemoteDialog = mutableStateOf(false)
+    var showDeleteRemoteFileConfirmDialog = mutableStateOf(false)
     var showImportRemoteDialogStateHolder = mutableStateOf(ImportRemoteDialogStateHolder())
 }
 
