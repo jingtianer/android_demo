@@ -40,6 +40,19 @@ kotlin {
 
     androidTarget()
 
+    listOf(
+        iosX64(),
+        iosArm64(),
+        iosSimulatorArm64()
+    ).forEach { iosTarget->
+        iosTarget.binaries {
+            framework {
+                baseName = if (isRemote) "${appName}.remote" else appName
+                isStatic = true
+            }
+        }
+    }
+
     jvm("desktop") {
         compilations.all {
             kotlinOptions {
@@ -58,7 +71,6 @@ kotlin {
                 implementation(compose.material3)
                 implementation(compose.ui)
                 implementation(compose.components.resources)
-                implementation(libs.androidx.compose.ui.tooling.preview.get().toString())
 
                 // 协程核心
                 implementation(libs.kotlinx.coroutines.core.get().toString())
@@ -86,6 +98,7 @@ kotlin {
                 implementation(libs.androidx.core.ktx)
                 implementation(libs.androidx.appcompat)
                 implementation(compose.uiTooling)
+                implementation(libs.androidx.compose.ui.tooling.preview.get().toString())
 
                 // Android 协程
                 implementation(libs.kotlinx.coroutines.android)
@@ -97,8 +110,15 @@ kotlin {
                 implementation(libs.jsch)
                 implementation(libs.jzlib)
 
-
                 implementation(libs.androidx.biometric)
+            }
+        }
+
+        val iosMain by creating {
+            dependsOn(commonMain)
+            dependencies {
+                implementation(libs.kotlinx.coroutines.core)
+                implementation(libs.sqlite.bundled)
             }
         }
 
@@ -237,12 +257,12 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
 
     // 测试依赖
-    testImplementation(libs.junit)
-    androidTestImplementation(libs.androidx.test.ext.junit)
-    androidTestImplementation(libs.androidx.test.espresso.core)
-    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
-    debugImplementation(libs.androidx.compose.ui.tooling)
-    debugImplementation(libs.androidx.compose.ui.test.manifest)
+//    testImplementation(libs.junit)
+//    androidTestImplementation(libs.androidx.test.ext.junit)
+//    androidTestImplementation(libs.androidx.test.espresso.core)
+//    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+//    debugImplementation(libs.androidx.compose.ui.tooling)
+//    debugImplementation(libs.androidx.compose.ui.test.manifest)
 }
 
 // ======================== Compose Desktop 配置 ========================
