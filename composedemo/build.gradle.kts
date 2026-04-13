@@ -105,9 +105,6 @@ kotlin {
                     exclude(group = "com.intellij", module = "annotations")
                 }
 
-                implementation(libs.kotlinx.io.core)
-                implementation(libs.kotlinx.io.filesystem)
-
             }
         }
 
