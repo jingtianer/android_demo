@@ -29,6 +29,10 @@ val appAid = configProps.getProperty("AID")
 val targetPlatform = configProps.getProperty("TARGET_PLATFORM")
 val isRemote = configProps.getProperty("IS_REMOTE").toBoolean()
 
+val isDektop = targetPlatform.lowercase() == "desktop"
+val isAndroid = targetPlatform.lowercase() == "android"
+val isIOS = targetPlatform.lowercase() == "ios"
+
 
 // ======================== Kotlin 多平台配置 ========================
 kotlin {
@@ -44,66 +48,32 @@ kotlin {
         }
     }
 
-    if (targetPlatform == "desktop") {
-        configurations {
-            all {
-                exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
-            }
-        }
-    }
-
     sourceSets {
         // 通用依赖 (CommonMain)
         val commonMain by getting {
             dependencies {
                 // Compose 核心
-                implementation(compose.runtime) {
-                    exclude(group = "com.intellij", module = "annotations")
-                }
-                implementation(compose.foundation) {
-                    exclude(group = "com.intellij", module = "annotations")
-                }
-                implementation(compose.material3) {
-                    exclude(group = "com.intellij", module = "annotations")
-                }
-                implementation(compose.ui) {
-                    exclude(group = "com.intellij", module = "annotations")
-                }
-                implementation(compose.components.resources) {
-                    exclude(group = "com.intellij", module = "annotations")
-                }
-                implementation(libs.androidx.compose.ui.tooling.preview.get().toString()) {
-                    exclude(group = "com.intellij", module = "annotations")
-                }
+                implementation(compose.runtime)
+                implementation(compose.foundation)
+                implementation(compose.material3)
+                implementation(compose.ui)
+                implementation(compose.components.resources)
+                implementation(libs.androidx.compose.ui.tooling.preview.get().toString())
 
                 // 协程核心
-                implementation(libs.kotlinx.coroutines.core.get().toString()) {
-                    exclude(group = "com.intellij", module = "annotations")
-                }
+                implementation(libs.kotlinx.coroutines.core.get().toString())
 
                 // 数据库 - Room
-                implementation(libs.androidx.room.runtime.get().toString()) {
-                    exclude(group = "com.intellij", module = "annotations")
-                }
-                implementation(libs.androidx.room.ktx.get().toString()) {
-                    exclude(group = "com.intellij", module = "annotations")
-                }
+                implementation(libs.androidx.room.runtime.get().toString())
+                implementation(libs.androidx.room.ktx.get().toString())
 
                 // 生命周期
-                implementation(libs.androidx.lifecycle.viewmodel.core.get().toString()) {
-                    exclude(group = "com.intellij", module = "annotations")
-                }
-                implementation(libs.androidx.lifecycle.viewmodel.ktx.get().toString()) {
-                    exclude(group = "com.intellij", module = "annotations")
-                }
-                implementation(libs.androidx.lifecycle.viewmodel.compose.get().toString()) {
-                    exclude(group = "com.intellij", module = "annotations")
-                }
+                implementation(libs.androidx.lifecycle.viewmodel.core.get().toString())
+                implementation(libs.androidx.lifecycle.viewmodel.ktx.get().toString())
+                implementation(libs.androidx.lifecycle.viewmodel.compose.get().toString())
 
                 // 工具类
-                implementation(libs.gson.get().toString()) {
-                    exclude(group = "com.intellij", module = "annotations")
-                }
+                implementation(libs.gson.get().toString())
 
             }
         }
@@ -160,6 +130,15 @@ kotlin {
             }
         }
     }
+
+    if (!isAndroid) {
+        configurations {
+            all {
+                exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
+                exclude(group = "com.intellij", module = "annotations")
+            }
+        }
+    }
 }
 
 buildkonfig {
@@ -167,8 +146,9 @@ buildkonfig {
 
     defaultConfigs {
         buildConfigField(FieldSpec.Type.BOOLEAN, "isRemote", "$isRemote")
-        buildConfigField(FieldSpec.Type.BOOLEAN, "isDektop", "${targetPlatform == "desktop"}")
-        buildConfigField(FieldSpec.Type.BOOLEAN, "isAndroid", "${targetPlatform == "android"}")
+        buildConfigField(FieldSpec.Type.BOOLEAN, "isDektop", "$isDektop")
+        buildConfigField(FieldSpec.Type.BOOLEAN, "isAndroid", "$isAndroid")
+        buildConfigField(FieldSpec.Type.BOOLEAN, "isIOS", "$isIOS")
     }
     targetConfigs {
         // names in create should be the same as target names you specified
