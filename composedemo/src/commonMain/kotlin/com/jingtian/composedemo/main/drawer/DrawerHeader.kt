@@ -113,6 +113,8 @@ fun DrawerHeader() {
             }
             currentUser.userAvatar.storageId = nextId
             currentUser.userAvatar.fileType = FileType.IMAGE
+            currentUser.userAvatar.extension = uri.extension
+            currentUser.userAvatar.filePath = uri.path
             UserStorage.userInstance = currentUser
             val (_, image) = BitMapCachePool.loadImage(
                 currentUser.userAvatar,
