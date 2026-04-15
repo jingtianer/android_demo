@@ -1,6 +1,5 @@
 import com.codingfeline.buildkonfig.compiler.FieldSpec
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
-import java.io.FileInputStream
 import java.util.Properties
 
 plugins {
@@ -17,9 +16,9 @@ plugins {
 val configFile = project.file("app-config.properties")
 val configProps = Properties()
 if (configFile.exists()) {
-    FileInputStream(configFile).use { configProps.load(it) }
+	configFile.inputStream().use { configProps.load(it) }
 } else {
-    throw GradleException("配置文件 app-config.properties 不存在！")
+	throw GradleException("配置文件 app-config.properties 不存在！")
 }
 
 // 应用配置
@@ -29,7 +28,7 @@ val appAid = configProps.getProperty("AID")
 val targetPlatform = configProps.getProperty("TARGET_PLATFORM")
 val isRemote = configProps.getProperty("IS_REMOTE").toBoolean()
 
-val isDektop = targetPlatform.lowercase() == "desktop"
+val isDesktop = targetPlatform.lowercase() == "desktop"
 val isAndroid = targetPlatform.lowercase() == "android"
 val isIOS = targetPlatform.lowercase() == "ios"
 
@@ -40,15 +39,17 @@ kotlin {
 
     androidTarget()
 
-    listOf(
-        iosX64(),
-        iosArm64(),
-        iosSimulatorArm64()
-    ).forEach { iosTarget->
-        iosTarget.binaries {
-            framework {
-                baseName = if (isRemote) "${appName}.remote" else appName
-                isStatic = true
+    if (isIOS) {
+        listOf(
+            iosX64(),
+            iosArm64(),
+            iosSimulatorArm64()
+        ).forEach { iosTarget->
+            iosTarget.binaries {
+                framework {
+                    baseName = if (isRemote) "${appName}.remote" else appName
+                    isStatic = true
+                }
             }
         }
     }
@@ -85,8 +86,17 @@ kotlin {
                 implementation(libs.androidx.lifecycle.viewmodel.compose.get().toString())
 
                 // 工具类
-                implementation(libs.gson.get().toString())
+                implementation(libs.kotlinx.serialization.json)
+                implementation("org.jetbrains.kotlinx:kotlinx-io-core:0.6.0")
+                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.2")
 
+//                // Room 扩展
+//                implementation(libs.androidx.room.rxjava2)
+//                implementation(libs.androidx.room.paging)
+//
+//                // 生命周期扩展
+//                implementation(libs.androidx.lifecycle.livedata.ktx)
+//                implementation(libs.androidx.compose.runtime.livedata)
             }
         }
 
@@ -114,11 +124,27 @@ kotlin {
             }
         }
 
-        val iosMain by creating {
-            dependsOn(commonMain)
-            dependencies {
-                implementation(libs.kotlinx.coroutines.core)
-                implementation(libs.sqlite.bundled)
+        if (isIOS) {
+            val iosMain by creating {
+                dependsOn(commonMain)
+                dependencies {
+                    implementation(libs.kotlinx.coroutines.core)
+                    implementation(libs.sqlite.bundled)
+//                implementation(libs.androidx.room.runtime)
+//                implementation(libs.androidx.room.ktx)
+                }
+            }
+
+            val iosArm64Main by getting {
+                dependsOn(iosMain)
+            }
+
+            val iosSimulatorArm64Main by getting {
+                dependsOn(iosMain)
+            }
+
+            val iosX64Main by getting {
+                dependsOn(iosMain)
             }
         }
 
@@ -132,7 +158,6 @@ kotlin {
                 implementation(libs.annotations.get().toString())
 
                 // 工具类
-                implementation(libs.gson.get().toString())
                 implementation(libs.androidx.sqlite.bundled.get().toString())
 
                 // 数据库 - Room (仅声明运行时，编译器通过 KSP 处理)
@@ -166,7 +191,7 @@ buildkonfig {
 
     defaultConfigs {
         buildConfigField(FieldSpec.Type.BOOLEAN, "isRemote", "$isRemote")
-        buildConfigField(FieldSpec.Type.BOOLEAN, "isDektop", "$isDektop")
+        buildConfigField(FieldSpec.Type.BOOLEAN, "isDesktop", "$isDesktop")
         buildConfigField(FieldSpec.Type.BOOLEAN, "isAndroid", "$isAndroid")
         buildConfigField(FieldSpec.Type.BOOLEAN, "isIOS", "$isIOS")
     }
@@ -239,15 +264,16 @@ android {
 // ======================== 全局依赖 ========================
 dependencies {
     // Room 编译器 (KSP)
-    ksp(libs.androidx.room.compiler)
+    // 仅在 JVM / Android 相关 target 上运行，避免在 iOS KSP 任务中解析依赖
+    add("kspAndroid", libs.androidx.room.compiler)
+    add("kspDesktop", libs.androidx.room.compiler)
 
-    // Room 扩展
-    implementation(libs.androidx.room.rxjava2)
-    implementation(libs.androidx.room.paging)
-
-    // 生命周期扩展
-    implementation(libs.androidx.lifecycle.livedata.ktx)
-    implementation(libs.androidx.compose.runtime.livedata)
+    if (isIOS) {
+        // iOS 仅使用 Kotlin Inject 的 KSP，不运行 Room KSP，以避免 commonMain 中 JVM-only 类型（如 java.util.Date）导致 MissingType
+        add("kspIosSimulatorArm64", libs.kotlin.inject.compiler)
+        add("kspIosArm64", libs.kotlin.inject.compiler)
+        add("kspIosX64", libs.kotlin.inject.compiler)
+    }
 
     // Compose 布局
     implementation(libs.androidx.constraintlayout.compose)

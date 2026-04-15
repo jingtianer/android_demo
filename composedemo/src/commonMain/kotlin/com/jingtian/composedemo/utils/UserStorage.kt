@@ -1,19 +1,17 @@
 package com.jingtian.composedemo.utils
 
-import com.google.gson.GsonBuilder
-import com.google.gson.reflect.TypeToken
 import com.jingtian.composedemo.dao.model.User
 import com.jingtian.composedemo.multiplatform.getJsonStorage
 import com.jingtian.composedemo.multiplatform.getLongStorage
+import kotlinx.serialization.json.Json
 
 object UserStorage {
     var userInstance: User by SharedPreferenceUtils.StorageJson(
         getJsonStorage("user_info"),
         "user",
         User(),
-        TypeToken.get(User::class.java),
-        gson = GsonBuilder()
-            .create(),
+        serializer = User.serializer(),
+        jsonFormat = Json { ignoreUnknownKeys = true },
     )
 
     private var _userAppThemeConfig: Long by SharedPreferenceUtils.StorageLong(

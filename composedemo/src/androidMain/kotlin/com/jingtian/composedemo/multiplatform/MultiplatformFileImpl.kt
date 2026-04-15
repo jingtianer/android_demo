@@ -17,6 +17,10 @@ import com.jingtian.composedemo.BuildKonfig
 import com.jingtian.composedemo.base.app
 import com.jingtian.composedemo.dao.model.FileType
 import com.jingtian.composedemo.utils.SerializationUtils.toInputStream
+import kotlinx.io.Buffer
+import kotlinx.io.RawSource
+import kotlinx.io.asSource
+import kotlinx.io.files.Path
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.IOException
@@ -213,16 +217,20 @@ open class MultiplatformFileImpl(open val uri: Uri) : MultiplatformFile {
         getMediaType(uri)
     }
 
-    override val inputStream: InputStream?
-        get() = app.contentResolver.openInputStream(uri)
-
-    override val fileStoreInputStream: InputStream?
+    override val inputStream: RawSource?
         get() {
-            return if (BuildKonfig.isRemote) {
+            val isr = app.contentResolver.openInputStream(uri) ?: return null
+            return InputStreamRawSource(isr)
+        }
+
+    override val fileStoreInputStream: RawSource?
+        get() {
+            val isr = if (BuildKonfig.isRemote) {
                 uri.toInputStream()
             } else {
-                return app.contentResolver.openInputStream(uri)
-            }
+                app.contentResolver.openInputStream(uri)
+            } ?: return null
+            return isr.asSource()
         }
 
     override val videoThumbnail: ImageBitmap?
@@ -235,8 +243,8 @@ open class MultiplatformFileImpl(open val uri: Uri) : MultiplatformFile {
         getImageRatio(uri)
     }
 
-    override val file: File?
-        get() = uri.safeToFile()
+    override val file: kotlinx.io.files.Path?
+        get() = uri.safeToFile()?.absolutePath?.let { Path(it) }
 
     override val extension: String by lazy {
         fileName?.let { fileName->
@@ -251,6 +259,32 @@ open class MultiplatformFileImpl(open val uri: Uri) : MultiplatformFile {
 //    override fun toString(): String {
 //        return "fileName=$fileName, isHidden=$isHidden, mediaType=$mediaType, extension=$extension, file=$file, uri=$uri"
 //    }
+}
+
+private class InputStreamRawSource(
+    private val input: InputStream
+) : RawSource {
+
+    override fun readAtMostTo(sink: Buffer, byteCount: Long): Long {
+        require(byteCount >= 0) { "byteCount < 0: $byteCount" }
+        if (byteCount == 0L) return 0L
+
+        val toRead = byteCount.coerceAtMost(DEFAULT_BUFFER_SIZE.toLong()).toInt()
+        val buffer = ByteArray(toRead)
+        val read = input.read(buffer)
+        if (read == -1) return -1L
+
+        sink.write(buffer, 0, read)
+        return read.toLong()
+    }
+
+    override fun close() {
+        input.close()
+    }
+
+    companion object {
+        private const val DEFAULT_BUFFER_SIZE = 8 * 1024
+    }
 }
 
 fun Bitmap?.toImmutable(): Bitmap? {

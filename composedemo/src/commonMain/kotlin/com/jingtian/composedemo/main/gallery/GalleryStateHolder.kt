@@ -9,6 +9,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.node.WeakReference
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewModelScope
 import com.jingtian.composedemo.dao.model.Album
@@ -19,10 +20,10 @@ import com.jingtian.composedemo.main.albumItem.AlbumItemViewStateHolder
 import com.jingtian.composedemo.utils.dpValue
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.lang.ref.SoftReference
 import kotlin.math.max
 
 class GalleryDpConstants(
@@ -74,7 +75,7 @@ class GalleryStateHolder(val album: IndexedValue<Album>, val albumList: List<Alb
 
     var platformExtraModel by mutableStateOf(getPlatformExtra())
 
-    val albumViewMap = mutableStateMapOf<Long, SoftReference<AlbumItemViewStateHolder>>()
+    val albumViewMap = mutableStateMapOf<Long, WeakReference<AlbumItemViewStateHolder>>()
 
     suspend fun updateFilterList() {
         withContext(Dispatchers.Default) {

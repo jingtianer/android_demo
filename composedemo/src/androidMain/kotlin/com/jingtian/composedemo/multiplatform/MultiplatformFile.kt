@@ -4,23 +4,24 @@ import androidx.core.net.toUri
 import com.jingtian.composedemo.BuildKonfig
 import com.jingtian.composedemo.main.remote.RemoteUriUtils
 import com.jingtian.composedemo.utils.SerializationUtils.readAsUri
+import kotlinx.io.files.Path
 import java.io.File
 
 private object MultiplatformFileFactory : IMultiplatformFileFactory {
-    override fun fromFile(file: File): MultiplatformFile {
+    override fun fromFile(file: Path): MultiplatformFile {
         if (BuildKonfig.isRemote) {
-            val uri = file.inputStream().readAsUri()
+            val uri = File(file.toString()).inputStream().readAsUri()
             if (uri.scheme?.startsWith("jingtian") == true) {
                 RemoteUriUtils.parse(uri)?.let {
                     return it
                 }
             }
-            return MultiplatformFileImpl(file.inputStream().readAsUri())
+            return MultiplatformFileImpl(File(file.toString()).inputStream().readAsUri())
         }
-        return MultiplatformFileImpl(file.toUri())
+        return MultiplatformFileImpl(File(file.toString()).toUri())
     }
 
-    override fun shareFile(file: File): MultiplatformFile {
+    override fun shareFile(file: Path): MultiplatformFile {
         return MultiplatformFileImpl(file.toUri())
     }
 }

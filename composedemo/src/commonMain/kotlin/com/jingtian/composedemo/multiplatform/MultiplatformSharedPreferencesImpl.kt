@@ -1,10 +1,15 @@
 package com.jingtian.composedemo.multiplatform
 
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
+import androidx.collection.arrayMapOf
+import com.jingtian.composedemo.dao.model.relation.AlbumRelation
 import com.jingtian.composedemo.utils.CoroutineUtils
 import com.jingtian.composedemo.utils.getFileStorageRootDir
+import kotlinx.coroutines.InternalCoroutinesApi
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.internal.synchronized
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
 import java.io.File
 import java.io.FileReader
 import java.io.FileWriter
@@ -12,12 +17,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 class MultiplatformSharedPreferences<V>(
     name: String,
-    val gson: Gson = Gson(),
-    typeToken: TypeToken<Map<String, V>> = TypeToken.getParameterized(
-        Map::class.java,
-        String::class.java,
-        Any::class.java
-    ) as TypeToken<Map<String, V>>,
+    val json: Json = Json { ignoreUnknownKeys = true },
     val async: Boolean = true
 ) {
     private val outfile = File(spDir, name)
@@ -30,8 +30,10 @@ class MultiplatformSharedPreferences<V>(
         }
     }
     private val value: MutableMap<String, V?> = ConcurrentHashMap(
-        FileReader(outfile).use {
-            gson.fromJson(it, typeToken.type) ?: mapOf()
+        try {
+            json.decodeFromString<Map<String, V>>("")
+        } catch (e : Exception) {
+            arrayMapOf()
         }
     )
     private val lock = Any()
@@ -39,6 +41,7 @@ class MultiplatformSharedPreferences<V>(
 
     fun all(): Map<String, V?> = value
 
+    @OptIn(InternalCoroutinesApi::class)
     fun <T : V?> editor(): IMultiplatformSharedPreferences<T> {
         return object : IMultiplatformSharedPreferences<T> {
             override fun getValue(key: String, defaultValue: T): T {
@@ -49,11 +52,11 @@ class MultiplatformSharedPreferences<V>(
             }
 
             override fun toString(): String {
-                return gson.toJson(value)
+                return json.encodeToString(value)
             }
 
             override fun setValue(key: String, t: T) {
-                value[key] = t
+                value.put(key, t)
                 updateStore()
             }
 
@@ -68,13 +71,13 @@ class MultiplatformSharedPreferences<V>(
                         job?.cancel()
                         job = CoroutineUtils.runIOTask({
                             FileWriter(outfile).use {
-                                gson.toJson(value, it)
+                                it.write(json.encodeToString(value))
                                 it.flush()
                             }
                         })
                     } else {
                         FileWriter(outfile).use {
-                            gson.toJson(value, it)
+                            it.write(json.encodeToString(value))
                             it.flush()
                         }
                     }
@@ -118,10 +121,9 @@ fun getLongStorage(storageName: String): IMultiplatformSharedPreferences<Long> {
 
 fun <V> getRawStorage(
     storageName: String,
-    gson: Gson = Gson(),
-    typeToken: TypeToken<Map<String, V>>,
+    typeToken: Json = Json { ignoreUnknownKeys = true },
 ): MultiplatformSharedPreferences<V> {
     return getStorage(storageName) {
-        MultiplatformSharedPreferences(storageName, gson, typeToken)
+        MultiplatformSharedPreferences(storageName, typeToken)
     }
 }

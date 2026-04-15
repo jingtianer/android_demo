@@ -2,42 +2,52 @@ package com.jingtian.composedemo.utils
 
 import androidx.annotation.IntRange
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.node.WeakReference
 import com.jingtian.composedemo.dao.DataBase
 import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.FileType
 import com.jingtian.composedemo.multiplatform.MultiplatformFile
+import com.jingtian.composedemo.multiplatform.readAllBytesOrNull
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.InputStream
 import java.io.OutputStream
-import java.lang.ref.SoftReference
+import java.lang.ref.WeakReference
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.max
 
 object BitMapCachePool {
-    private val overallImagePool: ConcurrentHashMap<FileType, BitMapCache> = ConcurrentHashMap()
+    private val overallImagePool: MutableMap<FileType, BitMapCache> = mutableMapOf()
+    private val lock = Mutex()
 
     private fun getBitMapCachePool(fileType: FileType): BitMapCache {
-        return overallImagePool.computeIfAbsent(fileType) { k->
-            BitMapCache(k)
+        return synchronized(lock) {
+            overallImagePool.getOrPut(fileType) {
+                BitMapCache(fileType)
+            }
         }
     }
     class BitMapCache(private val fileType: FileType) {
-        private val imagePool = ConcurrentHashMap<Long, ArrayList<Pair<Int, SoftReference<ImageBitmap?>>>>()
+        private val imagePool: MutableMap<Long, Pair<Mutex, ArrayList<Pair<Int, WeakReference<ImageBitmap>>>>> = mutableMapOf()
+        private val lock = Mutex()
 
-        @Synchronized
-        private fun getQueue(id: Long): ArrayList<Pair<Int, SoftReference<ImageBitmap?>>> {
-            return imagePool.computeIfAbsent(id) { k->
-                ArrayList()
+        private fun getQueue(id: Long): Pair<Mutex, ArrayList<Pair<Int, WeakReference<ImageBitmap>>>> {
+            return synchronized(lock) {
+                imagePool.getOrPut(id) {
+                    Mutex() to ArrayList()
+                }
             }
         }
 
-        private fun getIfNotNull(queue: ArrayList<Pair<Int, SoftReference<ImageBitmap?>>>, index: Int): Pair<Int, ImageBitmap>? {
+        private fun getIfNotNull(queue: ArrayList<Pair<Int, WeakReference<ImageBitmap>>>, index: Int): Pair<Int, ImageBitmap>? {
             queue.lastOrNull()?.let { last->
                 last.second.get()?.let { bitmap ->
                     return last.first to bitmap
@@ -46,7 +56,7 @@ object BitMapCachePool {
             return null
         }
 
-        private fun tryGetNeighborBitmap(queue: ArrayList<Pair<Int, SoftReference<ImageBitmap?>>>, id: Long, scaleFactor: Int, insertPos: Int, bitmapCreator: () -> ImageBitmap?): Pair<Int, ImageBitmap>? {
+        private fun tryGetNeighborBitmap(queue: ArrayList<Pair<Int, WeakReference<ImageBitmap>>>, id: Long, scaleFactor: Int, insertPos: Int, bitmapCreator: () -> ImageBitmap?): Pair<Int, ImageBitmap>? {
             getIfNotNull(queue, insertPos-1)?.let { (neighborScaleFactor, bitmap)->
                 CoroutineUtils.runIOTask({
                     createAndStoreBitmap(id, scaleFactor, -insertPos-1, queue, bitmapCreator)
@@ -63,59 +73,59 @@ object BitMapCachePool {
         }
 
         fun put(id: Long, scaleFactor: Int = -1, bitmapCreator: () -> ImageBitmap?): ImageBitmap? {
-            val queue = getQueue(id)
-            synchronized(queue) {
+            val (lock, queue) = getQueue(id)
+            return synchronized(lock) {
                 if (scaleFactor == -1) {
                     getIfNotNull(queue, 0)?.let { (scaleFactor, bitmap)->
-                        return bitmap
+                        return@synchronized bitmap
                     }
-                    return bitmapCreator()
+                    return@synchronized bitmapCreator()
                 }
                 val insertPos = queue.binarySearch {
                     scaleFactor - it.first
                 }
                 if (insertPos < 0) {
                     tryGetNeighborBitmap(queue, id, scaleFactor, -insertPos-1, bitmapCreator)?.let { (scaleFactor, bitmap)->
-                        return bitmap
+                        return@synchronized bitmap
                     }
-                    return createAndStoreBitmap(id, scaleFactor, -insertPos-1, queue, bitmapCreator)
+                    return@synchronized createAndStoreBitmap(id, scaleFactor, -insertPos-1, queue, bitmapCreator)
                 }
                 val cachedBitmap = queue[insertPos].second.get()
                 if (cachedBitmap == null) {
                     tryGetNeighborBitmap(queue, id, scaleFactor, insertPos, bitmapCreator)?.let { (scaleFactor, bitmap)->
-                        return bitmap
+                        return@synchronized bitmap
                     }
                     val bitmap = bitmapCreator()
                     if (bitmap != null) {
-                        queue[insertPos] = scaleFactor to SoftReference(bitmap)
+                        queue[insertPos] = scaleFactor to WeakReference(bitmap)
                     }
-                    return bitmap
+                    return@synchronized bitmap
                 }
-                return cachedBitmap
+                return@synchronized cachedBitmap
             }
         }
 
         fun clear(id: Long) {
-            val queue = getQueue(id)
-            synchronized(queue) {
+            val (lock, queue) = getQueue(id)
+            synchronized(lock) {
                 queue.clear()
             }
             getCacheDir(fileType.value, id).takeIf { it.exists() }?.deleteRecursively()
         }
 
-        private fun createAndStoreBitmap(id: Long, scaleFactor: Int, @IntRange(from = 0) insertPos: Int, queue: ArrayList<Pair<Int, SoftReference<ImageBitmap?>>>, bitmapCreator: () -> ImageBitmap?): ImageBitmap? {
+        private fun createAndStoreBitmap(id: Long, scaleFactor: Int, @IntRange(from = 0) insertPos: Int, queue: ArrayList<Pair<Int, WeakReference<ImageBitmap>>>, bitmapCreator: () -> ImageBitmap?): ImageBitmap? {
             val cacheFile = getCacheFile(fileType.value, id, scaleFactor)
             if (cacheFile?.exists() == true) {
                 FileInputStream(cacheFile).use {
                     uriToImageBitmap(it, scaleFactor)?.let {
-                        queue.add(insertPos, scaleFactor to SoftReference(it))
+                        queue.add(insertPos, scaleFactor to WeakReference(it))
                         return@createAndStoreBitmap it
                     }
                 }
             }
             val bitmap = bitmapCreator()
             if (bitmap != null) {
-                queue.add(insertPos, scaleFactor to SoftReference(bitmap))
+                queue.add(insertPos, scaleFactor to WeakReference(bitmap))
                 CoroutineUtils.runIOTask({
                     val file = getCacheFile(fileType.value, id, scaleFactor)
                     if (file == null || file.exists()) {
@@ -134,7 +144,7 @@ object BitMapCachePool {
         }
     }
 
-    private fun getCacheStoreRoot(fileType: Int): File {
+    private fun getCacheStoreRoot(fileType: Int): Path {
         return if (fileType == FileType.HTML.value) getFileStorageRootDir() else getFileCacheStorageRootDir()
     }
 
@@ -165,11 +175,11 @@ object BitMapCachePool {
     }
 
     private fun ensureCacheDir(fileType: Int, storageId: Long) {
-        File(getCacheStoreRoot(fileType), "bitmap_cache/bitmap_${fileType}/${storageId}").ensureDir()
+        Path(getCacheStoreRoot(fileType), "bitmap_cache/bitmap_${fileType}/${storageId}").ensureDir()
     }
 
-    private fun getCacheDir(fileType: Int, storageId: Long): File {
-        return File(getCacheStoreRoot(fileType), "bitmap_cache/bitmap_${fileType}/${storageId}")
+    private fun getCacheDir(fileType: Int, storageId: Long): Path {
+        return Path(getCacheStoreRoot(fileType), "bitmap_cache/bitmap_${fileType}/${storageId}")
     }
 
     fun invalid(id: Long, fileType: FileType) {
@@ -207,14 +217,15 @@ object BitMapCachePool {
     }
 
     fun toBitMap(image: MultiplatformFile, maxWidth: Int = -1, maxHeight: Int = -1): Pair<Int, ImageBitmap?> {
-        val scaleFactor =  image.inputStream?.use { `is`->
+        val bytes = image.inputStream.readAllBytesOrNull() ?: return -1 to null
+        val scaleFactor = bytes.inputStream().use { `is`->
             // 第一步：仅解码边界，获取图片原始宽高
             val (outWidth, outHeight) = uriToImageSize(`is`)
             // 第二步：计算缩放比例（避免图片过大导致 OOM）
             calculateScaleFactor(outWidth, outHeight, maxWidth, maxHeight)
-        } ?: -1
+        }
 //        println("scale factor: $scaleFactor")
-        val bitmap = image.inputStream?.use { `is`->
+        val bitmap = bytes.inputStream().use { `is`->
 //            Log.d("TAG", "loadImage failed: $image, $scaleFactor, $image")
             // 第三步：按缩放比例解码图片
             uriToImageBitmap(`is`, scaleFactor)
@@ -248,16 +259,22 @@ object BitMapCachePool {
         val scaleFactor =  if (fileInfo.intrinsicWidth > 0 && fileInfo.intrinsicHeight > 0) {
             calculateScaleFactor(fileInfo.intrinsicWidth, fileInfo.intrinsicHeight, maxWidth, maxHeight)
         } else {
-            image.inputStream?.use { `is`->
-                // 第一步：仅解码边界，获取图片原始宽高
-                val (outWidth, outHeight) = uriToImageSize(`is`)
-                // 第二步：计算缩放比例（避免图片过大导致 OOM）
-                calculateScaleFactor(outWidth, outHeight, maxWidth, maxHeight)
-            } ?: -1
+            val bytes = image.inputStream.readAllBytesOrNull()
+            if (bytes == null) {
+                -1
+            } else {
+                bytes.inputStream().use { `is`->
+                    // 第一步：仅解码边界，获取图片原始宽高
+                    val (outWidth, outHeight) = uriToImageSize(`is`)
+                    // 第二步：计算缩放比例（避免图片过大导致 OOM）
+                    calculateScaleFactor(outWidth, outHeight, maxWidth, maxHeight)
+                }
+            }
         }
 //        println("scale factor: $scaleFactor")
         val bitmap = getBitMapCachePool(fileInfo.fileType).put(id, scaleFactor) {
-            fileInfo.getFileUri()?.inputStream?.use { `is`->
+            val bytes = fileInfo.getFileUri()?.inputStream.readAllBytesOrNull() ?: return@put null
+            bytes.inputStream().use { `is`->
                 uriToImageBitmap(`is`, scaleFactor)
             }
         }

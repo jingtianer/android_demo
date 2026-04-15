@@ -9,14 +9,14 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import com.jingtian.composedemo.base.app
+import kotlinx.io.files.Path
 import java.io.File
 import java.nio.file.Files
-import java.nio.file.Path
 import kotlin.io.path.inputStream
 import kotlin.io.path.isDirectory
 
-actual fun getFileStorageRootDir(): File = app.getExternalFilesDir(null)!!
-actual fun getFileCacheStorageRootDir(): File = app.externalCacheDir!!
+actual fun getFileStorageRootDir(): Path = Path(app.getExternalFilesDir(null)!!.absolutePath)
+actual fun getFileCacheStorageRootDir(): Path = Path(app.externalCacheDir!!.absolutePath)
 
 actual fun compressImageBitmap(bitmap: ImageBitmap, width: Int, height: Int, scale: Float): ImageBitmap {
     // 2. 创建缩放矩阵

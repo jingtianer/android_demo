@@ -1,10 +1,6 @@
 package com.jingtian.composedemo.utils.share
 
-import com.google.gson.GsonBuilder
-import com.google.gson.reflect.TypeToken
-import com.google.gson.stream.JsonReader
 import com.jingtian.composedemo.dao.DataBase
-import com.jingtian.composedemo.dao.converter.DateTypeConverter
 import com.jingtian.composedemo.dao.converter.FileTypeConverter
 import com.jingtian.composedemo.dao.converter.ItemRankConverter
 import com.jingtian.composedemo.dao.model.AlbumItem
@@ -14,20 +10,31 @@ import com.jingtian.composedemo.dao.model.LabelInfo
 import com.jingtian.composedemo.dao.model.relation.AlbumRelation
 import com.jingtian.composedemo.multiplatform.MultiplatformFile
 import com.jingtian.composedemo.multiplatform.getMultiplatformFileFactory
+import com.jingtian.composedemo.multiplatform.readAllBytesOrNull
+import com.jingtian.composedemo.utils.createNewFile
+import com.jingtian.composedemo.utils.delete
+import com.jingtian.composedemo.utils.deleteRecursively
 import com.jingtian.composedemo.utils.getFileCacheStorageRootDir
+import com.jingtian.composedemo.utils.isDirectory
+import com.jingtian.composedemo.utils.isFile
+import com.jingtian.composedemo.utils.mkdirs
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
 import com.jingtian.composedemo.viewmodels.AlbumViewModel.Companion.notifyChange
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
-import java.io.File
-import java.io.FileWriter
-import java.io.InputStreamReader
-import java.util.Date
+import kotlinx.io.buffered
+import kotlinx.io.files.Path
+import kotlinx.io.files.SystemFileSystem
+import kotlinx.io.readString
+import kotlinx.io.writeString
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import kotlin.random.Random
 import kotlin.random.nextULong
 
 object ShareUtils {
-    private val shareFileRootDir =  File(getFileCacheStorageRootDir(), "share")
+    private val shareFileRootDir =  Path(Path(getFileCacheStorageRootDir()), "share")
     suspend fun shareDataBase(): MultiplatformFile {
         val file = withContext(Dispatchers.IO) {
             getShareFile()
@@ -35,30 +42,24 @@ object ShareUtils {
         return getMultiplatformFileFactory().shareFile(file)
     }
 
-    val gson = {
-        GsonBuilder()
-            .registerTypeAdapter(Date::class.java, DateTypeConverter())
-            .registerTypeAdapter(FileType::class.java, FileTypeConverter())
-            .registerTypeAdapter(ItemRank::class.java, ItemRankConverter())
-            .create()
-    }
+    private val json = Json { ignoreUnknownKeys = true }
 
-    private suspend fun getShareFile(): File {
+    private suspend fun getShareFile(): Path {
         return withContext(Dispatchers.IO) {
-            val file = File(shareFileRootDir, "share_${Random.nextULong()}.json")
-            if (file.exists()) {
+            val file = Path(shareFileRootDir, "share_${Random.nextULong()}.json")
+            if (SystemFileSystem.exists(file)) {
                 if (file.isFile) {
                     file.delete()
                 } else if (file.isDirectory) {
                     file.deleteRecursively()
                 }
             }
-            file.parentFile?.mkdirs()
+            file.parent?.mkdirs()
             file.createNewFile()
             val dataList = DataBase.dbImpl.getAlbumDao().getAllAlbumInfoWithExtra()
-            FileWriter(file, Charsets.UTF_8).use { fw ->
-                gson().toJson(dataList, fw)
-                fw.flush()
+            SystemFileSystem.sink(file).buffered().use {
+                it.writeString(json.encodeToString(dataList))
+                it.flush()
             }
             file
         }
@@ -66,17 +67,13 @@ object ShareUtils {
 
     suspend fun importSharedDb(albumViewModel: AlbumViewModel, file: MultiplatformFile) {
         withContext(Dispatchers.IO) {
-            val importedAlbumList = file.inputStream?.use { `is` ->
-                gson()
-                    .fromJson<List<AlbumRelation>>(
-                        JsonReader(InputStreamReader(`is`, Charsets.UTF_8)),
-                        TypeToken.getParameterized(List::class.java, AlbumRelation::class.java).type
-                    ).associate { albumRelation ->
-                        val albumMap = albumRelation.albumItemList.withIndex().associate { (index, albumItem) ->
-                            albumItem.albumItem.itemName to albumRelation.albumItemList[index]
-                        }
-                        albumRelation.albumItem.albumName to albumMap
+            val importedAlbumList = file.inputStream?.buffered()?.readString()?.let { bytes ->
+                json.decodeFromString<List<AlbumRelation>>(bytes).associate { albumRelation ->
+                    val albumMap = albumRelation.albumItemList.withIndex().associate { (index, albumItem) ->
+                        albumItem.albumItem.itemName to albumRelation.albumItemList[index]
                     }
+                    albumRelation.albumItem.albumName to albumMap
+                }
             } ?: return@withContext
             val albumList = DataBase.dbImpl.getAlbumDao().getAllAlbumInfoWithExtra()
             for (album in albumList) {

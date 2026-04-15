@@ -11,6 +11,9 @@ import com.jcraft.jsch.ChannelSftp.LsEntry
 import com.jingtian.composedemo.dao.model.FileType
 import com.jingtian.composedemo.multiplatform.MultiplatformFileImpl
 import com.jingtian.composedemo.utils.SerializationUtils.toInputStream
+import kotlinx.io.Buffer
+import kotlinx.io.RawSource
+import kotlinx.io.files.Path
 import java.io.File
 import java.io.FileInputStream
 import java.io.InputStream
@@ -56,11 +59,11 @@ class RemoteSftpFileImpl(
     override val extension: String
         get() = getOrignExtension()
 
-    override val inputStream: InputStream
-        get() = FileInputStream(contentFile)
+    override val inputStream: RawSource
+        get() = InputStreamRawSource(FileInputStream(contentFile))
 
-    override val fileStoreInputStream: InputStream
-        get() = originUri.toInputStream()
+    override val fileStoreInputStream: RawSource
+        get() = InputStreamRawSource(originUri.toInputStream())
 
     override val videoThumbnail: ImageBitmap?
         get() {
@@ -75,8 +78,8 @@ class RemoteSftpFileImpl(
         get() {
             return getImageRatio(contentFile.toUri())
         }
-    override val file: File
-        get() = contentFile
+    override val file: Path
+        get() = Path(contentFile.absolutePath)
 
     override fun onDelete() {
         fileStore.delete(originUri)
@@ -84,6 +87,32 @@ class RemoteSftpFileImpl(
 
     override val path: String
         get() = originUri.path ?: "/"
+}
+
+private class InputStreamRawSource(
+    private val input: InputStream
+) : RawSource {
+
+    override fun readAtMostTo(sink: Buffer, byteCount: Long): Long {
+        require(byteCount >= 0) { "byteCount < 0: $byteCount" }
+        if (byteCount == 0L) return 0L
+
+        val toRead = byteCount.coerceAtMost(DEFAULT_BUFFER_SIZE.toLong()).toInt()
+        val buffer = ByteArray(toRead)
+        val read = input.read(buffer)
+        if (read == -1) return -1L
+
+        sink.write(buffer, 0, read)
+        return read.toLong()
+    }
+
+    override fun close() {
+        input.close()
+    }
+
+    companion object {
+        private const val DEFAULT_BUFFER_SIZE = 8 * 1024
+    }
 }
 
 object RemoteUriUtils {

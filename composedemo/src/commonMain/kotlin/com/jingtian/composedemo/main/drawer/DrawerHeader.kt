@@ -65,6 +65,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.sqrt
 import com.jingtian.composedemo.base.resources.getPainter
+import kotlinx.coroutines.IO
 
 @Composable
 fun DrawerHeader() {

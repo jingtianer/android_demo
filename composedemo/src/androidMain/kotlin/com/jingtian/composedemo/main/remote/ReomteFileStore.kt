@@ -27,7 +27,7 @@ import java.util.concurrent.locks.ReentrantLock
 
 
 class RemoteFileStore(serverType: ServerType) {
-    private val storageRoot = File(getFileCacheStorageRootDir(), "remote/filestore/server_${serverType.type}")
+    private val storageRoot = File(File(getFileCacheStorageRootDir().toString()), "remote/filestore/server_${serverType.type}")
     init {
         storageRoot.ensureDirExist()
     }
@@ -88,7 +88,7 @@ class RemoteFileStore(serverType: ServerType) {
     }
 
     fun delete(originUri: Uri) {
-        CoroutineUtils.runIOTaskLowPriority({
+        CoroutineUtils.runIOTask({
             val lock = locks.computeIfAbsent(originUri.toString()) { ReentrantLock() }
             try {
                 lock.lockInterruptibly()

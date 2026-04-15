@@ -66,6 +66,7 @@ import kotlinx.coroutines.withContext
 import kotlin.math.min
 import com.jingtian.composedemo.base.resources.getPainter
 import com.jingtian.composedemo.base.resources.DrawableIcon
+import kotlinx.coroutines.IO
 
 @Composable
 fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumData: List<Album>, totalLabelList: List<String>, onDismiss: ()->Unit) {

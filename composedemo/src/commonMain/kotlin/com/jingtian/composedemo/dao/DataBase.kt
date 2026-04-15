@@ -3,7 +3,6 @@ package com.jingtian.composedemo.dao
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
-import com.jingtian.composedemo.dao.converter.DateTypeConverter
 import com.jingtian.composedemo.dao.converter.FileTypeConverter
 import com.jingtian.composedemo.dao.converter.ItemRankConverter
 import com.jingtian.composedemo.dao.model.Album
@@ -20,12 +19,12 @@ import com.jingtian.composedemo.dao.model.LabelInfo
     ],
     version = 1
 )
-@TypeConverters(DateTypeConverter::class, FileTypeConverter::class, ItemRankConverter::class)
+@TypeConverters(/* DateTypeConverter::class, */FileTypeConverter::class, ItemRankConverter::class)
 abstract class DataBase: RoomDatabase() {
     companion object {
         const val INVALID_ID = -1L
         val dbImpl = dbImplCreator()
-            .addTypeConverter(DateTypeConverter())
+//            .addTypeConverter(DateTypeConverter())
             .addTypeConverter(FileTypeConverter())
             .addTypeConverter(ItemRankConverter())
             .build()

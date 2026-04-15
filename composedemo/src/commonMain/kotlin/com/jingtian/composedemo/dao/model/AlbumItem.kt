@@ -7,8 +7,8 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.jingtian.composedemo.dao.AlbumItemDao
 import com.jingtian.composedemo.dao.DataBase
-import org.jetbrains.annotations.Range
-import java.util.Date
+import kotlinx.datetime.Clock
+import kotlinx.serialization.Serializable
 
 @Entity(
     tableName = AlbumItemDao.TABLE_NAME,
@@ -30,10 +30,11 @@ import java.util.Date
     ],
     indices = [Index(value = ["itemId", "albumId", "fileId"])],
 )
+@Serializable
 class AlbumItem(
     @PrimaryKey(autoGenerate = true)
     var itemId: Long? = null,
-    var createTime: Date = Date(),
+    var createTime: Long = Clock.System.now().toEpochMilliseconds(),
     var itemName: String = "",
     var rank: ItemRank = ItemRank.NONE,
     var desc: String = "",

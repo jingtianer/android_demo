@@ -38,6 +38,7 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.node.WeakReference
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.jingtian.composedemo.base.AppThemeText
@@ -50,9 +51,9 @@ import com.jingtian.composedemo.utils.observeAsState
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
 import com.jingtian.composedemo.viewmodels.AlbumViewModel.Companion.observeAsState
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.lang.ref.SoftReference
 
 @Composable
 fun Main(
@@ -113,7 +114,7 @@ fun Main(
     val snackBarMessage by viewModel.currentBackgroundTask.observeAsState()
 
     val galleryStateHolderMap = remember(menuItemsEntity) {
-        mutableStateMapOf<Long, SoftReference<GalleryStateHolder>>()
+        mutableStateMapOf<Long, WeakReference<GalleryStateHolder>>()
     }
     var showSnackBar by remember { mutableStateOf(snackBarMessage != null) }
     var showSnackBarAnim by remember { mutableStateOf(true) }

@@ -3,6 +3,7 @@ package com.jingtian.composedemo.utils
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toAwtImage
 import androidx.compose.ui.graphics.toComposeImageBitmap
+import kotlinx.io.files.Path
 import org.jetbrains.skia.Bitmap
 import org.jetbrains.skia.Canvas
 import org.jetbrains.skia.ColorAlphaType
@@ -19,8 +20,8 @@ val globalWorkDir = if (File(".").canWrite()) {
     File(System.getProperty("user.home"), "ComposeDemo/workdir")
 }
 
-actual fun getFileStorageRootDir(): File = File(globalWorkDir, "filestore")
-actual fun getFileCacheStorageRootDir(): File = File(globalWorkDir, "cache")
+actual fun getFileStorageRootDir(): Path = Path(File(globalWorkDir, "filestore").absolutePath)
+actual fun getFileCacheStorageRootDir(): Path = Path(File(globalWorkDir, "cache").absolutePath)
 actual fun compressImageBitmap(bitmap: ImageBitmap, width: Int, height: Int, scale: Float): ImageBitmap {
     val image = bitmap.toAwtImage().toImage()
     val originWidth = image.width

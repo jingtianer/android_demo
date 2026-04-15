@@ -5,6 +5,7 @@ import androidx.room.ForeignKey
 import androidx.room.Index
 import com.jingtian.composedemo.dao.DataBase
 import com.jingtian.composedemo.dao.LabelInfoDao
+import kotlinx.serialization.Serializable
 
 @Entity(
     tableName = LabelInfoDao.TABLE_NAME,
@@ -21,6 +22,7 @@ import com.jingtian.composedemo.dao.LabelInfoDao
     indices = [Index(value = ["albumItemId", "label"])]
 )
 
+@Serializable
 class LabelInfo(
     var albumItemId: Long = DataBase.INVALID_ID,
     var label: String = ""

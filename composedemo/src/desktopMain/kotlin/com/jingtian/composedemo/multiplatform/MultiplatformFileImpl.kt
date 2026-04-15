@@ -3,6 +3,9 @@ package com.jingtian.composedemo.multiplatform
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import com.jingtian.composedemo.dao.model.FileType
+import kotlinx.io.RawSource
+import kotlinx.io.asSource
+import kotlinx.io.files.Path
 import org.bytedeco.javacv.FFmpegFrameGrabber
 import org.bytedeco.javacv.Java2DFrameConverter
 import org.jaudiotagger.audio.AudioFileIO
@@ -108,18 +111,18 @@ class MultiplatformFileImpl(val realFile: File, val realExtension: String) : Mul
             in htmlExtensions -> FileType.HTML
             else -> FileType.RegularFile
         }
-    override val inputStream: InputStream
-        get() = FileInputStream(realFile)
+    override val inputStream: RawSource?
+        get() = FileInputStream(realFile).asSource()
     override val videoThumbnail: ImageBitmap?
         get() = extractVideoFirstFrame(realFile)
     override val audioThumbnail: ImageBitmap?
         get() = extractAudioCover(realFile)
     override val imageRatio: Pair<Int, Int>
         get() = getImageSize(realFile) ?: (1 to 1)
-    override val fileStoreInputStream: InputStream
-        get() = ByteArrayInputStream(realFile.absolutePath.toByteArray(StandardCharsets.UTF_8))
-    override val file: File
-        get() = realFile
+    override val fileStoreInputStream: RawSource?
+        get() = ByteArrayInputStream(realFile.absolutePath.toByteArray(StandardCharsets.UTF_8)).asSource()
+    override val file: Path
+        get() = Path(realFile.absolutePath)
     override val extension: String = realFile.extension
     override val path: String
         get() = realFile.path

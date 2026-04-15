@@ -1,22 +1,22 @@
 package com.jingtian.composedemo.main.remote
 
-import com.google.gson.GsonBuilder
-import com.google.gson.reflect.TypeToken
+import androidx.compose.ui.text.intl.Locale
+import androidx.compose.ui.text.toLowerCase
 import com.jingtian.composedemo.multiplatform.getLongStorage
+import com.jingtian.composedemo.multiplatform.getJsonStorage
 import com.jingtian.composedemo.multiplatform.getRawStorage
 import com.jingtian.composedemo.utils.SharedPreferenceUtils
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 
 object ServerStorage {
 
     private val serverIdStorage = getLongStorage("server_id_storage")
 
-    class Storage<T : RemoteServer>(private val serverType: ServerType, serverClazz: Class<T>) {
+    class Storage<T : RemoteServer>(private val serverType: ServerType) {
         private val storageObject by lazy {
-            getRawStorage(
-                "server_storage_${serverType.type}",
-                GsonBuilder().create(),
-                TypeToken.getParameterized(Map::class.java, String::class.java, serverClazz) as TypeToken<Map<String, T>>
-            )
+            getRawStorage<T>("server_storage_${serverType.type}")
         }
         private var storageId by SharedPreferenceUtils.StorageLong(
             serverIdStorage,
@@ -37,7 +37,7 @@ object ServerStorage {
 
         fun allocateServerId(server: RemoteServer) {
             val nextId = storageId++
-            val serverId = "${serverType.name.lowercase()}serve_$nextId"
+            val serverId = "${serverType.name.toLowerCase(Locale.current)}serve_$nextId"
             server.serverId = serverId
         }
 
@@ -50,7 +50,7 @@ object ServerStorage {
         }
     }
 
-    private val sftpServerStorage = Storage(ServerType.SFTP, SftpServer::class.java)
+    private val sftpServerStorage = Storage<SftpServer>(ServerType.SFTP)
 
     fun <T: RemoteServer> getStorage(serverType: ServerType): Storage<T> {
         return when(serverType) {

@@ -7,8 +7,10 @@ import com.jingtian.composedemo.dao.model.Album
 import com.jingtian.composedemo.dao.model.AlbumItem
 import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.LabelInfo
+import kotlinx.serialization.Serializable
 
 @DatabaseView
+@Serializable
 class AlbumRelation(
     @Embedded
     val albumItem: Album,

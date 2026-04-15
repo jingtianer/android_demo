@@ -15,6 +15,7 @@ import com.jingtian.composedemo.base.app
 import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
 import com.jingtian.composedemo.multiplatform.MultiplatformFile
+import com.jingtian.composedemo.multiplatform.readAllBytesOrNull
 import com.jingtian.composedemo.multiplatform.MultiplatformFileImpl
 import com.jingtian.composedemo.utils.CoroutineUtils
 import com.jingtian.composedemo.utils.ensureDirExist
@@ -56,14 +57,13 @@ class FileShareLauncher(val context: Context) : IFileShareLauncher {
             val shareFile: File? = downloadDir?.let { downloadDir->
                 file.fileName?.let { shareFileName->
                     val shareFile = File(downloadDir, shareFileName)
-                    file.inputStream?.use { `is`->
-                        shareFile.ensureFile()
-                        FileOutputStream(shareFile).use { os->
-                            `is`.copyTo(os)
-                            os.flush()
-                        }
-                        return@use shareFile
+                    val bytes = file.inputStream.readAllBytesOrNull() ?: return@let null
+                    shareFile.ensureFile()
+                    FileOutputStream(shareFile).use { os->
+                        os.write(bytes)
+                        os.flush()
                     }
+                    shareFile
                 }
             }
             return@runIOTask shareFile

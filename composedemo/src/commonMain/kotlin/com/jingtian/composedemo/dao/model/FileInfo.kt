@@ -6,10 +6,12 @@ import com.jingtian.composedemo.dao.DataBase
 import com.jingtian.composedemo.dao.FileInfoDao
 import com.jingtian.composedemo.multiplatform.MultiplatformFile
 import com.jingtian.composedemo.utils.FileStorageUtils
+import kotlinx.serialization.Serializable
 
 @Entity(
     tableName = FileInfoDao.TABLE_NAME,
 )
+@Serializable
 class FileInfo(
     @PrimaryKey(autoGenerate = true)
     var id: Long? = null,
@@ -25,6 +27,7 @@ class FileInfo(
     }
 }
 
+@Serializable
 enum class FileType(val value: Int, val mimeType: String, val typeName: String) {
     IMAGE(1, "image/*", "图片"),
     VIDEO(2, "video/*", "视频"),

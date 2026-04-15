@@ -34,6 +34,7 @@ enum class ServerType(val type: Int) {
     SFTP(0)
 }
 
+@kotlinx.serialization.Serializable
 abstract class RemoteServer(
     var serverName: String = "新建: ${Random.nextULong()}",
     var serverId: String = "",
@@ -49,16 +50,32 @@ fun <T> ChannelSftp.use(block: (ChannelSftp)->T): T? {
     }
 }
 
-class SftpServer(
-    serverName: String = "新建: ${Random.nextULong()}",
-    serverId: String = "",
-    var userName: String = "",
-    var port: Int = 22,
-    var ip: String = "localhost",
-    var password: String = "",
-    var passwordIv: String? = null,
-    var path: String = "/",
-) : RemoteServer(serverName, serverId) {
+@kotlinx.serialization.Serializable
+class SftpServer : RemoteServer {
+    var userName: String = ""
+    var port: Int = 22
+    var ip: String = "localhost"
+    var password: String = ""
+    var passwordIv: String? = null
+    var path: String = "/"
+    constructor(
+        serverName: String = "新建: ${Random.nextULong()}",
+        serverId: String = "",
+        userName: String = "",
+        port: Int = 22,
+        ip: String = "localhost",
+        password: String = "",
+        passwordIv: String? = null,
+        path: String = "/",
+    ) : super(serverName, serverId) {
+        this.userName = userName
+        this.port = port
+        this.ip = ip
+        this.password = password
+        this.passwordIv = passwordIv
+        this.path = path
+    }
+    @kotlinx.serialization.Transient
     private var session: Session? = null
     private fun getSession(logger: (String, String)->Unit): Session? {
         val session = session
@@ -266,5 +283,4 @@ class SftpServer(
         }
     }
 }
-
 

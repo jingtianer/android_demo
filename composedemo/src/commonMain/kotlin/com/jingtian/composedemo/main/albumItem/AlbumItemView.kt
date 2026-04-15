@@ -35,6 +35,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.node.WeakReference
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -61,10 +62,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.lang.ref.SoftReference
 import com.jingtian.composedemo.base.resources.getPainter
 import com.jingtian.composedemo.base.resources.DrawableIcon
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
+import kotlinx.coroutines.IO
 
 class AlbumItemViewStateHolder(
     val viewModel: AlbumViewModel,
@@ -188,7 +189,7 @@ class AlbumItemViewStateHolder(
 
 @Composable
 fun AlbumItemView(
-    albumViewMap: SnapshotStateMap<Long, SoftReference<AlbumItemViewStateHolder>>,
+    albumViewMap: SnapshotStateMap<Long, WeakReference<AlbumItemViewStateHolder>>,
     albumItemRelation: AlbumItemRelation,
     size: Dp,
     padding: Dp,
