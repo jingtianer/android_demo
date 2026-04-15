@@ -6,17 +6,17 @@
 //
 
 import SwiftUI
-import composedemo
+import SharedComposeDemo
 
-struct ContentView: View {
-    var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
-        }
-        .padding()
+struct ContentView: UIViewControllerRepresentable {
+    func makeUIViewController(context: Context) -> UIViewController {
+        // 这里调用的是 iosMain 里定义的 Kotlin 函数
+        MainViewControllerKt.MainViewController()
+//        UIViewController()
+    }
+                                                                                                                                                                                                                         
+    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
+        // 通常不需要做更新
     }
 }
 

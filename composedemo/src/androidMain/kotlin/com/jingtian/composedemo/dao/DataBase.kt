@@ -4,6 +4,7 @@ import android.os.Build
 import android.util.Log
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.RoomDatabaseConstructor
 import androidx.sqlite.db.SupportSQLiteOpenHelper
 import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
 import com.jingtian.composedemo.base.app
@@ -44,3 +45,9 @@ actual fun dbImplCreator() : RoomDatabase.Builder<DataBase>  {
     return Room.databaseBuilder(app, DataBase::class.java, "app_db")
         .openHelperFactory(openHelperFactory)
 }
+
+//actual object RoomConstructor: RoomDatabaseConstructor<DataBase> {
+//    override fun initialize(): DataBase {
+//        return DataBase.dbImpl
+//    }
+//}

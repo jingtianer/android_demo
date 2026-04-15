@@ -1,28 +1,3 @@
-*.iml
-.gradle
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
-.DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
-local.properties
-.idea
-*/release
-*/py39
-*/py310
-*/py311
-*/py312
-/.kotlin/
-
-# ios ignore
-
 # Xcode user settings and state
 xcuserdata/
 *.bundle/

@@ -1,7 +1,9 @@
 package com.jingtian.composedemo.dao
 
+import androidx.room.ConstructedBy
 import androidx.room.Database
 import androidx.room.RoomDatabase
+import androidx.room.RoomDatabaseConstructor
 import androidx.room.TypeConverters
 import com.jingtian.composedemo.dao.converter.FileTypeConverter
 import com.jingtian.composedemo.dao.converter.ItemRankConverter
@@ -20,6 +22,7 @@ import com.jingtian.composedemo.dao.model.LabelInfo
     version = 1
 )
 @TypeConverters(/* DateTypeConverter::class, */FileTypeConverter::class, ItemRankConverter::class)
+@ConstructedBy(RoomConstructor::class)
 abstract class DataBase: RoomDatabase() {
     companion object {
         const val INVALID_ID = -1L
@@ -35,5 +38,7 @@ abstract class DataBase: RoomDatabase() {
     abstract fun getFileInfoDao(): FileInfoDao
     abstract fun getLabelInfoDao(): LabelInfoDao
 }
+
+expect object RoomConstructor: RoomDatabaseConstructor<DataBase>
 
 expect fun dbImplCreator() : RoomDatabase.Builder<DataBase>

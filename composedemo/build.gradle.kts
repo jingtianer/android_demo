@@ -47,7 +47,7 @@ kotlin {
         ).forEach { iosTarget->
             iosTarget.binaries {
                 framework {
-                    baseName = if (isRemote) "${appName}.remote" else appName
+                    baseName = "SharedComposeDemo"
                     isStatic = true
                 }
             }
@@ -273,6 +273,9 @@ dependencies {
         add("kspIosSimulatorArm64", libs.kotlin.inject.compiler)
         add("kspIosArm64", libs.kotlin.inject.compiler)
         add("kspIosX64", libs.kotlin.inject.compiler)
+        add("kspIosSimulatorArm64", libs.androidx.room.compiler)
+        add("kspIosArm64", libs.androidx.room.compiler)
+        add("kspIosX64", libs.androidx.room.compiler)
     }
 
     // Compose 布局

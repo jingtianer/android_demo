@@ -1,26 +1,29 @@
 package com.jingtian.composedemo.multiplatform
 
-import androidx.collection.arrayMapOf
-import com.jingtian.composedemo.dao.model.relation.AlbumRelation
 import com.jingtian.composedemo.utils.CoroutineUtils
+import com.jingtian.composedemo.utils.createNewFile
+import com.jingtian.composedemo.utils.delete
+import com.jingtian.composedemo.utils.deleteRecursively
+import com.jingtian.composedemo.utils.exists
 import com.jingtian.composedemo.utils.getFileStorageRootDir
-import kotlinx.coroutines.InternalCoroutinesApi
+import com.jingtian.composedemo.utils.isDirectory
+import com.jingtian.composedemo.utils.mkdirs
+import com.jingtian.composedemo.utils.synchronized
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.internal.synchronized
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.io.buffered
+import kotlinx.io.files.Path
+import kotlinx.io.files.SystemFileSystem
+import kotlinx.io.writeString
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
-import java.io.File
-import java.io.FileReader
-import java.io.FileWriter
-import java.util.concurrent.ConcurrentHashMap
 
 class MultiplatformSharedPreferences<V>(
     name: String,
     val json: Json = Json { ignoreUnknownKeys = true },
     val async: Boolean = true
 ) {
-    private val outfile = File(spDir, name)
+    private val outfile = Path(spDir, name)
     init {
         if (!outfile.exists()) {
             outfile.createNewFile()
@@ -29,19 +32,18 @@ class MultiplatformSharedPreferences<V>(
             outfile.createNewFile()
         }
     }
-    private val value: MutableMap<String, V?> = ConcurrentHashMap(
+    private val value: MutableMap<String, V?> = HashMap(
         try {
             json.decodeFromString<Map<String, V>>("")
         } catch (e : Exception) {
-            arrayMapOf()
+            hashMapOf()
         }
     )
-    private val lock = Any()
+    private val lock = Mutex()
     private var job: Job? = null
 
     fun all(): Map<String, V?> = value
 
-    @OptIn(InternalCoroutinesApi::class)
     fun <T : V?> editor(): IMultiplatformSharedPreferences<T> {
         return object : IMultiplatformSharedPreferences<T> {
             override fun getValue(key: String, defaultValue: T): T {
@@ -70,14 +72,14 @@ class MultiplatformSharedPreferences<V>(
                     if (async) {
                         job?.cancel()
                         job = CoroutineUtils.runIOTask({
-                            FileWriter(outfile).use {
-                                it.write(json.encodeToString(value))
+                            SystemFileSystem.sink(outfile).buffered().use {
+                                it.writeString(json.encodeToString(value))
                                 it.flush()
                             }
                         })
                     } else {
-                        FileWriter(outfile).use {
-                            it.write(json.encodeToString(value))
+                        SystemFileSystem.sink(outfile).buffered().use {
+                            it.writeString(json.encodeToString(value))
                             it.flush()
                         }
                     }
@@ -87,7 +89,7 @@ class MultiplatformSharedPreferences<V>(
     }
 
     companion object {
-        private val spDir = File(getFileStorageRootDir(), "properties")
+        private val spDir = Path(getFileStorageRootDir(), "properties")
         init {
             if (!spDir.exists()) {
                 spDir.mkdirs()
@@ -99,12 +101,15 @@ class MultiplatformSharedPreferences<V>(
     }
 }
 
-private val spInstance = ConcurrentHashMap<String, MultiplatformSharedPreferences<*>>()
+private val spInstance: MutableMap<String, MultiplatformSharedPreferences<*>> = mutableMapOf()
+private val spInstanceLock = Mutex()
 
 private inline fun <V> getStorage(storageName: String, crossinline initializer: ()->MultiplatformSharedPreferences<V>) : MultiplatformSharedPreferences<V>{
-    return spInstance.computeIfAbsent(storageName) { old->
-        initializer()
-    } as MultiplatformSharedPreferences<V>
+    return synchronized(spInstanceLock) {
+        spInstance.getOrPut(storageName) {
+            initializer()
+        } as MultiplatformSharedPreferences<V>
+    }
 }
 
 fun getJsonStorage(storageName: String): IMultiplatformSharedPreferences<String> {
