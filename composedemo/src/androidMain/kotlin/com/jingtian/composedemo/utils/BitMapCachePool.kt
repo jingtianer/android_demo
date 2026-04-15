@@ -5,11 +5,14 @@ import android.graphics.BitmapFactory
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.asImageBitmap
-import java.io.InputStream
-import java.io.OutputStream
+import kotlinx.io.RawSink
+import kotlinx.io.RawSource
+import kotlinx.io.asInputStream
+import kotlinx.io.asOutputStream
+import kotlinx.io.buffered
 
 
-actual fun uriToImageBitmap(`is`: InputStream, scaleFactor: Int): ImageBitmap? {
+actual fun uriToImageBitmap(`is`: RawSource, scaleFactor: Int): ImageBitmap? {
     val options = BitmapFactory.Options()
     // 第三步：按缩放比例解码图片
     options.apply {
@@ -18,23 +21,31 @@ actual fun uriToImageBitmap(`is`: InputStream, scaleFactor: Int): ImageBitmap? {
         inPreferredConfig = Bitmap.Config.RGB_565 // 可选：使用 RGB_565 节省内存（比 ARGB_8888 节省一半）
         inMutable = false // 不可变
     }
-    return BitmapFactory.decodeStream(`is`, null, options)?.asImageBitmap()
+    return `is`.buffered().asInputStream().use {
+        BitmapFactory.decodeStream(it, null, options)?.asImageBitmap()
+    }
 }
 
-actual fun uriToImageSize(`is`: InputStream): Pair<Int, Int> {
+actual fun uriToImageSize(`is`: RawSource): Pair<Int, Int> {
     val options = BitmapFactory.Options().apply {
         inJustDecodeBounds = true // 只获取尺寸，不加载像素
     }
-    return BitmapFactory.decodeStream(`is`, null, options)?.let { 
-        it.width to it.height
-    } ?: (-1 to -1)
+    return `is`.buffered().asInputStream().use {
+        BitmapFactory.decodeStream(it, null, options)?.let {
+            it.width to it.height
+        } ?: (-1 to -1)
+    }
 }
 
-actual fun uriToImageBitmap(`is`: InputStream): ImageBitmap? {
-    return BitmapFactory.decodeStream(`is`)?.asImageBitmap()
+actual fun uriToImageBitmap(`is`: RawSource): ImageBitmap? {
+    return `is`.buffered().asInputStream().use {
+        BitmapFactory.decodeStream(it)?.asImageBitmap()
+    }
 }
 
-actual fun writeImage(bitmap: ImageBitmap, os: OutputStream) {
-    bitmap.asAndroidBitmap().compress(Bitmap.CompressFormat.PNG, 100, os)
-    
+actual fun writeImage(bitmap: ImageBitmap, os: RawSink) {
+    os.buffered().asOutputStream().use {
+        bitmap.asAndroidBitmap().compress(Bitmap.CompressFormat.PNG, 100, it)
+    }
+
 }

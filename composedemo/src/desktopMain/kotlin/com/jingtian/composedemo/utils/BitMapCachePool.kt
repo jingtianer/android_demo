@@ -10,10 +10,15 @@ import com.jingtian.composedemo.dao.DataBase
 import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.FileType
 import com.jingtian.composedemo.multiplatform.MultiplatformFile
+import com.jingtian.composedemo.multiplatform.readAllBytesOrNull
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.io.RawSink
+import kotlinx.io.RawSource
+import kotlinx.io.asOutputStream
+import kotlinx.io.buffered
 import org.jetbrains.skia.Bitmap
 import org.jetbrains.skia.Canvas
 import org.jetbrains.skia.ColorAlphaType
@@ -32,8 +37,9 @@ import java.util.concurrent.ConcurrentHashMap
 import javax.imageio.ImageIO
 import kotlin.math.max
 
-actual fun uriToImageBitmap(`is`: InputStream, scaleFactor: Int): ImageBitmap? {
-    val image = Image.makeFromEncoded(`is`.readBytes())
+actual fun uriToImageBitmap(`is`: RawSource, scaleFactor: Int): ImageBitmap? {
+    val bytes = `is`.buffered().readAllBytesOrNull() ?: return null
+    val image = Image.makeFromEncoded(bytes)
     if (scaleFactor == 1 || scaleFactor <= 0) {
         return image.toComposeImageBitmap()
     }
@@ -73,12 +79,15 @@ actual fun uriToImageBitmap(`is`: InputStream, scaleFactor: Int): ImageBitmap? {
         scaledBitmap.close()
     }.toComposeImageBitmap()
 }
-actual fun uriToImageBitmap(`is`: InputStream): ImageBitmap? = uriToImageBitmap(`is`, 1)
-actual fun uriToImageSize(`is`: InputStream): Pair<Int, Int> {
-    val image = Image.makeFromEncoded(`is`.readBytes())
+actual fun uriToImageBitmap(`is`: RawSource): ImageBitmap? = uriToImageBitmap(`is`, 1)
+actual fun uriToImageSize(`is`: RawSource): Pair<Int, Int> {
+    val bytes = `is`.buffered().readAllBytesOrNull() ?: return 1 to 1
+    val image = Image.makeFromEncoded(bytes)
     return image.width to image.height
 }
-actual fun writeImage(bitmap: ImageBitmap, os: OutputStream) {
+actual fun writeImage(bitmap: ImageBitmap, os: RawSink) {
     val image = bitmap.toAwtImage()
-    ImageIO.write(image, "png", os)
+    os.buffered().asOutputStream().use {
+        ImageIO.write(image, "png", it)
+    }
 }

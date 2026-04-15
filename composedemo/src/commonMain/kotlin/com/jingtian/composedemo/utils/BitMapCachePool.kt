@@ -2,7 +2,6 @@ package com.jingtian.composedemo.utils
 
 import androidx.annotation.IntRange
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.node.WeakReference
 import com.jingtian.composedemo.dao.DataBase
 import com.jingtian.composedemo.dao.model.FileInfo
@@ -15,13 +14,12 @@ import kotlinx.coroutines.IO
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
-import java.io.File
-import java.io.FileInputStream
-import java.io.FileOutputStream
-import java.io.InputStream
-import java.io.OutputStream
-import java.lang.ref.WeakReference
-import java.util.concurrent.ConcurrentHashMap
+import kotlinx.io.Buffer
+import kotlinx.io.RawSink
+import kotlinx.io.RawSource
+import kotlinx.io.buffered
+import kotlinx.io.files.Path
+import kotlinx.io.files.SystemFileSystem
 import kotlin.math.max
 
 object BitMapCachePool {
@@ -116,7 +114,7 @@ object BitMapCachePool {
         private fun createAndStoreBitmap(id: Long, scaleFactor: Int, @IntRange(from = 0) insertPos: Int, queue: ArrayList<Pair<Int, WeakReference<ImageBitmap>>>, bitmapCreator: () -> ImageBitmap?): ImageBitmap? {
             val cacheFile = getCacheFile(fileType.value, id, scaleFactor)
             if (cacheFile?.exists() == true) {
-                FileInputStream(cacheFile).use {
+                SystemFileSystem.source(cacheFile).buffered().use {
                     uriToImageBitmap(it, scaleFactor)?.let {
                         queue.add(insertPos, scaleFactor to WeakReference(it))
                         return@createAndStoreBitmap it
@@ -131,7 +129,7 @@ object BitMapCachePool {
                     if (file == null || file.exists()) {
                         return@runIOTask
                     }
-                    FileOutputStream(file).use {
+                    SystemFileSystem.sink(file).use {
                         writeImage(bitmap, it)
                         it.flush()
                     }
@@ -148,12 +146,12 @@ object BitMapCachePool {
         return if (fileType == FileType.HTML.value) getFileStorageRootDir() else getFileCacheStorageRootDir()
     }
 
-    private fun getCacheFile(fileType: Int, storageId: Long, scaleFactor: Int): File? {
+    private fun getCacheFile(fileType: Int, storageId: Long, scaleFactor: Int): Path {
         ensureCacheDir((fileType), storageId)
-        return File(getCacheStoreRoot(fileType), "bitmap_cache/bitmap_${fileType}/${storageId}/${scaleFactor}").ensureFile()
+        return Path(getCacheStoreRoot(fileType), "bitmap_cache/bitmap_${fileType}/${storageId}/${scaleFactor}").ensureFile()
     }
 
-    private fun File.ensureDir(): File {
+    private fun Path.ensureDir(): Path {
         if (exists()) {
             if (isFile) {
                 delete()
@@ -165,7 +163,7 @@ object BitMapCachePool {
         return this
     }
 
-    private fun File.ensureFile(): File {
+    private fun Path.ensureFile(): Path {
         if (exists()) {
             if (isDirectory) {
                 deleteRecursively()
@@ -217,15 +215,15 @@ object BitMapCachePool {
     }
 
     fun toBitMap(image: MultiplatformFile, maxWidth: Int = -1, maxHeight: Int = -1): Pair<Int, ImageBitmap?> {
-        val bytes = image.inputStream.readAllBytesOrNull() ?: return -1 to null
-        val scaleFactor = bytes.inputStream().use { `is`->
+        val `is` = image.inputStream ?: return -1 to null
+        val scaleFactor = `is`.use { `is`->
             // 第一步：仅解码边界，获取图片原始宽高
             val (outWidth, outHeight) = uriToImageSize(`is`)
             // 第二步：计算缩放比例（避免图片过大导致 OOM）
             calculateScaleFactor(outWidth, outHeight, maxWidth, maxHeight)
         }
 //        println("scale factor: $scaleFactor")
-        val bitmap = bytes.inputStream().use { `is`->
+        val bitmap = `is`.use { `is`->
 //            Log.d("TAG", "loadImage failed: $image, $scaleFactor, $image")
             // 第三步：按缩放比例解码图片
             uriToImageBitmap(`is`, scaleFactor)
@@ -259,22 +257,18 @@ object BitMapCachePool {
         val scaleFactor =  if (fileInfo.intrinsicWidth > 0 && fileInfo.intrinsicHeight > 0) {
             calculateScaleFactor(fileInfo.intrinsicWidth, fileInfo.intrinsicHeight, maxWidth, maxHeight)
         } else {
-            val bytes = image.inputStream.readAllBytesOrNull()
-            if (bytes == null) {
-                -1
-            } else {
-                bytes.inputStream().use { `is`->
-                    // 第一步：仅解码边界，获取图片原始宽高
-                    val (outWidth, outHeight) = uriToImageSize(`is`)
-                    // 第二步：计算缩放比例（避免图片过大导致 OOM）
-                    calculateScaleFactor(outWidth, outHeight, maxWidth, maxHeight)
-                }
-            }
+            val `is` = image.inputStream
+            `is`?.use { `is`->
+                // 第一步：仅解码边界，获取图片原始宽高
+                val (outWidth, outHeight) = uriToImageSize(`is`)
+                // 第二步：计算缩放比例（避免图片过大导致 OOM）
+                calculateScaleFactor(outWidth, outHeight, maxWidth, maxHeight)
+            } ?: -1
         }
 //        println("scale factor: $scaleFactor")
         val bitmap = getBitMapCachePool(fileInfo.fileType).put(id, scaleFactor) {
-            val bytes = fileInfo.getFileUri()?.inputStream.readAllBytesOrNull() ?: return@put null
-            bytes.inputStream().use { `is`->
+            val `is` = fileInfo.getFileUri()?.inputStream ?: return@put null
+            `is`.use { `is`->
                 uriToImageBitmap(`is`, scaleFactor)
             }
         }
@@ -282,7 +276,7 @@ object BitMapCachePool {
     }
 }
 
-expect fun uriToImageBitmap(`is`: InputStream, scaleFactor: Int): ImageBitmap?
-expect fun uriToImageBitmap(`is`: InputStream): ImageBitmap?
-expect fun uriToImageSize(`is`: InputStream): Pair<Int, Int>
-expect fun writeImage(bitmap: ImageBitmap, os: OutputStream)
+expect fun uriToImageBitmap(`is`: RawSource, scaleFactor: Int): ImageBitmap?
+expect fun uriToImageBitmap(`is`: RawSource): ImageBitmap?
+expect fun uriToImageSize(`is`: RawSource): Pair<Int, Int>
+expect fun writeImage(bitmap: ImageBitmap, os: RawSink)
