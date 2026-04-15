@@ -195,7 +195,7 @@ fun systemFallbackIntent(context: Context, fileName: String, fileInfo: FileInfo)
             FileProvider.getUriForFile(
                 context,
                 "${context.packageName}.fileprovider",
-                originFile
+                File(originFile.toString())
             )
         }
     } else {

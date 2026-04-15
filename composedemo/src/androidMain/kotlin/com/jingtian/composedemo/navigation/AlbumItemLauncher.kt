@@ -32,7 +32,7 @@ class AlbumItemLauncher(
     val scope: CoroutineScope,
     val launcher: ManagedActivityResultLauncher<Intent, ActivityResult>
 ) : IAlbumItemLauncher{
-    override fun launch(fileName: String, fileInfo: FileInfo) {
+    override suspend fun launch(fileName: String, fileInfo: FileInfo) {
         scope.launch(Dispatchers.Main) {
             val timeoutJob = scope.launch(Dispatchers.Main) {
                 withContext(Dispatchers.IO) {
@@ -57,7 +57,7 @@ class AlbumItemLauncher(
         }
     }
 
-    override fun launch(albumItemRelation: AlbumItemRelation) {
+    override suspend fun launch(albumItemRelation: AlbumItemRelation) {
         val fileName = albumItemRelation.albumItem.itemName
         val fileInfo = albumItemRelation.fileInfo
         launch(fileName, fileInfo)

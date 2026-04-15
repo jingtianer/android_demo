@@ -42,7 +42,7 @@ class FileShareLauncher(val context: Context) : IFileShareLauncher {
             FileProvider.getUriForFile(
                 app,
                 app.packageName + ".fileprovider",
-                sharedFile
+                File(sharedFile.toString())
             )
         } else {
             (file as MultiplatformFileImpl).uri

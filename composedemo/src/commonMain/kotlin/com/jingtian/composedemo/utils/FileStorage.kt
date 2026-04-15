@@ -1,7 +1,7 @@
 package com.jingtian.composedemo.utils
 
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.node.WeakReference
+import com.jingtian.composedemo.multiplatform.WeakRef
 import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.FileType
 import com.jingtian.composedemo.multiplatform.MultiplatformFile
@@ -33,7 +33,7 @@ object FileStorageUtils {
     private const val RANK_IMAGE_STORE_DIR = "${RANK_IMAGE_STORE_ROOT_DIR}/file_"
     private const val RANK_IMAGE_STORE_PREFIX = "file_"
 
-    private val storage = HashMap<FileType, WeakReference<FileStorage>>()
+    private val storage = HashMap<FileType, WeakRef<FileStorage>>()
 
     fun checkRootDir() {
         val storeDir = Path(getFileStorageRootDir(), RANK_IMAGE_STORE_ROOT_DIR)
@@ -52,12 +52,14 @@ object FileStorageUtils {
     fun getStorage(fileType: FileType): FileStorage? {
         return runBlocking {
             lock.withLock {
-                storage.get(fileType)?.get() ?: run {
+                storage[fileType]?.get() ?: run {
                     val new = FileStorage(fileType)
-                    storage.put(fileType, WeakReference(new))
+                    storage[fileType] = WeakRef(new)
                     new
                 }
             }
+        }.apply {
+            println("getStorage ${fileType.name} ${this}")
         }
     }
 
@@ -84,18 +86,22 @@ object FileStorageUtils {
         }
 
         fun get(id: Long, fileInfo: FileInfo): MultiplatformFile? {
+            println("FileStorage: fileType:${fileType.name}, id=$id, fileInfo=${fileInfo.extension}")
             if (id == -1L) {
                 return null
             }
-            val cachedUri = uriCache.get(id)
+            val cachedUri = uriCache[id]
             if (cachedUri != null) {
                 return cachedUri
             }
             val storeDir = Path(getFileStorageRootDir(), rankImageStoreDir)
             val storageFile = Path(storeDir, rankImagePrefix(id))
+            println("FileStorage: fileType:${fileType.name}, id=$id, storageFile=$storageFile")
             return if (storageFile.exists()) {
+                println("FileStorage: exist fileType:${fileType.name}, id=$id, storageFile=$storageFile")
                 getMultiplatformFileFactory().fromFile(storageFile, fileInfo.extension)
             } else {
+                println("FileStorage: not exist fileType:${fileType.name}, id=$id, storageFile=$storageFile")
                 null
             }
         }
@@ -124,17 +130,26 @@ object FileStorageUtils {
                 val storageFile = getStoreFile(id)
                 if (uri.file?.equals(storageFile) != true) {
                     if (storageFile.exists()) {
-                        storageFile.delete()
+                        if (storageFile.isDirectory) {
+                            storageFile.deleteRecursively()
+                        } else {
+                            storageFile.delete()
+                        }
                     }
-                    val bytes = uri.fileStoreInputStream ?: return@runIOTask
+                    storageFile.createNewFile()
+                    val bytes = uri.fileStoreInputStream!!
                     innerStoreImage(id, bytes, storageFile, uri.extension())
                 }
-            }, { e->
+            }, onFailure = { e->
+                println("asyncStore $e")
                 throw e
-            }) {}
+            }) {
+                println("asyncStore: success: $fileType $id")
+            }
             return id
         }
 
+        @OptIn(InternalCoroutinesApi::class)
         fun asyncStore(uri: MultiplatformFile): Long {
             val id = synchronized(lock) {
                 this.id++
@@ -142,10 +157,21 @@ object FileStorageUtils {
             uriCache[id] = uri
             CoroutineUtils.runIOTask({
                 val storageFile = getStoreFile(id)
-                storageFile.delete()
-                val bytes = uri.fileStoreInputStream ?: return@runIOTask
+                if (storageFile.exists()) {
+                    if (storageFile.isDirectory) {
+                        storageFile.deleteRecursively()
+                    } else {
+                        storageFile.delete()
+                    }
+                }
+                storageFile.createNewFile()
+                val bytes = uri.fileStoreInputStream!!
                 innerStoreImage(id, bytes, storageFile, uri.extension())
-            })
+            }, onFailure = { e->
+                println("asyncStore: $e")
+            }) {
+                println("asyncStore: success: $fileType $id")
+            }
             return id
         }
 

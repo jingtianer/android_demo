@@ -177,7 +177,9 @@ fun DrawerHeader() {
                 if (enableEdit) {
                     pickImage()
                 } else {
-                    albumItemLauncher.launch(UserStorage.userInstance.userName, UserStorage.userInstance.userAvatar)
+                    scope.launch {
+                        albumItemLauncher.launch(UserStorage.userInstance.userName, UserStorage.userInstance.userAvatar)
+                    }
                 }
             }
 
@@ -222,7 +224,9 @@ fun DrawerHeader() {
                                     if (enableEdit) {
                                         pickImage()
                                     } else {
-                                        albumItemLauncher.launch(UserStorage.userInstance.userName, UserStorage.userInstance.userAvatar)
+                                        scope.launch {
+                                            albumItemLauncher.launch(UserStorage.userInstance.userName, UserStorage.userInstance.userAvatar)
+                                        }
                                     }
                                 }
                                 .offset(

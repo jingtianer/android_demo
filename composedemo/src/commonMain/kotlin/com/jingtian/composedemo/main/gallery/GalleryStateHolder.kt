@@ -9,7 +9,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.node.WeakReference
+import com.jingtian.composedemo.multiplatform.WeakRef
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewModelScope
 import com.jingtian.composedemo.dao.model.Album
@@ -75,7 +75,7 @@ class GalleryStateHolder(val album: IndexedValue<Album>, val albumList: List<Alb
 
     var platformExtraModel by mutableStateOf(getPlatformExtra())
 
-    val albumViewMap = mutableStateMapOf<Long, WeakReference<AlbumItemViewStateHolder>>()
+    val albumViewMap = mutableStateMapOf<Long, WeakRef<AlbumItemViewStateHolder>>()
 
     suspend fun updateFilterList() {
         withContext(Dispatchers.Default) {

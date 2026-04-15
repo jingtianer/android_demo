@@ -26,7 +26,6 @@ import java.io.FileNotFoundException
 import java.io.IOException
 import java.io.InputStream
 import java.nio.file.Files
-import java.nio.file.Path
 import java.nio.file.Paths
 
 open class MultiplatformFileImpl(open val uri: Uri) : MultiplatformFile {
@@ -98,7 +97,7 @@ open class MultiplatformFileImpl(open val uri: Uri) : MultiplatformFile {
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 try {
-                    val path: Path = Paths.get(this.path)
+                    val path: java.nio.file.Path = Paths.get(this.path)
                     return Files.isHidden(path)
                 } catch (e: FileNotFoundException) {
                 } catch (e: IOException) {

@@ -36,13 +36,13 @@ actual fun compressImageBitmap(bitmap: ImageBitmap, width: Int, height: Int, sca
 }
 
 @RequiresApi(Build.VERSION_CODES.O)
-fun traverseDirNio(root: Path, execute: (String, Path)->Unit) {
+fun traverseDirNio(root: java.nio.file.Path, execute: (String, java.nio.file.Path)->Unit) {
     _traverseDirNio(root, "", execute)
 }
 
 @RequiresApi(Build.VERSION_CODES.O)
-private fun _traverseDirNio(root: Path, rootDir: String, execute: (String, Path)->Unit) {
-    Files.list(root)?.use { stream->
+private fun _traverseDirNio(root: java.nio.file.Path, rootDir: String, execute: (String, java.nio.file.Path)->Unit) {
+    Files.list(File(root.toString()).toPath())?.use { stream->
         stream.forEach { file->
             if (file.isDirectory()) {
                 _traverseDirNio(file,  "${rootDir}/${file.fileName}", execute)

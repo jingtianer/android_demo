@@ -2,7 +2,7 @@ package com.jingtian.composedemo.utils
 
 import androidx.annotation.IntRange
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.node.WeakReference
+import com.jingtian.composedemo.multiplatform.WeakRef
 import com.jingtian.composedemo.dao.DataBase
 import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.FileType
@@ -34,10 +34,10 @@ object BitMapCachePool {
         }
     }
     class BitMapCache(private val fileType: FileType) {
-        private val imagePool: MutableMap<Long, Pair<Mutex, ArrayList<Pair<Int, WeakReference<ImageBitmap>>>>> = mutableMapOf()
+        private val imagePool: MutableMap<Long, Pair<Mutex, ArrayList<Pair<Int, WeakRef<ImageBitmap>>>>> = mutableMapOf()
         private val lock = Mutex()
 
-        private fun getQueue(id: Long): Pair<Mutex, ArrayList<Pair<Int, WeakReference<ImageBitmap>>>> {
+        private fun getQueue(id: Long): Pair<Mutex, ArrayList<Pair<Int, WeakRef<ImageBitmap>>>> {
             return synchronized(lock) {
                 imagePool.getOrPut(id) {
                     Mutex() to ArrayList()
@@ -45,7 +45,7 @@ object BitMapCachePool {
             }
         }
 
-        private fun getIfNotNull(queue: ArrayList<Pair<Int, WeakReference<ImageBitmap>>>, index: Int): Pair<Int, ImageBitmap>? {
+        private fun getIfNotNull(queue: ArrayList<Pair<Int, WeakRef<ImageBitmap>>>, index: Int): Pair<Int, ImageBitmap>? {
             queue.lastOrNull()?.let { last->
                 last.second.get()?.let { bitmap ->
                     return last.first to bitmap
@@ -54,7 +54,7 @@ object BitMapCachePool {
             return null
         }
 
-        private fun tryGetNeighborBitmap(queue: ArrayList<Pair<Int, WeakReference<ImageBitmap>>>, id: Long, scaleFactor: Int, insertPos: Int, bitmapCreator: () -> ImageBitmap?): Pair<Int, ImageBitmap>? {
+        private fun tryGetNeighborBitmap(queue: ArrayList<Pair<Int, WeakRef<ImageBitmap>>>, id: Long, scaleFactor: Int, insertPos: Int, bitmapCreator: () -> ImageBitmap?): Pair<Int, ImageBitmap>? {
             getIfNotNull(queue, insertPos-1)?.let { (neighborScaleFactor, bitmap)->
                 CoroutineUtils.runIOTask({
                     createAndStoreBitmap(id, scaleFactor, -insertPos-1, queue, bitmapCreator)
@@ -95,7 +95,7 @@ object BitMapCachePool {
                     }
                     val bitmap = bitmapCreator()
                     if (bitmap != null) {
-                        queue[insertPos] = scaleFactor to WeakReference(bitmap)
+                        queue[insertPos] = scaleFactor to WeakRef(bitmap)
                     }
                     return@synchronized bitmap
                 }
@@ -111,19 +111,19 @@ object BitMapCachePool {
             getCacheDir(fileType.value, id).takeIf { it.exists() }?.deleteRecursively()
         }
 
-        private fun createAndStoreBitmap(id: Long, scaleFactor: Int, @IntRange(from = 0) insertPos: Int, queue: ArrayList<Pair<Int, WeakReference<ImageBitmap>>>, bitmapCreator: () -> ImageBitmap?): ImageBitmap? {
+        private fun createAndStoreBitmap(id: Long, scaleFactor: Int, @IntRange(from = 0) insertPos: Int, queue: ArrayList<Pair<Int, WeakRef<ImageBitmap>>>, bitmapCreator: () -> ImageBitmap?): ImageBitmap? {
             val cacheFile = getCacheFile(fileType.value, id, scaleFactor)
             if (cacheFile?.exists() == true) {
                 SystemFileSystem.source(cacheFile).buffered().use {
                     uriToImageBitmap(it, scaleFactor)?.let {
-                        queue.add(insertPos, scaleFactor to WeakReference(it))
+                        queue.add(insertPos, scaleFactor to WeakRef(it))
                         return@createAndStoreBitmap it
                     }
                 }
             }
             val bitmap = bitmapCreator()
             if (bitmap != null) {
-                queue.add(insertPos, scaleFactor to WeakReference(bitmap))
+                queue.add(insertPos, scaleFactor to WeakRef(bitmap))
                 CoroutineUtils.runIOTask({
                     val file = getCacheFile(fileType.value, id, scaleFactor)
                     if (file == null || file.exists()) {

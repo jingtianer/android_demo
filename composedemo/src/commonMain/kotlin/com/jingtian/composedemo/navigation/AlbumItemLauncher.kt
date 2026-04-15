@@ -6,8 +6,8 @@ import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
 
 interface IAlbumItemLauncher {
-    fun launch(fileName: String, fileInfo: FileInfo)
-    fun launch(albumItemRelation: AlbumItemRelation)
+    suspend fun launch(fileName: String, fileInfo: FileInfo)
+    suspend fun launch(albumItemRelation: AlbumItemRelation)
 }
 @Composable
 expect fun rememberAlbumLauncher(onResult: (Long)->Unit): MutableState<IAlbumItemLauncher>

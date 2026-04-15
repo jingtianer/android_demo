@@ -68,7 +68,7 @@
 				2B839E892F8D189400BC3C53 /* Sources */,
 				2B839E8A2F8D189400BC3C53 /* Frameworks */,
 				2B839E8B2F8D189400BC3C53 /* Resources */,
-				2B839E9B2F8F4B5F00BC3C53 /* ShellScript */,
+				2B839E9B2F8F4B5F00BC3C53 /* Run Script */,
 			);
 			buildRules = (
 			);
@@ -129,8 +129,9 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		2B839E9B2F8F4B5F00BC3C53 /* ShellScript */ = {
+		2B839E9B2F8F4B5F00BC3C53 /* Run Script */ = {
 			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
 			buildActionMask = 12;
 			files = (
 			);
@@ -138,13 +139,14 @@
 			);
 			inputPaths = (
 			);
+			name = "Run Script";
 			outputFileListPaths = (
 			);
 			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "# Type a script or drag a script file from your workspace to insert its path.\ncd \"$SRCROOT/../../..\"\necho \"jingtian\" \"$SRCROOT/../../..\"\n$SRCROOT/../../../gradlew :composeDemo:embedAndSignAppleFrameworkForXcode\n";
+			shellScript = "# Type a script or drag a script file from your workspace to insert its path.\ncd \"$SRCROOT/../../..\"\necho \"jingtian\" \"$(pwd)\"\n$SRCROOT/../../../gradlew :composeDemo:clean :composeDemo:embedAndSignAppleFrameworkForXcode\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 

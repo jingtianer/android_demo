@@ -1,5 +1,6 @@
 package com.jingtian.composedemo.multiplatform
 
+import android.net.Uri
 import androidx.core.net.toUri
 import com.jingtian.composedemo.BuildKonfig
 import com.jingtian.composedemo.main.remote.RemoteUriUtils
@@ -22,7 +23,7 @@ private object MultiplatformFileFactory : IMultiplatformFileFactory {
     }
 
     override fun shareFile(file: Path): MultiplatformFile {
-        return MultiplatformFileImpl(file.toUri())
+        return MultiplatformFileImpl(Uri.fromFile(File(file.toString())))
     }
 }
 

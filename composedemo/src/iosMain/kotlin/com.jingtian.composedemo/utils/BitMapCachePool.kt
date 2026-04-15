@@ -17,7 +17,9 @@ import org.jetbrains.skia.Rect
 import androidx.compose.ui.graphics.ImageBitmap
 
 actual fun uriToImageBitmap(`is`: RawSource, scaleFactor: Int): ImageBitmap? {
+//    println("uriToImageBitmap scaleFactor: $scaleFactor")
     val bytes = `is`.buffered().readAllBytesOrNull() ?: return null
+//    println("uriToImageBitmap: bytes")
     val image = Image.makeFromEncoded(bytes)
     if (scaleFactor == 1 || scaleFactor <= 0) {
         return image.toComposeImageBitmap()

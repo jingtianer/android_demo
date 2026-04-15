@@ -35,7 +35,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.node.WeakReference
+import com.jingtian.composedemo.multiplatform.WeakRef
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -189,7 +189,7 @@ class AlbumItemViewStateHolder(
 
 @Composable
 fun AlbumItemView(
-    albumViewMap: SnapshotStateMap<Long, WeakReference<AlbumItemViewStateHolder>>,
+    albumViewMap: SnapshotStateMap<Long, WeakRef<AlbumItemViewStateHolder>>,
     albumItemRelation: AlbumItemRelation,
     size: Dp,
     padding: Dp,
@@ -270,7 +270,10 @@ fun AlbumItemViewStateHolder.AlbumItemView() {
                         }
                         itemSelectStateChangeState.value += 1
                     } else {
-                        albumItemLauncher.launch(albumItemRelation)
+                        println("AlbumItemView: click: ${albumItemRelation.albumItem.itemName}")
+                        scope.launch {
+                            albumItemLauncher.launch(albumItemRelation)
+                        }
                         scope.launch(Dispatchers.IO) {
                             fetchImage(scope)
                         }

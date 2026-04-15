@@ -14,12 +14,22 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.io.buffered
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
+import kotlinx.io.readString
 import kotlinx.io.writeString
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerializationStrategy
+import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.encodeToString
+import kotlinx.serialization.modules.EmptySerializersModule
+
+@Serializable
+private class SharedPreferenceStorage<V>(val content: MutableMap<String, V> = mutableMapOf())
 
 class MultiplatformSharedPreferences<V>(
-    name: String,
+    val name: String,
+    val kSerializer: KSerializer<V>,
     val json: Json = Json { ignoreUnknownKeys = true },
     val async: Boolean = true
 ) {
@@ -27,38 +37,56 @@ class MultiplatformSharedPreferences<V>(
     init {
         if (!outfile.exists()) {
             outfile.createNewFile()
+            println("MultiplatformSharedPreferences: $name !exists")
         } else if (outfile.isDirectory) {
             outfile.deleteRecursively()
             outfile.createNewFile()
+            println("MultiplatformSharedPreferences: $name isDirectory")
         }
+        println("MultiplatformSharedPreferences: $name ${outfile}")
     }
-    private val value: MutableMap<String, V?> = HashMap(
+    private val storage: SharedPreferenceStorage<V> =
         try {
-            json.decodeFromString<Map<String, V>>("")
+            val jsonData = SystemFileSystem.source(outfile).buffered().readString()
+            json.decodeFromString(SharedPreferenceStorage.serializer(kSerializer), jsonData)
         } catch (e : Exception) {
-            hashMapOf()
+            SharedPreferenceStorage()
         }
-    )
+
+    private val value get() = storage.content
+
+    init {
+        println("MultiplatformSharedPreferences: value=$value")
+    }
     private val lock = Mutex()
     private var job: Job? = null
 
     fun all(): Map<String, V?> = value
 
-    fun <T : V?> editor(): IMultiplatformSharedPreferences<T> {
-        return object : IMultiplatformSharedPreferences<T> {
-            override fun getValue(key: String, defaultValue: T): T {
-                return (value[key] as? T) ?: let {
+    fun editor(): IMultiplatformSharedPreferences<V> {
+        return object : IMultiplatformSharedPreferences<V> {
+            override fun getValue(key: String, defaultValue: V): V {
+                return value[key] ?: let {
                     setValue(key, defaultValue)
                     defaultValue
                 }
+            }
+
+            override fun getValue(key: String): V? {
+                return value[key]
             }
 
             override fun toString(): String {
                 return json.encodeToString(value)
             }
 
-            override fun setValue(key: String, t: T) {
-                value.put(key, t)
+            override fun setValue(key: String, t: V?) {
+                if (t == null) {
+                    value.remove(key)
+                } else {
+                    value[key] = t
+                }
+                println("set: $name, $key $t, $value")
                 updateStore()
             }
 
@@ -73,13 +101,19 @@ class MultiplatformSharedPreferences<V>(
                         job?.cancel()
                         job = CoroutineUtils.runIOTask({
                             SystemFileSystem.sink(outfile).buffered().use {
-                                it.writeString(json.encodeToString(value))
+                                it.writeString(json.encodeToString(SharedPreferenceStorage.serializer(kSerializer), storage).apply {
+                                    println("write: $name, $this")
+                                })
                                 it.flush()
                             }
+                        }, {
+                            println("updateStore: error $it")
                         })
                     } else {
                         SystemFileSystem.sink(outfile).buffered().use {
-                            it.writeString(json.encodeToString(value))
+                            it.writeString(json.encodeToString(value).apply {
+                                println("write: $name, $this")
+                            })
                             it.flush()
                         }
                     }
@@ -101,34 +135,31 @@ class MultiplatformSharedPreferences<V>(
     }
 }
 
-private val spInstance: MutableMap<String, MultiplatformSharedPreferences<*>> = mutableMapOf()
-private val spInstanceLock = Mutex()
 
 private inline fun <V> getStorage(storageName: String, crossinline initializer: ()->MultiplatformSharedPreferences<V>) : MultiplatformSharedPreferences<V>{
-    return synchronized(spInstanceLock) {
-        spInstance.getOrPut(storageName) {
-            initializer()
-        } as MultiplatformSharedPreferences<V>
-    }
+    return initializer()
 }
 
 fun getJsonStorage(storageName: String): IMultiplatformSharedPreferences<String> {
     return getStorage(storageName) {
-        MultiplatformSharedPreferences<Any?>(storageName)
+        MultiplatformSharedPreferences(storageName, String.serializer())
     }.editor()
 }
 
 fun getLongStorage(storageName: String): IMultiplatformSharedPreferences<Long> {
     return getStorage(storageName) {
-        MultiplatformSharedPreferences<Any?>(storageName)
+        MultiplatformSharedPreferences(storageName, Long.serializer(), json = Json {
+            ignoreUnknownKeys = true
+        })
     }.editor()
 }
 
 fun <V> getRawStorage(
     storageName: String,
-    typeToken: Json = Json { ignoreUnknownKeys = true },
+    kSerializer: KSerializer<V>,
+    json: Json = Json { ignoreUnknownKeys = true },
 ): MultiplatformSharedPreferences<V> {
     return getStorage(storageName) {
-        MultiplatformSharedPreferences(storageName, typeToken)
+        MultiplatformSharedPreferences(storageName, kSerializer, json)
     }
 }

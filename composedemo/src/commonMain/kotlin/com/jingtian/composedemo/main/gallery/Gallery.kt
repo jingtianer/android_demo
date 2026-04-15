@@ -54,7 +54,7 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.node.WeakReference
+import com.jingtian.composedemo.multiplatform.WeakRef
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -99,7 +99,7 @@ import com.jingtian.composedemo.base.resources.getPainter
 import kotlinx.coroutines.IO
 
 @Composable
-fun Gallery(galleryStateHolderMap: SnapshotStateMap<Long, WeakReference<GalleryStateHolder>>, album: IndexedValue<Album>?, albumList: List<Album>, drawerState: DrawerState) {
+fun Gallery(galleryStateHolderMap: SnapshotStateMap<Long, WeakRef<GalleryStateHolder>>, album: IndexedValue<Album>?, albumList: List<Album>, drawerState: DrawerState) {
     if (album == null) {
         return
     }

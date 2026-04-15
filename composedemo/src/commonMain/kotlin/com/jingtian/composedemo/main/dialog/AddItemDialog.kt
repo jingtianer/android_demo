@@ -109,6 +109,7 @@ fun AddItemDialog(album: Album, totalLabelList: List<String>, albumData: List<Al
     val multipleImagePickerLauncher by rememberDocumentPicker(
         onResult = { uri: MultiplatformFile? ->
             uri?.takeIf { !it.isHidden } ?: return@rememberDocumentPicker
+            println("AddItemDialog: onResult: uri ${uri.file}")
             when (uri.mediaType) {
                 FileType.IMAGE -> {
                     BitMapCachePool.toBitMap(

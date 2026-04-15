@@ -4,7 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshots.SnapshotStateMap
-import androidx.compose.ui.node.WeakReference
+import com.jingtian.composedemo.multiplatform.WeakRef
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -37,9 +37,9 @@ fun CharSequence.splitBy(predicate: (Char) -> Boolean): List<String> {
 
 fun CharSequence.splitByWhiteSpace() = splitBy(Char::isWhitespace)
 
-fun <K, V : Any> SnapshotStateMap<K, WeakReference<V>>.getOrPutRef(key: K, default: ()->V): V {
+fun <K, V : Any> SnapshotStateMap<K, WeakRef<V>>.getOrPutRef(key: K, default: ()->V): V {
     return get(key)?.get() ?: default().also {
-        put(key, WeakReference(it))
+        put(key, WeakRef(it))
     }
 }
 
@@ -49,7 +49,9 @@ fun <T> MutableState<T>.observeAsState() = remember { this }
 val Path.isFile get() = SystemFileSystem.metadataOrNull(this)?.isRegularFile ?: false
 val Path.isDirectory get() = SystemFileSystem.metadataOrNull(this)?.isDirectory ?: false
 fun Path.delete() {
-    SystemFileSystem.delete(this)
+    if (SystemFileSystem.exists(this)) {
+        SystemFileSystem.delete(this)
+    }
 }
 fun Path.exists() = SystemFileSystem.exists(this)
 fun Path.mkdir() = SystemFileSystem.createDirectories(this)
@@ -82,7 +84,7 @@ fun RawSource.copyTo(dest: Path) {
                 if (readCnt <= 0) {
                     break
                 }
-                os.write(buffer, readCnt)
+                os.write(buffer, 0, readCnt)
             }
         }
         os.flush()
@@ -98,8 +100,8 @@ fun <T> synchronized(lock: Mutex, action: () -> T): T {
 val Path.extension: String get() {
     return name.run {
         val index = lastIndexOf(".")
-        if (index > 1) {
-            substring(index)
+        if (index >= 1 && index < length - 1) {
+            substring(index + 1)
         } else {
             ""
         }

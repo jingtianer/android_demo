@@ -14,9 +14,9 @@ object ServerStorage {
 
     private val serverIdStorage = getLongStorage("server_id_storage")
 
-    class Storage<T : RemoteServer>(private val serverType: ServerType) {
+    class Storage<T : RemoteServer>(private val serverType: ServerType, kSerializer: KSerializer<T>) {
         private val storageObject by lazy {
-            getRawStorage<T>("server_storage_${serverType.type}")
+            getRawStorage<T>("server_storage_${serverType.type}", kSerializer)
         }
         private var storageId by SharedPreferenceUtils.StorageLong(
             serverIdStorage,
@@ -28,11 +28,11 @@ object ServerStorage {
         }
 
         fun getServer(serverId: String): T? {
-            return storageObject.editor<T?>().getValue(serverId, null)
+            return storageObject.editor().getValue(serverId)
         }
 
         fun updateServer(serverId: String, sftpServer: T) {
-            storageObject.editor<T>().setValue(serverId, sftpServer)
+            storageObject.editor().setValue(serverId, sftpServer)
         }
 
         fun allocateServerId(server: RemoteServer) {
@@ -42,15 +42,15 @@ object ServerStorage {
         }
 
         fun addServer(server: T) {
-            storageObject.editor<T>().setValue(server.serverId, server)
+            storageObject.editor().setValue(server.serverId, server)
         }
 
         fun deleteServer(serverId: String) {
-            storageObject.editor<T>().delete(serverId)
+            storageObject.editor().delete(serverId)
         }
     }
 
-    private val sftpServerStorage = Storage<SftpServer>(ServerType.SFTP)
+    private val sftpServerStorage = Storage(ServerType.SFTP, SftpServer.serializer())
 
     fun <T: RemoteServer> getStorage(serverType: ServerType): Storage<T> {
         return when(serverType) {

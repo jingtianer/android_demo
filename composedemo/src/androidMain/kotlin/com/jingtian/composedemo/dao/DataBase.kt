@@ -13,7 +13,7 @@ import com.jingtian.composedemo.utils.getFileStorageRootDir
 import java.io.File
 
 actual fun dbImplCreator() : RoomDatabase.Builder<DataBase>  {
-    val dbDir = File(getFileStorageRootDir(), "database")
+    val dbDir = File(getFileStorageRootDir().toString(), "database")
     val dbFile = File(dbDir, "app_db")
     dbFile.parentFile?.let { parent->
         if (parent.exists()) {

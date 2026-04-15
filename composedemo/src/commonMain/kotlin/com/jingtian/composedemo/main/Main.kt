@@ -36,9 +36,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.node.WeakReference
+import com.jingtian.composedemo.multiplatform.WeakRef
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.jingtian.composedemo.base.AppThemeText
@@ -114,7 +113,7 @@ fun Main(
     val snackBarMessage by viewModel.currentBackgroundTask.observeAsState()
 
     val galleryStateHolderMap = remember(menuItemsEntity) {
-        mutableStateMapOf<Long, WeakReference<GalleryStateHolder>>()
+        mutableStateMapOf<Long, WeakRef<GalleryStateHolder>>()
     }
     var showSnackBar by remember { mutableStateOf(snackBarMessage != null) }
     var showSnackBarAnim by remember { mutableStateOf(true) }

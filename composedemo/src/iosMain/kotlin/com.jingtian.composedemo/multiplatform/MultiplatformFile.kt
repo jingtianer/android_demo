@@ -4,22 +4,15 @@ import com.jingtian.composedemo.utils.extension
 import kotlinx.io.buffered
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
+import kotlinx.io.readString
 
 actual fun getMultiplatformFileFactory() : IMultiplatformFileFactory {
     return object : IMultiplatformFileFactory {
         override fun fromFile(file: Path): MultiplatformFile {
-            val realFile = SystemFileSystem.source(file).buffered().use { fis->
-                val bytes = fis.readAllBytesOrNull()
-                Path(bytes?.toString() ?: throw RuntimeException("file not found $file, bytes=$bytes"))
-            }
-            return MultiplatformFileImpl(realFile, realFile.extension)
+            return MultiplatformFileImpl(file, file.extension)
         }
         override fun fromFile(file: Path, extension: String?): MultiplatformFile {
-            val realFile = SystemFileSystem.source(file).buffered().use { fis->
-                val bytes = fis.readAllBytesOrNull()
-                Path(bytes?.toString() ?: throw RuntimeException("file not found $file, bytes=$bytes"))
-            }
-            return MultiplatformFileImpl(realFile, extension ?: file.extension)
+            return MultiplatformFileImpl(file, extension ?: file.extension)
         }
 
         override fun shareFile(file: Path): MultiplatformFileImpl {

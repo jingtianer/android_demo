@@ -70,14 +70,14 @@ class AlbumItemLauncher : IAlbumItemLauncher {
         }
     }
 
-    override fun launch(fileName: String, fileInfo: FileInfo) {
+    override suspend fun launch(fileName: String, fileInfo: FileInfo) {
         when(fileInfo.fileType) {
             FileType.HTML -> openUrl(fileName, fileInfo)
             else -> openFile(fileName, fileInfo)
         }
     }
 
-    override fun launch(albumItemRelation: AlbumItemRelation) {
+    override suspend fun launch(albumItemRelation: AlbumItemRelation) {
         val fileInfo = albumItemRelation.fileInfo
         val name = albumItemRelation.albumItem.itemName
         launch(name, fileInfo)
