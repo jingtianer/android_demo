@@ -1,10 +1,14 @@
+
 # Xcode user settings and state
 xcuserdata/
 *.bundle/
 *.moved-aside
 *.xcuserstate
 *.xccheckout
-
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+*.xcodeproj/project.xcworkspace/
+project.xcworkspace/
 # Derived Data (Build artifacts)
 DerivedData/
 build/

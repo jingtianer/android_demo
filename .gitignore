@@ -29,6 +29,9 @@ xcuserdata/
 *.moved-aside
 *.xcuserstate
 *.xccheckout
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+*.xcodeproj/project.xcworkspace/
 
 # Derived Data (Build artifacts)
 DerivedData/
