@@ -9,7 +9,7 @@ import java.io.File
 
 
 class FileShareLauncher : IFileShareLauncher {
-    override fun launch(file: MultiplatformFile) {
+    override suspend fun launch(file: MultiplatformFile) {
         val file = file.file ?: return
         val window = getComposeWindow() ?: return
         FileDialog(window, "保存文件", FileDialog.SAVE).apply {

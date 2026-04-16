@@ -36,7 +36,7 @@ class FileShareLauncher(val context: Context) : IFileShareLauncher {
         }
     }
 
-    override fun launch(file: MultiplatformFile) {
+    override suspend fun launch(file: MultiplatformFile) {
         val sharedFile = file.file
         val uri = if (sharedFile != null) {
             FileProvider.getUriForFile(

@@ -32,37 +32,6 @@ import platform.UIKit.UIViewController
 import platform.darwin.NSObject
 
 class AlbumItemLauncher : IAlbumItemLauncher {
-    companion object {
-        private val linkDir = Path(globalWorkDir, "tmp/links")
-        init {
-            if (linkDir.exists()) {
-                if (linkDir.isFile) {
-                    linkDir.delete()
-                } else if (linkDir.isDirectory) {
-                    linkDir.deleteRecursively()
-                }
-            }
-            linkDir.mkdirs()
-        }
-
-        fun FileInfo.browse(fileName: String) {
-            runCatching {
-                val uri = this.getFileUri() ?: return@runCatching
-                // iOS 端直接通过 UIApplication 打开本地文件 / 链接
-                val url = NSURL.fileURLWithPath(uri.path)
-                UIApplication.sharedApplication().openURL(url)
-            }
-        }
-    }
-    private fun openUrl(fileName: String, file: FileInfo) {
-        runCatching {
-//            println("openFile: file:${file.fileType.name}, ${file.getFileUri()?.file}")
-            val f = file.getFileUri()?.file ?: return@runCatching
-            val url = NSURL.fileURLWithPath(f.toString())
-//            println("openFile: url:$url")
-            UIApplication.sharedApplication().openURL(url)
-        }
-    }
 
     private suspend fun openFile(fileName: String, file: FileInfo) {
 //        println("openFile: file:${file.fileType.name}, ${file.getFileUri()}, ${file.getFileUri()?.file}")
@@ -77,35 +46,12 @@ class AlbumItemLauncher : IAlbumItemLauncher {
         docController.setURL(NSURL.fileURLWithPath(filePath.toString()))
 
         docController.delegate = OpenFileDelegate()
-
-        // 2. ✅ 关键：手动指定 UTI（文件类型）
-//        docController.UTI = when(file.fileType) {
-//            FileType.RegularFile -> {
-//                ""
-//            }
-//            FileType.VIDEO -> {
-//                "public.movie"
-//            }
-//            FileType.IMAGE -> {
-//                "public.image"
-//            }
-//            FileType.AUDIO -> {
-//                "public.audio"
-//            }
-//            FileType.HTML -> {
-//                "public.plain-text"
-//            }
-//        }
-
-//        println("uti=${docController.UTI}")
-
-        // 3. 弹出系统预览/打开菜单
         docController.presentPreviewAnimated(true)
     }
 
     override suspend fun launch(fileName: String, fileInfo: FileInfo) {
         when(fileInfo.fileType) {
-            FileType.HTML -> openUrl(fileName, fileInfo)
+            FileType.HTML -> openFile(fileName, fileInfo)
             else -> openFile(fileName, fileInfo)
         }
     }
@@ -124,7 +70,7 @@ actual fun rememberAlbumLauncher(onResult: (Long)->Unit): MutableState<IAlbumIte
     }
 }
 
-private class OpenFileDelegate : NSObject(), UIDocumentInteractionControllerDelegateProtocol {
+class OpenFileDelegate : NSObject(), UIDocumentInteractionControllerDelegateProtocol {
 
     override fun documentInteractionControllerViewControllerForPreview(controller: UIDocumentInteractionController): UIViewController {
         return UIApplication.sharedApplication.keyWindow?.rootViewController!!

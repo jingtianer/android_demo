@@ -14,6 +14,7 @@ import com.jingtian.composedemo.multiplatform.readAllBytesOrNull
 import com.jingtian.composedemo.utils.createNewFile
 import com.jingtian.composedemo.utils.delete
 import com.jingtian.composedemo.utils.deleteRecursively
+import com.jingtian.composedemo.utils.exists
 import com.jingtian.composedemo.utils.getFileCacheStorageRootDir
 import com.jingtian.composedemo.utils.isDirectory
 import com.jingtian.composedemo.utils.isFile
@@ -54,7 +55,16 @@ object ShareUtils {
                     file.deleteRecursively()
                 }
             }
-            file.parent?.mkdirs()
+            file.parent?.let { parent->
+                if (parent.exists()) {
+                    if (parent.isFile) {
+                        parent.delete()
+                        parent.mkdirs()
+                    }
+                } else {
+                    parent.mkdirs()
+                }
+            }
             file.createNewFile()
             val dataList = DataBase.dbImpl.getAlbumDao().getAllAlbumInfoWithExtra()
             SystemFileSystem.sink(file).buffered().use {

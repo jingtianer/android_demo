@@ -11,12 +11,22 @@ import org.jetbrains.skia.Image
 import org.jetbrains.skia.ImageInfo
 import org.jetbrains.skia.Paint
 import org.jetbrains.skia.Rect
+import platform.Foundation.NSCachesDirectory
+import platform.Foundation.NSDocumentDirectory
 import platform.Foundation.NSHomeDirectory
+import platform.Foundation.NSSearchPathForDirectoriesInDomains
+import platform.Foundation.NSUserDomainMask
 
-val globalWorkDir = Path(NSHomeDirectory(), "files")
+val globalWorkDir = NSSearchPathForDirectoriesInDomains(
+    NSDocumentDirectory, NSUserDomainMask, true
+).first() as String
 
 actual fun getFileStorageRootDir(): Path = Path(globalWorkDir, "filestore")
-actual fun getFileCacheStorageRootDir(): Path = Path(globalWorkDir, "cache")
+
+actual fun getFileCacheStorageRootDir(): Path = Path(NSSearchPathForDirectoriesInDomains(
+    NSCachesDirectory, NSUserDomainMask, true
+).first() as String, "cache")
+
 actual fun compressImageBitmap(bitmap: ImageBitmap, width: Int, height: Int, scale: Float): ImageBitmap {
     val image = Image.makeFromBitmap(bitmap.asSkiaBitmap())
     val originWidth = image.width

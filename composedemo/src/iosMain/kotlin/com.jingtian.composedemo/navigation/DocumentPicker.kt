@@ -111,11 +111,13 @@ class DocumentPickerDelegate(private val callback: (MultiplatformFile)->Unit) : 
                 if (success) url.absoluteURL?.path?.also {
                     // 用完记得 stop（建议业务层管理）
                     val path = Path(it)
-//                    println("DocumentPickerDelegate: documentPicker: $path, ${path.extension}")
+                    println("DocumentPickerDelegate: documentPicker: $path, ${path.extension}")
                     callback(MultiplatformFileImpl(path, path.extension))
-//                     url.stopAccessingSecurityScopedResource()
+                    url.stopAccessingSecurityScopedResource()
+                    url.toString()
                 } else null
             }
+        println("file: ${didPickDocumentsAtURLs.toTypedArray().contentDeepToString()}")
     }
 
     override fun documentPickerWasCancelled(controller: UIDocumentPickerViewController) {

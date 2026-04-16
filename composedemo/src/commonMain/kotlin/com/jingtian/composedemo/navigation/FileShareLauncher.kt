@@ -7,7 +7,7 @@ import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
 import com.jingtian.composedemo.multiplatform.MultiplatformFile
 
 interface IFileShareLauncher {
-    fun launch(file: MultiplatformFile)
+    suspend fun launch(file: MultiplatformFile)
 }
 @Composable
 expect fun rememberFileShare(onResult: (Long)->Unit): MutableState<IFileShareLauncher>

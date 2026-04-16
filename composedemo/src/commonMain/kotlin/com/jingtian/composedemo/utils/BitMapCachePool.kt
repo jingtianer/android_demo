@@ -114,6 +114,8 @@ object BitMapCachePool {
                             SystemFileSystem.sink(cacheFile).use {
                                 writeImage(bitmap, it)
                             }
+                        }, onFailure = { e->
+                            println("bitmapCache: id=$id, type=${fileType.value}, scaleFactor=$scaleFactor, cache fail\n$e")
                         })
                     } else {
                         cacheFile.delete()
