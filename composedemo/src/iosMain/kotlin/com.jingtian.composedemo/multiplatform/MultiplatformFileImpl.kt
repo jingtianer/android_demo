@@ -44,7 +44,7 @@ fun UIImage.toImageBitmap(): ImageBitmap {
     // 3. Decode ByteArray into Skia Image and then to Compose ImageBitmap
     return Image.makeFromEncoded(byteArray).toComposeImageBitmap()
 }
-class MultiplatformFileImpl(val realFile: Path, val realExtension: String) : MultiplatformFile {
+class MultiplatformFileImpl(val realFile: Path, val realExtension: String, val relativePath: Path = realFile) : MultiplatformFile {
     companion object {
         val imageExtensions = arrayOf("jpg", "jpeg", "png", "gif", "bmp", "webp", "tiff", "ico", "heic", "heif", "jfif")
         val videoExtensions = arrayOf("mp4", "mov", "mkv", "avi", "webm", "flv", "wmv")
@@ -122,5 +122,5 @@ class MultiplatformFileImpl(val realFile: Path, val realExtension: String) : Mul
         get() = Path(realFile)
     override val extension: String = realExtension
     override val path: String
-        get() = realFile.toString()
+        get() = relativePath.toString()
 }

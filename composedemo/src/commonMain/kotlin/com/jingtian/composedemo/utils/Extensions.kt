@@ -11,6 +11,8 @@ import kotlinx.io.RawSource
 import kotlinx.io.buffered
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
+import kotlinx.io.files.SystemPathSeparator
+import kotlin.math.min
 
 
 fun CharSequence.splitBy(predicate: (Char) -> Boolean): List<String> {
@@ -93,5 +95,44 @@ val Path.extension: String get() {
         } else {
             ""
         }
+    }
+}
+
+private fun Path.split(): List<String> {
+    val split = this.toString().split(SystemPathSeparator)
+//    println("split: this:$this, raw=${split.toTypedArray().contentDeepToString()}, $SystemPathSeparator")
+    if (split.isEmpty()) {
+        return split
+    }
+    var startIndex = 0
+    var endIndex = split.size - 1
+    while (startIndex < split.size && split[startIndex].isEmpty()) {
+        startIndex++
+    }
+    while (endIndex > 0 && split[endIndex].isEmpty()) {
+        endIndex--
+    }
+    if (startIndex <= endIndex && endIndex < split.size) {
+        return split.subList(startIndex, endIndex + 1)
+    }
+    return listOf()
+
+}
+
+fun Path.relativeTo(parent: Path): Path {
+//    println("relativeTo: this:$this, parent=$parent")
+    if (!this.isAbsolute || !parent.isAbsolute) {
+        return this
+    }
+    val path = this.split()
+    val parentPath = parent.split()
+//    println("relativeTo: split this:${path.toTypedArray().contentDeepToString()}, parent=${parentPath.toTypedArray().contentDeepToString()}")
+    val len = min(path.size, parentPath.size)
+    var index = 0
+    while (index < len && path[index] == parentPath[index]) {
+        index++
+    }
+    return Path(".",  *path.subList(index, path.size).toTypedArray()).apply {
+//        println("relativeTo: result=$this")
     }
 }

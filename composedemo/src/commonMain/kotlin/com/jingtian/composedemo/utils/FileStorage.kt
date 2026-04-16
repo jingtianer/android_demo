@@ -22,6 +22,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.io.Buffer
 import kotlinx.io.RawSource
 import kotlinx.io.files.Path
+import kotlinx.io.files.SystemFileSystem
 
 expect fun getFileStorageRootDir(): Path
 expect fun getFileCacheStorageRootDir(): Path
@@ -167,7 +168,7 @@ object FileStorageUtils {
 
         private fun storeIos(uri: MultiplatformFile, storageFile: Path, id: Long) {
             val realFile = getIosRealFileStoreFile(id, uri.fileName ?: "real")
-            val bytes = realFile.toString().encodeToByteArray()
+            val bytes = realFile.relativeTo(getFileStorageRootDir()).toString().encodeToByteArray()
             val buffer = Buffer()
             buffer.write(bytes, 0, bytes.size)
             innerStoreImage(id, buffer, storageFile, uri.extension())
