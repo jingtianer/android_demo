@@ -53,7 +53,7 @@ class MultiplatformFileImpl(val realFile: Path, val realExtension: String) : Mul
     }
 
     @OptIn(ExperimentalForeignApi::class)
-    fun getVideoThumbnail(filePath: Path): ImageBitmap?  {
+    private fun getVideoThumbnail(filePath: Path): ImageBitmap?  {
         return try {
             val url = NSURL.fileURLWithPath(filePath.toString())
             val asset = AVAsset.assetWithURL(url)
@@ -69,7 +69,7 @@ class MultiplatformFileImpl(val realFile: Path, val realExtension: String) : Mul
         }
     }
 
-    fun getAudioCoverImage(filePath: Path): ImageBitmap? {
+    private fun getAudioCoverImage(filePath: Path): ImageBitmap? {
         val asset = AVURLAsset.URLAssetWithURL(NSURL.fileURLWithPath(filePath.toString()), null)
 
         // Look for common metadata (artwork)
@@ -105,7 +105,7 @@ class MultiplatformFileImpl(val realFile: Path, val realExtension: String) : Mul
         get() = getVideoThumbnail(realFile)
 
     override val audioThumbnail: ImageBitmap?
-        get() = getAudioCoverImage(realFile) // iOS 端暂未实现音频封面提取
+        get() = getAudioCoverImage(realFile)
 
     override val imageRatio: Pair<Int, Int>
         get() = runCatching {

@@ -67,26 +67,7 @@ class AlbumItemLauncher : IAlbumItemLauncher {
     private suspend fun openFile(fileName: String, file: FileInfo) {
 //        println("openFile: file:${file.fileType.name}, ${file.getFileUri()}, ${file.getFileUri()?.file}")
         val filePath = withContext(Dispatchers.IO) {
-            val filePath = file.getFileUri()?.file ?: return@withContext null
-            val tmpFile = Path(getFileCacheStorageRootDir(), "tmp/$fileName.${file.extension}")
-            tmpFile.parent?.let { parent->
-                if (parent.exists() && parent.isFile) {
-                    parent.delete()
-                    parent.mkdirs()
-                } else {
-                    parent.mkdirs()
-                }
-            }
-            if (tmpFile.exists()) {
-                if (tmpFile.isDirectory) {
-                    tmpFile.deleteRecursively()
-                } else {
-                    tmpFile.delete()
-                }
-            }
-            tmpFile.createNewFile()
-            SystemFileSystem.source(filePath).copyTo(tmpFile)
-            tmpFile
+            file.getFileUri()?.file ?: return@withContext null
         } ?: return
 //        println("openFile: file: $filePath")
 

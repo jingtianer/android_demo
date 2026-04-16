@@ -15,6 +15,7 @@ import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.jingtian.composedemo.launch.LaunchTasks
 import com.jingtian.composedemo.main.Main
 import com.jingtian.composedemo.ui.theme.DemoAppTheme
 import com.jingtian.composedemo.ui.theme.LocalDesktopConst
@@ -23,6 +24,7 @@ import com.jingtian.composedemo.utils.DesktopStorage
 import com.jingtian.composedemo.viewmodels.AppThemeViewModel
 
 fun main(args: Array<String>) {
+    LaunchTasks.onLaunch()
     application {
         MainWindow()
     }

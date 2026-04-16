@@ -199,7 +199,7 @@ fun systemFallbackIntent(context: Context, fileName: String, fileInfo: FileInfo)
             )
         }
     } else {
-        (originFileUri as MultiplatformFileImpl).uri
+        (originFileUri as MultiplatformFileImpl?)?.uri
     } ?: return null
     return Intent(Intent.ACTION_VIEW).apply {
         // 设置Uri和媒体类型

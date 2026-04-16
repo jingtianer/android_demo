@@ -9,10 +9,20 @@ import kotlinx.io.readString
 actual fun getMultiplatformFileFactory() : IMultiplatformFileFactory {
     return object : IMultiplatformFileFactory {
         override fun fromFile(file: Path): MultiplatformFile {
-            return MultiplatformFileImpl(file, file.extension)
+            val realFile = Path(
+                SystemFileSystem.source(file).buffered().use {
+                    it.readString()
+                }
+            )
+            return MultiplatformFileImpl(realFile, realFile.extension)
         }
         override fun fromFile(file: Path, extension: String?): MultiplatformFile {
-            return MultiplatformFileImpl(file, extension ?: file.extension)
+            val realFile = Path(
+                SystemFileSystem.source(file).buffered().use {
+                    it.readString()
+                }
+            )
+            return MultiplatformFileImpl(realFile, extension ?: realFile.extension)
         }
 
         override fun shareFile(file: Path): MultiplatformFileImpl {

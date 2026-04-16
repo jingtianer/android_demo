@@ -6,9 +6,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshots.SnapshotStateMap
 import com.jingtian.composedemo.multiplatform.WeakRef
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.io.Buffer
 import kotlinx.io.RawSource
 import kotlinx.io.buffered
 import kotlinx.io.files.Path
@@ -46,15 +44,11 @@ fun <K, V : Any> SnapshotStateMap<K, WeakRef<V>>.getOrPutRef(key: K, default: ()
 @Composable
 fun <T> MutableState<T>.observeAsState() = remember { this }
 
-val Path.isFile get() = SystemFileSystem.metadataOrNull(this)?.isRegularFile ?: false
-val Path.isDirectory get() = SystemFileSystem.metadataOrNull(this)?.isDirectory ?: false
-fun Path.delete() {
-    if (SystemFileSystem.exists(this)) {
-        SystemFileSystem.delete(this)
-    }
-}
+val Path.isFile get() = SystemFileSystem.metadataOrNull(this)?.isRegularFile ?: throw Exception("attr is null exists=${exists()}, $this")
+val Path.isDirectory get() = SystemFileSystem.metadataOrNull(this)?.isDirectory ?: throw Exception("attr is null exists=${exists()}, $this")
+fun Path.delete() = SystemFileSystem.delete(this, false)
 fun Path.exists() = SystemFileSystem.exists(this)
-fun Path.mkdir() = SystemFileSystem.createDirectories(this)
+fun Path.mkdir() = SystemFileSystem.createDirectories(this, true)
 fun Path.deleteRecursively() {
     if (isFile) {
         SystemFileSystem.delete(this)
@@ -66,7 +60,7 @@ fun Path.deleteRecursively() {
     }
 }
 
-fun Path.mkdirs() = SystemFileSystem.createDirectories(this)
+fun Path.mkdirs() = SystemFileSystem.createDirectories(this, true)
 
 fun Path.createNewFile() {
     if (SystemFileSystem.exists(this)) {
@@ -88,12 +82,6 @@ fun RawSource.copyTo(dest: Path) {
             }
         }
         os.flush()
-    }
-}
-
-fun <T> synchronized(lock: Mutex, action: () -> T): T {
-    return runBlocking {
-        lock.withLock(action = action)
     }
 }
 

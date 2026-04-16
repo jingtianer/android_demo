@@ -23,7 +23,7 @@ class FileInfo(
     var extension: String? = null,
 ) {
     fun getFileUri(): MultiplatformFile? {
-        return FileStorageUtils.getStorage(fileType)?.get(storageId, this)
+        return FileStorageUtils.getStorage(fileType).get(storageId, this)
     }
 }
 

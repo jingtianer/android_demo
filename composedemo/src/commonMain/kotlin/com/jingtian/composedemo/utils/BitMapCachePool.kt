@@ -7,14 +7,12 @@ import com.jingtian.composedemo.dao.DataBase
 import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.FileType
 import com.jingtian.composedemo.multiplatform.MultiplatformFile
-import com.jingtian.composedemo.multiplatform.readAllBytesOrNull
+import com.jingtian.composedemo.multiplatform.newReentrantLock
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
-import kotlinx.io.Buffer
 import kotlinx.io.RawSink
 import kotlinx.io.RawSource
 import kotlinx.io.buffered
@@ -22,31 +20,40 @@ import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
 import kotlin.math.max
 
+class ListWithLock<T> {
+    private val lock = newReentrantLock()
+    private val list: MutableList<T> = mutableListOf()
+    fun read(): List<T> = list
+    fun <R> write(block: (MutableList<T>) -> R): R = lock.use {
+        block(list)
+    }
+}
+
 object BitMapCachePool {
     private val overallImagePool: MutableMap<FileType, BitMapCache> = mutableMapOf()
-    private val lock = Mutex()
+    private val lock = newReentrantLock()
 
     private fun getBitMapCachePool(fileType: FileType): BitMapCache {
-        return synchronized(lock) {
+        return lock.use {
             overallImagePool.getOrPut(fileType) {
                 BitMapCache(fileType)
             }
         }
     }
     class BitMapCache(private val fileType: FileType) {
-        private val imagePool: MutableMap<Long, Pair<Mutex, ArrayList<Pair<Int, WeakRef<ImageBitmap>>>>> = mutableMapOf()
-        private val lock = Mutex()
+        private val imagePool: MutableMap<Long, ListWithLock<Pair<Int, WeakRef<ImageBitmap>>>> = mutableMapOf()
+        private val lock = newReentrantLock()
 
-        private fun getQueue(id: Long): Pair<Mutex, ArrayList<Pair<Int, WeakRef<ImageBitmap>>>> {
-            return synchronized(lock) {
+        private fun getQueue(id: Long): ListWithLock<Pair<Int, WeakRef<ImageBitmap>>> {
+            return lock.use {
                 imagePool.getOrPut(id) {
-                    Mutex() to ArrayList()
+                    ListWithLock()
                 }
             }
         }
 
-        private fun getIfNotNull(queue: ArrayList<Pair<Int, WeakRef<ImageBitmap>>>, index: Int): Pair<Int, ImageBitmap>? {
-            queue.lastOrNull()?.let { last->
+        private fun getIfNotNull(queue: ListWithLock<Pair<Int, WeakRef<ImageBitmap>>>, index: Int): Pair<Int, ImageBitmap>? {
+            queue.read().getOrNull(index)?.let { last->
                 last.second.get()?.let { bitmap ->
                     return last.first to bitmap
                 }
@@ -54,91 +61,75 @@ object BitMapCachePool {
             return null
         }
 
-        private fun tryGetNeighborBitmap(queue: ArrayList<Pair<Int, WeakRef<ImageBitmap>>>, id: Long, scaleFactor: Int, insertPos: Int, bitmapCreator: () -> ImageBitmap?): Pair<Int, ImageBitmap>? {
-            getIfNotNull(queue, insertPos-1)?.let { (neighborScaleFactor, bitmap)->
-                CoroutineUtils.runIOTask({
-                    createAndStoreBitmap(id, scaleFactor, -insertPos-1, queue, bitmapCreator)
-                })
-                return neighborScaleFactor to bitmap
-            }
-            getIfNotNull(queue, insertPos)?.let { (neighborScaleFactor, bitmap)->
-                CoroutineUtils.runIOTask({
-                    createAndStoreBitmap(id, scaleFactor, -insertPos-1, queue, bitmapCreator)
-                })
-                return neighborScaleFactor to bitmap
-            }
-            return null
-        }
-
         fun put(id: Long, scaleFactor: Int = -1, bitmapCreator: () -> ImageBitmap?): ImageBitmap? {
-            val (lock, queue) = getQueue(id)
-            return synchronized(lock) {
+            val queue = getQueue(id)
+            return queue.write { list->
                 if (scaleFactor == -1) {
                     getIfNotNull(queue, 0)?.let { (scaleFactor, bitmap)->
-                        return@synchronized bitmap
+                        println("bitmapCache: id=$id, type=${fileType.value}, invalid scaleFactor, read any")
+                        return@write bitmap
                     }
-                    return@synchronized bitmapCreator()
+                    println("bitmapCache: id=$id, type=${fileType.value}, invalid scaleFactor, create")
+                    return@write bitmapCreator()
                 }
-                val insertPos = queue.binarySearch {
+                val insertPos = list.binarySearch {
                     scaleFactor - it.first
                 }
-                if (insertPos < 0) {
-                    tryGetNeighborBitmap(queue, id, scaleFactor, -insertPos-1, bitmapCreator)?.let { (scaleFactor, bitmap)->
-                        return@synchronized bitmap
+                val finalInsertPos = if (insertPos >= 0) {
+                    val cachedBitmap = list.run {
+                        val item = getOrNull(insertPos)
+                        val result = item?.second?.get()
+                        if (result == null && item != null) {
+                            list.removeAt(insertPos)
+                        }
+                        result
                     }
-                    return@synchronized createAndStoreBitmap(id, scaleFactor, -insertPos-1, queue, bitmapCreator)
+                    if (cachedBitmap != null) {
+                        println("bitmapCache: id=$id, type=${fileType.value}, scaleFactor=$scaleFactor, mem cache")
+                        return@write cachedBitmap
+                    }
+                    insertPos
+                } else {
+                    -insertPos-1
                 }
-                val cachedBitmap = queue[insertPos].second.get()
-                if (cachedBitmap == null) {
-                    tryGetNeighborBitmap(queue, id, scaleFactor, insertPos, bitmapCreator)?.let { (scaleFactor, bitmap)->
-                        return@synchronized bitmap
-                    }
-                    val bitmap = bitmapCreator()
+                val cacheFile = getCacheFile(fileType.value, id, scaleFactor)
+                if (cacheFile.exists()) {
+                    val bitmap = runCatching {
+                        SystemFileSystem.source(cacheFile).use {
+                            uriToImageBitmap(it, scaleFactor)
+                        }
+                    }.getOrNull()
                     if (bitmap != null) {
-                        queue[insertPos] = scaleFactor to WeakRef(bitmap)
+                        list.add(finalInsertPos, scaleFactor to WeakRef(bitmap))
+                        println("bitmapCache: id=$id, type=${fileType.value}, scaleFactor=$scaleFactor, disk cache")
+                        return@write bitmap
                     }
-                    return@synchronized bitmap
                 }
-                return@synchronized cachedBitmap
+                val bitmap = bitmapCreator()
+                if (bitmap != null) {
+                    list.add(finalInsertPos, scaleFactor to WeakRef(bitmap))
+                    if (scaleFactor > 1) {
+                        cacheFile.createNewFile()
+                        CoroutineUtils.runIOTask({
+                            SystemFileSystem.sink(cacheFile).use {
+                                writeImage(bitmap, it)
+                            }
+                        })
+                    } else {
+                        cacheFile.delete()
+                    }
+                }
+                println("bitmapCache: id=$id, type=${fileType.value}, scaleFactor=$scaleFactor, create: $bitmap")
+                return@write bitmap
             }
         }
 
         fun clear(id: Long) {
-            val (lock, queue) = getQueue(id)
-            synchronized(lock) {
-                queue.clear()
+            val queue = getQueue(id)
+            queue.write {
+                it.clear()
+                getCacheDir(fileType.value, id).takeIf { it.exists() }?.deleteRecursively()
             }
-            getCacheDir(fileType.value, id).takeIf { it.exists() }?.deleteRecursively()
-        }
-
-        private fun createAndStoreBitmap(id: Long, scaleFactor: Int, @IntRange(from = 0) insertPos: Int, queue: ArrayList<Pair<Int, WeakRef<ImageBitmap>>>, bitmapCreator: () -> ImageBitmap?): ImageBitmap? {
-            val cacheFile = getCacheFile(fileType.value, id, scaleFactor)
-            if (cacheFile?.exists() == true) {
-                SystemFileSystem.source(cacheFile).buffered().use {
-                    uriToImageBitmap(it, scaleFactor)?.let {
-                        queue.add(insertPos, scaleFactor to WeakRef(it))
-                        return@createAndStoreBitmap it
-                    }
-                }
-            }
-            val bitmap = bitmapCreator()
-            if (bitmap != null) {
-                queue.add(insertPos, scaleFactor to WeakRef(bitmap))
-                CoroutineUtils.runIOTask({
-                    val file = getCacheFile(fileType.value, id, scaleFactor)
-                    if (file == null || file.exists()) {
-                        return@runIOTask
-                    }
-                    SystemFileSystem.sink(file).use {
-                        writeImage(bitmap, it)
-                        it.flush()
-                    }
-                }, { e->
-
-                }) {
-                }
-            }
-            return bitmap
         }
     }
 
@@ -152,13 +143,15 @@ object BitMapCachePool {
     }
 
     private fun Path.ensureDir(): Path {
-        if (exists()) {
-            if (isFile) {
-                delete()
-                mkdirs()
+        runCatching {
+            if (exists()) {
+                if (isFile) {
+                    delete()
+                    mkdirs()
+                }
+            } else {
+                mkdir()
             }
-        } else {
-            mkdirs()
         }
         return this
     }
@@ -173,7 +166,7 @@ object BitMapCachePool {
     }
 
     private fun ensureCacheDir(fileType: Int, storageId: Long) {
-        Path(getCacheStoreRoot(fileType), "bitmap_cache/bitmap_${fileType}/${storageId}").ensureDir()
+        getCacheDir(fileType, storageId).ensureDir()
     }
 
     private fun getCacheDir(fileType: Int, storageId: Long): Path {
@@ -215,15 +208,14 @@ object BitMapCachePool {
     }
 
     fun toBitMap(image: MultiplatformFile, maxWidth: Int = -1, maxHeight: Int = -1): Pair<Int, ImageBitmap?> {
-        val `is` = image.inputStream ?: return -1 to null
-        val scaleFactor = `is`.use { `is`->
+        val scaleFactor = image.inputStream?.use { `is`->
             // 第一步：仅解码边界，获取图片原始宽高
             val (outWidth, outHeight) = uriToImageSize(`is`)
             // 第二步：计算缩放比例（避免图片过大导致 OOM）
             calculateScaleFactor(outWidth, outHeight, maxWidth, maxHeight)
-        }
+        } ?: 1
 //        println("scale factor: $scaleFactor")
-        val bitmap = `is`.use { `is`->
+        val bitmap = image.inputStream?.use { `is`->
 //            Log.d("TAG", "loadImage failed: $image, $scaleFactor, $image")
             // 第三步：按缩放比例解码图片
             uriToImageBitmap(`is`, scaleFactor)
@@ -257,8 +249,7 @@ object BitMapCachePool {
         val scaleFactor =  if (fileInfo.intrinsicWidth > 0 && fileInfo.intrinsicHeight > 0) {
             calculateScaleFactor(fileInfo.intrinsicWidth, fileInfo.intrinsicHeight, maxWidth, maxHeight)
         } else {
-            val `is` = image.inputStream
-            `is`?.use { `is`->
+            image.inputStream?.use { `is`->
                 // 第一步：仅解码边界，获取图片原始宽高
                 val (outWidth, outHeight) = uriToImageSize(`is`)
                 // 第二步：计算缩放比例（避免图片过大导致 OOM）

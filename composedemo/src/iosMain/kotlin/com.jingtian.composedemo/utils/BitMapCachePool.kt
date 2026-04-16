@@ -15,12 +15,13 @@ import org.jetbrains.skia.ImageInfo
 import org.jetbrains.skia.Paint
 import org.jetbrains.skia.Rect
 import androidx.compose.ui.graphics.ImageBitmap
+import kotlinx.io.readByteArray
 
 actual fun uriToImageBitmap(`is`: RawSource, scaleFactor: Int): ImageBitmap? {
 //    println("uriToImageBitmap scaleFactor: $scaleFactor")
-    val bytes = `is`.buffered().readAllBytesOrNull() ?: return null
+    val bytes = `is`.buffered().readByteArray()
 //    println("uriToImageBitmap: bytes")
-    val image = Image.makeFromEncoded(bytes)
+    val image = runCatching { Image.makeFromEncoded(bytes) }.getOrNull() ?: return null
     if (scaleFactor == 1 || scaleFactor <= 0) {
         return image.toComposeImageBitmap()
     }
@@ -62,8 +63,8 @@ actual fun uriToImageBitmap(`is`: RawSource, scaleFactor: Int): ImageBitmap? {
 }
 actual fun uriToImageBitmap(`is`: RawSource): ImageBitmap? = uriToImageBitmap(`is`, 1)
 actual fun uriToImageSize(`is`: RawSource): Pair<Int, Int> {
-    val bytes = `is`.buffered().readAllBytesOrNull() ?: return 1 to 1
-    val image = Image.makeFromEncoded(bytes)
+    val bytes = `is`.buffered().readByteArray()
+    val image = runCatching { Image.makeFromEncoded(bytes) }.getOrNull() ?: return 1 to 1
     return image.width to image.height
 }
 actual fun writeImage(bitmap: ImageBitmap, os: RawSink) {

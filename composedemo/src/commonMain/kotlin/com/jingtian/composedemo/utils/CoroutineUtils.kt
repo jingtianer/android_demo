@@ -11,8 +11,6 @@ import kotlinx.coroutines.withContext
 object CoroutineUtils {
     val globalScope = CoroutineScope(Dispatchers.Main + Job())
 
-    class CoroutineTaskFailException : Exception()
-
     fun <T> runIOTask(block: suspend ()->T, onFailure: suspend (t: Throwable)->Unit = {}, callback: suspend (T) -> Unit = {}): Job {
         return globalScope.launch {
             try {
@@ -24,13 +22,13 @@ object CoroutineUtils {
                     withContext(Dispatchers.Main) {
                         onFailure(e)
                     }
-                    throw CoroutineTaskFailException()
+                    throw e
                 }
                 withContext(Dispatchers.Main) {
                     callback.invoke(ret)
                 }
-            } catch (_: CoroutineTaskFailException) {
-
+            } catch (e: Exception) {
+                throw e
             }
         }
     }

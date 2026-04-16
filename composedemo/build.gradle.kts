@@ -87,7 +87,7 @@ kotlin {
 
                 // 工具类
                 implementation(libs.kotlinx.serialization.json)
-                implementation("org.jetbrains.kotlinx:kotlinx-io-core:0.6.0")
+                implementation("org.jetbrains.kotlinx:kotlinx-io-core:0.7.0")
                 implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.2")
 
 //                // Room 扩展

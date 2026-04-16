@@ -8,9 +8,7 @@ import com.jingtian.composedemo.utils.exists
 import com.jingtian.composedemo.utils.getFileStorageRootDir
 import com.jingtian.composedemo.utils.isDirectory
 import com.jingtian.composedemo.utils.mkdirs
-import com.jingtian.composedemo.utils.synchronized
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.sync.Mutex
 import kotlinx.io.buffered
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
@@ -18,11 +16,9 @@ import kotlinx.io.readString
 import kotlinx.io.writeString
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.SerializationStrategy
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.encodeToString
-import kotlinx.serialization.modules.EmptySerializersModule
 
 @Serializable
 private class SharedPreferenceStorage<V>(val content: MutableMap<String, V> = mutableMapOf())
@@ -37,13 +33,13 @@ class MultiplatformSharedPreferences<V>(
     init {
         if (!outfile.exists()) {
             outfile.createNewFile()
-            println("MultiplatformSharedPreferences: $name !exists")
+//            println("MultiplatformSharedPreferences: $name !exists")
         } else if (outfile.isDirectory) {
             outfile.deleteRecursively()
             outfile.createNewFile()
-            println("MultiplatformSharedPreferences: $name isDirectory")
+//            println("MultiplatformSharedPreferences: $name isDirectory")
         }
-        println("MultiplatformSharedPreferences: $name ${outfile}")
+//        println("MultiplatformSharedPreferences: $name ${outfile}")
     }
     private val storage: SharedPreferenceStorage<V> =
         try {
@@ -56,9 +52,9 @@ class MultiplatformSharedPreferences<V>(
     private val value get() = storage.content
 
     init {
-        println("MultiplatformSharedPreferences: value=$value")
+//        println("MultiplatformSharedPreferences: value=$value")
     }
-    private val lock = Mutex()
+    private val lock = newReentrantLock()
     private var job: Job? = null
 
     fun all(): Map<String, V?> = value
@@ -86,7 +82,7 @@ class MultiplatformSharedPreferences<V>(
                 } else {
                     value[key] = t
                 }
-                println("set: $name, $key $t, $value")
+//                println("set: $name, $key $t, $value")
                 updateStore()
             }
 
@@ -96,23 +92,23 @@ class MultiplatformSharedPreferences<V>(
             }
 
             private fun updateStore() {
-                synchronized(lock) {
+                lock.use {
                     if (async) {
                         job?.cancel()
                         job = CoroutineUtils.runIOTask({
                             SystemFileSystem.sink(outfile).buffered().use {
                                 it.writeString(json.encodeToString(SharedPreferenceStorage.serializer(kSerializer), storage).apply {
-                                    println("write: $name, $this")
+//                                    println("write: $name, $this")
                                 })
                                 it.flush()
                             }
                         }, {
-                            println("updateStore: error $it")
+//                            println("updateStore: error $it")
                         })
                     } else {
                         SystemFileSystem.sink(outfile).buffered().use {
                             it.writeString(json.encodeToString(value).apply {
-                                println("write: $name, $this")
+//                                println("write: $name, $this")
                             })
                             it.flush()
                         }

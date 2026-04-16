@@ -270,7 +270,7 @@ fun AlbumItemViewStateHolder.AlbumItemView() {
                         }
                         itemSelectStateChangeState.value += 1
                     } else {
-                        println("AlbumItemView: click: ${albumItemRelation.albumItem.itemName}")
+//                        println("AlbumItemView: click: ${albumItemRelation.albumItem.itemName}")
                         scope.launch {
                             albumItemLauncher.launch(albumItemRelation)
                         }
