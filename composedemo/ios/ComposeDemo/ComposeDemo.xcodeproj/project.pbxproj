@@ -65,10 +65,10 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 2B839E982F8D189600BC3C53 /* Build configuration list for PBXNativeTarget "ComposeDemo" */;
 			buildPhases = (
+				2B839E9B2F8F4B5F00BC3C53 /* Run Script */,
 				2B839E892F8D189400BC3C53 /* Sources */,
 				2B839E8A2F8D189400BC3C53 /* Frameworks */,
 				2B839E8B2F8D189400BC3C53 /* Resources */,
-				2B839E9B2F8F4B5F00BC3C53 /* Run Script */,
 			);
 			buildRules = (
 			);
