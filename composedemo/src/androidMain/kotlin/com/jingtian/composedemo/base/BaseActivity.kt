@@ -35,9 +35,7 @@ abstract class BaseActivity : AppCompatActivity() {
         }
         val isDark = AppTheme.isDark(AppTheme.currentAppTheme(), isSystemInDarkTheme())
         updateStateBar(isDark)
-        if (shouldFitSystemBars()) {
-            fitSystemBars()
-        }
+//        fitSystemBars()
     }
 
     private fun updateStateBar(isDark: Boolean) {

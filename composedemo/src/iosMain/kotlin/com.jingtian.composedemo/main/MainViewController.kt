@@ -24,6 +24,7 @@ fun MainViewController() = ComposeUIViewController {
             AppTheme.setAppTheme(currentAppTheme)
             val isDark = AppTheme.isDark(currentAppTheme, isSystemDark)
             this@DemoAppTheme.setCurrentDark(isDark)
+
         }
     }
 }

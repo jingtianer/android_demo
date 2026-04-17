@@ -11,8 +11,12 @@ import SharedComposeDemo
 struct ContentView: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UIViewController {
         // 这里调用的是 iosMain 里定义的 Kotlin 函数
-        MainViewControllerKt.MainViewController()
+        let controller = MainViewControllerKt.MainViewController()
+        controller.edgesForExtendedLayout = .all
+        controller.extendedLayoutIncludesOpaqueBars = true
+        controller.modalPresentationStyle = .fullScreen
 //        UIViewController()
+        return controller
     }
                                                                                                                                                                                                                          
     func updateUIViewController(_ uiViewController: UIViewController, context: Context) {

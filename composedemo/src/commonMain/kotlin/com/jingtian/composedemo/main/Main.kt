@@ -7,6 +7,7 @@ import androidx.compose.animation.expandIn
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkOut
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -14,10 +15,15 @@ import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.ModalDrawerSheet
@@ -35,6 +41,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import com.jingtian.composedemo.multiplatform.WeakRef
@@ -158,8 +165,15 @@ fun Main(
     ) { _->
         ModalNavigationDrawer(
             drawerContent = {
-                ModalDrawerSheet(drawerContainerColor = LocalAppPalette.current.drawerBg, windowInsets = WindowInsets.navigationBars.only(
-                    WindowInsetsSides.Vertical + WindowInsetsSides.Start)) {
+                Box(Modifier
+                    .fillMaxHeight()
+                    .fillMaxWidth(0.92f)
+                    .clip(RoundedCornerShape(0.dp, 20.dp, 20.dp, 0.dp))
+                    .background(LocalAppPalette.current.drawerBg)
+                    .windowInsetsPadding(WindowInsets.navigationBars.only(
+                        WindowInsetsSides.Vertical + WindowInsetsSides.Start)
+                    )
+                ) {
                     MainDrawer(menuItemsEntity) { index, album ->
                         currentSelectedAlbum = IndexedValue(index, album)
                         scope.launch {

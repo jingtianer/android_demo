@@ -153,7 +153,8 @@ fun GalleryStateHolder.Gallery() {
         Modifier
             .fillMaxSize()
             .appBackground()
-            .windowInsetsPadding(WindowInsets.systemBars)) {
+            .windowInsetsPadding(WindowInsets.systemBars)
+    ) {
         CompositionLocalProvider(LocalContentColor provides LocalAppPalette.current.galleryHeaderColor, LocalTextStyle provides LocalTextStyle.current.copy(color = LocalAppPalette.current.galleryHeaderColor)) {
             Row(
                 Modifier
