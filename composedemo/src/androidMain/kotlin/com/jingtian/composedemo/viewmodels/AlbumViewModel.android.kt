@@ -31,7 +31,7 @@ private suspend fun realTraverseUri(documentFile: DocumentFile, album: Album, fi
         }
         val type = uri.mediaType
         val fileName = uri.fileName ?: ""
-        val fileStorageId = FileStorageUtils.getStorage(type)?.asyncStore(uri) ?: DataBase.INVALID_ID
+        val (fileStorageId, _) = FileStorageUtils.getStorage(type).asyncStore(uri)
         val (width, height) = getFileIntrinsicSize(uri, type)
         val fileInfo = FileInfo(
             storageId = fileStorageId,

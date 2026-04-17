@@ -105,7 +105,7 @@ fun DrawerHeader() {
             val currentUser = UserStorage.userInstance
             val currentImageId =
                 currentUser.userAvatar.storageId.takeIf { it != DataBase.INVALID_ID }
-            val nextId = if (currentImageId != null) {
+            val (nextId, _) = if (currentImageId != null) {
                 BitMapCachePool.invalid(currentImageId, FileType.IMAGE)
                 imageStorage.asyncStore(currentImageId, uri)
             } else {

@@ -107,8 +107,28 @@ object FileStorageUtils {
             }
         }
 
-        fun asyncStore(oldId: Long, uri: MultiplatformFile): Long {
-            val id = lock.use {
+        fun asyncStore(oldId: Long, uri: MultiplatformFile): Pair<Long, Job> {
+            val id = allocateId(uri, oldId)
+            val job = CoroutineUtils.runIOTask({
+                doStore(uri, id)
+            })
+            return id to job
+        }
+
+        private fun doStore(uri: MultiplatformFile, id: Long) {
+            val storageFile = getStoreFile(id)
+            ensureFile(storageFile)
+            if (BuildKonfig.isIOS) {
+                storeIos(uri, storageFile, id)
+            } else {
+                val bytes = uri.fileStoreInputStream!!
+                innerStoreImage(id, bytes, storageFile, uri.extension())
+            }
+            uri.onStoreFinish()
+        }
+
+        private fun allocateId(uri: MultiplatformFile, oldId: Long = -1): Long {
+            return lock.use {
                 val id = if (oldId >= this@FileStorage.id || oldId < 0) {
                     this@FileStorage.id++
                 } else {
@@ -120,51 +140,22 @@ object FileStorageUtils {
                 ensureFile(storageFile)
                 id
             }
-            CoroutineUtils.runIOTask({
-                val storageFile = getStoreFile(id)
-                if (uri.file?.equals(storageFile) != true) {
-                    ensureFile(storageFile)
-                    if (BuildKonfig.isIOS) {
-                        storeIos(uri, storageFile, id)
-                    } else {
-                        val bytes = uri.fileStoreInputStream!!
-                        innerStoreImage(id, bytes, storageFile, uri.extension())
-                    }
-                }
-            }, onFailure = { e->
-//                println("asyncStore $e")
-                throw e
-            }) {
-//                println("asyncStore: success: $fileType $id")
+        }
+
+        fun store(uri: MultiplatformFile, oldId: Long = -1): Long {
+            val id = allocateId(uri, oldId)
+            runCatching {
+                doStore(uri, id)
             }
             return id
         }
 
-        @OptIn(InternalCoroutinesApi::class)
-        fun asyncStore(uri: MultiplatformFile): Long {
-            val id = lock.use {
-                val id = this.id++
-                uriCache[id] = WeakRef(uri)
-                val storageFile = getStoreFile(id)
-                ensureFile(storageFile)
-                id
-            }
-            CoroutineUtils.runIOTask({
-                val storageFile = getStoreFile(id)
-                ensureFile(storageFile)
-                if (BuildKonfig.isIOS) {
-                    storeIos(uri, storageFile, id)
-                } else {
-                    val bytes = uri.fileStoreInputStream!!
-                    innerStoreImage(id, bytes, storageFile, uri.extension())
-                }
-                uri.onStoreFinish()
-            }, onFailure = { e->
-//                println("asyncStore: $e")
-            }) {
-//                println("asyncStore: success: $fileType $id")
-            }
-            return id
+        fun asyncStore(uri: MultiplatformFile): Pair<Long, Job> {
+            val id = allocateId(uri)
+            val job = CoroutineUtils.runIOTask({
+                doStore(uri, id)
+            })
+            return id to job
         }
 
         private fun storeIos(uri: MultiplatformFile, storageFile: Path, id: Long) {

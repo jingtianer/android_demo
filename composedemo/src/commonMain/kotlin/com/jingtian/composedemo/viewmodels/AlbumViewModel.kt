@@ -178,7 +178,7 @@ class AlbumViewModel : ViewModel() {
             val mediaType = selectedUri.mediaType
             val imageStorage =
                 FileStorageUtils.getStorage(mediaType) ?: return@runIOTask
-            val nextId = imageStorage.asyncStore(uri)
+            val (nextId, _) = imageStorage.asyncStore(uri)
             val (width, height) = getFileIntrinsicSize(uri, mediaType)
             val file = FileInfo(
                 storageId = nextId,
@@ -273,7 +273,7 @@ class AlbumViewModel : ViewModel() {
         val oldUri = albumItemRelation.fileInfo.getFileUri()
 
         CoroutineUtils.runIOTask({
-            val nextId = if (uri != oldUri) {
+            val (nextId, _) = if (uri != oldUri) {
                 val storage = FileStorageUtils.getStorage(mediaType)
                 if (oldUri != null) {
                     albumItemRelation.fileInfo.getFileUri()?.onDelete()
@@ -281,21 +281,21 @@ class AlbumViewModel : ViewModel() {
                     BitMapCachePool.invalid(albumItemRelation.fileInfo.storageId, oldMediaType)
                     if (mediaType == oldMediaType) {
                         if (albumItemRelation.fileInfo.storageId != DataBase.INVALID_ID) {
-                            storage?.asyncStore(albumItemRelation.fileInfo.storageId, uri)
+                            storage.asyncStore(albumItemRelation.fileInfo.storageId, uri)
                         } else {
-                            storage?.asyncStore(uri)
+                            storage.asyncStore(uri)
                         }
                     } else {
                         val oldStorage = FileStorageUtils.getStorage(oldMediaType)
-                        oldStorage?.delete(albumItemRelation.fileInfo.storageId)
-                        storage?.asyncStore(uri)
+                        oldStorage.delete(albumItemRelation.fileInfo.storageId)
+                        storage.asyncStore(uri)
                     }
                 } else {
-                    storage?.asyncStore(uri)
+                    storage.asyncStore(uri)
                 }
             } else {
-                albumItemRelation.fileInfo.storageId
-            } ?: DataBase.INVALID_ID
+                albumItemRelation.fileInfo.storageId to null
+            }
 
             val (width, height) = getFileIntrinsicSize(uri, mediaType)
             val file = FileInfo(

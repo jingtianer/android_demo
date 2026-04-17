@@ -68,7 +68,7 @@ fun Path.createNewFile() {
     if (SystemFileSystem.exists(this)) {
         return
     }
-    SystemFileSystem.sink(this).close()
+    SystemFileSystem.sink(this).use { it.flush() }
 }
 
 fun RawSource.copyTo(dest: Path) {
