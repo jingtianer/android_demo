@@ -112,8 +112,7 @@ class DocumentPickerDelegate(private val callback: (MultiplatformFile)->Unit) : 
                     // 用完记得 stop（建议业务层管理）
                     val path = Path(it)
                     println("DocumentPickerDelegate: documentPicker: $path, ${path.extension}")
-                    callback(MultiplatformFileImpl(path, path.extension))
-                    url.stopAccessingSecurityScopedResource()
+                    callback(MultiplatformFileImpl(path, path.extension, nsurl = url))
                     url.toString()
                 } else null
             }

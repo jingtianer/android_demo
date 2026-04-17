@@ -32,6 +32,8 @@ interface MultiplatformFile {
     val path: String
 
     fun onDelete() {}
+
+    fun onStoreFinish() {}
 }
 
 /**

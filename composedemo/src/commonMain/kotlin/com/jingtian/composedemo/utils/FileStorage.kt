@@ -158,6 +158,7 @@ object FileStorageUtils {
                     val bytes = uri.fileStoreInputStream!!
                     innerStoreImage(id, bytes, storageFile, uri.extension())
                 }
+                uri.onStoreFinish()
             }, onFailure = { e->
 //                println("asyncStore: $e")
             }) {

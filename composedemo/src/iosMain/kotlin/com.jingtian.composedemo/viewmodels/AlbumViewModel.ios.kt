@@ -12,6 +12,7 @@ import com.jingtian.composedemo.utils.extension
 import com.jingtian.composedemo.utils.isDirectory
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
+import platform.Foundation.NSURL
 
 actual suspend fun traverseUri(
     album: Album,
@@ -20,6 +21,7 @@ actual suspend fun traverseUri(
     sendMessage: (String) -> Unit
 ) {
     realTraverseUri(album, uri.file ?: return, fileInfoList, sendMessage)
+    uri.onStoreFinish()
 }
 
 private fun realTraverseUri(

@@ -60,7 +60,7 @@ class ImagePickDelegate(private val onResult: (MultiplatformFile?)->Unit) : NSOb
 //        NSLog("ImagePickDelegate: imagePickerController $image, $success")
         val path = Path(image.absoluteURL?.path ?: return)
 //        NSLog("ImagePickDelegate: imagePickerController $path")
-        onResult(MultiplatformFileImpl(path, path.extension))
+        onResult(MultiplatformFileImpl(path, path.extension, nsurl = image))
     }
 
     // 取消选择
