@@ -66,10 +66,10 @@ object BitMapCachePool {
             return queue.write { list->
                 if (scaleFactor == -1) {
                     getIfNotNull(queue, 0)?.let { (scaleFactor, bitmap)->
-                        println("bitmapCache: id=$id, type=${fileType.value}, invalid scaleFactor, read any")
+//                        println("bitmapCache: id=$id, type=${fileType.value}, invalid scaleFactor, read any")
                         return@write bitmap
                     }
-                    println("bitmapCache: id=$id, type=${fileType.value}, invalid scaleFactor, create")
+//                    println("bitmapCache: id=$id, type=${fileType.value}, invalid scaleFactor, create")
                     return@write bitmapCreator()
                 }
                 val insertPos = list.binarySearch {
@@ -85,7 +85,7 @@ object BitMapCachePool {
                         result
                     }
                     if (cachedBitmap != null) {
-                        println("bitmapCache: id=$id, type=${fileType.value}, scaleFactor=$scaleFactor, mem cache")
+//                        println("bitmapCache: id=$id, type=${fileType.value}, scaleFactor=$scaleFactor, mem cache")
                         return@write cachedBitmap
                     }
                     insertPos
@@ -101,7 +101,7 @@ object BitMapCachePool {
                     }.getOrNull()
                     if (bitmap != null) {
                         list.add(finalInsertPos, scaleFactor to WeakRef(bitmap))
-                        println("bitmapCache: id=$id, type=${fileType.value}, scaleFactor=$scaleFactor, disk cache")
+//                        println("bitmapCache: id=$id, type=${fileType.value}, scaleFactor=$scaleFactor, disk cache")
                         return@write bitmap
                     }
                 }
@@ -115,13 +115,13 @@ object BitMapCachePool {
                                 writeImage(bitmap, it)
                             }
                         }, onFailure = { e->
-                            println("bitmapCache: id=$id, type=${fileType.value}, scaleFactor=$scaleFactor, cache fail\n$e")
+//                            println("bitmapCache: id=$id, type=${fileType.value}, scaleFactor=$scaleFactor, cache fail\n$e")
                         })
                     } else {
                         cacheFile.delete()
                     }
                 }
-                println("bitmapCache: id=$id, type=${fileType.value}, scaleFactor=$scaleFactor, create: $bitmap")
+//                println("bitmapCache: id=$id, type=${fileType.value}, scaleFactor=$scaleFactor, create: $bitmap")
                 return@write bitmap
             }
         }
