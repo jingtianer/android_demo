@@ -32,6 +32,11 @@ val isDesktop = targetPlatform.lowercase() == "desktop"
 val isAndroid = targetPlatform.lowercase() == "android"
 val isIOS = targetPlatform.lowercase() == "ios"
 
+val isDebugBuild = project.gradle.startParameter.taskNames.any { task ->
+    task.contains("debug", ignoreCase = true) ||
+            task.contains("assembleDebug") ||
+            task.contains("linkDebug")
+}
 
 // ======================== Kotlin 多平台配置 ========================
 kotlin {
@@ -194,7 +199,10 @@ buildkonfig {
         buildConfigField(FieldSpec.Type.BOOLEAN, "isDesktop", "$isDesktop")
         buildConfigField(FieldSpec.Type.BOOLEAN, "isAndroid", "$isAndroid")
         buildConfigField(FieldSpec.Type.BOOLEAN, "isIOS", "$isIOS")
+        buildConfigField(FieldSpec.Type.STRING, "appAid", appAid)
+        buildConfigField(FieldSpec.Type.BOOLEAN, "isDebug", "$isDebugBuild")
     }
+
     targetConfigs {
         // names in create should be the same as target names you specified
         create("android") {
