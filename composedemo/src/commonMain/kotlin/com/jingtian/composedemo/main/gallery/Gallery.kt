@@ -12,12 +12,17 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -54,6 +59,7 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalLayoutDirection
 import com.jingtian.composedemo.multiplatform.WeakRef
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -153,7 +159,7 @@ fun GalleryStateHolder.Gallery() {
         Modifier
             .fillMaxSize()
             .appBackground()
-            .windowInsetsPadding(WindowInsets.systemBars)
+            .windowInsetsPadding(WindowInsets.statusBars)
     ) {
         CompositionLocalProvider(LocalContentColor provides LocalAppPalette.current.galleryHeaderColor, LocalTextStyle provides LocalTextStyle.current.copy(color = LocalAppPalette.current.galleryHeaderColor)) {
             Row(
@@ -242,6 +248,7 @@ fun GalleryStateHolder.Gallery() {
                 .weight(1f)) {
             val bottomBarHeight = 62.dp
             val shadesHeight = 0.dp
+            val naviBarInsets = WindowInsets.navigationBars.asPaddingValues()
             LazyVerticalStaggeredGrid(
                 columns = StaggeredGridCells.Adaptive((size + galleryItemPadding * 2)),
                 Modifier
@@ -263,7 +270,12 @@ fun GalleryStateHolder.Gallery() {
                             return super.onPostScroll(consumed, available, source)
                         }
                     }),
-                contentPadding = PaddingValues(bottom = if (enterEditMode) bottomBarHeight + shadesHeight else 0.dp),
+                contentPadding = PaddingValues(
+                    start = naviBarInsets.calculateStartPadding(LocalLayoutDirection.current),
+                    top = naviBarInsets.calculateTopPadding(),
+                    end = naviBarInsets.calculateEndPadding(LocalLayoutDirection.current),
+                    bottom = naviBarInsets.calculateBottomPadding() + if (enterEditMode) bottomBarHeight + shadesHeight else 0.dp
+                ),
                 state = galleryScrollState,
             ) {
                 items(filteredItemList.size, key = { index-> filteredItemList[index].hashCode() }, contentType = { index-> filteredItemList[index].fileInfo.fileType.value }) { index: Int ->
@@ -355,6 +367,7 @@ fun GalleryStateHolder.Gallery() {
                         .background(
                             LocalAppColorScheme.current.background.copy(alpha = 0.90f),
                         )
+                        .windowInsetsPadding(WindowInsets.navigationBars)
                         .align(Alignment.BottomCenter)
                 ) {
                     Row(Modifier.align(Alignment.CenterStart)) {
