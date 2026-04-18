@@ -85,6 +85,7 @@ object ShareUtils {
                     albumRelation.albumItem.albumName to albumMap
                 }
             } ?: return@withContext
+            file.onStoreFinish()
             val albumList = DataBase.dbImpl.getAlbumDao().getAllAlbumInfoWithExtra()
             for (album in albumList) {
                 val importedAlbumItemMap = importedAlbumList[album.albumItem.albumName] ?: continue

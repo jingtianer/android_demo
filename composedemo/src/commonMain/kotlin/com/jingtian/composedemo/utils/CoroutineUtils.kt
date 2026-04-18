@@ -13,22 +13,19 @@ object CoroutineUtils {
 
     fun <T> runIOTask(block: suspend ()->T, onFailure: suspend (t: Throwable)->Unit = {}, callback: suspend (T) -> Unit = {}): Job {
         return globalScope.launch {
-            try {
-                val ret = try {
-                    withContext(Dispatchers.IO) {
-                        block()
-                    }
-                } catch (e: Exception) {
-                    withContext(Dispatchers.Main) {
-                        onFailure(e)
-                    }
-                    throw e
+            runCatching {
+                withContext(Dispatchers.IO) {
+                    block()
                 }
+            }.onSuccess { ret->
                 withContext(Dispatchers.Main) {
                     callback.invoke(ret)
                 }
-            } catch (e: Exception) {
-                throw e
+            }.onFailure { e->
+                withContext(Dispatchers.Main) {
+                    onFailure(e)
+                    throw e
+                }
             }
         }
     }

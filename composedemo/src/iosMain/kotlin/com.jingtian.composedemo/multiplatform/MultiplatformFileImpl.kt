@@ -3,6 +3,8 @@ package com.jingtian.composedemo.multiplatform
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import com.jingtian.composedemo.dao.model.FileType
+import com.jingtian.composedemo.utils.delete
+import com.jingtian.composedemo.utils.exists
 import com.jingtian.composedemo.utils.extension
 import com.jingtian.composedemo.utils.uriToImageSize
 import kotlinx.cinterop.ExperimentalForeignApi
@@ -126,5 +128,13 @@ class MultiplatformFileImpl(val realFile: Path, val realExtension: String, val r
 
     override fun onStoreFinish() {
         nsurl?.stopAccessingSecurityScopedResource()
+    }
+
+    override fun onDelete() {
+        if (nsurl != null) {
+            if (realFile.exists()) {
+                realFile.delete()
+            }
+        }
     }
 }
