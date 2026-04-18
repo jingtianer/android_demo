@@ -246,9 +246,9 @@ fun GalleryStateHolder.Gallery() {
             Modifier
                 .fillMaxSize()
                 .weight(1f)) {
-            val bottomBarHeight = 62.dp
-            val shadesHeight = 0.dp
             val naviBarInsets = WindowInsets.navigationBars.asPaddingValues()
+            val bottomBarHeight = 52.dp
+            val shadesHeight = 0.dp
             LazyVerticalStaggeredGrid(
                 columns = StaggeredGridCells.Adaptive((size + galleryItemPadding * 2)),
                 Modifier
@@ -363,11 +363,11 @@ fun GalleryStateHolder.Gallery() {
                 Box(
                     Modifier
                         .fillMaxWidth()
-                        .height(bottomBarHeight)
                         .background(
                             LocalAppColorScheme.current.background.copy(alpha = 0.90f),
                         )
                         .windowInsetsPadding(WindowInsets.navigationBars)
+                        .height(bottomBarHeight)
                         .align(Alignment.BottomCenter)
                 ) {
                     Row(Modifier
