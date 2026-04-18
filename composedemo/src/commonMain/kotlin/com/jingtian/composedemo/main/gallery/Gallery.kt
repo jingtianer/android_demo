@@ -370,7 +370,9 @@ fun GalleryStateHolder.Gallery() {
                         .windowInsetsPadding(WindowInsets.navigationBars)
                         .align(Alignment.BottomCenter)
                 ) {
-                    Row(Modifier.align(Alignment.CenterStart)) {
+                    Row(Modifier
+                        .wrapContentSize()
+                        .align(Alignment.CenterStart)) {
                         if (selectAll) {
                             GalleryFunctionView(SELECT_ALL) {
                                 scope.launch(Dispatchers.Default) {
@@ -393,7 +395,6 @@ fun GalleryStateHolder.Gallery() {
                     Row(
                         Modifier
                             .wrapContentSize()
-                            .padding(vertical = 6.dp)
                             .align(Alignment.Center)
                     ) {
                         for (func in currentFunctions) {
@@ -435,7 +436,10 @@ fun GalleryStateHolder.Gallery() {
                             PlatformGalleryFunctionView(this@Gallery, func) {  }
                         }
                     }
-                    Row(Modifier.align(Alignment.CenterEnd)) {
+                    Row(Modifier
+                        .wrapContentSize()
+                        .align(Alignment.CenterEnd)
+                    ) {
                         GalleryFunctionView(EXIT) {
                             enterEditMode = false
                         }
