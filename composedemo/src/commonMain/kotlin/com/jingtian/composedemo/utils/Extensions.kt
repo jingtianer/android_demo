@@ -37,7 +37,7 @@ fun CharSequence.splitBy(predicate: (Char) -> Boolean): List<String> {
 
 fun CharSequence.splitByWhiteSpace() = splitBy(Char::isWhitespace)
 
-fun <K, V : Any> SnapshotStateMap<K, WeakRef<V>>.getOrPutRef(key: K, default: ()->V): V {
+fun <K, V : Any> MutableMap<K, WeakRef<V>>.getOrPutRef(key: K, default: ()->V): V {
     return get(key)?.get() ?: default().also {
         put(key, WeakRef(it))
     }

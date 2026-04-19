@@ -41,22 +41,20 @@ object BitMapCachePool {
         }
     }
     class BitMapCache(private val fileType: FileType) {
-        private val imagePool: MutableMap<Long, ListWithLock<Pair<Int, WeakRef<ImageBitmap>>>> = mutableMapOf()
+        private val imagePool: MutableMap<Long, WeakRef<ListWithLock<Pair<Int, ImageBitmap>>>> = mutableMapOf()
         private val lock = newReentrantLock()
 
-        private fun getQueue(id: Long): ListWithLock<Pair<Int, WeakRef<ImageBitmap>>> {
+        private fun getQueue(id: Long): ListWithLock<Pair<Int, ImageBitmap>> {
             return lock.use {
-                imagePool.getOrPut(id) {
+                imagePool.getOrPutRef(id) {
                     ListWithLock()
                 }
             }
         }
 
-        private fun getIfNotNull(queue: ListWithLock<Pair<Int, WeakRef<ImageBitmap>>>, index: Int): Pair<Int, ImageBitmap>? {
-            queue.read().getOrNull(index)?.let { last->
-                last.second.get()?.let { bitmap ->
-                    return last.first to bitmap
-                }
+        private fun getIfNotNull(queue: ListWithLock<Pair<Int, ImageBitmap>>, index: Int): Pair<Int, ImageBitmap>? {
+            queue.read().getOrNull(index)?.let { last ->
+                return last
             }
             return null
         }
@@ -78,7 +76,7 @@ object BitMapCachePool {
                 val finalInsertPos = if (insertPos >= 0) {
                     val cachedBitmap = list.run {
                         val item = getOrNull(insertPos)
-                        val result = item?.second?.get()
+                        val result = item?.second
                         if (result == null && item != null) {
                             list.removeAt(insertPos)
                         }
@@ -100,14 +98,14 @@ object BitMapCachePool {
                         }
                     }.getOrNull()
                     if (bitmap != null) {
-                        list.add(finalInsertPos, scaleFactor to WeakRef(bitmap))
+                        list.add(finalInsertPos, scaleFactor to bitmap)
 //                        println("bitmapCache: id=$id, type=${fileType.value}, scaleFactor=$scaleFactor, disk cache")
                         return@write bitmap
                     }
                 }
                 val bitmap = bitmapCreator()
                 if (bitmap != null) {
-                    list.add(finalInsertPos, scaleFactor to WeakRef(bitmap))
+                    list.add(finalInsertPos, scaleFactor to bitmap)
                     if (scaleFactor > 1) {
                         cacheFile.createNewFile()
                         CoroutineUtils.runIOTask({
