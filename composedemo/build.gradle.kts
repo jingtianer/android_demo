@@ -92,8 +92,17 @@ kotlin {
 
                 // 工具类
                 implementation(libs.kotlinx.serialization.json)
-                implementation("org.jetbrains.kotlinx:kotlinx-io-core:0.7.0")
-                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.2")
+                implementation(libs.kotlinx.io.core)
+                implementation(libs.kotlinx.datetime)
+
+                // 尝试了 precompose 并不是compose预加载
+//                api("moe.tlaster:precompose:1.6.2")
+//
+//                api("moe.tlaster:precompose-molecule:1.6.2") // For Molecule intergration
+//
+//                api("moe.tlaster:precompose-viewmodel:1.6.2") // For ViewModel intergration
+//
+//                api("moe.tlaster:precompose-koin:1.6.2") // For Koin intergration
 
 //                // Room 扩展
 //                implementation(libs.androidx.room.rxjava2)
