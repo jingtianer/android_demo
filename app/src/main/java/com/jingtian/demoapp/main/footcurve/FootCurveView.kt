@@ -1,0 +1,276 @@
+package com.jingtian.demoapp.main.footcurve
+
+import android.content.Context
+import android.graphics.*
+import android.util.AttributeSet
+import android.view.MotionEvent
+import android.view.View
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.lifecycleScope
+import com.jingtian.demoapp.main.rank.Utils
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlin.math.hypot
+import kotlin.math.min
+
+class FootCurveView @JvmOverloads constructor(
+    context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0, defStyleRes: Int = 0
+) : View(context, attrs, defStyleAttr, defStyleRes) {
+    var lifecycleOwner: LifecycleOwner? = context as? LifecycleOwner
+
+    // 曲线配置
+    var curve: Curve = Curve()
+        set(value) {
+            field = value
+            updateAll()
+        }
+
+    private var currentTJob: Job?= null
+    var job: Job? = null
+
+    // 当前切点参数 t
+    var currentT: Float = curve.initT
+        set(value) {
+            field = value
+            currentTJob?.cancel()
+            if (job != null) {
+                updateAll()
+                return
+            }
+            currentTJob = runTask({
+                updateTangentInfo()
+            }, callback = {
+                currentTJob = null
+                invalidate()
+            }, onError = {
+                currentTJob = null
+            })
+        }
+
+
+    // 可拖动定点 P
+    var px: Float = curve.initPx
+    var py: Float = curve.initPy
+        set(value) {
+            field = value
+            updateFootPath()
+            updateTangentInfo()
+            invalidate()
+        }
+
+    // ===================== 【预编译 Path】 =====================
+    private val pathOrigin = Path()   // 原始曲线，提前编译好
+    private val pathFoot = Path()     // 垂足曲线，提前编译好
+
+    // 切线、垂线 两点坐标（仅存坐标，不计算）
+    private var lineTan = FloatArray(4)
+    private var linePerp = FloatArray(4)
+
+    // 绘制点坐标
+    private var pointP = FloatArray(2)
+    private var pointTan = FloatArray(2)
+    private var pointFoot = FloatArray(2)
+
+    // ===================== 画笔 =====================
+    private val paintOrigin = Paint().apply {
+        color = Color.BLUE
+        strokeWidth = 10f
+        style = Paint.Style.STROKE
+        isAntiAlias = true
+    }
+    private val paintFoot = Paint().apply {
+        color = Color.MAGENTA
+        strokeWidth = 3f
+        style = Paint.Style.STROKE
+        isAntiAlias = true
+    }
+    private val paintTangent = Paint().apply {
+        color = Color.GRAY
+        strokeWidth = 2f
+        pathEffect = DashPathEffect(floatArrayOf(10f,10f), 0f)
+    }
+    private val paintPerp = Paint().apply {
+        color = Color.BLACK
+        strokeWidth = 2f
+    }
+    private val paintPoint = Paint().apply {
+        isAntiAlias = true
+        style = Paint.Style.FILL
+    }
+
+    // 坐标变换
+    private var scale = 200f
+    private var offsetX = 0f
+    private var offsetY = 0f
+
+    private fun toScreenX(x: Float) = offsetX + x * scale
+    private fun toScreenY(y: Float) = offsetY - y * scale
+
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        offsetX = w / 2f
+        offsetY = h / 2f
+        updateAll()
+    }
+
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        super.onMeasure(widthMeasureSpec, heightMeasureSpec)
+        if (offsetX != measuredWidth / 2f || offsetY != measuredHeight / 2f) {
+            offsetX = measuredWidth / 2f
+            offsetY = measuredHeight / 2f
+            updateAll()
+        }
+    }
+
+    // ===================== 全部提前计算 + 提前编译 Path =====================
+    fun updateAll() {
+        job?.cancel()
+        currentTJob?.cancel()
+        job = runTask({
+            updateOriginPath()
+            updateFootPath()
+            updateTangentInfo()
+        }, callback = {
+            job = null
+            currentTJob = null
+            invalidate()
+        }, onError =  {
+            job = null
+            currentTJob = null
+        })
+    }
+
+    fun <T> runTask(task: ()->T, callback: (T)->Unit = {}, onError: (Throwable)->Unit = {}): Job {
+        val scope = (lifecycleOwner?.lifecycleScope ?: Utils.CoroutineUtils.globalScope)
+        return scope.launch(Dispatchers.Default) {
+            runCatching {
+                task()
+            }.onSuccess {
+                withContext(Dispatchers.Main) {
+                    callback(it)
+                }
+            }.onFailure {
+                withContext(Dispatchers.Main) {
+                    onError(it)
+                }
+            }
+        }
+    }
+
+    /** 预编译：原始曲线 Path */
+    private fun updateOriginPath() {
+        pathOrigin.reset()
+        val step = (curve.tMax - curve.tMin) / 300f
+        var first = true
+        val xPoint = FootCurveMath.eval(curve.paramName, curve.xExprStr, (0..300).map { curve.tMin + step * it })
+        val yPoint = FootCurveMath.eval(curve.paramName, curve.yExprStr, (0..300).map { curve.tMin + step * it })
+        for (i in 0 until min(xPoint.size, yPoint.size)) {
+            val x = xPoint[i]
+            val y = yPoint[i]
+            val sx = toScreenX(x)
+            val sy = toScreenY(y)
+            if (first) {
+                pathOrigin.moveTo(sx, sy)
+                first = false
+            } else {
+                pathOrigin.lineTo(sx, sy)
+            }
+        }
+    }
+
+    /** 预编译：垂足曲线 Path */
+    private fun updateFootPath() {
+        pathFoot.reset()
+        val step = (curve.tMax - curve.tMin) / 300f
+        var first = true
+        val fList = FootCurveMath.calcFoot(curve, (0..300).map { curve.tMin + step * it }, px, py)
+        for (f in fList) {
+            val sx = toScreenX(f[2])
+            val sy = toScreenY(f[3])
+            if (first) {
+                pathFoot.moveTo(sx, sy)
+                first = false
+            } else {
+                pathFoot.lineTo(sx, sy)
+            }
+        }
+    }
+
+    /** 预计算：切线、垂线、点坐标 */
+    private fun updateTangentInfo() {
+        val f = FootCurveMath.calcFoot(curve, currentT, px, py)
+        val cx = f[0]; val cy = f[1]
+        val fx = f[2]; val fy = f[3]
+        val dx = f[4]; val dy = f[5]
+
+        // 切线线段
+        val L = 2f
+        val x1 = cx - dx*L
+        val y1 = cy - dy*L
+        val x2 = cx + dx*L
+        val y2 = cy + dy*L
+        lineTan[0] = toScreenX(x1)
+        lineTan[1] = toScreenY(y1)
+        lineTan[2] = toScreenX(x2)
+        lineTan[3] = toScreenY(y2)
+
+        // 垂线
+        linePerp[0] = toScreenX(px)
+        linePerp[1] = toScreenY(py)
+        linePerp[2] = toScreenX(fx)
+        linePerp[3] = toScreenY(fy)
+
+        // 点坐标
+        pointP[0] = linePerp[0]
+        pointP[1] = linePerp[1]
+        pointTan[0] = toScreenX(cx)
+        pointTan[1] = toScreenY(cy)
+        pointFoot[0] = linePerp[2]
+        pointFoot[1] = linePerp[3]
+    }
+
+    // ===================== 【最极致轻量 onDraw】 =====================
+    override fun onDraw(canvas: Canvas) {
+        super.onDraw(canvas)
+
+        // 只绘制，无任何计算、无循环、无Path创建
+        canvas.drawPath(pathOrigin, paintOrigin)
+        canvas.drawPath(pathFoot, paintFoot)
+        canvas.drawLines(lineTan, paintTangent)
+        canvas.drawLines(linePerp, paintPerp)
+
+        paintPoint.color = 0xFFFF9800.toInt()
+        canvas.drawCircle(pointP[0], pointP[1], 12f, paintPoint)
+
+        paintPoint.color = Color.RED
+        canvas.drawCircle(pointTan[0], pointTan[1], 8f, paintPoint)
+
+        paintPoint.color = Color.GREEN
+        canvas.drawCircle(pointFoot[0], pointFoot[1], 8f, paintPoint)
+    }
+
+    // ===================== 拖拽 =====================
+    private var isDragging = false
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        parent?.requestDisallowInterceptTouchEvent(true)
+        val x = (event.x - offsetX) / scale
+        val y = (offsetY - event.y) / scale
+        when (event.action) {
+            MotionEvent.ACTION_DOWN -> {
+                val d = hypot(x-px.toDouble(), y-py.toDouble())
+                isDragging = d < 0.2f
+            }
+            MotionEvent.ACTION_MOVE -> {
+                if (isDragging) {
+                    this.px = x
+                    this.py = y
+                }
+            }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> isDragging = false
+        }
+        super.onTouchEvent(event)
+        return true
+    }
+}

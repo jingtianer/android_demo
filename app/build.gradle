@@ -81,4 +81,7 @@ dependencies {
     implementation libs.androidx.room.ktx
     implementation libs.androidx.room.rxjava2
     implementation libs.androidx.room.paging
+
+    // 简易数学表达式解析
+    implementation 'com.ezylang:EvalEx:3.6.1'
 }

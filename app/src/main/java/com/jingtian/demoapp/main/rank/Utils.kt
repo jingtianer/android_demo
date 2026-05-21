@@ -756,7 +756,7 @@ object Utils {
     }
 
     object CoroutineUtils {
-        private val globalScope = CoroutineScope(Dispatchers.Main + Job())
+        val globalScope = CoroutineScope(Dispatchers.Main + Job())
 
         class LowPriorityThreadFactory : ThreadFactory {
             private val group = ThreadGroup("LowPriorityGroup")
