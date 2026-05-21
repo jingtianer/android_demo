@@ -1,13 +1,13 @@
 package com.jingtian.demoapp.main.footcurve
 
 import android.annotation.SuppressLint
-import android.graphics.Color
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.ImageView
+import android.widget.ProgressBar
 import android.widget.SeekBar
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.content.res.ResourcesCompat
@@ -84,11 +84,15 @@ class FootCurveFragment: BaseFragment() {
             }
 
             tMinValue.watchValue(initCurve.tMin) {
-                this.copy(tMin = it ?: 0f)
+                this.copy(tMin = it ?: 0f).apply {
+                    seekBarT.updateProgress(getProgress())
+                }
             }
 
             tMaxValue.watchValue(initCurve.tMax) {
-                this.copy(tMax = it ?: 0f)
+                this.copy(tMax = it ?: 0f).apply {
+                    seekBarT.updateProgress(getProgress())
+                }
             }
 
             fixPointX.watchValue(initCurve.initPx) {
@@ -100,12 +104,12 @@ class FootCurveFragment: BaseFragment() {
             }
 
             // SeekBar 映射参数t
-            val range = initCurve.tMax - initCurve.tMin
             seekBarT.max = 1000
-            seekBarT.progress = (1000 * (initCurve.initT - initCurve.tMin) * 1f / (initCurve.tMax - initCurve.tMin)).toInt()
+            seekBarT.updateProgress(initCurve.getProgress())
             seekBarT.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(sb: SeekBar?, progress: Int, fromUser: Boolean) {
-                    val t = initCurve.tMin + range * progress / 1000f
+                    val t = binding.footCurveView.curve.getCurrentT(progress / 1000f)
+                    binding.footCurveView.curve.initT = t
                     binding.footCurveView.currentT = t
                 }
                 override fun onStartTrackingTouch(sb: SeekBar?) {}
@@ -119,6 +123,22 @@ class FootCurveFragment: BaseFragment() {
                 silentWatching = false
             }
         }
+    }
+
+    private fun ProgressBar.updateProgress(progress: Float) {
+        this.progress = (this.max * progress).toInt()
+    }
+
+    private fun Curve.getProgress() = if (this.tMin == this.tMax) {
+        0f
+    } else {
+        (this.initT - this.tMin) * 1f / (this.tMax - this.tMin)
+    }
+
+    private fun Curve.getCurrentT(progress: Float) = if (this.tMin == this.tMax) {
+        0f
+    } else {
+        this.tMin + progress * (this.tMax - this.tMin)
     }
 
     private inline fun EditText.watchValue(initValue: Float, crossinline onUpdate: Curve.(Float?)->Curve) {
