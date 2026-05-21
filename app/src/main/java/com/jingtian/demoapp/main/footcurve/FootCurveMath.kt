@@ -9,10 +9,9 @@ object FootCurveMath {
     private const val DX_EPS = 1e-4f
     private const val INF_THRESHOLD = 1e10f
 
-    fun eval(paramName: String, expr: String, t: Float): Float {
+    fun eval(expr: String): Float {
         return try {
-            val value = Expression(expr).with(paramName, t).evaluate().numberValue.toFloat()
-            value
+            Expression(expr).evaluate().numberValue.toFloat()
         } catch (e: Exception) { 0f }
     }
 

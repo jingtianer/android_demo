@@ -13,6 +13,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.math.floor
 import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.min
@@ -55,13 +56,29 @@ class FootCurveView @JvmOverloads constructor(
 
     // 可拖动定点 P
     var px: Float = curve.initPx
-    var py: Float = curve.initPy
+        get() = curve.initPx
         set(value) {
             field = value
+            curve.initPx = value
             footPathJob.schedule()
             tangentJob.schedule()
             invalidate()
         }
+    var py: Float = curve.initPy
+        get() = curve.initPy
+        set(value) {
+            field = value
+            curve.initPy = value
+            footPathJob.schedule()
+            tangentJob.schedule()
+            invalidate()
+        }
+
+    val pxPyChangeListener = mutableListOf<(Float, Float)->Unit>()
+
+    fun dispatchPxPyChange() {
+        pxPyChangeListener.forEach { it.invoke(px, py) }
+    }
 
     // ===================== 【预编译 Path】 =====================
     private val pathOrigin = Path()   // 原始曲线，提前编译好
@@ -113,17 +130,19 @@ class FootCurveView @JvmOverloads constructor(
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
-        offsetX = w / 2f
-        offsetY = h / 2f
-        updateAll()
+        if (floor(offsetX) != floor(measuredWidth / 2f) || floor(offsetY) != floor(measuredHeight / 2f)) {
+            offsetX = measuredWidth / 2f
+            offsetY = measuredHeight / 2f
+            redrawAll()
+        }
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec)
-        if (offsetX != measuredWidth / 2f || offsetY != measuredHeight / 2f) {
+        if (floor(offsetX) != floor(measuredWidth / 2f) || floor(offsetY) != floor(measuredHeight / 2f)) {
             offsetX = measuredWidth / 2f
             offsetY = measuredHeight / 2f
-            updateAll()
+            redrawAll()
         }
     }
 
@@ -311,6 +330,7 @@ class FootCurveView @JvmOverloads constructor(
                 if (isDragging) {
                     this.px = x
                     this.py = y
+                    dispatchPxPyChange()
                 }
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> isDragging = false
