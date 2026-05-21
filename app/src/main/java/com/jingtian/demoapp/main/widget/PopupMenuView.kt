@@ -50,6 +50,7 @@ class PopupMenuView @JvmOverloads constructor(
         bottomView.addView(bottomContentView, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT))
         bottomContentView.translationY = 0f
         bottomContentView.alpha = 0f
+        bottomContentView.visibility = View.GONE
         addView(bottomView, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
         typedArray.recycle()
         animator.addListener(AnimationObserver())
