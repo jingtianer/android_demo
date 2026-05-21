@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.*
 import android.util.AttributeSet
 import android.view.MotionEvent
+import android.view.ScaleGestureDetector
 import android.view.View
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
@@ -20,6 +21,18 @@ class FootCurveView @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0, defStyleRes: Int = 0
 ) : View(context, attrs, defStyleAttr, defStyleRes) {
     var lifecycleOwner: LifecycleOwner? = context as? LifecycleOwner
+
+    // ===================== 双指缩放 新增 =====================
+    private val scaleGestureDetector = ScaleGestureDetector(context, ScaleListener())
+    private inner class ScaleListener : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+        override fun onScale(detector: ScaleGestureDetector): Boolean {
+            scale *= detector.scaleFactor
+            scale = scale.coerceIn(50f, 800f) // 限制最小/最大缩放
+            // 缩放后只需要重新刷新路径坐标，不需要重算数学
+            redrawAll()
+            return true
+        }
+    }
 
     // 曲线配置
     var curve: Curve = Curve()
@@ -119,6 +132,12 @@ class FootCurveView @JvmOverloads constructor(
         originPathTask.run()
         footPathJob.run()
         tangentJob.run()
+    }
+
+    private fun redrawAll() {
+        originPathTask.scheduleRedraw()
+        footPathJob.scheduleRedraw()
+        tangentJob.scheduleRedraw()
     }
 
     fun <T> runTask(task: suspend ()->T, callback: (T)->Unit = {}, onError: (Throwable)->Unit = {}): Job {
@@ -279,6 +298,7 @@ class FootCurveView @JvmOverloads constructor(
     // ===================== 拖拽 =====================
     private var isDragging = false
     override fun onTouchEvent(event: MotionEvent): Boolean {
+        scaleGestureDetector.onTouchEvent(event)
         parent?.requestDisallowInterceptTouchEvent(true)
         val x = (event.x - offsetX) / scale
         val y = (offsetY - event.y) / scale
@@ -302,17 +322,24 @@ class FootCurveView @JvmOverloads constructor(
     inner class CanvasJob<T>(private val task: ()->T, private val callback: (T)->Unit = {}, private val onError: (Throwable) -> Unit) {
         private var job: Job? = null
         private var hasSchedule = false
-        fun run() {
+        private val result: T? = null
+        fun run(redraw: Boolean = false) {
             job?.cancel()
-            job = runTask(task, {
-                callback.invoke(it)
+            val result = result
+            if (redraw && result != null) {
+                callback(result)
                 job = null
-                invalidate()
-            }, onError = {
-                onError.invoke(it)
-                job = null
-                invalidate()
-            })
+            } else {
+                job = runTask(task, {
+                    callback.invoke(it)
+                    job = null
+                    invalidate()
+                }, onError = {
+                    onError.invoke(it)
+                    job = null
+                    invalidate()
+                })
+            }
         }
 
         fun schedule() {
@@ -321,6 +348,20 @@ class FootCurveView @JvmOverloads constructor(
                 runTask({
                     job?.join()
                     run()
+                }, callback = {
+                    hasSchedule = false
+                }, onError = {
+                    hasSchedule = false
+                })
+            }
+        }
+
+        fun scheduleRedraw() {
+            if (!hasSchedule) {
+                hasSchedule = true
+                runTask({
+                    job?.join()
+                    run(true)
                 }, callback = {
                     hasSchedule = false
                 }, onError = {
