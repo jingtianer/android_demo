@@ -3,6 +3,7 @@ package com.jingtian.demoapp.main.footcurve
 import android.content.Context
 import android.graphics.*
 import android.util.AttributeSet
+import android.util.Log
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.View
@@ -14,10 +15,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.round
 
 class FootCurveView @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0, defStyleRes: Int = 0
@@ -29,7 +32,6 @@ class FootCurveView @JvmOverloads constructor(
     private inner class ScaleListener : ScaleGestureDetector.SimpleOnScaleGestureListener() {
         override fun onScale(detector: ScaleGestureDetector): Boolean {
             scale *= detector.scaleFactor
-            scale = scale.coerceIn(50f, 800f) // 限制最小/最大缩放
             // 缩放后只需要重新刷新路径坐标，不需要重算数学
             redrawAll()
             return true
@@ -119,6 +121,20 @@ class FootCurveView @JvmOverloads constructor(
     private val paintPoint = Paint().apply {
         isAntiAlias = true
         style = Paint.Style.FILL
+    }
+    // 新增 坐标轴画笔
+    private val paintAxis = Paint().apply {
+        color = 0xFF999999.toInt()
+        strokeWidth = 1.5f
+        style = Paint.Style.STROKE
+        isAntiAlias = true
+    }
+    // 刻度文字画笔
+    private val paintAxisText = Paint().apply {
+        color = 0xFF666666.toInt()
+        textSize = 24f
+        isAntiAlias = true
+        textAlign = Paint.Align.CENTER
     }
 
     // 坐标变换
@@ -299,6 +315,8 @@ class FootCurveView @JvmOverloads constructor(
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
+        drawAxis(canvas)
+
         // 只绘制，无任何计算、无循环、无Path创建
         canvas.drawPath(pathOrigin, paintOrigin)
         canvas.drawPath(pathFoot, paintFoot)
@@ -314,6 +332,90 @@ class FootCurveView @JvmOverloads constructor(
         paintPoint.color = Color.GREEN
         canvas.drawCircle(pointFoot[0], pointFoot[1], 8f, paintPoint)
     }
+
+    /** 绘制XY坐标轴 + 简易刻度 */
+    private fun drawAxis(canvas: Canvas) {
+        // 原点屏幕坐标
+        val originScreenX = offsetX
+        val originScreenY = offsetY
+
+        // X轴 水平
+        canvas.drawLine(0f, originScreenY, width.toFloat(), originScreenY, paintAxis)
+        // Y轴 垂直
+        canvas.drawLine(originScreenX, 0f, originScreenX, height.toFloat(), paintAxis)
+
+        // 绘制原点文字
+        canvas.drawText("O", originScreenX - 15f, originScreenY + 30f, paintAxisText)
+
+        // 单位1长度: scale
+        // 单位1的个数
+        val xUnitOneCount = ceil(measuredWidth.toFloat() / 2f / scale).toInt()
+        val yUnitOneCount = ceil(measuredHeight.toFloat() / 2f / scale).toInt()
+
+        val screenAspectRatio = measuredWidth.toFloat() / measuredHeight.toFloat()
+
+        val xStepValue = if (xUnitOneCount <= 1) {
+            measuredWidth.toFloat() / 2f / scale / 5f
+        } else if (xUnitOneCount <= 5) {
+            1f
+        } else {
+            xUnitOneCount / 5f
+        }
+
+        val yBarCount = round(5f / screenAspectRatio)
+        val yStepValue = if (xUnitOneCount <= 1) {
+            measuredHeight.toFloat() / 2f / scale / yBarCount
+        } else if (xUnitOneCount <= yBarCount) {
+            1f
+        } else {
+            yUnitOneCount / yBarCount
+        }
+
+        val xStepCount = ceil(xUnitOneCount / xStepValue).toInt()
+        val xBarHeight = xStepValue * scale
+
+        val yStepCount = ceil(yUnitOneCount / yStepValue).toInt()
+        val yBarHeight = yStepValue * scale
+
+        // X轴正方向刻度
+        var xPos = originScreenX + xBarHeight
+        repeat(xStepCount) {
+            canvas.drawLine(xPos, originScreenY - 8f, xPos, originScreenY + 8f, paintAxis)
+            val value = (it + 1) * xStepValue
+            canvas.drawText(String.format("%.2f", value), xPos, originScreenY + 35f, paintAxisText)
+            xPos += xBarHeight
+        }
+
+        // X轴负方向刻度
+        xPos = originScreenX - xBarHeight
+        repeat(xStepCount) {
+            canvas.drawLine(xPos, originScreenY - 8f, xPos, originScreenY + 8f, paintAxis)
+            val value = -(it + 1) * xStepValue
+            canvas.drawText(String.format("%.2f", value), xPos, originScreenY + 35f, paintAxisText)
+            xPos -= xBarHeight
+        }
+
+        // y轴负方向刻度
+        var yPos = originScreenY + yBarHeight
+        repeat(yStepCount) {
+            canvas.drawLine(originScreenX - 8f, yPos, originScreenX + 8f, yPos, paintAxis)
+            val value = -(it + 1) * yStepValue
+            val text = String.format("%.2f", value)
+            canvas.drawText(text, originScreenX + paintAxisText.measureText(text) / 2f + 12f, yPos + 8f, paintAxisText)
+            yPos += yBarHeight
+        }
+
+        // y轴正方向刻度
+        yPos = originScreenY - yBarHeight
+        repeat(yStepCount) {
+            canvas.drawLine(originScreenX - 8f, yPos, originScreenX + 8f, yPos, paintAxis)
+            val value = (it + 1) * yStepValue
+            val text = String.format("%.2f", value)
+            canvas.drawText(text, originScreenX + paintAxisText.measureText(text) / 2f + 12f, yPos + 8f, paintAxisText)
+            yPos -= yBarHeight
+        }
+    }
+
 
     // ===================== 拖拽 =====================
     private var isDragging = false
