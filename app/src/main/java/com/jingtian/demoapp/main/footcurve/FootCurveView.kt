@@ -6,6 +6,7 @@ import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.View
+import android.view.ViewConfiguration
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import com.jingtian.demoapp.main.rank.Utils
@@ -324,7 +325,7 @@ class FootCurveView @JvmOverloads constructor(
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
                 val d = hypot(x-px.toDouble(), y-py.toDouble())
-                isDragging = d < 0.2f
+                isDragging = d < 0.5
             }
             MotionEvent.ACTION_MOVE -> {
                 if (isDragging) {
