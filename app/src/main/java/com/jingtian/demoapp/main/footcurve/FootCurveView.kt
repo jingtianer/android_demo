@@ -13,6 +13,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.hypot
+import kotlin.math.max
 import kotlin.math.min
 
 class FootCurveView @JvmOverloads constructor(
@@ -27,27 +28,16 @@ class FootCurveView @JvmOverloads constructor(
             updateAll()
         }
 
-    private var currentTJob: Job?= null
-    var job: Job? = null
-
     // 当前切点参数 t
     var currentT: Float = curve.initT
         set(value) {
             field = value
-            currentTJob?.cancel()
-            if (job != null) {
-                updateAll()
-                return
-            }
-            currentTJob = runTask({
-                updateTangentInfo()
-            }, callback = {
-                currentTJob = null
-                invalidate()
-            }, onError = {
-                currentTJob = null
-            })
+            tangentJob.run()
         }
+
+    private fun calcTangentInfo(): FloatArray {
+        return FootCurveMath.calcFoot(curve, currentT, px, py)
+    }
 
 
     // 可拖动定点 P
@@ -55,8 +45,8 @@ class FootCurveView @JvmOverloads constructor(
     var py: Float = curve.initPy
         set(value) {
             field = value
-            updateFootPath()
-            updateTangentInfo()
+            footPathJob.schedule()
+            tangentJob.schedule()
             invalidate()
         }
 
@@ -125,24 +115,13 @@ class FootCurveView @JvmOverloads constructor(
     }
 
     // ===================== 全部提前计算 + 提前编译 Path =====================
-    fun updateAll() {
-        job?.cancel()
-        currentTJob?.cancel()
-        job = runTask({
-            updateOriginPath()
-            updateFootPath()
-            updateTangentInfo()
-        }, callback = {
-            job = null
-            currentTJob = null
-            invalidate()
-        }, onError =  {
-            job = null
-            currentTJob = null
-        })
+    private fun updateAll() {
+        originPathTask.run()
+        footPathJob.run()
+        tangentJob.run()
     }
 
-    fun <T> runTask(task: ()->T, callback: (T)->Unit = {}, onError: (Throwable)->Unit = {}): Job {
+    fun <T> runTask(task: suspend ()->T, callback: (T)->Unit = {}, onError: (Throwable)->Unit = {}): Job {
         val scope = (lifecycleOwner?.lifecycleScope ?: Utils.CoroutineUtils.globalScope)
         return scope.launch(Dispatchers.Default) {
             runCatching {
@@ -159,33 +138,60 @@ class FootCurveView @JvmOverloads constructor(
         }
     }
 
+    private val originPathTask = CanvasJob({
+        calcOriginPath()
+    }, {
+        updateOriginPath(it)
+    }, {
+        clearOriginPath()
+    })
+
     /** 预编译：原始曲线 Path */
-    private fun updateOriginPath() {
-        pathOrigin.reset()
+    private fun calcOriginPath(): Pair<List<Float>, List<Float>> {
         val step = (curve.tMax - curve.tMin) / 300f
-        var first = true
         val xPoint = FootCurveMath.eval(curve.paramName, curve.xExprStr, (0..300).map { curve.tMin + step * it })
         val yPoint = FootCurveMath.eval(curve.paramName, curve.yExprStr, (0..300).map { curve.tMin + step * it })
+        return xPoint to yPoint
+    }
+
+    private fun updateOriginPath(path: Pair<List<Float>, List<Float>>) {
+        pathOrigin.reset()
+        var first = true
+        val (xPoint, yPoint) = path
         for (i in 0 until min(xPoint.size, yPoint.size)) {
-            val x = xPoint[i]
-            val y = yPoint[i]
-            val sx = toScreenX(x)
-            val sy = toScreenY(y)
+            val x = toScreenX(xPoint[i])
+            val y = toScreenY(yPoint[i])
             if (first) {
-                pathOrigin.moveTo(sx, sy)
+                pathOrigin.moveTo(x, y)
                 first = false
             } else {
-                pathOrigin.lineTo(sx, sy)
+                pathOrigin.lineTo(x, y)
             }
         }
     }
 
-    /** 预编译：垂足曲线 Path */
-    private fun updateFootPath() {
-        pathFoot.reset()
+    private fun clearOriginPath() {
+        pathOrigin.reset()
+    }
+
+    private val footPathJob = CanvasJob({
+        calcFootPath()
+    }, {
+        updateFootPath(it)
+    }, {
+        clearFootPath()
+    })
+
+    private fun calcFootPath(): List<FloatArray> {
         val step = (curve.tMax - curve.tMin) / 300f
-        var first = true
         val fList = FootCurveMath.calcFoot(curve, (0..300).map { curve.tMin + step * it }, px, py)
+        return fList
+    }
+
+    /** 预编译：垂足曲线 Path */
+    private fun updateFootPath(fList: List<FloatArray>) {
+        pathFoot.reset()
+        var first = true
         for (f in fList) {
             val sx = toScreenX(f[2])
             val sy = toScreenY(f[3])
@@ -198,15 +204,34 @@ class FootCurveView @JvmOverloads constructor(
         }
     }
 
+    private fun clearFootPath() {
+        pathFoot.reset()
+    }
+
+    private val tangentJob = CanvasJob({
+        calcTangentInfo()
+    }, {
+        updateTangentInfo(it)
+    }, {
+        clearTangentInfo()
+    })
+
+    private fun clearTangentInfo() {
+        lineTan.fill(0f)
+        linePerp.fill(0f)
+        pointP.fill(0f)
+        pointTan.fill(0f)
+        pointFoot.fill(0f)
+    }
+
     /** 预计算：切线、垂线、点坐标 */
-    private fun updateTangentInfo() {
-        val f = FootCurveMath.calcFoot(curve, currentT, px, py)
+    private fun updateTangentInfo(f: FloatArray) {
         val cx = f[0]; val cy = f[1]
         val fx = f[2]; val fy = f[3]
         val dx = f[4]; val dy = f[5]
 
         // 切线线段
-        val L = 2f
+        val L = 1f + max(1f, hypot(cx - px, cy - py))
         val x1 = cx - dx*L
         val y1 = cy - dy*L
         val x2 = cx + dx*L
@@ -272,5 +297,36 @@ class FootCurveView @JvmOverloads constructor(
         }
         super.onTouchEvent(event)
         return true
+    }
+
+    inner class CanvasJob<T>(private val task: ()->T, private val callback: (T)->Unit = {}, private val onError: (Throwable) -> Unit) {
+        private var job: Job? = null
+        private var hasSchedule = false
+        fun run() {
+            job?.cancel()
+            job = runTask(task, {
+                callback.invoke(it)
+                job = null
+                invalidate()
+            }, onError = {
+                onError.invoke(it)
+                job = null
+                invalidate()
+            })
+        }
+
+        fun schedule() {
+            if (!hasSchedule) {
+                hasSchedule = true
+                runTask({
+                    job?.join()
+                    run()
+                }, callback = {
+                    hasSchedule = false
+                }, onError = {
+                    hasSchedule = false
+                })
+            }
+        }
     }
 }
