@@ -71,6 +71,7 @@ class FootCurveFragment: BaseFragment() {
         }
 
         with(popUpBinding) {
+            val seekBarT = binding.seekBarT
             xExpr.watchString(initCurve.xExprStr) {
                 this.copy(xExprStr = it ?: "")
             }
