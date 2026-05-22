@@ -120,9 +120,9 @@ class FootCurveView @JvmOverloads constructor(
     private var linePerp = FloatArray(4)
 
     // 绘制点坐标
-    private var pointP = FloatArray(2)
-    private var pointTan = FloatArray(2)
-    private var pointFoot = FloatArray(2)
+    private var pointP = FloatArray(2) // 定点
+    private var pointTan = FloatArray(2) // 切点
+    private var pointFoot = FloatArray(2) // 垂足
 
     // ===================== 画笔 =====================
     private val paintOrigin = Paint().apply {
@@ -568,8 +568,10 @@ class FootCurveView @JvmOverloads constructor(
                 } else if (isDraggingCanvas) {
                     val lastPointerIndex = event.findPointerIndex(canvasOffsetPointerId)
                     val pointerIndex = if (lastPointerIndex in 0 until event.pointerCount) {
-                        canvasOffsetX += event.getX(lastPointerIndex) - canvasStartX
-                        canvasOffsetY += event.getY(lastPointerIndex) - canvasStartY
+                        if (event.pointerCount == 1) {
+                            canvasOffsetX += event.getX(lastPointerIndex) - canvasStartX
+                            canvasOffsetY += event.getY(lastPointerIndex) - canvasStartY
+                        }
                         lastPointerIndex
                     } else {
                         canvasOffsetPointerId = event.getPointerId(0)
