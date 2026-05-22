@@ -463,20 +463,22 @@ class FootCurveView @JvmOverloads constructor(
     inner class CanvasJob<T>(private val tag: String, private val task: ()->T, private val callback: (T)->Unit = {}, private val onError: (Throwable) -> Unit) {
         private var job: Job? = null
         private var hasSchedule = false
-        private val result: T? = null
+        private var result: T? = null
         fun run(redraw: Boolean = false) {
             job?.cancel()
             val result = result
             if (redraw && result != null) {
-                Utils.timeCost(tag) {
+                Utils.timeCost(tag + "_redraw") {
                     callback.invoke(result)
                 }
+                invalidate()
                 job = null
             } else {
                 job = runTask(task, { result->
                     Utils.timeCost(tag) {
                         callback.invoke(result)
                     }
+                    this.result = result
                     job = null
                     invalidate()
                 }, onError = {
