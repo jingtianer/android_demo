@@ -19,7 +19,7 @@ import com.jingtian.demoapp.main.app
 import com.jingtian.demoapp.main.fragments.BaseFragment
 
 @BaseFragment.FragmentInfo(desc = "垂足曲线")
-class FootCurveFragment @JvmOverloads constructor(private val curve: Curve = Curve(), private val fromMain: Boolean = true): BaseFragment() {
+class FootCurveFragment @JvmOverloads constructor(private val curve: Curve = DefaultConfigs.defaultConfigs.random().curve, private val fromMain: Boolean = true): BaseFragment() {
     private lateinit var binding: FragmentFootCurveBinding
 
     private lateinit var popUpBinding: PanelPopupFootCurveConfigBinding
