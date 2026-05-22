@@ -23,7 +23,6 @@ import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.round
-import kotlin.math.sign
 
 class FootCurveView @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0, defStyleRes: Int = 0
@@ -53,6 +52,8 @@ class FootCurveView @JvmOverloads constructor(
 
             override fun onDoubleTap(e: MotionEvent): Boolean {
                 scale = DEFAULT_SCALE
+                canvasOffsetX = 0f
+                canvasOffsetY = 0f
                 return true
             }
 
@@ -171,8 +172,12 @@ class FootCurveView @JvmOverloads constructor(
             // 缩放后只需要重新刷新路径坐标，不需要重算数学
             redrawAll()
         }
-    private var offsetX = 0f
-    private var offsetY = 0f
+
+    private var screenOffsetX = 0f
+    private var screenOffsetY = 0f
+
+    private val offsetX get() = screenOffsetX + canvasOffsetX
+    private val offsetY get() = screenOffsetY + canvasOffsetY
 
     private fun toScreenX(x: Float) = offsetX + x * scale
     private fun toScreenY(y: Float) = offsetY - y * scale
@@ -184,8 +189,8 @@ class FootCurveView @JvmOverloads constructor(
         }
         if (floor(offsetX) != floor(w / 2f) || floor(offsetY) != floor(h / 2f)) {
             Log.d("jingtian", "onSizeChanged: redraw, w=$w, h=$h, $measuredWidth, $measuredHeight")
-            offsetX = w / 2f
-            offsetY = h / 2f
+            screenOffsetX = w / 2f
+            screenOffsetY = h / 2f
             redrawAll()
         }
     }
@@ -194,8 +199,8 @@ class FootCurveView @JvmOverloads constructor(
         super.onMeasure(widthMeasureSpec, heightMeasureSpec)
         if (floor(offsetX) != floor(measuredWidth / 2f) || floor(offsetY) != floor(measuredHeight / 2f)) {
             Log.d("jingtian", "onMeasure: redraw, $measuredWidth, $measuredHeight")
-            offsetX = measuredWidth / 2f
-            offsetY = measuredHeight / 2f
+            screenOffsetX = measuredWidth / 2f
+            screenOffsetY = measuredHeight / 2f
             redrawAll()
         }
     }
@@ -530,8 +535,14 @@ class FootCurveView @JvmOverloads constructor(
 
 
     // ===================== 拖拽 =====================
-    private var isDragging = false
+    private var isDraggingFixPoint = false
+    private var isDraggingCanvas = false
     private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
+    private var canvasOffsetX = 0f
+    private var canvasOffsetY = 0f
+    private var canvasStartX = 0f
+    private var canvasStartY = 0f
+    private var canvasOffsetPointerId = 0
     override fun onTouchEvent(event: MotionEvent): Boolean {
         parent?.requestDisallowInterceptTouchEvent(true)
         scaleGestureDetector.onTouchEvent(event)
@@ -541,16 +552,38 @@ class FootCurveView @JvmOverloads constructor(
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
                 val d = hypot(event.x-toScreenX(px), event.y - toScreenY(py))
-                isDragging = d <= touchSlop*3
+                isDraggingFixPoint = d <= touchSlop*3
+                if (!isDraggingFixPoint) {
+                    isDraggingCanvas = true
+                    canvasStartX = event.getX(0)
+                    canvasStartY = event.getY(0)
+                    canvasOffsetPointerId = event.getPointerId(0)
+                }
             }
             MotionEvent.ACTION_MOVE -> {
-                if (isDragging) {
+                if (isDraggingFixPoint) {
                     this.px = (event.x - offsetX) / scale
                     this.py = (offsetY - event.y) / scale
                     dispatchPxPyChange()
+                } else if (isDraggingCanvas) {
+                    val lastPointerIndex = event.findPointerIndex(canvasOffsetPointerId)
+                    val pointerIndex = if (lastPointerIndex in 0 until event.pointerCount) {
+                        canvasOffsetX += event.getX(lastPointerIndex) - canvasStartX
+                        canvasOffsetY += event.getY(lastPointerIndex) - canvasStartY
+                        lastPointerIndex
+                    } else {
+                        canvasOffsetPointerId = event.getPointerId(0)
+                        0
+                    }
+                    canvasStartX = event.getX(pointerIndex)
+                    canvasStartY = event.getY(pointerIndex)
+                    redrawAll()
                 }
             }
-            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> isDragging = false
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                isDraggingFixPoint = false
+                isDraggingCanvas = false
+            }
         }
         super.onTouchEvent(event)
         return true
