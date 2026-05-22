@@ -10,6 +10,7 @@ import android.view.View
 import android.view.ViewConfiguration
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
+import com.jingtian.demoapp.BuildConfig
 import com.jingtian.demoapp.main.rank.Utils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -182,6 +183,7 @@ class FootCurveView @JvmOverloads constructor(
         originPathTask.scheduleRedraw()
         footPathJob.scheduleRedraw()
         tangentJob.scheduleRedraw()
+        axisJob.scheduleRedraw()
     }
 
     private inline fun <T> runTask(crossinline task: suspend ()->T, crossinline callback: (T)->Unit = {}, crossinline onError: (Throwable)->Unit = {}): Job {
@@ -200,6 +202,14 @@ class FootCurveView @JvmOverloads constructor(
             }
         }
     }
+
+    private fun createAxisInfo() = AxisInfo(offsetX, offsetY, measuredWidth, measuredHeight, scale, paintAxisText)
+
+    private val axisJob = CanvasJob("axisJob", {}, {
+        this.axisInfo = createAxisInfo()
+    }, {
+        this.axisInfo = createAxisInfo()
+    })
 
     private val originPathTask = CanvasJob("originPathTask", {
         calcOriginPath()
@@ -320,12 +330,14 @@ class FootCurveView @JvmOverloads constructor(
         pointFoot[1] = linePerp[3]
     }
 
+    private var axisInfo: AxisInfo = createAxisInfo()
+
     // ===================== 【最极致轻量 onDraw】 =====================
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
         Utils.timeCost("onDraw->drawAxis") {
-            drawAxis(canvas)
+            axisInfo.drawAxis(canvas)
         }
 
         // 只绘制，无任何计算、无循环、无Path创建
@@ -353,8 +365,97 @@ class FootCurveView @JvmOverloads constructor(
         }
     }
 
+    class AxisInfo(offsetX: Float, offsetY: Float, measuredWidth: Int, measuredHeight: Int, scale: Float, paintAxisText: Paint) {
+        val originScreenX = offsetX
+        val originScreenY = offsetY
+
+        fun Float.print(): String {
+            return if (this < 0.01 || this > 1e4) {
+                String.format("%.2e", this)
+            } else {
+                String.format("%.3f", this)
+            }
+        }
+
+        // 单位1长度: scale
+        // 单位1的个数
+        val xUnitOneCount = ceil(measuredWidth.toFloat() / 2f / scale).toInt()
+        val yUnitOneCount = ceil(measuredHeight.toFloat() / 2f / scale).toInt()
+
+        val screenAspectRatio = if (measuredHeight > 0) (measuredWidth.toFloat() / measuredHeight.toFloat()) else 1f
+
+        val xBarCount = 3f
+        val xStepValue: Float
+        val xStepCount: Int
+
+        val yBarCount = round(xBarCount / screenAspectRatio)
+        val yStepValue: Float
+        val yStepCount: Int
+
+        init {
+            val (xStepValue, xStepCount) = if (xUnitOneCount <= 1) {
+                val xUnitOneCount = measuredWidth.toFloat() / 2f / scale
+                xUnitOneCount / xBarCount to ceil(xUnitOneCount / (xUnitOneCount / xBarCount)).toInt()
+            } else if (xUnitOneCount <= xBarCount) {
+                1f to xUnitOneCount
+            } else {
+                xUnitOneCount / xBarCount to ceil(xUnitOneCount / (xUnitOneCount / xBarCount)).toInt()
+            }
+            this.xStepValue = xStepValue
+            this.xStepCount = xStepCount
+            val (yStepValue, yStepCount) = if (xUnitOneCount <= 1) {
+                val yUnitOneCount = measuredHeight.toFloat() / 2f / scale
+                yUnitOneCount / yBarCount to ceil(yUnitOneCount / (yUnitOneCount / yBarCount)).toInt()
+            } else if (yUnitOneCount <= yBarCount) {
+                1f to yUnitOneCount
+            } else {
+                yUnitOneCount / yBarCount to ceil(yUnitOneCount / (yUnitOneCount / yBarCount)).toInt()
+            }
+            this.yStepValue = yStepValue
+            this.yStepCount = yStepCount
+        }
+
+        val xBarHeight = xStepValue * scale
+
+        val yBarHeight = yStepValue * scale
+
+        // X轴正方向刻度
+        val xPos = originScreenX + xBarHeight
+        val yPos = originScreenY + yBarHeight
+
+        val xPosInfo = (0 until xStepCount).map {
+            ((it + 1) * xStepValue).print()
+        }
+
+        val xNegInfo = (0 until xStepCount).map {
+            (-(it + 1) * xStepValue).print()
+        }
+
+        val yNegInfo = (0 until  yStepCount).map {
+            (-(it + 1) * yStepValue).print().let { text->
+                text to (paintAxisText.measureText(text) / 2f + 12f)
+            }
+        }
+
+        val yPosInfo = (0 until  yStepCount).map {
+            ((it + 1) * yStepValue).print().let { text->
+                text to (paintAxisText.measureText(text) / 2f + 12f)
+            }
+        }
+
+        init {
+            if (BuildConfig.IS_DEBUG) {
+                Log.d("jingtian", "drawInfo: $this")
+            }
+        }
+
+        override fun toString(): String {
+            return "${xStepValue}, ${xStepCount}, ${yStepValue}, ${yStepCount}"
+        }
+    }
+
     /** 绘制XY坐标轴 + 简易刻度 */
-    private fun drawAxis(canvas: Canvas) {
+    private fun AxisInfo.drawAxis(canvas: Canvas) {
         // 原点屏幕坐标
         val originScreenX = offsetX
         val originScreenY = offsetY
@@ -367,79 +468,34 @@ class FootCurveView @JvmOverloads constructor(
         // 绘制原点文字
         canvas.drawText("O", originScreenX - 15f, originScreenY + 30f, paintAxisText)
 
-        fun Float.print(): String {
-            return if (this < 0.01 || this > 1e5) {
-                String.format("%.3e", this)
-            } else {
-                String.format("%.3f", this)
-            }
-        }
-
-        // 单位1长度: scale
-        // 单位1的个数
-        val xUnitOneCount = ceil(measuredWidth.toFloat() / 2f / scale).toInt()
-        val yUnitOneCount = ceil(measuredHeight.toFloat() / 2f / scale).toInt()
-
-        val screenAspectRatio = measuredWidth.toFloat() / measuredHeight.toFloat()
-
-        val (xStepValue, xStepCount) = if (xUnitOneCount <= 1) {
-            val xUnitOneCount = measuredWidth.toFloat() / 2f / scale
-            xUnitOneCount / 5f to ceil(xUnitOneCount / (xUnitOneCount / 5f)).toInt()
-        } else if (xUnitOneCount <= 5) {
-            1f to xUnitOneCount
-        } else {
-            xUnitOneCount / 5f to ceil(xUnitOneCount / (xUnitOneCount / 5f)).toInt()
-        }
-
-        val yBarCount = round(5f / screenAspectRatio)
-        val (yStepValue, yStepCount) = if (xUnitOneCount <= 1) {
-            val yUnitOneCount = measuredHeight.toFloat() / 2f / scale
-            yUnitOneCount / yBarCount to ceil(yUnitOneCount / (yUnitOneCount / yBarCount)).toInt()
-        } else if (yUnitOneCount <= yBarCount) {
-            1f to yUnitOneCount
-        } else {
-            yUnitOneCount / yBarCount to ceil(yUnitOneCount / (yUnitOneCount / yBarCount)).toInt()
-        }
-
-        val xBarHeight = xStepValue * scale
-
-        val yBarHeight = yStepValue * scale
-
-        // X轴正方向刻度
-        var xPos = originScreenX + xBarHeight
-        repeat(xStepCount) {
+        var xPos = this.xPos
+        xPosInfo.forEach { text->
             canvas.drawLine(xPos, originScreenY - 8f, xPos, originScreenY + 8f, paintAxis)
-            val value = (it + 1) * xStepValue
-            canvas.drawText(value.print(), xPos, originScreenY + 35f, paintAxisText)
+            canvas.drawText(text, xPos, originScreenY + 35f, paintAxisText)
             xPos += xBarHeight
         }
 
         // X轴负方向刻度
         xPos = originScreenX - xBarHeight
-        repeat(xStepCount) {
+        xNegInfo.forEach { text->
             canvas.drawLine(xPos, originScreenY - 8f, xPos, originScreenY + 8f, paintAxis)
-            val value = -(it + 1) * xStepValue
-            canvas.drawText(value.print(), xPos, originScreenY + 35f, paintAxisText)
+            canvas.drawText(text, xPos, originScreenY + 35f, paintAxisText)
             xPos -= xBarHeight
         }
 
         // y轴负方向刻度
-        var yPos = originScreenY + yBarHeight
-        repeat(yStepCount) {
+        var yPos = this.yPos
+        yNegInfo.forEach { (text, textWidth)->
             canvas.drawLine(originScreenX - 8f, yPos, originScreenX + 8f, yPos, paintAxis)
-            val value = -(it + 1) * yStepValue
-            val text = value.print()
-            canvas.drawText(text, originScreenX + paintAxisText.measureText(text) / 2f + 12f, yPos + 8f, paintAxisText)
+            canvas.drawText(text, originScreenX + textWidth, yPos + 8f, paintAxisText)
             yPos += yBarHeight
         }
 
         // y轴正方向刻度
         yPos = originScreenY - yBarHeight
-        repeat(yStepCount) {
+        yPosInfo.forEach { (text, textWidth)->
             canvas.drawLine(originScreenX - 8f, yPos, originScreenX + 8f, yPos, paintAxis)
-            val value = (it + 1) * yStepValue
-            val text = value.print()
-            canvas.drawText(text, originScreenX + paintAxisText.measureText(text) / 2f + 12f, yPos + 8f, paintAxisText)
+            canvas.drawText(text, originScreenX + textWidth, yPos + 8f, paintAxisText)
             yPos -= yBarHeight
         }
     }
