@@ -18,6 +18,7 @@ android {
         versionCode 1
         versionName "1.0"
 
+        buildConfigField("boolean", "IS_DEBUG", "true")
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -36,6 +37,7 @@ android {
     }
     buildFeatures {
         viewBinding true
+        buildConfig true
     }
 }
 

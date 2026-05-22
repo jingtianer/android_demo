@@ -193,7 +193,7 @@ class FootCurveView @JvmOverloads constructor(
         }
     }
 
-    private val originPathTask = CanvasJob({
+    private val originPathTask = CanvasJob("originPathTask", {
         calcOriginPath()
     }, {
         updateOriginPath(it)
@@ -229,7 +229,7 @@ class FootCurveView @JvmOverloads constructor(
         pathOrigin.reset()
     }
 
-    private val footPathJob = CanvasJob({
+    private val footPathJob = CanvasJob("footPathJob", {
         calcFootPath()
     }, {
         updateFootPath(it)
@@ -263,7 +263,7 @@ class FootCurveView @JvmOverloads constructor(
         pathFoot.reset()
     }
 
-    private val tangentJob = CanvasJob({
+    private val tangentJob = CanvasJob("tangentJob", {
         calcTangentInfo()
     }, {
         updateTangentInfo(it)
@@ -315,22 +315,33 @@ class FootCurveView @JvmOverloads constructor(
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
-        drawAxis(canvas)
+        Utils.timeCost("onDraw->drawAxis") {
+            drawAxis(canvas)
+        }
 
         // 只绘制，无任何计算、无循环、无Path创建
-        canvas.drawPath(pathOrigin, paintOrigin)
-        canvas.drawPath(pathFoot, paintFoot)
-        canvas.drawLines(lineTan, paintTangent)
-        canvas.drawLines(linePerp, paintPerp)
+        Utils.timeCost("onDraw->pathOrigin") {
+            canvas.drawPath(pathOrigin, paintOrigin)
+        }
+        Utils.timeCost("onDraw->pathFoot") {
+            canvas.drawPath(pathFoot, paintFoot)
+        }
+        Utils.timeCost("onDraw->lineTan") {
+            canvas.drawLines(lineTan, paintTangent)
+        }
+        Utils.timeCost("onDraw->linePerp") {
+            canvas.drawLines(linePerp, paintPerp)
+        }
+        Utils.timeCost("onDraw->drawDots") {
+            paintPoint.color = 0xFFFF9800.toInt()
+            canvas.drawCircle(pointP[0], pointP[1], 12f, paintPoint)
 
-        paintPoint.color = 0xFFFF9800.toInt()
-        canvas.drawCircle(pointP[0], pointP[1], 12f, paintPoint)
+            paintPoint.color = Color.RED
+            canvas.drawCircle(pointTan[0], pointTan[1], 8f, paintPoint)
 
-        paintPoint.color = Color.RED
-        canvas.drawCircle(pointTan[0], pointTan[1], 8f, paintPoint)
-
-        paintPoint.color = Color.GREEN
-        canvas.drawCircle(pointFoot[0], pointFoot[1], 8f, paintPoint)
+            paintPoint.color = Color.GREEN
+            canvas.drawCircle(pointFoot[0], pointFoot[1], 8f, paintPoint)
+        }
     }
 
     /** 绘制XY坐标轴 + 简易刻度 */
@@ -362,27 +373,27 @@ class FootCurveView @JvmOverloads constructor(
 
         val screenAspectRatio = measuredWidth.toFloat() / measuredHeight.toFloat()
 
-        val xStepValue = if (xUnitOneCount <= 1) {
-            measuredWidth.toFloat() / 2f / scale / 5f
+        val (xStepValue, xStepCount) = if (xUnitOneCount <= 1) {
+            val xUnitOneCount = measuredWidth.toFloat() / 2f / scale
+            xUnitOneCount / 5f to ceil(xUnitOneCount / (xUnitOneCount / 5f)).toInt()
         } else if (xUnitOneCount <= 5) {
-            1f
+            1f to xUnitOneCount
         } else {
-            xUnitOneCount / 5f
+            xUnitOneCount / 5f to ceil(xUnitOneCount / (xUnitOneCount / 5f)).toInt()
         }
 
         val yBarCount = round(5f / screenAspectRatio)
-        val yStepValue = if (xUnitOneCount <= 1) {
-            measuredHeight.toFloat() / 2f / scale / yBarCount
-        } else if (xUnitOneCount <= yBarCount) {
-            1f
+        val (yStepValue, yStepCount) = if (xUnitOneCount <= 1) {
+            val yUnitOneCount = measuredHeight.toFloat() / 2f / scale
+            yUnitOneCount / yBarCount to ceil(yUnitOneCount / (yUnitOneCount / yBarCount)).toInt()
+        } else if (yUnitOneCount <= yBarCount) {
+            1f to yUnitOneCount
         } else {
-            yUnitOneCount / yBarCount
+            yUnitOneCount / yBarCount to ceil(yUnitOneCount / (yUnitOneCount / yBarCount)).toInt()
         }
 
-        val xStepCount = ceil(xUnitOneCount / xStepValue).toInt()
         val xBarHeight = xStepValue * scale
 
-        val yStepCount = ceil(yUnitOneCount / yStepValue).toInt()
         val yBarHeight = yStepValue * scale
 
         // X轴正方向刻度
@@ -449,7 +460,7 @@ class FootCurveView @JvmOverloads constructor(
         return true
     }
 
-    inner class CanvasJob<T>(private val task: ()->T, private val callback: (T)->Unit = {}, private val onError: (Throwable) -> Unit) {
+    inner class CanvasJob<T>(private val tag: String, private val task: ()->T, private val callback: (T)->Unit = {}, private val onError: (Throwable) -> Unit) {
         private var job: Job? = null
         private var hasSchedule = false
         private val result: T? = null
@@ -457,11 +468,15 @@ class FootCurveView @JvmOverloads constructor(
             job?.cancel()
             val result = result
             if (redraw && result != null) {
-                callback(result)
+                Utils.timeCost(tag) {
+                    callback.invoke(result)
+                }
                 job = null
             } else {
-                job = runTask(task, {
-                    callback.invoke(it)
+                job = runTask(task, { result->
+                    Utils.timeCost(tag) {
+                        callback.invoke(result)
+                    }
                     job = null
                     invalidate()
                 }, onError = {

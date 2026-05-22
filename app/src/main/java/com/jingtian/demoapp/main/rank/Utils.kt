@@ -903,4 +903,15 @@ object Utils {
             }
         }
     }
+
+    inline fun <T> timeCost(name: String, crossinline task: ()->T):T {
+        if (!com.jingtian.demoapp.BuildConfig.IS_DEBUG) {
+            return task()
+        }
+        val start = System.nanoTime()
+        val ret = task()
+        val duration = System.nanoTime() - start
+        Log.d("TimeCost", "[$name]: cost=${duration / 1000f}ms, startAt=$start")
+        return ret
+    }
 }
