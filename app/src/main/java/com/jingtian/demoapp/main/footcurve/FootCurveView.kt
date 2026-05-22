@@ -426,7 +426,7 @@ class FootCurveView @JvmOverloads constructor(
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
                 val d = hypot(event.x-toScreenX(px), event.y - toScreenY(py))
-                isDragging = d <= touchSlop
+                isDragging = d <= touchSlop*3
             }
             MotionEvent.ACTION_MOVE -> {
                 if (isDragging) {
