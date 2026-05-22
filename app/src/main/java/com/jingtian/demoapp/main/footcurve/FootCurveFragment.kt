@@ -172,6 +172,18 @@ class FootCurveFragment @JvmOverloads constructor(
         })
     }
 
+    private fun EditText.updateValue(value: Float) {
+        silentWatching = true
+        this.setText(String.format("%.2f", value))
+        silentWatching = false
+    }
+
+    private fun EditText.updateText(value: String) {
+        silentWatching = true
+        this.setText(value)
+        silentWatching = false
+    }
+
     private inline fun EditText.watchString(initValue: String, crossinline onUpdate: Curve.(String?)->Curve) {
         this.setText(initValue)
         this.addTextChangedListener(afterTextChanged = {
@@ -188,7 +200,19 @@ class FootCurveFragment @JvmOverloads constructor(
         val firstOnResume = firstOnResume
         if (::binding.isInitialized && fromMain && !firstOnResume) {
             index = (index + 1) % DefaultConfigs.defaultConfigs.size
-            binding.footCurveView.curve = DefaultConfigs.defaultConfigs[index].curve
+            val initCurve = DefaultConfigs.defaultConfigs[index].curve
+            binding.footCurveView.curve = initCurve
+            with(popUpBinding) {
+                val seekBarT = binding.seekBarT
+                xExpr.updateText(initCurve.xExprStr)
+                yExpr.updateText(initCurve.yExprStr)
+                tLabel.updateText(initCurve.paramName)
+                tMinValue.updateValue(initCurve.tMin)
+                tMaxValue.updateValue(initCurve.tMax)
+                fixPointX.updateValue(initCurve.initPx)
+                fixPointY.updateValue(initCurve.initPy)
+                seekBarT.updateProgress(initCurve.getProgress())
+            }
         }
         this.firstOnResume = false
     }
