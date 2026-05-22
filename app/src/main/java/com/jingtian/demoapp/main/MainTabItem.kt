@@ -5,11 +5,11 @@ import android.view.LayoutInflater
 import android.view.View
 import com.jingtian.demoapp.databinding.TabMainBinding
 
-class MainTabItem(context: Context, tabName: String, tabDesc: String) {
+class MainTabItem(context: Context, tabName: CharSequence, tabDesc: CharSequence?) {
     private val rootView = TabMainBinding.inflate(LayoutInflater.from(context))
     init {
         rootView.tabName.text = tabName
-        if (tabDesc.isEmpty()) {
+        if (tabDesc.isNullOrEmpty()) {
             rootView.tabDesc.visibility = View.GONE
         } else {
             rootView.tabDesc.visibility = View.VISIBLE

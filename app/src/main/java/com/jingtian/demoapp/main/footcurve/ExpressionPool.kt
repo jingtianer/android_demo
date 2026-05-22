@@ -12,6 +12,6 @@ object ExpressionPool {
     }
 
     fun get(expr: String): Expression {
-        return expressions[expr]?.copy() ?: Expression(expr)
+        return Expression(expr)
     }
 }

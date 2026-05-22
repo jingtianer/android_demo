@@ -19,7 +19,7 @@ import com.jingtian.demoapp.main.app
 import com.jingtian.demoapp.main.fragments.BaseFragment
 
 @BaseFragment.FragmentInfo(desc = "垂足曲线")
-class FootCurveFragment: BaseFragment() {
+class FootCurveFragment @JvmOverloads constructor(private val curve: Curve = Curve(), private val fromMain: Boolean = true): BaseFragment() {
     private lateinit var binding: FragmentFootCurveBinding
 
     private lateinit var popUpBinding: PanelPopupFootCurveConfigBinding
@@ -44,7 +44,7 @@ class FootCurveFragment: BaseFragment() {
             binding.root.requestDisallowInterceptTouchEvent(true)
             return@setOnTouchListener true
         }
-        val initCurve = Curve()
+        val initCurve = curve
         binding.footCurveView.curve = initCurve
 
         binding.popUpMenu.animator.duration = 300
@@ -71,6 +71,12 @@ class FootCurveFragment: BaseFragment() {
         }
 
         with(popUpBinding) {
+            if (fromMain) {
+                more.visibility = View.VISIBLE
+                more.setOnClickListener {
+                    FootCurveActivity.startFootCurveActivity(context ?: return@setOnClickListener)
+                }
+            }
             val seekBarT = binding.seekBarT
             xExpr.watchString(initCurve.xExprStr) {
                 this.copy(xExprStr = it ?: "")
