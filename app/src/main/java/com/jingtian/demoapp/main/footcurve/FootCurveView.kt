@@ -419,20 +419,19 @@ class FootCurveView @JvmOverloads constructor(
 
     // ===================== 拖拽 =====================
     private var isDragging = false
+    private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
     override fun onTouchEvent(event: MotionEvent): Boolean {
         scaleGestureDetector.onTouchEvent(event)
         parent?.requestDisallowInterceptTouchEvent(true)
-        val x = (event.x - offsetX) / scale
-        val y = (offsetY - event.y) / scale
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
-                val d = hypot(x-px.toDouble(), y-py.toDouble())
-                isDragging = d < 0.5
+                val d = hypot(event.x-toScreenX(px), event.y - toScreenY(py))
+                isDragging = d <= touchSlop
             }
             MotionEvent.ACTION_MOVE -> {
                 if (isDragging) {
-                    this.px = x
-                    this.py = y
+                    this.px = (event.x - offsetX) / scale
+                    this.py = (offsetY - event.y) / scale
                     dispatchPxPyChange()
                 }
             }
