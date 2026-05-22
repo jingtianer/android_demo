@@ -48,8 +48,10 @@ class FootCurveView @JvmOverloads constructor(
 
     // 当前切点参数 t
     var currentT: Float = curve.initT
+        get() = curve.initT
         set(value) {
             field = value
+            curve.initT = value
             tangentJob.run()
         }
 
