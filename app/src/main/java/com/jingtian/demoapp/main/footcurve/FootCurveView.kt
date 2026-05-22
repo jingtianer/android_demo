@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.*
 import android.util.AttributeSet
 import android.util.Log
+import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.View
@@ -27,6 +28,11 @@ import kotlin.math.sign
 class FootCurveView @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0, defStyleRes: Int = 0
 ) : View(context, attrs, defStyleAttr, defStyleRes) {
+
+    companion object {
+        private const val DEFAULT_SCALE = 200f
+    }
+
     var lifecycleOwner: LifecycleOwner? = context as? LifecycleOwner
 
     // ===================== 双指缩放 新增 =====================
@@ -34,10 +40,27 @@ class FootCurveView @JvmOverloads constructor(
     private inner class ScaleListener : ScaleGestureDetector.SimpleOnScaleGestureListener() {
         override fun onScale(detector: ScaleGestureDetector): Boolean {
             scale *= detector.scaleFactor
-            // 缩放后只需要重新刷新路径坐标，不需要重算数学
-            redrawAll()
             return true
         }
+    }
+
+    private val gestureDetector: GestureDetector by lazy(LazyThreadSafetyMode.NONE) {
+        val detector = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {})
+        detector.setOnDoubleTapListener(object : GestureDetector.OnDoubleTapListener {
+            override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
+                return false
+            }
+
+            override fun onDoubleTap(e: MotionEvent): Boolean {
+                scale = DEFAULT_SCALE
+                return true
+            }
+
+            override fun onDoubleTapEvent(e: MotionEvent): Boolean {
+                return false
+            }
+        })
+        detector
     }
 
     // 曲线配置
@@ -142,7 +165,12 @@ class FootCurveView @JvmOverloads constructor(
     }
 
     // 坐标变换
-    private var scale = 200f
+    private var scale = DEFAULT_SCALE
+        set(value) {
+            field = value
+            // 缩放后只需要重新刷新路径坐标，不需要重算数学
+            redrawAll()
+        }
     private var offsetX = 0f
     private var offsetY = 0f
 
@@ -505,8 +533,11 @@ class FootCurveView @JvmOverloads constructor(
     private var isDragging = false
     private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        scaleGestureDetector.onTouchEvent(event)
         parent?.requestDisallowInterceptTouchEvent(true)
+        scaleGestureDetector.onTouchEvent(event)
+        if (gestureDetector.onTouchEvent(event)) {
+            return true
+        }
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
                 val d = hypot(event.x-toScreenX(px), event.y - toScreenY(py))
