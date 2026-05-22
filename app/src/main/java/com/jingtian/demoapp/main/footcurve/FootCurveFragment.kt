@@ -17,12 +17,19 @@ import com.jingtian.demoapp.databinding.FragmentFootCurveBinding
 import com.jingtian.demoapp.databinding.PanelPopupFootCurveConfigBinding
 import com.jingtian.demoapp.main.app
 import com.jingtian.demoapp.main.fragments.BaseFragment
+import kotlin.random.Random
 
 @BaseFragment.FragmentInfo(desc = "垂足曲线")
-class FootCurveFragment @JvmOverloads constructor(private val curve: Curve = DefaultConfigs.defaultConfigs.random().curve, private val fromMain: Boolean = true): BaseFragment() {
+class FootCurveFragment @JvmOverloads constructor(
+    private val curve: Curve = DefaultConfigs.defaultConfigs.random().curve,
+    private val fromMain: Boolean = true
+): BaseFragment() {
     private lateinit var binding: FragmentFootCurveBinding
 
     private lateinit var popUpBinding: PanelPopupFootCurveConfigBinding
+
+    private var firstOnResume = true
+    private var index = Random.nextInt(0, DefaultConfigs.defaultConfigs.size)
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -44,7 +51,11 @@ class FootCurveFragment @JvmOverloads constructor(private val curve: Curve = Def
             binding.root.requestDisallowInterceptTouchEvent(true)
             return@setOnTouchListener true
         }
-        val initCurve = curve
+        val initCurve = if (fromMain) {
+            DefaultConfigs.defaultConfigs[index].curve
+        } else {
+            curve
+        }
         binding.footCurveView.curve = initCurve
 
         binding.popUpMenu.animator.duration = 300
@@ -170,5 +181,15 @@ class FootCurveFragment @JvmOverloads constructor(private val curve: Curve = Def
             val value = it?.takeIf { !it.isNullOrEmpty() }?.toString()
             binding.footCurveView.curve = binding.footCurveView.curve.onUpdate(value)
         })
+    }
+
+    override fun onResume() {
+        super.onResume()
+        val firstOnResume = firstOnResume
+        if (::binding.isInitialized && fromMain && !firstOnResume) {
+            index = (index + 1) % DefaultConfigs.defaultConfigs.size
+            binding.footCurveView.curve = DefaultConfigs.defaultConfigs[index].curve
+        }
+        this.firstOnResume = false
     }
 }
