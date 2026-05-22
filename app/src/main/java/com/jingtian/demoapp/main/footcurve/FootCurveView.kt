@@ -29,10 +29,11 @@ class FootCurveView @JvmOverloads constructor(
 ) : View(context, attrs, defStyleAttr, defStyleRes) {
 
     companion object {
-        private const val DEFAULT_SCALE = 200f
     }
 
     var lifecycleOwner: LifecycleOwner? = context as? LifecycleOwner
+
+    private var DEFAULT_SCALE = -1f
 
     // ===================== 双指缩放 新增 =====================
     private val scaleGestureDetector = ScaleGestureDetector(context, ScaleListener())
@@ -166,7 +167,7 @@ class FootCurveView @JvmOverloads constructor(
     }
 
     // 坐标变换
-    private var scale = DEFAULT_SCALE
+    private var scale: Float = DEFAULT_SCALE.toFloat()
         set(value) {
             field = value
             // 缩放后只需要重新刷新路径坐标，不需要重算数学
@@ -188,9 +189,12 @@ class FootCurveView @JvmOverloads constructor(
             return
         }
         if (floor(offsetX) != floor(w / 2f) || floor(offsetY) != floor(h / 2f)) {
-            Log.d("jingtian", "onSizeChanged: redraw, w=$w, h=$h, $measuredWidth, $measuredHeight")
             screenOffsetX = w / 2f
             screenOffsetY = h / 2f
+            DEFAULT_SCALE = min(w, h) / 2 * 0.618f
+            if (scale <= 0) {
+                scale = DEFAULT_SCALE
+            }
             redrawAll()
         }
     }
@@ -198,9 +202,12 @@ class FootCurveView @JvmOverloads constructor(
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec)
         if (floor(offsetX) != floor(measuredWidth / 2f) || floor(offsetY) != floor(measuredHeight / 2f)) {
-            Log.d("jingtian", "onMeasure: redraw, $measuredWidth, $measuredHeight")
             screenOffsetX = measuredWidth / 2f
             screenOffsetY = measuredHeight / 2f
+            DEFAULT_SCALE = min(measuredWidth, measuredHeight) / 2 * 0.618f
+            if (scale <= 0) {
+                scale = DEFAULT_SCALE
+            }
             redrawAll()
         }
     }
