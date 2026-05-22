@@ -7,6 +7,7 @@ import com.jingtian.composedemo.dao.model.AlbumItem
 import com.jingtian.composedemo.dao.model.FileType
 import com.jingtian.composedemo.dao.model.ItemRank
 import com.jingtian.composedemo.dao.model.LabelInfo
+import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
 import com.jingtian.composedemo.dao.model.relation.AlbumRelation
 import com.jingtian.composedemo.multiplatform.MultiplatformFile
 import com.jingtian.composedemo.multiplatform.getMultiplatformFileFactory
@@ -79,9 +80,22 @@ object ShareUtils {
         withContext(Dispatchers.IO) {
             val importedAlbumList = file.inputStream?.buffered()?.readString()?.let { bytes ->
                 json.decodeFromString<List<AlbumRelation>>(bytes).associate { albumRelation ->
-                    val albumMap = albumRelation.albumItemList.withIndex().associate { (index, albumItem) ->
-                        albumItem.albumItem.itemName to albumRelation.albumItemList[index]
-                    }
+                    val albumMap = mutableMapOf<String, AlbumItemRelation>()
+                    for(albumItem in albumRelation.albumItemList) {
+                        val oldAlbumItem = albumMap[albumItem.albumItem.itemName]
+                        if (oldAlbumItem == null) {
+                            albumMap[albumItem.albumItem.itemName] = albumItem
+                        } else {
+                            albumMap[albumItem.albumItem.itemName] = AlbumItemRelation(
+                                albumItem = oldAlbumItem.albumItem,
+                                labelInfos = mutableListOf<LabelInfo>().apply {
+                                    addAll(oldAlbumItem.labelInfos)
+                                    addAll(albumItem.labelInfos)
+                                },
+                                fileInfo = oldAlbumItem.fileInfo
+                            )
+                        }
+                }
                     albumRelation.albumItem.albumName to albumMap
                 }
             } ?: return@withContext
