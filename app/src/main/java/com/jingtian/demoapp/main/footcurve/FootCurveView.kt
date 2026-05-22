@@ -21,6 +21,7 @@ import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.round
+import kotlin.math.sign
 
 class FootCurveView @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0, defStyleRes: Int = 0
@@ -291,11 +292,12 @@ class FootCurveView @JvmOverloads constructor(
         val dx = f[4]; val dy = f[5]
 
         // 切线线段
-        val L = 1f + max(1f, hypot(cx - px, cy - py))
-        val x1 = cx - dx*L
-        val y1 = cy - dy*L
-        val x2 = cx + dx*L
-        val y2 = cy + dy*L
+        val L = max(hypot(cx - px, cy - py), 1f) + 1f
+        val d = hypot(dx, dy)
+        val x1 = cx - dx/d*L
+        val y1 = cy - dy/d*L
+        val x2 = cx + dx/d*L
+        val y2 = cy + dy/d*L
         lineTan[0] = toScreenX(x1)
         lineTan[1] = toScreenY(y1)
         lineTan[2] = toScreenX(x2)

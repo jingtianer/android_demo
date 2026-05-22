@@ -20,8 +20,8 @@ object DefaultConfigs {
         DefConfig(Curve(
             xExprStr = "t",
             yExprStr = "t*t",
-            tMin = -1f,
-            tMax = 1f,
+            tMin = -2f,
+            tMax = 2f,
             initPx = 0f,
             initPy = 1/4f,
             initT = 1/2f
