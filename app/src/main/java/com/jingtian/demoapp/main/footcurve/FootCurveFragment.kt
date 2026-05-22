@@ -121,6 +121,11 @@ class FootCurveFragment @JvmOverloads constructor(
                 this.copy(initPy = it ?: 0f)
             }
 
+            tStepCount.watchValue(initCurve.stepCount) {
+                this.copy(stepCount = it ?: 300)
+            }
+
+
             // SeekBar 映射参数t
             seekBarT.max = 1000
             seekBarT.updateProgress(initCurve.getProgress())
@@ -172,9 +177,28 @@ class FootCurveFragment @JvmOverloads constructor(
         })
     }
 
+    private inline fun EditText.watchValue(initValue: Int, crossinline onUpdate: Curve.(Int?)->Curve) {
+        this.setText(String.format("%d", initValue))
+        this.addTextChangedListener(afterTextChanged = {
+            if (silentWatching) {
+                return@addTextChangedListener
+            }
+            val value = it?.takeIf { !it.isNullOrEmpty() }?.toString()?.let {
+                FootCurveMath.evalInt(it)
+            }
+            binding.footCurveView.curve = binding.footCurveView.curve.onUpdate(value)
+        })
+    }
+
     private fun EditText.updateValue(value: Float) {
         silentWatching = true
         this.setText(String.format("%.2f", value))
+        silentWatching = false
+    }
+
+    private fun EditText.updateValue(value: Int) {
+        silentWatching = true
+        this.setText(String.format("%d", value))
         silentWatching = false
     }
 
@@ -211,6 +235,7 @@ class FootCurveFragment @JvmOverloads constructor(
                 tMaxValue.updateValue(initCurve.tMax)
                 fixPointX.updateValue(initCurve.initPx)
                 fixPointY.updateValue(initCurve.initPy)
+                tStepCount.updateValue(initCurve.stepCount)
                 seekBarT.updateProgress(initCurve.getProgress())
             }
         }

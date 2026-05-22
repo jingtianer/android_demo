@@ -28,9 +28,6 @@ class FootCurveView @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0, defStyleRes: Int = 0
 ) : View(context, attrs, defStyleAttr, defStyleRes) {
 
-    companion object {
-    }
-
     var lifecycleOwner: LifecycleOwner? = context as? LifecycleOwner
 
     private var DEFAULT_SCALE = -1f
@@ -261,9 +258,9 @@ class FootCurveView @JvmOverloads constructor(
 
     /** 预编译：原始曲线 Path */
     private fun calcOriginPath(): Pair<List<Float>, List<Float>> {
-        val step = (curve.tMax - curve.tMin) / 300f
-        val xPoint = FootCurveMath.eval(curve.paramName, curve.xExprStr, (0..300).map { curve.tMin + step * it })
-        val yPoint = FootCurveMath.eval(curve.paramName, curve.yExprStr, (0..300).map { curve.tMin + step * it })
+        val step = (curve.tMax - curve.tMin) / curve.stepCount.toFloat()
+        val xPoint = FootCurveMath.eval(curve.paramName, curve.xExprStr, (0..curve.stepCount).map { curve.tMin + step * it })
+        val yPoint = FootCurveMath.eval(curve.paramName, curve.yExprStr, (0..curve.stepCount).map { curve.tMin + step * it })
         return xPoint to yPoint
     }
 
@@ -296,8 +293,8 @@ class FootCurveView @JvmOverloads constructor(
     })
 
     private fun calcFootPath(): List<FloatArray> {
-        val step = (curve.tMax - curve.tMin) / 300f
-        val fList = FootCurveMath.calcFoot(curve, (0..300).map { curve.tMin + step * it }, px, py)
+        val step = (curve.tMax - curve.tMin) / curve.stepCount.toFloat()
+        val fList = FootCurveMath.calcFoot(curve, (0..curve.stepCount).map { curve.tMin + step * it }, px, py)
         return fList
     }
 

@@ -12,7 +12,8 @@ data class Curve(
     val tMax: Float = (2 * Math.PI).toFloat(),
     var initPx: Float = 0.5f,
     var initPy: Float = (sqrt(3.0) /2).toFloat(),
-    var initT: Float = (7 * Math.PI/4).toFloat()
+    var initT: Float = (7 * Math.PI/4).toFloat(),
+    val stepCount: Int = 300,
 )
 
 object DefaultConfigs {

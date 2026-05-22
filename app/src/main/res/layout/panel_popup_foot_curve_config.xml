@@ -85,6 +85,19 @@
             android:layout_weight="1"
             android:gravity="center"
             android:hint="max:(float)" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text=", 精度" />
+
+        <EditText
+            android:id="@+id/t_step_count"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:hint="max:(int)" />
     </LinearLayout>
 
 

@@ -9,6 +9,12 @@ object FootCurveMath {
         } catch (e: Exception) { 0f }
     }
 
+    fun evalInt(expr: String): Int {
+        return try {
+            ExpressionPool.get(expr).evaluate().numberValue.toInt()
+        } catch (e: Exception) { 0 }
+    }
+
     fun eval(paramName: String, expr: String, t: List<Float>): List<Float> {
         val exp = ExpressionPool.get(expr)
         return try {
