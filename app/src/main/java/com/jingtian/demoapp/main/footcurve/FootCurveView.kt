@@ -176,7 +176,7 @@ class FootCurveView @JvmOverloads constructor(
         tangentJob.scheduleRedraw()
     }
 
-    fun <T> runTask(task: suspend ()->T, callback: (T)->Unit = {}, onError: (Throwable)->Unit = {}): Job {
+    private inline fun <T> runTask(crossinline task: suspend ()->T, crossinline callback: (T)->Unit = {}, crossinline onError: (Throwable)->Unit = {}): Job {
         val scope = (lifecycleOwner?.lifecycleScope ?: Utils.CoroutineUtils.globalScope)
         return scope.launch(Dispatchers.Default) {
             runCatching {
