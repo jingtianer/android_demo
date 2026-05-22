@@ -347,6 +347,14 @@ class FootCurveView @JvmOverloads constructor(
         // 绘制原点文字
         canvas.drawText("O", originScreenX - 15f, originScreenY + 30f, paintAxisText)
 
+        fun Float.print(): String {
+            return if (this < 0.01 || this > 1e5) {
+                String.format("%.3e", this)
+            } else {
+                String.format("%.3f", this)
+            }
+        }
+
         // 单位1长度: scale
         // 单位1的个数
         val xUnitOneCount = ceil(measuredWidth.toFloat() / 2f / scale).toInt()
@@ -382,7 +390,7 @@ class FootCurveView @JvmOverloads constructor(
         repeat(xStepCount) {
             canvas.drawLine(xPos, originScreenY - 8f, xPos, originScreenY + 8f, paintAxis)
             val value = (it + 1) * xStepValue
-            canvas.drawText(String.format("%.2f", value), xPos, originScreenY + 35f, paintAxisText)
+            canvas.drawText(value.print(), xPos, originScreenY + 35f, paintAxisText)
             xPos += xBarHeight
         }
 
@@ -391,7 +399,7 @@ class FootCurveView @JvmOverloads constructor(
         repeat(xStepCount) {
             canvas.drawLine(xPos, originScreenY - 8f, xPos, originScreenY + 8f, paintAxis)
             val value = -(it + 1) * xStepValue
-            canvas.drawText(String.format("%.2f", value), xPos, originScreenY + 35f, paintAxisText)
+            canvas.drawText(value.print(), xPos, originScreenY + 35f, paintAxisText)
             xPos -= xBarHeight
         }
 
@@ -400,7 +408,7 @@ class FootCurveView @JvmOverloads constructor(
         repeat(yStepCount) {
             canvas.drawLine(originScreenX - 8f, yPos, originScreenX + 8f, yPos, paintAxis)
             val value = -(it + 1) * yStepValue
-            val text = String.format("%.2f", value)
+            val text = value.print()
             canvas.drawText(text, originScreenX + paintAxisText.measureText(text) / 2f + 12f, yPos + 8f, paintAxisText)
             yPos += yBarHeight
         }
@@ -410,7 +418,7 @@ class FootCurveView @JvmOverloads constructor(
         repeat(yStepCount) {
             canvas.drawLine(originScreenX - 8f, yPos, originScreenX + 8f, yPos, paintAxis)
             val value = (it + 1) * yStepValue
-            val text = String.format("%.2f", value)
+            val text = value.print()
             canvas.drawText(text, originScreenX + paintAxisText.measureText(text) / 2f + 12f, yPos + 8f, paintAxisText)
             yPos -= yBarHeight
         }
