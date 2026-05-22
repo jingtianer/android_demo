@@ -1,5 +1,7 @@
 package com.jingtian.demoapp.main.footcurve
 
+import kotlin.math.cos
+import kotlin.math.sin
 import kotlin.math.sqrt
 
 data class Curve(
@@ -16,7 +18,7 @@ data class Curve(
 object DefaultConfigs {
     class DefConfig(val curve: Curve, val name: CharSequence, val desc: CharSequence = "")
     val defaultConfigs = listOf(
-        DefConfig(Curve(), "圆", ),
+        DefConfig(Curve(), "圆"),
         DefConfig(Curve(
             xExprStr = "t",
             yExprStr = "t*t",
@@ -35,5 +37,32 @@ object DefaultConfigs {
             initPy = 0f,
             initT = (0.25 * Math.PI).toFloat()
         ), "星行线"),
+        DefConfig(Curve(
+            xExprStr = "t - sinr(t*2*pi)/2/pi",
+            yExprStr = "1/2/pi - cosr(t*2*pi)/2/pi",
+            tMin = 0f,
+            tMax = 1f,
+            initPx = (0.5 - sin(Math.PI)/2.0/Math.PI).toFloat(),
+            initPy = (1.0/2.0/Math.PI - cos(Math.PI)/2.0/Math.PI).toFloat(),
+            initT = 0f
+        ), "摆线"),
+        DefConfig(Curve(
+            xExprStr = "cosr(2t)*cosr(t)",
+            yExprStr = "cosr(2t)*sinr(t)",
+            tMin = 0f,
+            tMax = (2f*Math.PI).toFloat(),
+            initPx = 0f,
+            initPy = 0f,
+            initT = 0f
+        ), "四叶玫瑰线"),
+        DefConfig(Curve(
+            xExprStr = "secr(t)",
+            yExprStr = "tanr(t)",
+            tMin = 0f,
+            tMax = (2f*Math.PI).toFloat(),
+            initPx = 0f,
+            initPy = 0f,
+            initT = 0f
+        ), "双曲线"),
     )
 }

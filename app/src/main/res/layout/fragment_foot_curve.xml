@@ -18,10 +18,11 @@
         android:paddingHorizontal="12dp"
         app:popUpMenuBottomView="@layout/panel_popup_foot_curve_config"/>
 
-
     <SeekBar
         android:id="@+id/seekBarT"
         android:layout_marginVertical="20dp"
+        android:layout_marginHorizontal="16dp"
+        android:paddingVertical="6dp"
         android:layout_gravity="bottom"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"/>
