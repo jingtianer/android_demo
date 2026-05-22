@@ -127,7 +127,7 @@ class FootCurveView @JvmOverloads constructor(
     // ===================== 画笔 =====================
     private val paintOrigin = Paint().apply {
         color = Color.BLUE
-        strokeWidth = 10f
+        strokeWidth = 3f
         style = Paint.Style.STROKE
         isAntiAlias = true
     }
@@ -388,7 +388,7 @@ class FootCurveView @JvmOverloads constructor(
         }
         Utils.timeCost("onDraw->drawDots") {
             paintPoint.color = 0xFFFF9800.toInt()
-            canvas.drawCircle(pointP[0], pointP[1], 12f, paintPoint)
+            canvas.drawCircle(pointP[0], pointP[1], 8f, paintPoint)
 
             paintPoint.color = Color.RED
             canvas.drawCircle(pointTan[0], pointTan[1], 8f, paintPoint)
