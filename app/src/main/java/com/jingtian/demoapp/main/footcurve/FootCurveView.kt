@@ -147,9 +147,13 @@ class FootCurveView @JvmOverloads constructor(
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
-        if (floor(offsetX) != floor(measuredWidth / 2f) || floor(offsetY) != floor(measuredHeight / 2f)) {
-            offsetX = measuredWidth / 2f
-            offsetY = measuredHeight / 2f
+        if (w <= 0 || h <= 0) {
+            return
+        }
+        if (floor(offsetX) != floor(w / 2f) || floor(offsetY) != floor(h / 2f)) {
+            Log.d("jingtian", "onSizeChanged: redraw, w=$w, h=$h, $measuredWidth, $measuredHeight")
+            offsetX = w / 2f
+            offsetY = h / 2f
             redrawAll()
         }
     }
@@ -157,6 +161,7 @@ class FootCurveView @JvmOverloads constructor(
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec)
         if (floor(offsetX) != floor(measuredWidth / 2f) || floor(offsetY) != floor(measuredHeight / 2f)) {
+            Log.d("jingtian", "onMeasure: redraw, $measuredWidth, $measuredHeight")
             offsetX = measuredWidth / 2f
             offsetY = measuredHeight / 2f
             redrawAll()
@@ -462,59 +467,59 @@ class FootCurveView @JvmOverloads constructor(
 
     inner class CanvasJob<T>(private val tag: String, private val task: ()->T, private val callback: (T)->Unit = {}, private val onError: (Throwable) -> Unit) {
         private var job: Job? = null
-        private var hasSchedule = false
+        private var scheduleJob: Job? = null
+        private var scheduleRedrawJob: Job? = null
         private var result: T? = null
         fun run(redraw: Boolean = false) {
-            job?.cancel()
             val result = result
-            if (redraw && result != null) {
-                Utils.timeCost(tag + "_redraw") {
+            job?.cancel()
+            scheduleJob?.cancel()
+            scheduleRedrawJob?.cancel()
+            job = runTask({
+                if (redraw && result != null) {
+                    result
+                } else {
+                    task.invoke()
+                }
+            }, { result->
+                Utils.timeCost(tag) {
                     callback.invoke(result)
                 }
-                invalidate()
+                this.result = result
                 job = null
-            } else {
-                job = runTask(task, { result->
-                    Utils.timeCost(tag) {
-                        callback.invoke(result)
-                    }
-                    this.result = result
-                    job = null
-                    invalidate()
-                }, onError = {
-                    onError.invoke(it)
-                    job = null
-                    invalidate()
-                })
-            }
+                invalidate()
+            }, onError = {
+                job = null
+                this.result = null
+                onError.invoke(it)
+                invalidate()
+            })
         }
 
         fun schedule() {
-            if (!hasSchedule) {
-                hasSchedule = true
-                runTask({
-                    job?.join()
-                    run()
-                }, callback = {
-                    hasSchedule = false
-                }, onError = {
-                    hasSchedule = false
-                })
-            }
+            scheduleJob?.cancel()
+            scheduleRedrawJob?.cancel()
+            scheduleJob = runTask({
+                job?.join()
+                run()
+            }, callback = {
+                scheduleJob = null
+            }, onError = {
+                scheduleJob = null
+            })
         }
 
         fun scheduleRedraw() {
-            if (!hasSchedule) {
-                hasSchedule = true
-                runTask({
-                    job?.join()
-                    run(true)
-                }, callback = {
-                    hasSchedule = false
-                }, onError = {
-                    hasSchedule = false
-                })
-            }
+            scheduleRedrawJob?.cancel()
+            scheduleRedrawJob = runTask({
+                job?.join()
+                scheduleJob?.join()
+                run(true)
+            }, callback = {
+                scheduleRedrawJob = null
+            }, onError = {
+                scheduleRedrawJob = null
+            })
         }
     }
 }
