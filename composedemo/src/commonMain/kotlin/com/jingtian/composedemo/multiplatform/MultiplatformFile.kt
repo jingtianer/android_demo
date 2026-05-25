@@ -9,27 +9,27 @@ import kotlinx.io.files.Path
 import kotlinx.io.readByteArray
 
 interface MultiplatformFile {
-    val fileName: String?
+    suspend fun fileName(): String?
 
-    val isHidden: Boolean
+    suspend fun isHidden(): Boolean
 
-    val mediaType: FileType
+    suspend fun mediaType(): FileType
 
-    val extension: String
+    suspend fun extension(): String
 
-    val inputStream: RawSource?
+    suspend fun inputStream(): RawSource?
 
-    val fileStoreInputStream: RawSource?
+    suspend fun fileStoreInputStream(): RawSource?
 
-    val videoThumbnail: ImageBitmap?
+    suspend fun videoThumbnail(): ImageBitmap?
 
-    val audioThumbnail: ImageBitmap?
+    suspend fun audioThumbnail(): ImageBitmap?
 
-    val imageRatio: Pair<Int, Int>
+    suspend fun imageRatio(): Pair<Int, Int>
 
-    val file: Path?
+    suspend fun file(): Path?
 
-    val path: String
+    suspend fun path(): String
 
     fun onDelete() {}
 

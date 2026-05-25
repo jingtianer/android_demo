@@ -28,10 +28,13 @@ class RemoteSftpFileImpl(
         }
     }
 
-    private val contentFile: File
-        get() {
-            return fileStore.loadFile(originUri, server)
+    private var contentFile: File? = null
+
+    private suspend fun getContentFile(): File {
+        return contentFile ?: fileStore.loadFile(originUri, server).also {
+            contentFile = it
         }
+    }
 
 
     private fun getOrignExtension(): String {
@@ -42,51 +45,39 @@ class RemoteSftpFileImpl(
         return originUri.lastPathSegment ?: ""
     }
 
-    override val uri: Uri
-        get() = contentFile.toUri()
+    override suspend fun getUri(): Uri = getContentFile().toUri()
 
-    override val fileName: String
-        get() = getOrignFileName()
+    override suspend fun fileName(): String = getOrignFileName()
 
-    override val isHidden: Boolean
-        get() = fileName.startsWith(".")
-                && fileName != "."
-                && fileName != ".."
+    override suspend fun isHidden(): Boolean = fileName().startsWith(".")
+                && fileName() != "."
+                && fileName() != ".."
 
-    override val mediaType: FileType
-        get() = getMediaTypeByExtension(getOrignExtension())
+    override suspend fun mediaType(): FileType = getMediaTypeByExtension(getOrignExtension())
 
-    override val extension: String
-        get() = getOrignExtension()
+    override suspend fun extension(): String = getOrignExtension()
 
-    override val inputStream: RawSource
-        get() = InputStreamRawSource(FileInputStream(contentFile))
+    override suspend fun inputStream(): RawSource = InputStreamRawSource(FileInputStream(getContentFile()))
 
-    override val fileStoreInputStream: RawSource
-        get() = InputStreamRawSource(originUri.toInputStream())
+    override suspend fun fileStoreInputStream(): RawSource = InputStreamRawSource(originUri.toInputStream())
 
-    override val videoThumbnail: ImageBitmap?
-        get() {
-            return getVideoThumbnail(contentFile.toUri())?.asImageBitmap()
+    override suspend fun videoThumbnail(): ImageBitmap? {
+            return getVideoThumbnail(getContentFile().toUri())?.asImageBitmap()
         }
 
-    override val audioThumbnail: ImageBitmap?
-        get() {
-            return getAudioThumbnail(contentFile.toUri())?.asImageBitmap()
+    override suspend fun audioThumbnail(): ImageBitmap? {
+            return getAudioThumbnail(getContentFile().toUri())?.asImageBitmap()
         }
-    override val imageRatio: Pair<Int, Int>
-        get() {
-            return getImageRatio(contentFile.toUri())
+    override suspend fun imageRatio(): Pair<Int, Int> {
+            return getImageRatio(getContentFile().toUri())
         }
-    override val file: Path
-        get() = Path(contentFile.absolutePath)
+    override suspend fun file(): Path = Path(getContentFile().absolutePath)
 
     override fun onDelete() {
         fileStore.delete(originUri)
     }
 
-    override val path: String
-        get() = originUri.path ?: "/"
+    override suspend fun path(): String = originUri.path ?: "/"
 }
 
 private class InputStreamRawSource(

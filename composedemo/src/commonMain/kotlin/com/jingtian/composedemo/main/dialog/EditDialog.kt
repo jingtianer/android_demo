@@ -261,7 +261,7 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
             imageResource = DrawableIcon.DrawableLoadFailed
         }
         if (itemName.isBlank() && uri != null) {
-            itemName = uri.fileName ?: ""
+            itemName = uri.fileName() ?: ""
         }
     }
 
@@ -274,15 +274,15 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
             imageResource = DrawableIcon.DrawableLoadFailed
         }
         if (itemName.isNullOrBlank() && uri != null) {
-            itemName = uri.fileName ?: ""
+            itemName = uri.fileName() ?: ""
         }
     }
 
     val multipleImagePickerLauncher by rememberDocumentPicker { uri: MultiplatformFile? ->
-        uri?.takeIf { !it.isHidden } ?: return@rememberDocumentPicker
-        selectedFileType = uri.mediaType
-        selectedUri = uri
         scope.launch {
+            uri?.takeIf { !it.isHidden() } ?: return@launch
+            selectedFileType = uri.mediaType()
+            selectedUri = uri
             onSelectedUriChange()
         }
     }

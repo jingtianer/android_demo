@@ -22,7 +22,7 @@ import kotlinx.coroutines.withContext
 actual fun CommonWebView(modifier: Modifier, file: MultiplatformFile?, enabled: Boolean, width: Dp?, height: Dp?, viewScope: ICommonWebViewScope.()->Unit) {
     val uri = suspend {
         withContext(Dispatchers.IO) {
-            (file as? MultiplatformFileImpl)?.uri
+            (file as? MultiplatformFileImpl)?.getUri()
         }
     }
     val scope = rememberCoroutineScope()

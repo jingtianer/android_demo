@@ -26,6 +26,9 @@ import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.IvParameterSpec
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.InvocationKind
+import kotlin.contracts.contract
 import kotlin.random.Random
 import kotlin.random.nextULong
 
@@ -39,10 +42,14 @@ abstract class RemoteServer(
     var serverName: String = "新建: ${Random.nextULong()}",
     var serverId: String = "",
 ) {
-    abstract fun deleteFiles(files: List<RemoteSftpFileImpl>)
+    abstract suspend fun deleteFiles(files: List<RemoteSftpFileImpl>)
 }
 
-fun <T> ChannelSftp.use(block: (ChannelSftp)->T): T? {
+@OptIn(ExperimentalContracts::class)
+inline fun <T> ChannelSftp.use(block: (ChannelSftp)->T): T? {
+    contract {
+        callsInPlace(block, InvocationKind.AT_MOST_ONCE)
+    }
     return try {
         block(this)
     } finally {
@@ -177,7 +184,7 @@ class SftpServer : RemoteServer {
         }
     }
 
-    private fun traverseEntry(sftpChannel: ChannelSftp, viewModel: AlbumViewModel, pathSet: Set<String>, root: String, album: Album, fileInfoList: MutableList<Pair<FileInfo, AlbumItem>>) {
+    private suspend fun traverseEntry(sftpChannel: ChannelSftp, viewModel: AlbumViewModel, pathSet: Set<String>, root: String, album: Album, fileInfoList: MutableList<Pair<FileInfo, AlbumItem>>) {
         val ls = sftpChannel.ls(root)
         for (entry in ls) {
             val entry = (entry as? ChannelSftp.LsEntry) ?: continue
@@ -191,22 +198,22 @@ class SftpServer : RemoteServer {
         }
     }
 
-    private fun readFile(sftpChannel: ChannelSftp, viewModel: AlbumViewModel, pathSet: Set<String>, root: String, entry: LsEntry, album: Album, fileInfoList: MutableList<Pair<FileInfo, AlbumItem>>) {
+    private suspend fun readFile(sftpChannel: ChannelSftp, viewModel: AlbumViewModel, pathSet: Set<String>, root: String, entry: LsEntry, album: Album, fileInfoList: MutableList<Pair<FileInfo, AlbumItem>>) {
         val uri = RemoteUriUtils.fromSftpEntry(this, root, entry)
-        if (uri.isHidden || pathSet.contains(uri.path)) {
+        if (uri.isHidden() || pathSet.contains(uri.path())) {
             return
         }
-        val type = uri.mediaType
-        val fileName = uri.fileName
+        val type = uri.mediaType()
+        val fileName = uri.fileName()
         val (fileStorageId, _) = FileStorageUtils.getStorage(type).asyncStore(uri)
         val (width, height) = (-1 to -1)//getFileIntrinsicSize(uri, type)
         val fileInfo = FileInfo(
             storageId = fileStorageId,
             fileType = type,
-            filePath = uri.path,
+            filePath = uri.path(),
             intrinsicWidth = width,
             intrinsicHeight = height,
-            extension = uri.extension
+            extension = uri.extension()
         )
         val albumItem = AlbumItem(itemName = fileName, albumId = album.albumId ?: DataBase.INVALID_ID)
         fileInfoList.add(fileInfo to albumItem)
@@ -268,16 +275,16 @@ class SftpServer : RemoteServer {
         return cipher
     }
 
-    override fun deleteFiles(files: List<RemoteSftpFileImpl>) {
+    override suspend fun deleteFiles(files: List<RemoteSftpFileImpl>) {
         connect { tag, msg ->
             Log.d(tag, "deleteFiles: $msg")
         }?.use { channel->
             files.forEach {
                 runCatching {
-                    channel.rm(it.path)
-                    Log.d("jingtian", "deleteFiles: rm: ${it.path}")
+                    channel.rm(it.path())
+                    Log.d("jingtian", "deleteFiles: rm: ${it.path()}")
                 }.onFailure { t->
-                    Log.e("jingtian", "deleteFiles: rm: ${it.path}, fail:\n $t")
+                    Log.e("jingtian", "deleteFiles: rm: ${it.path()}, fail:\n $t")
                 }
             }
         }

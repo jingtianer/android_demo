@@ -3,6 +3,7 @@ package com.jingtian.composedemo.main.remote
 import android.net.Uri
 import android.util.Log
 import android.widget.Toast
+import androidx.room.concurrent.AtomicBoolean
 import com.jcraft.jsch.SftpProgressMonitor
 import com.jingtian.composedemo.base.app
 import com.jingtian.composedemo.utils.CoroutineUtils
@@ -13,6 +14,11 @@ import com.jingtian.composedemo.utils.getFileCacheStorageRootDir
 import com.jingtian.composedemo.utils.getFileStorageRootDir
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -24,6 +30,7 @@ import java.util.concurrent.RejectedExecutionHandler
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
+import kotlin.coroutines.resume
 
 
 class RemoteFileStore(serverType: ServerType) {
@@ -32,70 +39,98 @@ class RemoteFileStore(serverType: ServerType) {
         storageRoot.ensureDirExist()
     }
 
-    private val locks = ConcurrentHashMap<String, ReentrantLock>()
-    private val executor = ThreadPoolExecutor(16, 16,
-        0L, TimeUnit.MILLISECONDS,
-        LinkedBlockingQueue(), ThreadPoolExecutor.DiscardOldestPolicy()
-    )
+    private val locks = ConcurrentHashMap<String, Semaphore>()
 
-    fun loadFile(originUri: Uri, server: SftpServer): File {
+    suspend fun loadFile(originUri: Uri, server: SftpServer): File {
         val realFile = get(originUri)
-        val task = executor.submit<File> task@{
-//            Log.d("jingtian", "读取文件 等待锁 ${originUri.path}")
-            val tmpFile = getTmp(originUri)
-            val lock = locks.computeIfAbsent(originUri.toString()) { ReentrantLock() }
-            try {
-                lock.lockInterruptibly()
-                val path = originUri.path ?: "/"
+        val tmpFile = getTmp(originUri)
+        val lock = locks.computeIfAbsent(originUri.toString()) { Semaphore(1) }
+        return lock.withPermit {
+            suspendCancellableCoroutine { cancelable->
+                Log.d("jingtian", "start: ${originUri.path}")
+                try {
+                    val path = originUri.path ?: "/"
 //                Log.d("jingtian", "读取文件 获得锁 ${originUri.path}")
-                if (realFile.exists() && realFile.length() > 0 && !tmpFile.exists()) {
-                    if (realFile.isFile) {
-                        return@task realFile
+                    if (realFile.exists() && realFile.length() > 0 && !tmpFile.exists()) {
+                        if (realFile.isFile) {
+                            Log.d("jingtian", "end5: ${originUri.path}")
+                            cancelable.resume(realFile)
+                            return@suspendCancellableCoroutine
+                        }
                     }
-                }
-                if (realFile.exists()) {
-                    if (realFile.isFile) {
-                        realFile.delete()
-                    } else {
-                        realFile.deleteRecursively()
+                    if (realFile.exists()) {
+                        if (realFile.isFile) {
+                            realFile.delete()
+                        } else {
+                            realFile.deleteRecursively()
+                        }
                     }
-                }
-                runCatching {
-                    tmpFile.ensureFileExist { file->
-                        server.connect({ _, msg ->
-                            // Log.d("jingtian", "读取文件 $path $msg")
-                        })?.use { channel ->
+                    runCatching {
+                        tmpFile.ensureFileExist { file->
+                            server.connect({ _, msg ->
+                                 Log.d("jingtian", "读取文件 $path $msg")
+                            })?.use { channel ->
 //                            Log.d("jingtian", "读取文件 $path 开始")
-                            val bos = FileOutputStream(file)
-                            channel.get(path, bos)
-                        } ?: throw RuntimeException("连接失败")
-                    }
-                }.fold(onSuccess = { file->
-                    file.renameTo(realFile)
+                                if (cancelable.isCancelled) {
+                                    Log.d("jingtian", "canceled 1: ${originUri.path}")
+                                    throw InterruptedException()
+                                } else {
+                                    Log.d("jingtian", "start download: ${originUri.path}")
+                                }
+                                val bos = FileOutputStream(file)
+                                bos.use {
+                                    channel.get(path, bos, object : SftpProgressMonitor {
+                                        override fun init(op: Int, src: String?, dest: String?, max: Long) {
+                                        }
+
+                                        override fun count(count: Long): Boolean {
+                                            if (cancelable.isCancelled) {
+                                                Log.d("jingtian", "canceled 0: ${originUri.path}")
+                                                return false
+                                            }
+                                            return true
+                                        }
+
+                                        override fun end() {
+                                        }
+                                    })
+                                    bos.flush()
+                                }
+                            } ?: throw RuntimeException("连接失败")
+                            if (cancelable.isCancelled) {
+                                throw InterruptedException()
+                            }
+                        }
+                    }.fold(onSuccess = { file->
+                        file.renameTo(realFile)
 //                    Log.d("jingtian", "读取文件 $path 完成")
-                }, onFailure = {
+                    }, onFailure = {
 //                    Log.d("jingtian", "读取文件 ${originUri.path} 失败 $it")
-                    return@task tmpFile
-                })
-            } catch (e : Exception) {
-                return@task tmpFile.ensureFileExist {  }
-            } finally {
-                lock.unlock()
+                        Log.d("jingtian", "end3: ${originUri.path}, ${it.message}")
+                        cancelable.resume(tmpFile)
+                        return@suspendCancellableCoroutine
+                    })
+                } catch (e : Exception) {
+                    Log.d("jingtian", "end2: ${originUri.path}")
+                    cancelable.resume(tmpFile.ensureFileExist {  })
+                    return@suspendCancellableCoroutine
+                }
+                Log.d("jingtian", "end1: ${originUri.path}")
+                cancelable.resume(realFile)
+                return@suspendCancellableCoroutine
             }
-            return@task realFile
         }
-        return task.get()
     }
 
     fun delete(originUri: Uri) {
         CoroutineUtils.runIOTask({
-            val lock = locks.computeIfAbsent(originUri.toString()) { ReentrantLock() }
+            val lock = locks.computeIfAbsent(originUri.toString()) { Semaphore(1) }
             try {
-                lock.lockInterruptibly()
+                lock.acquire()
                 get(originUri).delete()
                 getTmp(originUri).delete()
             } finally {
-                lock.unlock()
+                lock.release()
             }
         })
     }

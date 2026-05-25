@@ -99,31 +99,22 @@ class MultiplatformFileImpl(val realFile: File, val realExtension: String) : Mul
     }
 
 
-    override val fileName: String?
-        get() = realFile.name
-    override val isHidden: Boolean
-        get() = realFile.isHidden
-    override val mediaType: FileType
-        get() = when(realFile.extension.lowercase()) {
+    override suspend fun fileName(): String? = realFile.name
+
+    override suspend fun isHidden(): Boolean = realFile.isHidden
+    override suspend fun mediaType(): FileType = when(realFile.extension.lowercase()) {
             in imageExtensions -> FileType.IMAGE
             in videoExtensions -> FileType.VIDEO
             in audioExtensions -> FileType.AUDIO
             in htmlExtensions -> FileType.HTML
             else -> FileType.RegularFile
         }
-    override val inputStream: RawSource?
-        get() = FileInputStream(realFile).asSource()
-    override val videoThumbnail: ImageBitmap?
-        get() = extractVideoFirstFrame(realFile)
-    override val audioThumbnail: ImageBitmap?
-        get() = extractAudioCover(realFile)
-    override val imageRatio: Pair<Int, Int>
-        get() = getImageSize(realFile) ?: (1 to 1)
-    override val fileStoreInputStream: RawSource?
-        get() = ByteArrayInputStream(realFile.absolutePath.toByteArray(StandardCharsets.UTF_8)).asSource()
-    override val file: Path
-        get() = Path(realFile.absolutePath)
-    override val extension: String = realFile.extension
-    override val path: String
-        get() = realFile.path
+    override suspend fun inputStream(): RawSource? = FileInputStream(realFile).asSource()
+    override suspend fun videoThumbnail(): ImageBitmap? = extractVideoFirstFrame(realFile)
+    override suspend fun audioThumbnail(): ImageBitmap? = extractAudioCover(realFile)
+    override suspend fun imageRatio(): Pair<Int, Int> = getImageSize(realFile) ?: (1 to 1)
+    override suspend fun fileStoreInputStream(): RawSource? = ByteArrayInputStream(realFile.absolutePath.toByteArray(StandardCharsets.UTF_8)).asSource()
+    override suspend fun file(): Path = Path(realFile.absolutePath)
+    override suspend fun extension(): String = realFile.extension
+    override suspend fun path(): String = realFile.path
 }

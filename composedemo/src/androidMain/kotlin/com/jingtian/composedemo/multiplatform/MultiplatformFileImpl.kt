@@ -28,7 +28,7 @@ import java.io.InputStream
 import java.nio.file.Files
 import java.nio.file.Paths
 
-open class MultiplatformFileImpl(open val uri: Uri) : MultiplatformFile {
+open class MultiplatformFileImpl(private val uri: Uri) : MultiplatformFile {
     companion object {
         private fun getFileNameFromUri(uri: Uri): String? {
             runCatching {
@@ -204,25 +204,43 @@ open class MultiplatformFileImpl(open val uri: Uri) : MultiplatformFile {
         }
     }
 
-    override val fileName: String? by lazy {
+    open suspend fun getUri(): Uri = uri
+
+    private val fileName: String? by lazy {
         getFileNameFromUri(uri)
     }
 
-    override val isHidden: Boolean by lazy {
+    override suspend fun fileName(): String? {
+        return fileName
+    }
+
+    private val isHidden: Boolean by lazy {
         uri.isHidden()
     }
 
-    override val mediaType: FileType by lazy {
+    override suspend fun isHidden(): Boolean {
+        return isHidden
+    }
+
+    private val mediaType: FileType by lazy {
         getMediaType(uri)
     }
 
-    override val inputStream: RawSource?
+    override suspend fun mediaType(): FileType {
+        return mediaType
+    }
+
+    private val inputStream: RawSource?
         get() {
             val isr = app.contentResolver.openInputStream(uri) ?: return null
             return InputStreamRawSource(isr)
         }
 
-    override val fileStoreInputStream: RawSource?
+    override suspend fun inputStream(): RawSource? {
+        return inputStream
+    }
+
+    private val fileStoreInputStream: RawSource?
         get() {
             val isr = if (BuildKonfig.isRemote) {
                 uri.toInputStream()
@@ -232,28 +250,56 @@ open class MultiplatformFileImpl(open val uri: Uri) : MultiplatformFile {
             return isr.asSource()
         }
 
-    override val videoThumbnail: ImageBitmap?
+    override suspend fun fileStoreInputStream(): RawSource? {
+        return fileStoreInputStream
+    }
+
+    private val videoThumbnail: ImageBitmap?
         get() = getVideoThumbnail(uri)?.asImageBitmap()
 
-    override val audioThumbnail: ImageBitmap?
+    override suspend fun videoThumbnail(): ImageBitmap? {
+        return videoThumbnail
+    }
+
+    private val audioThumbnail: ImageBitmap?
         get() = getAudioThumbnail(uri)?.asImageBitmap()
 
-    override val imageRatio: Pair<Int, Int> by lazy {
+    override suspend fun audioThumbnail(): ImageBitmap? {
+        return audioThumbnail
+    }
+
+    private val imageRatio: Pair<Int, Int> by lazy {
         getImageRatio(uri)
     }
 
-    override val file: kotlinx.io.files.Path?
+    override suspend fun imageRatio(): Pair<Int, Int> {
+        return imageRatio
+    }
+
+    private val file: kotlinx.io.files.Path?
         get() = uri.safeToFile()?.absolutePath?.let { Path(it) }
 
-    override val extension: String by lazy {
+    override suspend fun file(): Path? {
+        return file
+    }
+
+    private val extension: String by lazy {
         fileName?.let { fileName->
             val index = (fileName.lastIndexOf(".") + 1).takeIf { it >= 0 && it < fileName.length } ?: return@let ""
             fileName.substring(index)
         } ?: ""
     }
 
-    override val path: String
+    override suspend fun extension(): String {
+        return extension
+    }
+
+    private val path: String
         get() = fileName ?: "/"
+
+    override suspend fun path(): String {
+        return path
+    }
 
 //    override fun toString(): String {
 //        return "fileName=$fileName, isHidden=$isHidden, mediaType=$mediaType, extension=$extension, file=$file, uri=$uri"

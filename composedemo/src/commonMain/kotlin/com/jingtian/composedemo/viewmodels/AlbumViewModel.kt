@@ -175,18 +175,18 @@ class AlbumViewModel : ViewModel() {
         val albumId = album.albumId ?: return
         val uri = selectedUri
         CoroutineUtils.runIOTask({
-            val mediaType = selectedUri.mediaType
+            val mediaType = selectedUri.mediaType()
             val imageStorage =
                 FileStorageUtils.getStorage(mediaType) ?: return@runIOTask
             val (nextId, _) = imageStorage.asyncStore(uri)
             val (width, height) = getFileIntrinsicSize(uri, mediaType)
             val file = FileInfo(
                 storageId = nextId,
-                filePath = selectedUri.path,
+                filePath = selectedUri.path(),
                 fileType = mediaType,
                 intrinsicWidth = width,
                 intrinsicHeight = height,
-                extension = selectedUri.extension
+                extension = selectedUri.extension()
             )
             val fileId = DataBase.dbImpl.getFileInfoDao().insertFileInfo(file)
             val albumItem = AlbumItem(
@@ -239,7 +239,7 @@ class AlbumViewModel : ViewModel() {
             DataBase.dbImpl.getAlbumItemDao().insertAllAlbumItem(albumItemList)
         }) {
             albumItemListChange.notifyChange()
-            sendMessage("批量导入 ${uri.fileName} 成功!")
+            sendMessage("批量导入 ${uri.fileName()} 成功!")
         }
     }
 
@@ -301,11 +301,11 @@ class AlbumViewModel : ViewModel() {
             val file = FileInfo(
                 id = albumItemRelation.fileInfo?.id,
                 storageId = nextId,
-                filePath = selectedUri.path,
+                filePath = selectedUri.path(),
                 fileType = mediaType,
                 intrinsicWidth = width,
                 intrinsicHeight = height,
-                extension = selectedUri.extension,
+                extension = selectedUri.extension(),
             )
             DataBase.dbImpl.getFileInfoDao().updateFileInfo(file)
             val albumItemId = albumItemRelation.albumItem.itemId ?: DataBase.INVALID_ID

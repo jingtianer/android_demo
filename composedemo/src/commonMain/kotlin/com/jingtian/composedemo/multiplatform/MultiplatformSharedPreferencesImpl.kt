@@ -9,6 +9,7 @@ import com.jingtian.composedemo.utils.getFileStorageRootDir
 import com.jingtian.composedemo.utils.isDirectory
 import com.jingtian.composedemo.utils.mkdirs
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.runBlocking
 import kotlinx.io.buffered
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
@@ -92,25 +93,27 @@ class MultiplatformSharedPreferences<V>(
             }
 
             private fun updateStore() {
-                lock.use {
-                    if (async) {
-                        job?.cancel()
-                        job = CoroutineUtils.runIOTask({
-                            SystemFileSystem.sink(outfile).buffered().use {
-                                it.writeString(json.encodeToString(SharedPreferenceStorage.serializer(kSerializer), storage).apply {
+                runBlocking {
+                    lock.use {
+                        if (async) {
+                            job?.cancel()
+                            job = CoroutineUtils.runIOTask({
+                                SystemFileSystem.sink(outfile).buffered().use {
+                                    it.writeString(json.encodeToString(SharedPreferenceStorage.serializer(kSerializer), storage).apply {
 //                                    println("write: $name, $this")
+                                    })
+                                    it.flush()
+                                }
+                            }, {
+//                            println("updateStore: error $it")
+                            })
+                        } else {
+                            SystemFileSystem.sink(outfile).buffered().use {
+                                it.writeString(json.encodeToString(value).apply {
+//                                println("write: $name, $this")
                                 })
                                 it.flush()
                             }
-                        }, {
-//                            println("updateStore: error $it")
-                        })
-                    } else {
-                        SystemFileSystem.sink(outfile).buffered().use {
-                            it.writeString(json.encodeToString(value).apply {
-//                                println("write: $name, $this")
-                            })
-                            it.flush()
                         }
                     }
                 }

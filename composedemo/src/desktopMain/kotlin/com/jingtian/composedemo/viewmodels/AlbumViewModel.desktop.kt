@@ -32,20 +32,20 @@ private fun realTraverseUri(
         }
     } else {
         val uri = MultiplatformFileImpl(file, file.extension)
-        if (uri.isHidden) {
+        if (uri.isHidden()) {
             return
         }
-        val type = uri.mediaType
-        val fileName = uri.fileName ?: ""
+        val type = uri.mediaType()
+        val fileName = uri.fileName() ?: ""
         val (fileStorageId, _) = FileStorageUtils.getStorage(type).asyncStore(uri)
         val (width, height) = getFileIntrinsicSize(uri, type)
         val fileInfo = FileInfo(
             storageId = fileStorageId,
             fileType = type,
-            filePath = uri.path,
+            filePath = uri.path(),
             intrinsicWidth = width,
             intrinsicHeight = height,
-            extension = uri.extension
+            extension = uri.extension()
         )
         val albumItem = AlbumItem(itemName = fileName, albumId = album.albumId ?: DataBase.INVALID_ID)
         sendMessage("正在导入: ${file.name}")

@@ -108,67 +108,69 @@ fun AddItemDialog(album: Album, totalLabelList: List<String>, albumData: List<Al
     val imageDpSize = imageWidth.dpValue()
     val multipleImagePickerLauncher by rememberDocumentPicker(
         onResult = { uri: MultiplatformFile? ->
-            uri?.takeIf { !it.isHidden } ?: return@rememberDocumentPicker
+            scope.launch {
+                uri?.takeIf { !it.isHidden() } ?: return@launch
 //            println("AddItemDialog: onResult: uri ${uri.file}")
-            when (uri.mediaType) {
-                FileType.IMAGE -> {
-                    BitMapCachePool.toBitMap(
-                        scope,
-                        uri,
-                        maxWidth = imageDpSize.toInt()
-                    ) { _, bitmap ->
-                        pickedImage = bitmap
+                when (uri.mediaType()) {
+                    FileType.IMAGE -> {
+                        BitMapCachePool.toBitMap(
+                            scope,
+                            uri,
+                            maxWidth = imageDpSize.toInt()
+                        ) { _, bitmap ->
+                            pickedImage = bitmap
+                        }
+                    }
+
+                    FileType.VIDEO -> {
+                        FileStorageUtils.getThumbnail(
+                            FileType.VIDEO,
+                            scope,
+                            uri,
+                            maxWidth = imageDpSize.toInt()
+                        ) { bitmap ->
+                            pickedImage = bitmap
+                        }
+                    }
+
+                    FileType.AUDIO -> {
+                        imageResource = DrawableIcon.DrawableMusic
+                        pickedImage = null
+                        FileStorageUtils.getThumbnail(
+                            FileType.AUDIO,
+                            scope,
+                            uri,
+                            maxWidth = imageDpSize.toInt()
+                        ) { bitmap ->
+                            pickedImage = bitmap
+                        }
+                    }
+
+                    FileType.HTML -> {
+                        imageResource = DrawableIcon.DrawableChrome
+                        pickedImage = null
+                        FileStorageUtils.getThumbnail(
+                            FileType.HTML,
+                            scope,
+                            uri,
+                            maxWidth = imageDpSize.toInt()
+                        ) { bitmap ->
+                            pickedImage = bitmap
+                        }
+                    }
+
+                    FileType.RegularFile -> {
+                        imageResource = DrawableIcon.DrawableFile
+                        pickedImage = null
                     }
                 }
-
-                FileType.VIDEO -> {
-                    FileStorageUtils.getThumbnail(
-                        FileType.VIDEO,
-                        scope,
-                        uri,
-                        maxWidth = imageDpSize.toInt()
-                    ) { bitmap ->
-                        pickedImage = bitmap
-                    }
+                if (itemName.isNullOrBlank()) {
+                    itemName = uri.fileName() ?: ""
                 }
-
-                FileType.AUDIO -> {
-                    imageResource = DrawableIcon.DrawableMusic
-                    pickedImage = null
-                    FileStorageUtils.getThumbnail(
-                        FileType.AUDIO,
-                        scope,
-                        uri,
-                        maxWidth = imageDpSize.toInt()
-                    ) { bitmap ->
-                        pickedImage = bitmap
-                    }
+                selectedUri = uri
+                selectedUri?.let { selectedUri ->
+                    selectedFileType = selectedUri.mediaType()
                 }
-
-                FileType.HTML -> {
-                    imageResource = DrawableIcon.DrawableChrome
-                    pickedImage = null
-                    FileStorageUtils.getThumbnail(
-                        FileType.HTML,
-                        scope,
-                        uri,
-                        maxWidth = imageDpSize.toInt()
-                    ) { bitmap ->
-                        pickedImage = bitmap
-                    }
-                }
-
-                FileType.RegularFile -> {
-                    imageResource = DrawableIcon.DrawableFile
-                    pickedImage = null
-                }
-            }
-            if (itemName.isNullOrBlank()) {
-                itemName = uri.fileName ?: ""
-            }
-            selectedUri = uri
-            selectedUri?.let { selectedUri ->
-                selectedFileType = selectedUri.mediaType
             }
         }
     )

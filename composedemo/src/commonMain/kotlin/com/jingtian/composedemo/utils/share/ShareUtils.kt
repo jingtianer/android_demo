@@ -78,7 +78,7 @@ object ShareUtils {
 
     suspend fun importSharedDb(albumViewModel: AlbumViewModel, file: MultiplatformFile) {
         withContext(Dispatchers.IO) {
-            val importedAlbumList = file.inputStream?.buffered()?.readString()?.let { bytes ->
+            val importedAlbumList = file.inputStream()?.buffered()?.readString()?.let { bytes ->
                 json.decodeFromString<List<AlbumRelation>>(bytes).associate { albumRelation ->
                     val albumMap = mutableMapOf<String, AlbumItemRelation>()
                     for(albumItem in albumRelation.albumItemList) {

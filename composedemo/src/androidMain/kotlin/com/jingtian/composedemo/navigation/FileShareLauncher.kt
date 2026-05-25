@@ -37,7 +37,7 @@ class FileShareLauncher(val context: Context) : IFileShareLauncher {
     }
 
     override suspend fun launch(file: MultiplatformFile) {
-        val sharedFile = file.file
+        val sharedFile = file.file()
         val uri = if (sharedFile != null) {
             FileProvider.getUriForFile(
                 app,
@@ -45,7 +45,7 @@ class FileShareLauncher(val context: Context) : IFileShareLauncher {
                 File(sharedFile.toString())
             )
         } else {
-            (file as MultiplatformFileImpl).uri
+            (file as MultiplatformFileImpl).getUri()
         }
         val shareIntent: Intent = Intent().apply {
             action = Intent.ACTION_SEND
@@ -55,9 +55,9 @@ class FileShareLauncher(val context: Context) : IFileShareLauncher {
 
         CoroutineUtils.runIOTask({
             val shareFile: File? = downloadDir?.let { downloadDir->
-                file.fileName?.let { shareFileName->
+                file.fileName()?.let { shareFileName->
                     val shareFile = File(downloadDir, shareFileName)
-                    val bytes = file.inputStream.readAllBytesOrNull() ?: return@let null
+                    val bytes = file.inputStream().readAllBytesOrNull() ?: return@let null
                     shareFile.ensureFile()
                     FileOutputStream(shareFile).use { os->
                         os.write(bytes)

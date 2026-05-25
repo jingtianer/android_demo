@@ -109,7 +109,7 @@ class WebViewActivity: BaseActivity() {
 fun AndroidWebView(modifier: Modifier = Modifier, file: MultiplatformFile?, enabled: Boolean = true, width: Dp? = null, height: Dp? = null, viewScope: CommonWebView.()->Unit = {}) {
     val uri = suspend {
         withContext(Dispatchers.IO) {
-            (file as? MultiplatformFileImpl)?.uri
+            (file as? MultiplatformFileImpl)?.getUri()
         }
     }
     val scope = rememberCoroutineScope()

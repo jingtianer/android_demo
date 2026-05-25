@@ -24,7 +24,7 @@ class DocumentTreePicker(val launcher: ManagedActivityResultLauncher<Uri?, Uri?>
     override fun launch(mimes: MultiplatformFile?) {
         scope.launch(Dispatchers.Main) {
             launcher.launch(withContext(Dispatchers.IO) {
-                (mimes as? MultiplatformFileImpl)?.uri
+                (mimes as? MultiplatformFileImpl)?.getUri()
             })
         }
     }

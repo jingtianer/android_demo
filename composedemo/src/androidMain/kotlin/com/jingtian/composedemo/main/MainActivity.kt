@@ -179,10 +179,10 @@ class MainActivity : BaseActivity() {
     override fun shouldFitSystemBars(): Boolean = false
 }
 
-fun systemFallbackIntent(context: Context, fileName: String, fileInfo: FileInfo): Intent? {
+suspend fun systemFallbackIntent(context: Context, fileName: String, fileInfo: FileInfo): Intent? {
     val mediaType = fileInfo.fileType.mimeType
     val originFileUri = fileInfo.getFileUri()
-    val originFile = originFileUri?.file
+    val originFile = originFileUri?.file()
     val mediaUri: Uri = if (originFile != null) {
         val tmpLinkFile = FileLinkProvider.get(fileName, fileInfo)?.toFile()
         if (tmpLinkFile != null) {
@@ -199,7 +199,7 @@ fun systemFallbackIntent(context: Context, fileName: String, fileInfo: FileInfo)
             )
         }
     } else {
-        (originFileUri as MultiplatformFileImpl?)?.uri
+        (originFileUri as MultiplatformFileImpl?)?.getUri()
     } ?: return null
     return Intent(Intent.ACTION_VIEW).apply {
         // 设置Uri和媒体类型
@@ -213,15 +213,15 @@ fun systemFallbackIntent(context: Context, fileName: String, fileInfo: FileInfo)
     }
 }
 
-fun webIntent(context: Context, fileName: String, fileInfo: FileInfo) : Intent {
+suspend fun webIntent(context: Context, fileName: String, fileInfo: FileInfo) : Intent {
     return Intent(context, WebViewActivity::class.java).apply {
-        putExtra(WebViewActivity.KEY_WEB_URI, (fileInfo.getFileUri() as? MultiplatformFileImpl)?.uri)
+        putExtra(WebViewActivity.KEY_WEB_URI, (fileInfo.getFileUri() as? MultiplatformFileImpl)?.getUri())
         putExtra(WebViewActivity.KEY_STORAGE_ID, fileInfo.storageId)
         putExtra(WebViewActivity.KEY_WEB_URI_EXTENSION, fileInfo.extension ?: "html")
     }
 }
 
-fun playIntent(context: Context, fileName: String, fileInfo: FileInfo): Intent? {
+suspend fun playIntent(context: Context, fileName: String, fileInfo: FileInfo): Intent? {
     val mediaType = fileInfo.fileType
     return when (mediaType) {
         HTML -> {

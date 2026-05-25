@@ -99,8 +99,8 @@ fun DrawerHeader() {
         userAvatarImage = bitmap
     }
     val multipleImagePickerLauncher by rememberImagePicker { uri: MultiplatformFile?->
-        uri?.takeIf { !it.isHidden } ?: return@rememberImagePicker
         scope.launch(Dispatchers.IO) {
+            uri?.takeIf { !it.isHidden() } ?: return@launch
             val imageStorage = FileStorageUtils.getStorage(FileType.IMAGE) ?: return@launch
             val currentUser = UserStorage.userInstance
             val currentImageId =
@@ -113,8 +113,8 @@ fun DrawerHeader() {
             }
             currentUser.userAvatar.storageId = nextId
             currentUser.userAvatar.fileType = FileType.IMAGE
-            currentUser.userAvatar.extension = uri.extension
-            currentUser.userAvatar.filePath = uri.path
+            currentUser.userAvatar.extension = uri.extension()
+            currentUser.userAvatar.filePath = uri.path()
             UserStorage.userInstance = currentUser
             val (_, image) = BitMapCachePool.loadImage(
                 currentUser.userAvatar,

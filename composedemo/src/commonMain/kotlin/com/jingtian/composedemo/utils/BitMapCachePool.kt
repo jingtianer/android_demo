@@ -8,6 +8,7 @@ import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.FileType
 import com.jingtian.composedemo.multiplatform.MultiplatformFile
 import com.jingtian.composedemo.multiplatform.newReentrantLock
+import com.jingtian.composedemo.multiplatform.use
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -18,14 +19,23 @@ import kotlinx.io.RawSource
 import kotlinx.io.buffered
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.InvocationKind
+import kotlin.contracts.contract
 import kotlin.math.max
 
 class ListWithLock<T> {
-    private val lock = newReentrantLock()
-    private val list: MutableList<T> = mutableListOf()
+    val lock = newReentrantLock()
+    val list: MutableList<T> = mutableListOf()
     fun read(): List<T> = list
-    fun <R> write(block: (MutableList<T>) -> R): R = lock.use {
-        block(list)
+    @OptIn(ExperimentalContracts::class)
+    inline fun <R> write(block: (MutableList<T>) -> R): R {
+        contract {
+            callsInPlace(block, InvocationKind.AT_MOST_ONCE)
+        }
+        return lock.use {
+            block(list)
+        }
     }
 }
 
@@ -59,7 +69,7 @@ object BitMapCachePool {
             return null
         }
 
-        fun put(id: Long, scaleFactor: Int = -1, bitmapCreator: () -> ImageBitmap?): ImageBitmap? {
+        suspend fun put(id: Long, scaleFactor: Int = -1, bitmapCreator: suspend () -> ImageBitmap?): ImageBitmap? {
             val queue = getQueue(id)
             return queue.write { list->
                 if (scaleFactor == -1) {
@@ -207,15 +217,15 @@ object BitMapCachePool {
         }
     }
 
-    fun toBitMap(image: MultiplatformFile, maxWidth: Int = -1, maxHeight: Int = -1): Pair<Int, ImageBitmap?> {
-        val scaleFactor = image.inputStream?.use { `is`->
+    suspend fun toBitMap(image: MultiplatformFile, maxWidth: Int = -1, maxHeight: Int = -1): Pair<Int, ImageBitmap?> {
+        val scaleFactor = image.inputStream()?.use { `is`->
             // 第一步：仅解码边界，获取图片原始宽高
             val (outWidth, outHeight) = uriToImageSize(`is`)
             // 第二步：计算缩放比例（避免图片过大导致 OOM）
             calculateScaleFactor(outWidth, outHeight, maxWidth, maxHeight)
         } ?: 1
 //        println("scale factor: $scaleFactor")
-        val bitmap = image.inputStream?.use { `is`->
+        val bitmap = image.inputStream()?.use { `is`->
 //            Log.d("TAG", "loadImage failed: $image, $scaleFactor, $image")
             // 第三步：按缩放比例解码图片
             uriToImageBitmap(`is`, scaleFactor)
@@ -223,11 +233,11 @@ object BitMapCachePool {
         return scaleFactor to bitmap
     }
 
-    fun loadImage(
+    suspend fun loadImage(
         fileInfo: FileInfo,
         maxWidth: Int = -1,
         maxHeight: Int = -1,
-        creator: () -> ImageBitmap?,
+        creator: suspend () -> ImageBitmap?,
     ): Pair<Int, ImageBitmap?> {
         val scaleFactor = if (fileInfo.fileType == FileType.HTML) {
             2
@@ -239,7 +249,7 @@ object BitMapCachePool {
         return scaleFactor to bitmap
     }
 
-    fun loadImage(
+    suspend fun loadImage(
         fileInfo: FileInfo,
         maxWidth: Int = -1,
         maxHeight: Int = -1,
@@ -249,7 +259,7 @@ object BitMapCachePool {
         val scaleFactor =  if (fileInfo.intrinsicWidth > 0 && fileInfo.intrinsicHeight > 0) {
             calculateScaleFactor(fileInfo.intrinsicWidth, fileInfo.intrinsicHeight, maxWidth, maxHeight)
         } else {
-            image.inputStream?.use { `is`->
+            image.inputStream()?.use { `is`->
                 // 第一步：仅解码边界，获取图片原始宽高
                 val (outWidth, outHeight) = uriToImageSize(`is`)
                 // 第二步：计算缩放比例（避免图片过大导致 OOM）
@@ -258,7 +268,7 @@ object BitMapCachePool {
         }
 //        println("scale factor: $scaleFactor")
         val bitmap = getBitMapCachePool(fileInfo.fileType).put(id, scaleFactor) {
-            val `is` = fileInfo.getFileUri()?.inputStream ?: return@put null
+            val `is` = fileInfo.getFileUri()?.inputStream() ?: return@put null
             `is`.use { `is`->
                 uriToImageBitmap(`is`, scaleFactor)
             }

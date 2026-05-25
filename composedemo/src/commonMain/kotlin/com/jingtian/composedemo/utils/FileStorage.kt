@@ -9,7 +9,7 @@ import com.jingtian.composedemo.multiplatform.WeakRef
 import com.jingtian.composedemo.multiplatform.getLongStorage
 import com.jingtian.composedemo.multiplatform.getMultiplatformFileFactory
 import com.jingtian.composedemo.multiplatform.newReentrantLock
-import com.jingtian.composedemo.utils.FileStorageUtils.extension
+import com.jingtian.composedemo.multiplatform.use
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -54,10 +54,6 @@ object FileStorageUtils {
                 FileStorage(fileType)
             }
         }
-    }
-
-    fun MultiplatformFile.extension(): String {
-        return this.extension
     }
 
     class FileStorage(val fileType: FileType) {
@@ -115,13 +111,13 @@ object FileStorageUtils {
             return id to job
         }
 
-        private fun doStore(uri: MultiplatformFile, id: Long) {
+        private suspend fun doStore(uri: MultiplatformFile, id: Long) {
             val storageFile = getStoreFile(id)
             ensureFile(storageFile)
             if (BuildKonfig.isIOS) {
                 storeIos(uri, storageFile, id)
             } else {
-                val bytes = uri.fileStoreInputStream!!
+                val bytes = uri.fileStoreInputStream()!!
                 innerStoreImage(id, bytes, storageFile, uri.extension())
             }
             uri.onStoreFinish()
@@ -142,7 +138,7 @@ object FileStorageUtils {
             }
         }
 
-        fun store(uri: MultiplatformFile, oldId: Long = -1): Long {
+        suspend fun store(uri: MultiplatformFile, oldId: Long = -1): Long {
             val id = allocateId(uri, oldId)
             runCatching {
                 doStore(uri, id)
@@ -158,13 +154,13 @@ object FileStorageUtils {
             return id to job
         }
 
-        private fun storeIos(uri: MultiplatformFile, storageFile: Path, id: Long) {
-            val realFile = getIosRealFileStoreFile(id, uri.fileName ?: "real")
+        private suspend fun storeIos(uri: MultiplatformFile, storageFile: Path, id: Long) {
+            val realFile = getIosRealFileStoreFile(id, uri.fileName() ?: "real")
             val bytes = realFile.relativeTo(getFileStorageRootDir()).toString().encodeToByteArray()
             val buffer = Buffer()
             buffer.write(bytes, 0, bytes.size)
             innerStoreImage(id, buffer, storageFile, uri.extension())
-            uri.inputStream?.use { `is`->
+            uri.inputStream()?.use { `is`->
                 `is`.copyTo(realFile)
             }
         }
@@ -220,10 +216,10 @@ object FileStorageUtils {
         }
     }
 
-    private fun getThumbnailByType(fileType: FileType, uri: MultiplatformFile): ImageBitmap? {
+    private suspend fun getThumbnailByType(fileType: FileType, uri: MultiplatformFile): ImageBitmap? {
         return when (fileType) {
-            FileType.VIDEO -> uri.videoThumbnail
-            FileType.AUDIO -> uri.audioThumbnail
+            FileType.VIDEO -> uri.videoThumbnail()
+            FileType.AUDIO -> uri.audioThumbnail()
             FileType.HTML -> null
             FileType.RegularFile -> null
             FileType.IMAGE -> null
@@ -260,7 +256,7 @@ object FileStorageUtils {
         }
     }
 
-    fun getThumbnail(
+    suspend fun getThumbnail(
         fileInfo: FileInfo,
         coroutineScope: CoroutineScope,
         videoUri: MultiplatformFile,
@@ -282,17 +278,17 @@ object FileStorageUtils {
         }
     }
 
-    fun getFileIntrinsicSize(uri: MultiplatformFile, mediaType: FileType) = when(mediaType) {
+    suspend fun getFileIntrinsicSize(uri: MultiplatformFile, mediaType: FileType) = when(mediaType) {
         FileType.IMAGE -> {
-            uri.imageRatio
+            uri.imageRatio()
         }
         FileType.VIDEO -> {
-            uri.videoThumbnail?.let {
+            uri.videoThumbnail()?.let {
                 it.width to it.height
             } ?: (-1 to -1)
         }
         FileType.AUDIO -> {
-            uri.audioThumbnail?.let {
+            uri.audioThumbnail()?.let {
                 it.width to it.height
             } ?: (-1 to -1)
         }
