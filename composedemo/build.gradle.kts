@@ -1,6 +1,7 @@
 import com.codingfeline.buildkonfig.compiler.FieldSpec
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import java.util.Properties
+import kotlin.math.min
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)

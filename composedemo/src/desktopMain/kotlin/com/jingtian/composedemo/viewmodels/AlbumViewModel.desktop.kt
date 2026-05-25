@@ -16,7 +16,7 @@ actual suspend fun traverseUri(
     fileInfoList: MutableList<Pair<FileInfo, AlbumItem>>,
     sendMessage: (String) -> Unit
 ) {
-    realTraverseUri(album, uri.file ?: return, fileInfoList, sendMessage)
+    realTraverseUri(album, (uri as? MultiplatformFileImpl)?.realFile ?: return, fileInfoList, sendMessage)
 }
 
 private fun realTraverseUri(

@@ -5,7 +5,6 @@ import kotlinx.io.buffered
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
 import java.io.File
-import java.io.FileInputStream
 import java.nio.charset.StandardCharsets
 
 actual fun getMultiplatformFileFactory() : IMultiplatformFileFactory {

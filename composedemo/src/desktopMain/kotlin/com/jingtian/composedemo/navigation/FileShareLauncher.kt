@@ -4,13 +4,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import com.jingtian.composedemo.multiplatform.MultiplatformFile
+import com.jingtian.composedemo.multiplatform.MultiplatformFileImpl
 import java.awt.FileDialog
 import java.io.File
 
 
 class FileShareLauncher : IFileShareLauncher {
     override suspend fun launch(file: MultiplatformFile) {
-        val file = file.file ?: return
+        val file = (file as? MultiplatformFileImpl)?.realFile ?: return
         val window = getComposeWindow() ?: return
         FileDialog(window, "保存文件", FileDialog.SAVE).apply {
             this.file = file.absolutePath

@@ -7,6 +7,7 @@ import androidx.compose.runtime.remember
 import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.FileType
 import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
+import com.jingtian.composedemo.multiplatform.MultiplatformFileImpl
 import com.jingtian.composedemo.utils.globalWorkDir
 import java.awt.Desktop
 import java.io.File
@@ -36,14 +37,13 @@ class AlbumItemLauncher : IAlbumItemLauncher {
 
         fun FileInfo.browse(fileName: String) {
             runCatching {
-                Desktop.getDesktop().browse(this.getFileUri()?.file?.toURI() ?: return)
+                Desktop.getDesktop().browse((this.getFileUri() as? MultiplatformFileImpl)?.realFile?.toURI() ?: return)
             }
         }
     }
     private fun openUrl(fileName: String, file: FileInfo) {
         runCatching {
-            val f = file.getFileUri()?.file ?: return
-            var path = f.toPath()
+            var path = (file.getFileUri() as? MultiplatformFileImpl)?.realFile?.toPath() ?: return@runCatching
             var depth = 0
             while (path.exists() && Files.isSymbolicLink(path) && depth <= 6) {
                 path = Files.readSymbolicLink(path)
@@ -56,9 +56,9 @@ class AlbumItemLauncher : IAlbumItemLauncher {
     private fun openFile(fileName: String, file: FileInfo) {
         runCatching {
             if (file.fileType == FileType.RegularFile) {
-                Desktop.getDesktop().browseFileDirectory(file.getFileUri()?.file ?: return@runCatching)
+                Desktop.getDesktop().browseFileDirectory((file.getFileUri() as? MultiplatformFileImpl)?.realFile ?: return@runCatching)
             } else {
-                val f = file.getFileUri()?.file ?: return
+                val f = (file.getFileUri() as? MultiplatformFileImpl)?.realFile ?: return
                 var path = f.toPath()
                 var depth = 0
                 while (path.exists() && Files.isSymbolicLink(path) && depth <= 6) {
