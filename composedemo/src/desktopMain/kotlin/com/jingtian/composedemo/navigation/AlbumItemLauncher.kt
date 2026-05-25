@@ -35,13 +35,13 @@ class AlbumItemLauncher : IAlbumItemLauncher {
 //            return originalFile.toPath()
 //        }
 
-        fun FileInfo.browse(fileName: String) {
+        suspend fun FileInfo.browse(fileName: String) {
             runCatching {
                 Desktop.getDesktop().browse((this.getFileUri() as? MultiplatformFileImpl)?.realFile?.toURI() ?: return)
             }
         }
     }
-    private fun openUrl(fileName: String, file: FileInfo) {
+    private suspend fun openUrl(fileName: String, file: FileInfo) {
         runCatching {
             var path = (file.getFileUri() as? MultiplatformFileImpl)?.realFile?.toPath() ?: return@runCatching
             var depth = 0
@@ -53,7 +53,7 @@ class AlbumItemLauncher : IAlbumItemLauncher {
         }
     }
 
-    private fun openFile(fileName: String, file: FileInfo) {
+    private suspend fun openFile(fileName: String, file: FileInfo) {
         runCatching {
             if (file.fileType == FileType.RegularFile) {
                 Desktop.getDesktop().browseFileDirectory((file.getFileUri() as? MultiplatformFileImpl)?.realFile ?: return@runCatching)
