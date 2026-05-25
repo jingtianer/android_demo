@@ -17,6 +17,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.hypot
@@ -407,7 +408,7 @@ class FootCurveView @JvmOverloads constructor(
         val originScreenY = offsetY
 
         fun Float.print(): String {
-            return if (this < 0.01 || this > 1e4) {
+            return if (abs(this) < 0.01 || abs(this) > 1e4) {
                 String.format("%.2e", this)
             } else {
                 String.format("%.3f", this)
