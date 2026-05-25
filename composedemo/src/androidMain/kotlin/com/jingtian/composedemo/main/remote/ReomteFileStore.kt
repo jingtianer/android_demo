@@ -42,82 +42,90 @@ class RemoteFileStore(serverType: ServerType) {
     private val locks = ConcurrentHashMap<String, Semaphore>()
 
     suspend fun loadFile(originUri: Uri, server: SftpServer): File {
-        val realFile = get(originUri)
-        val tmpFile = getTmp(originUri)
-        val lock = locks.computeIfAbsent(originUri.toString()) { Semaphore(1) }
-        return lock.withPermit {
-            suspendCancellableCoroutine { cancelable->
-                Log.d("jingtian", "start: ${originUri.path}")
-                try {
-                    val path = originUri.path ?: "/"
+        return withContext(Dispatchers.IO) {
+            val realFile = get(originUri)
+            val tmpFile = getTmp(originUri)
+            val lock = locks.computeIfAbsent(originUri.toString()) { Semaphore(1) }
+            return@withContext lock.withPermit {
+                suspendCancellableCoroutine { cancelable->
+//                    Log.d("jingtian", "start: ${originUri.path}")
+                    try {
+                        val path = originUri.path ?: "/"
 //                Log.d("jingtian", "读取文件 获得锁 ${originUri.path}")
-                    if (realFile.exists() && realFile.length() > 0 && !tmpFile.exists()) {
-                        if (realFile.isFile) {
-                            Log.d("jingtian", "end5: ${originUri.path}")
-                            cancelable.resume(realFile)
-                            return@suspendCancellableCoroutine
-                        }
-                    }
-                    if (realFile.exists()) {
-                        if (realFile.isFile) {
-                            realFile.delete()
-                        } else {
-                            realFile.deleteRecursively()
-                        }
-                    }
-                    runCatching {
-                        tmpFile.ensureFileExist { file->
-                            server.connect({ _, msg ->
-                                 Log.d("jingtian", "读取文件 $path $msg")
-                            })?.use { channel ->
-//                            Log.d("jingtian", "读取文件 $path 开始")
-                                if (cancelable.isCancelled) {
-                                    Log.d("jingtian", "canceled 1: ${originUri.path}")
-                                    throw InterruptedException()
-                                } else {
-                                    Log.d("jingtian", "start download: ${originUri.path}")
-                                }
-                                val bos = FileOutputStream(file)
-                                bos.use {
-                                    channel.get(path, bos, object : SftpProgressMonitor {
-                                        override fun init(op: Int, src: String?, dest: String?, max: Long) {
-                                        }
-
-                                        override fun count(count: Long): Boolean {
-                                            if (cancelable.isCancelled) {
-                                                Log.d("jingtian", "canceled 0: ${originUri.path}")
-                                                return false
-                                            }
-                                            return true
-                                        }
-
-                                        override fun end() {
-                                        }
-                                    })
-                                    bos.flush()
-                                }
-                            } ?: throw RuntimeException("连接失败")
-                            if (cancelable.isCancelled) {
-                                throw InterruptedException()
+                        if (realFile.exists() && realFile.length() > 0 && !tmpFile.exists()) {
+                            if (realFile.isFile) {
+//                                Log.d("jingtian", "end5: ${originUri.path}")
+                                cancelable.resume(realFile)
+                                return@suspendCancellableCoroutine
                             }
                         }
-                    }.fold(onSuccess = { file->
-                        file.renameTo(realFile)
+                        if (realFile.exists()) {
+                            if (realFile.isFile) {
+                                realFile.delete()
+                            } else {
+                                realFile.deleteRecursively()
+                            }
+                        }
+                        if (cancelable.isCancelled) {
+//                            Log.d("jingtian", "canceled 2: ${originUri.path}")
+                            throw InterruptedException()
+                        } else {
+//                            Log.d("jingtian", "start download: ${originUri.path}")
+                        }
+                        runCatching {
+                            tmpFile.ensureFileExist { file->
+                                server.connect({ _, msg ->
+//                                    Log.d("jingtian", "读取文件 $path $msg")
+                                })?.use { channel ->
+//                                    Log.d("jingtian", "读取文件 $path 开始")
+                                    if (cancelable.isCancelled) {
+//                                        Log.d("jingtian", "canceled 1: ${originUri.path}")
+                                        throw InterruptedException()
+                                    } else {
+//                                        Log.d("jingtian", "start download: ${originUri.path}")
+                                    }
+                                    val bos = FileOutputStream(file)
+                                    bos.use {
+                                        channel.get(path, bos, object : SftpProgressMonitor {
+                                            override fun init(op: Int, src: String?, dest: String?, max: Long) {
+                                            }
+
+                                            override fun count(count: Long): Boolean {
+                                                if (cancelable.isCancelled) {
+//                                                    Log.d("jingtian", "canceled 0: ${originUri.path}")
+                                                    return false
+                                                }
+                                                return true
+                                            }
+
+                                            override fun end() {
+                                            }
+                                        })
+                                        bos.flush()
+                                    }
+                                } ?: throw RuntimeException("连接失败")
+                                if (cancelable.isCancelled) {
+                                    throw InterruptedException()
+                                }
+                            }
+                        }.fold(onSuccess = { file->
+                            file.renameTo(realFile)
 //                    Log.d("jingtian", "读取文件 $path 完成")
-                    }, onFailure = {
+                        }, onFailure = {
 //                    Log.d("jingtian", "读取文件 ${originUri.path} 失败 $it")
-                        Log.d("jingtian", "end3: ${originUri.path}, ${it.message}")
-                        cancelable.resume(tmpFile)
+//                            Log.d("jingtian", "end3: ${originUri.path}, ${it.message}")
+                            cancelable.resume(tmpFile)
+                            return@suspendCancellableCoroutine
+                        })
+                    } catch (e : Exception) {
+//                        Log.d("jingtian", "end2: ${originUri.path}")
+                        cancelable.resume(tmpFile.ensureFileExist {  })
                         return@suspendCancellableCoroutine
-                    })
-                } catch (e : Exception) {
-                    Log.d("jingtian", "end2: ${originUri.path}")
-                    cancelable.resume(tmpFile.ensureFileExist {  })
+                    }
+//                    Log.d("jingtian", "end1: ${originUri.path}")
+                    cancelable.resume(realFile)
                     return@suspendCancellableCoroutine
                 }
-                Log.d("jingtian", "end1: ${originUri.path}")
-                cancelable.resume(realFile)
-                return@suspendCancellableCoroutine
             }
         }
     }

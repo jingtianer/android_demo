@@ -96,18 +96,18 @@ private fun RowScope.DeleteRemoteFileFunctionView(platformExtra: GalleryStateHol
                             .map { RemoteUriUtils.serverTypeAndId(it) to it }
                             .groupBy { it.first?.first }
                         for (serverType in groupedFiles.keys) {
-                            Log.d("jingtian", "remote deleteFiles: serverType=$serverType")
+//                            Log.d("jingtian", "remote deleteFiles: serverType=$serverType")
                             serverType ?: continue
                             val groupByServerId = groupedFiles[serverType]?.groupBy { it.first?.second } ?: continue
                             for (serverId in groupByServerId.keys) {
-                                Log.d("jingtian", "remote deleteFiles: serverId=$serverId")
+//                                Log.d("jingtian", "remote deleteFiles: serverId=$serverId")
                                 serverId ?: continue
                                 ServerStorage.getStorage<RemoteServer>(serverType).getServer(serverId)?.deleteFiles(groupByServerId[serverId]?.map { it.second } ?: listOf())
                             }
                         }
                         viewModel.deleteItems(currentSelectedItem.values)
                     }, onFailure = { t->
-                        Log.d("jingtian", "remote err=$t")
+//                        Log.d("jingtian", "remote err=$t")
                     })
                     showDialog = false
                 }, onNegative = {

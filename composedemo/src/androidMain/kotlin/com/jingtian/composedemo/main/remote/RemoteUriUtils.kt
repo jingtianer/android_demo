@@ -28,12 +28,8 @@ class RemoteSftpFileImpl(
         }
     }
 
-    private var contentFile: File? = null
-
     private suspend fun getContentFile(): File {
-        return contentFile ?: fileStore.loadFile(originUri, server).also {
-            contentFile = it
-        }
+        return fileStore.loadFile(originUri, server)
     }
 
 
@@ -134,7 +130,7 @@ object RemoteUriUtils {
 
     fun serverTypeAndId(file: RemoteSftpFileImpl): Pair<ServerType, String>? {
         val uri = file.originUri
-        Log.d("jingtian", "serverTypeAndId: uri=$uri")
+//        Log.d("jingtian", "serverTypeAndId: uri=$uri")
         val schema = uri.scheme ?: return null
         val serverId = uri.authority ?: return null
         return when(schema) {

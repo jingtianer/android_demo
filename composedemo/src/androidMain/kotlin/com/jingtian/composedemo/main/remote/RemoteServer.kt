@@ -169,7 +169,7 @@ class SftpServer : RemoteServer {
         withContext(Dispatchers.IO) {
             val sftpChannel = connect { tag, msg ->
                 viewModel.sendMessage("$tag: $msg")
-                 Log.d(tag, msg)
+//                 Log.d(tag, msg)
             } ?: return@withContext
             val pathSet = DataBase.dbImpl.getAlbumItemDao().getAllAlbumItemWithExtra(album.albumId ?: return@withContext).map { it.fileInfo.filePath }.toSet()
             runCatching {
@@ -277,14 +277,14 @@ class SftpServer : RemoteServer {
 
     override suspend fun deleteFiles(files: List<RemoteSftpFileImpl>) {
         connect { tag, msg ->
-            Log.d(tag, "deleteFiles: $msg")
+//            Log.d(tag, "deleteFiles: $msg")
         }?.use { channel->
             files.forEach {
                 runCatching {
                     channel.rm(it.path())
-                    Log.d("jingtian", "deleteFiles: rm: ${it.path()}")
+//                    Log.d("jingtian", "deleteFiles: rm: ${it.path()}")
                 }.onFailure { t->
-                    Log.e("jingtian", "deleteFiles: rm: ${it.path()}, fail:\n $t")
+//                    Log.e("jingtian", "deleteFiles: rm: ${it.path()}, fail:\n $t")
                 }
             }
         }
