@@ -22,7 +22,7 @@ class FileInfo(
     var intrinsicHeight: Int = -1,
     var extension: String? = null,
 ) {
-    fun getFileUri(): MultiplatformFile? {
+    suspend fun getFileUri(): MultiplatformFile? {
         return FileStorageUtils.getStorage(fileType).get(storageId, this)
     }
 }

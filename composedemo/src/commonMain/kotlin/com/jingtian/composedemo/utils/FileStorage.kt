@@ -48,7 +48,7 @@ object FileStorageUtils {
 
     private val lock = newReentrantLock()
 
-    fun getStorage(fileType: FileType): FileStorage {
+    suspend fun getStorage(fileType: FileType): FileStorage {
         return lock.use {
             storage.getOrPut(fileType) {
                 FileStorage(fileType)
@@ -103,7 +103,7 @@ object FileStorageUtils {
             }
         }
 
-        fun asyncStore(oldId: Long, uri: MultiplatformFile): Pair<Long, Job> {
+        suspend fun asyncStore(oldId: Long, uri: MultiplatformFile): Pair<Long, Job> {
             val id = allocateId(uri, oldId)
             val job = CoroutineUtils.runIOTask({
                 doStore(uri, id)
@@ -123,7 +123,7 @@ object FileStorageUtils {
             uri.onStoreFinish()
         }
 
-        private fun allocateId(uri: MultiplatformFile, oldId: Long = -1): Long {
+        private suspend fun allocateId(uri: MultiplatformFile, oldId: Long = -1): Long {
             return lock.use {
                 val id = if (oldId >= this@FileStorage.id || oldId < 0) {
                     this@FileStorage.id++
@@ -146,7 +146,7 @@ object FileStorageUtils {
             return id
         }
 
-        fun asyncStore(uri: MultiplatformFile): Pair<Long, Job> {
+        suspend fun asyncStore(uri: MultiplatformFile): Pair<Long, Job> {
             val id = allocateId(uri)
             val job = CoroutineUtils.runIOTask({
                 doStore(uri, id)
@@ -176,7 +176,7 @@ object FileStorageUtils {
             storageFile.createNewFile()
         }
 
-        private fun getStoreFile(id: Long): Path {
+        private suspend fun getStoreFile(id: Long): Path {
             val storeDir = Path(getFileStorageRootDir(), rankImageStoreDir)
             lock.use {
                 if (!storeDir.exists()) {
@@ -189,7 +189,7 @@ object FileStorageUtils {
             return Path(storeDir, rankImagePrefix(id))
         }
 
-        private fun getIosRealFileStoreFile(id: Long, fileName: String): Path {
+        private suspend fun getIosRealFileStoreFile(id: Long, fileName: String): Path {
             val storeDir = Path(getFileStorageRootDir(), rankImageStoreDir)
             lock.use {
                 if (!storeDir.exists()) {
@@ -202,7 +202,7 @@ object FileStorageUtils {
             return Path(storeDir, rankImagePrefix(id) + "_${fileName}")
         }
 
-        private fun innerStoreImage(
+        private suspend fun innerStoreImage(
             id: Long,
             input: RawSource,
             storageFile: Path,

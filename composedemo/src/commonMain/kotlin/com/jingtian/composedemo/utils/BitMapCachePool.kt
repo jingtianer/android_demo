@@ -12,6 +12,9 @@ import com.jingtian.composedemo.multiplatform.use
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.InternalCoroutinesApi
+import kotlinx.coroutines.internal.SynchronizedObject
+import kotlinx.coroutines.internal.synchronized
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.io.RawSink
@@ -29,7 +32,7 @@ class ListWithLock<T> {
     val list: MutableList<T> = mutableListOf()
     fun read(): List<T> = list
     @OptIn(ExperimentalContracts::class)
-    inline fun <R> write(block: (MutableList<T>) -> R): R {
+    suspend inline fun <R> write(block: (MutableList<T>) -> R): R {
         contract {
             callsInPlace(block, InvocationKind.AT_MOST_ONCE)
         }
@@ -43,7 +46,7 @@ object BitMapCachePool {
     private val overallImagePool: MutableMap<FileType, BitMapCache> = mutableMapOf()
     private val lock = newReentrantLock()
 
-    private fun getBitMapCachePool(fileType: FileType): BitMapCache {
+    private suspend fun getBitMapCachePool(fileType: FileType): BitMapCache {
         return lock.use {
             overallImagePool.getOrPut(fileType) {
                 BitMapCache(fileType)
@@ -54,7 +57,7 @@ object BitMapCachePool {
         private val imagePool: MutableMap<Long, WeakRef<ListWithLock<Pair<Int, ImageBitmap>>>> = mutableMapOf()
         private val lock = newReentrantLock()
 
-        private fun getQueue(id: Long): ListWithLock<Pair<Int, ImageBitmap>> {
+        private suspend fun getQueue(id: Long): ListWithLock<Pair<Int, ImageBitmap>> {
             return lock.use {
                 imagePool.getOrPutRef(id) {
                     ListWithLock()
@@ -134,7 +137,7 @@ object BitMapCachePool {
             }
         }
 
-        fun clear(id: Long) {
+        suspend fun clear(id: Long) {
             val queue = getQueue(id)
             queue.write {
                 it.clear()
@@ -183,7 +186,7 @@ object BitMapCachePool {
         return Path(getCacheStoreRoot(fileType), "bitmap_cache/bitmap_${fileType}/${storageId}")
     }
 
-    fun invalid(id: Long, fileType: FileType) {
+    suspend fun invalid(id: Long, fileType: FileType) {
         getBitMapCachePool(fileType).clear(id)
     }
 

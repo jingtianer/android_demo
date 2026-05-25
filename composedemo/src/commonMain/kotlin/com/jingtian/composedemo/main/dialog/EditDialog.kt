@@ -85,7 +85,7 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
         mutableStateMapOf(*albumItemRelation.labelInfos.map { it.label to it.label }.toTypedArray())
     }
 
-    var selectedUri by remember { mutableStateOf(albumItemRelation.fileInfo?.getFileUri()) }
+    var selectedUri by remember { mutableStateOf<MultiplatformFile?>(null) }
     var selectedFileType by remember { mutableStateOf(albumItemRelation.fileInfo?.fileType) }
     val scope = rememberCoroutineScope()
     var imageResource by remember { mutableStateOf(DrawableIcon.DrawableUploadToCloud) }
@@ -266,6 +266,7 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
     }
 
     LaunchedEffect(Unit) {
+        selectedUri = albumItemRelation.fileInfo?.getFileUri()
         val uri = selectedUri
         val fileType = selectedFileType
         if (uri != null && fileType != null) {

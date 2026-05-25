@@ -254,7 +254,7 @@ class AlbumViewModel : ViewModel() {
         })
     }
 
-    fun updateItem(
+    suspend fun updateItem(
         albumItemRelation: AlbumItemRelation,
         selectedUri: MultiplatformFile,
         selectedFileType: FileType,
