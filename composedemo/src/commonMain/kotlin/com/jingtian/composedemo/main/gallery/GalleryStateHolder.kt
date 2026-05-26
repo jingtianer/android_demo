@@ -86,7 +86,7 @@ class GalleryStateHolder(val album: IndexedValue<Album>, val albumList: List<Alb
             val filteredList = mutableListOf<AlbumItemRelation>()
             for (item in itemList) {
                 val labelCheck = labelFilterCheckedInfo.isNullOrEmpty() || item.labelInfos.map { it.label }.toSet().let {
-                    if (filterConfig.value.labelOr) {
+                    if (filterConfig.value.labelOr.value) {
                         it.intersect(labelFilterCheckedInfo.keys).isNotEmpty()
                     } else {
                         logD("updateFilterList") {

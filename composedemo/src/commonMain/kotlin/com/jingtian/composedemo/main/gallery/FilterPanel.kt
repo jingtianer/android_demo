@@ -1,5 +1,7 @@
 package com.jingtian.composedemo.main.gallery
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -10,25 +12,31 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.staggeredgrid.LazyHorizontalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconToggleButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -40,10 +48,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.jingtian.composedemo.base.AppThemeBasicTextField
 import com.jingtian.composedemo.base.AppThemeText
+import com.jingtian.composedemo.base.resources.DrawableIcon
+import com.jingtian.composedemo.base.resources.getPainter
+import com.jingtian.composedemo.multiplatform.logD
 import com.jingtian.composedemo.ui.theme.LocalAppPalette
 import com.jingtian.composedemo.ui.theme.LocalAppUIConstants
 import com.jingtian.composedemo.ui.theme.goldenRatio
+import com.jingtian.composedemo.utils.splitBy
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
 import com.jingtian.composedemo.viewmodels.AlbumViewModel.Companion.notifyChange
 import kotlinx.coroutines.Dispatchers
@@ -53,8 +66,58 @@ import kotlin.math.sqrt
 
 private val checkButtonText = listOf("or", "and")
 
-data class FilterConfig(val labelOr: Boolean = true) {
-    val labelChecked: Int get() = if (labelOr) 0 else 1
+class FilterConfig(
+    val labelOr: MutableState<Boolean> = mutableStateOf(true),
+    val isInSearch: MutableState<Boolean> = mutableStateOf(false)
+) {
+    val labelChecked: Int get() = if (labelOr.value) 0 else 1
+    val searchWord: MutableState<String> = mutableStateOf("")
+
+    val searchWordList = mutableStateListOf<String>()
+
+    suspend fun updateSearchWord(searchWord: String, labelList: List<String>) {
+        this.searchWord.value = searchWord
+        val searchWordList = withContext(Dispatchers.Default) {
+            val splitSearchWord = searchWord.splitBy { it.isWhitespace() }
+            labelList.map { label ->
+                label to splitSearchWord.map { subWord ->
+                    stringSim(subWord, label)
+                }.withIndex().sumOf { it.value * (splitSearchWord.size - it.index) }
+            }
+                .sortedByDescending { it.second }.map { it.first }
+        }
+        logD("updateSearchWord") {
+            "searchWordList=${searchWordList.toTypedArray().contentDeepToString()}"
+        }
+        this.searchWordList.clear()
+        this.searchWordList.addAll(searchWordList)
+    }
+
+    private fun stringSim(a: String, b: String): Double {
+        if (a.isEmpty() || b.isEmpty()) {
+            return 0.0
+        }
+        val aCharMap = a.charMap()
+        val bCharMap = b.charMap()
+        val keys = aCharMap.keys + bCharMap.keys
+        var aSquareSum = 0
+        var bSquareSum = 0
+        var abCrossSum = 0
+        for (c in keys) {
+            aSquareSum += aCharMap.getOrElse(c) { 0 } * aCharMap.getOrElse(c) { 0 }
+            bSquareSum += bCharMap.getOrElse(c) { 0 } * bCharMap.getOrElse(c) { 0 }
+            abCrossSum += aCharMap.getOrElse(c) { 0 } * bCharMap.getOrElse(c) { 0 }
+        }
+        return abCrossSum.toDouble() / (sqrt(aSquareSum.toDouble()) * sqrt(bSquareSum.toDouble()))
+    }
+
+    private fun CharSequence.charMap(): Map<Char, Int> {
+        val ret = mutableMapOf<Char, Int>()
+        for (c in this) {
+            ret[c] = ret.getOrElse(c) { 0 } + 1
+        }
+        return ret
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -74,6 +137,9 @@ fun FilterPanel(
     val verticalPadding = 6.dp
     val horizontalInnerPadding = LocalAppUIConstants.current.filterLabelPaddings[2]
     val viewModel: AlbumViewModel = viewModel(factory = AlbumViewModel.viewModelFactory)
+    LaunchedEffect(labelList) {
+        filterConfig.value.updateSearchWord(filterConfig.value.searchWord.value, labelList)
+    }
     Box(Modifier.fillMaxSize()) {
         ModalBottomSheet(
             onDismissRequest = onDismiss,
@@ -140,10 +206,12 @@ fun FilterPanel(
                 if (labelCheckStateList != null && labelList.isNotEmpty()) {
                     item(span = { GridItemSpan(this.maxLineSpan) }) {
 
-                        Box(modifier = Modifier.padding(
-                            horizontal = horizontalInnerPadding,
-                            vertical = verticalPadding
-                        )) {
+                        Box(
+                            modifier = Modifier.padding(
+                                horizontal = horizontalInnerPadding,
+                                vertical = verticalPadding
+                            )
+                        ) {
                             AppThemeText(
                                 text = "标签筛选",
                                 style = LocalTextStyle.current.copy(
@@ -152,8 +220,12 @@ fun FilterPanel(
                                 ),
                                 modifier = Modifier.align(Alignment.CenterStart)
                             )
-                            RadioGroup(Modifier.align(Alignment.CenterEnd), checkButtonText, filterConfig.value.labelChecked) {
-                                filterConfig.value = filterConfig.value.copy(labelOr = it == 0)
+                            RadioGroup(
+                                Modifier.align(Alignment.CenterEnd),
+                                checkButtonText,
+                                filterConfig.value.labelChecked
+                            ) {
+                                filterConfig.value.labelOr.value = it == 0
                                 viewModel.filterCheckChanged.notifyChange()
                             }
                         }
@@ -170,13 +242,59 @@ fun FilterPanel(
                                 .fillMaxWidth(),
                             horizontalItemSpacing = horizontalInnerPadding,
                         ) {
-                            items(labelList.size, { index -> labelList[index] }) { index ->
-                                val item = labelList[index]
+                            val finalLabelList = if (filterConfig.value.isInSearch.value) {
+                                filterConfig.value.searchWordList
+                            } else {
+                                labelList
+                            }
+                            items(
+                                finalLabelList.size,
+                                { index -> finalLabelList[index] }) { index ->
+                                val item = finalLabelList[index]
                                 RoundRectCheckableLabel(
                                     item,
                                     labelCheckStateList[item] ?: false,
                                     labelCheckStateList,
                                     true,
+                                )
+                            }
+                        }
+                    }
+
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        Box(
+                            modifier = Modifier.padding(
+                                horizontal = horizontalInnerPadding,
+                                vertical = verticalPadding
+                            )
+                        ) {
+                            Row(Modifier.align(Alignment.CenterEnd)) {
+                                if (filterConfig.value.isInSearch.value) {
+                                    OutlinedTextField(
+                                        filterConfig.value.searchWord.value, {
+                                            scope.launch {
+                                                filterConfig.value.updateSearchWord(it, labelList)
+                                            }
+                                        }, modifier = Modifier.fillMaxWidth()
+                                            .weight(1f)
+                                    )
+                                }
+                                Icon(
+                                    painter = getPainter(DrawableIcon.DrawableDrawer),
+                                    contentDescription = "搜索",
+                                    modifier = Modifier
+                                        .align(Alignment.CenterVertically)
+                                        .padding(4.dp)
+                                        .size(LocalAppUIConstants.current.filterLabelHeight)
+                                        .background(
+                                            LocalAppPalette.current.labelUnChecked,
+                                            shape = CircleShape
+                                        )
+                                        .clickable {
+                                            filterConfig.value.isInSearch.value =
+                                                !filterConfig.value.isInSearch.value
+                                        }
+                                        .padding(4.dp)
                                 )
                             }
                         }
@@ -198,9 +316,15 @@ fun FilterPanel(
                                     this.clear()
                                     this.putAll(reveredList.map { it to true })
                                 }
+
+                                val finalLabelList = if (filterConfig.value.isInSearch.value) {
+                                    filterConfig.value.searchWordList
+                                } else {
+                                    labelList
+                                }
                                 fileTypeCheckStateList.reverseList(fileTypeList)
                                 itemRankCheckStateList.reverseList(itemRankList)
-                                labelCheckStateList?.reverseList(labelList)
+                                labelCheckStateList?.reverseList(finalLabelList)
                             }
                             viewModel.filterCheckChanged.notifyChange()
                         }
@@ -248,7 +372,12 @@ fun FilterPanel(
 }
 
 @Composable
-fun RadioGroup(modifier: Modifier, textString: List<String>, checked: Int, onCheckChange: (Int)->Unit) {
+fun RadioGroup(
+    modifier: Modifier,
+    textString: List<String>,
+    checked: Int,
+    onCheckChange: (Int) -> Unit
+) {
     Box(modifier) {
         // 记录当前选中项 ID
         var selectedId by remember(checked) { mutableStateOf(checked) }
