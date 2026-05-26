@@ -94,3 +94,6 @@ actual fun getEditIcon(): Painter = painterResource(R.drawable.edit)
 
 @Composable
 actual fun getCifsIcon(): Painter = painterResource(R.drawable.cifs)
+
+@Composable
+actual fun getSearchIcon(): Painter = painterResource(R.drawable.search)

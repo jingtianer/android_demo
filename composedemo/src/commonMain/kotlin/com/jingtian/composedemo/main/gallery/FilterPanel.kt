@@ -280,12 +280,12 @@ fun FilterPanel(
                                     )
                                 }
                                 Icon(
-                                    painter = getPainter(DrawableIcon.DrawableDrawer),
+                                    painter = getPainter(DrawableIcon.DrawableSearch),
                                     contentDescription = "搜索",
                                     modifier = Modifier
                                         .align(Alignment.CenterVertically)
                                         .padding(4.dp)
-                                        .size(LocalAppUIConstants.current.filterLabelHeight)
+                                        .size(LocalAppUIConstants.current.filterLabelHeight + 8.dp)
                                         .background(
                                             LocalAppPalette.current.labelUnChecked,
                                             shape = CircleShape
@@ -294,7 +294,7 @@ fun FilterPanel(
                                             filterConfig.value.isInSearch.value =
                                                 !filterConfig.value.isInSearch.value
                                         }
-                                        .padding(4.dp)
+                                        .padding(8.dp)
                                 )
                             }
                         }
