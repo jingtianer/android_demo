@@ -26,6 +26,7 @@ import com.jingtian.composedemo.base.app
 import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.FileType.*
 import com.jingtian.composedemo.multiplatform.MultiplatformFileImpl
+import com.jingtian.composedemo.multiplatform.logD
 import com.jingtian.composedemo.utils.CoroutineUtils
 import com.jingtian.composedemo.utils.FileLinkProvider
 import com.jingtian.composedemo.utils.copyDir
@@ -154,6 +155,9 @@ class MainActivity : BaseActivity() {
     @Composable
     override fun Content() {
         val isPasswordChecked by remember { viewModel.isPasswordChecked }
+        logD("MainActivity") {
+            "Content: viewModel.isPasswordChecked=${isPasswordChecked}"
+        }
         Main(isPasswordChecked) {
             checkBioAuth()
         }
@@ -162,7 +166,12 @@ class MainActivity : BaseActivity() {
     override fun onResume() {
         super.onResume()
         if (!viewModel.isPasswordChecked.value) {
-            checkBioAuth()
+            logD("MainActivity") {
+                "onResume: viewModel.isPasswordChecked=${viewModel.isPasswordChecked.value}"
+            }
+            window?.decorView?.post {
+                checkBioAuth()
+            } ?: checkBioAuth()
         }
     }
 
