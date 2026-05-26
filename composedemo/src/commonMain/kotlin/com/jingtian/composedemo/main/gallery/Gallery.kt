@@ -207,7 +207,13 @@ fun GalleryStateHolder.Gallery() {
                 if (gallerySearchEnabled) {
                     BasicTextField(
                         value = gallerySearchWord,
-                        onValueChange = ::updateGallerySearchWord,
+                        onValueChange = {
+                            scope.launch {
+                                scrollOffsetY = 0f
+                                searchGalleryScrollState.scrollToItem(0, 0)
+                                updateScrollOffset()
+                                updateGallerySearchWord(it)
+                            } },
                         modifier = Modifier
                             .align(Alignment.CenterVertically)
                             .fillMaxWidth()

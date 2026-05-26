@@ -18,7 +18,9 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.staggeredgrid.LazyHorizontalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -65,6 +67,7 @@ import com.jingtian.composedemo.viewmodels.AlbumViewModel.Companion.notifyChange
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.math.max
 import kotlin.math.sqrt
 
 private val checkButtonText = listOf("or", "and")
@@ -80,8 +83,8 @@ internal fun calcSearchScore(searchWord: String, target: String): Double {
     }
     return splitSearchWord.map { subWord ->
         stringSim(subWord, target)
-    }.withIndex().sumOf { (index, value) ->
-        value * (splitSearchWord.size - index)
+    }.withIndex().maxOf { (index, value) ->
+        value
     }
 }
 
@@ -93,21 +96,29 @@ internal fun calcSearchSortedList(searchWord: String, candidateList: List<String
 }
 
 private fun stringSim(a: String, b: String): Double {
-    if (a.isEmpty() || b.isEmpty()) {
-        return 0.0
+    var strA = a
+    var strB = b
+    // 保证 b 更短，减少空间
+    if (strA.length < strB.length) {
+        val temp = strA
+        strA = strB
+        strB = temp
     }
-    val aCharMap = a.charMap()
-    val bCharMap = b.charMap()
-    val keys = aCharMap.keys + bCharMap.keys
-    var aSquareSum = 0
-    var bSquareSum = 0
-    var abCrossSum = 0
-    for (c in keys) {
-        aSquareSum += aCharMap.getOrElse(c) { 0 } * aCharMap.getOrElse(c) { 0 }
-        bSquareSum += bCharMap.getOrElse(c) { 0 } * bCharMap.getOrElse(c) { 0 }
-        abCrossSum += aCharMap.getOrElse(c) { 0 } * bCharMap.getOrElse(c) { 0 }
+
+    val lenA = strA.length
+    val lenB = strB.length
+    var prev = IntArray(lenB + 1) { it }
+
+    for (i in 1..lenA) {
+        val curr = IntArray(lenB + 1)
+        curr[0] = i
+        for (j in 1..lenB) {
+            val cost = if (strA[i - 1] == strB[j - 1]) 0 else 1
+            curr[j] = minOf(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cost)
+        }
+        prev = curr
     }
-    return abCrossSum.toDouble() / (sqrt(aSquareSum.toDouble()) * sqrt(bSquareSum.toDouble()))
+    return 1 - prev[lenB].toDouble() / max(a.length, b.length)
 }
 
 private fun CharSequence.charMap(): Map<Char, Int> {
@@ -126,6 +137,20 @@ class FilterConfig(
     val searchWord: MutableState<String> = mutableStateOf("")
 
     val searchWordList = mutableStateListOf<String>()
+
+    val defaultStaggerLabelListScrollState = LazyStaggeredGridState(
+        0,
+        0
+    )
+
+    val searchStaggerLabelListScrollState by lazy {
+        LazyStaggeredGridState(
+            0,
+            0
+        )
+    }
+
+    val staggerLabelListScrollState get() = if (isInSearch.value) searchStaggerLabelListScrollState else defaultStaggerLabelListScrollState
 
     suspend fun updateSearchWord(searchWord: String, labelList: List<String>) {
         this.searchWord.value = searchWord
@@ -259,7 +284,9 @@ fun FilterPanel(
                             StaggeredGridCells.Fixed(3),
                             Modifier
                                 .height(labelItemHeight * 3)
-                                .fillMaxWidth(),
+                                .fillMaxWidth()
+                            ,
+                            state = filterConfig.value.staggerLabelListScrollState,
                             horizontalItemSpacing = horizontalInnerPadding,
                         ) {
                             val finalLabelList = if (filterConfig.value.isInSearch.value) {
@@ -294,6 +321,7 @@ fun FilterPanel(
                                         value = filterConfig.value.searchWord.value,
                                         onValueChange = {
                                             scope.launch {
+                                                filterConfig.value.searchStaggerLabelListScrollState.scrollToItem(0, 0)
                                                 filterConfig.value.updateSearchWord(it, labelList)
                                             }
                                         },
@@ -321,6 +349,10 @@ fun FilterPanel(
                                         .clickable {
                                             filterConfig.value.isInSearch.value =
                                                 !filterConfig.value.isInSearch.value
+
+                                            scope.launch {
+                                                filterConfig.value.searchStaggerLabelListScrollState.scrollToItem(0, 0)
+                                            }
                                         }
                                         .padding(8.dp)
                                         .align(Alignment.CenterVertically)
