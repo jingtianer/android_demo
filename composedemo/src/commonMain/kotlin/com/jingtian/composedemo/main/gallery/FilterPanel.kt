@@ -66,6 +66,55 @@ import kotlin.math.sqrt
 
 private val checkButtonText = listOf("or", "and")
 
+internal fun calcSearchScore(searchWord: String, target: String): Double {
+    if (searchWord.isBlank() || target.isBlank()) {
+        return 0.0
+    }
+    val splitSearchWord = searchWord.splitBy { it.isWhitespace() }
+        .filter { it.isNotBlank() }
+    if (splitSearchWord.isEmpty()) {
+        return 0.0
+    }
+    return splitSearchWord.map { subWord ->
+        stringSim(subWord, target)
+    }.withIndex().sumOf { (index, value) ->
+        value * (splitSearchWord.size - index)
+    }
+}
+
+internal fun calcSearchSortedList(searchWord: String, candidateList: List<String>): List<String> {
+    return candidateList
+        .map { candidate -> candidate to calcSearchScore(searchWord, candidate) }
+        .sortedByDescending { it.second }
+        .map { it.first }
+}
+
+private fun stringSim(a: String, b: String): Double {
+    if (a.isEmpty() || b.isEmpty()) {
+        return 0.0
+    }
+    val aCharMap = a.charMap()
+    val bCharMap = b.charMap()
+    val keys = aCharMap.keys + bCharMap.keys
+    var aSquareSum = 0
+    var bSquareSum = 0
+    var abCrossSum = 0
+    for (c in keys) {
+        aSquareSum += aCharMap.getOrElse(c) { 0 } * aCharMap.getOrElse(c) { 0 }
+        bSquareSum += bCharMap.getOrElse(c) { 0 } * bCharMap.getOrElse(c) { 0 }
+        abCrossSum += aCharMap.getOrElse(c) { 0 } * bCharMap.getOrElse(c) { 0 }
+    }
+    return abCrossSum.toDouble() / (sqrt(aSquareSum.toDouble()) * sqrt(bSquareSum.toDouble()))
+}
+
+private fun CharSequence.charMap(): Map<Char, Int> {
+    val ret = mutableMapOf<Char, Int>()
+    for (c in this) {
+        ret[c] = ret.getOrElse(c) { 0 } + 1
+    }
+    return ret
+}
+
 class FilterConfig(
     val labelOr: MutableState<Boolean> = mutableStateOf(true),
     val isInSearch: MutableState<Boolean> = mutableStateOf(false)
@@ -78,45 +127,13 @@ class FilterConfig(
     suspend fun updateSearchWord(searchWord: String, labelList: List<String>) {
         this.searchWord.value = searchWord
         val searchWordList = withContext(Dispatchers.Default) {
-            val splitSearchWord = searchWord.splitBy { it.isWhitespace() }
-            labelList.map { label ->
-                label to splitSearchWord.map { subWord ->
-                    stringSim(subWord, label)
-                }.withIndex().sumOf { it.value * (splitSearchWord.size - it.index) }
-            }
-                .sortedByDescending { it.second }.map { it.first }
+            calcSearchSortedList(searchWord, labelList)
         }
         logD("updateSearchWord") {
             "searchWordList=${searchWordList.toTypedArray().contentDeepToString()}"
         }
         this.searchWordList.clear()
         this.searchWordList.addAll(searchWordList)
-    }
-
-    private fun stringSim(a: String, b: String): Double {
-        if (a.isEmpty() || b.isEmpty()) {
-            return 0.0
-        }
-        val aCharMap = a.charMap()
-        val bCharMap = b.charMap()
-        val keys = aCharMap.keys + bCharMap.keys
-        var aSquareSum = 0
-        var bSquareSum = 0
-        var abCrossSum = 0
-        for (c in keys) {
-            aSquareSum += aCharMap.getOrElse(c) { 0 } * aCharMap.getOrElse(c) { 0 }
-            bSquareSum += bCharMap.getOrElse(c) { 0 } * bCharMap.getOrElse(c) { 0 }
-            abCrossSum += aCharMap.getOrElse(c) { 0 } * bCharMap.getOrElse(c) { 0 }
-        }
-        return abCrossSum.toDouble() / (sqrt(aSquareSum.toDouble()) * sqrt(bSquareSum.toDouble()))
-    }
-
-    private fun CharSequence.charMap(): Map<Char, Int> {
-        val ret = mutableMapOf<Char, Int>()
-        for (c in this) {
-            ret[c] = ret.getOrElse(c) { 0 } + 1
-        }
-        return ret
     }
 }
 

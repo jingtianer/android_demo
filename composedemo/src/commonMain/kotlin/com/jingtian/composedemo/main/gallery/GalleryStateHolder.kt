@@ -79,6 +79,12 @@ class GalleryStateHolder(val album: IndexedValue<Album>, val albumList: List<Alb
     val albumViewMap = mutableStateMapOf<Long, WeakRef<AlbumItemViewStateHolder>>()
 
     val filterConfig = mutableStateOf(FilterConfig())
+    var gallerySearchWord by mutableStateOf("")
+    var gallerySearchEnabled by mutableStateOf(false)
+
+    fun updateGallerySearchWord(searchWord: String) {
+        gallerySearchWord = searchWord
+    }
 
     suspend fun updateFilterList() {
         withContext(Dispatchers.Default) {
@@ -101,9 +107,16 @@ class GalleryStateHolder(val album: IndexedValue<Album>, val albumList: List<Alb
                     filteredList.add(item)
                 }
             }
+            val sortedList = if (gallerySearchEnabled && gallerySearchWord.isNotBlank()) {
+                filteredList.sortedByDescending { item ->
+                    calcSearchScore(gallerySearchWord, item.albumItem.itemName)
+                }
+            } else {
+                filteredList
+            }
             withContext(Dispatchers.Main) {
                 filteredItemList.clear()
-                filteredItemList.addAll(filteredList)
+                filteredItemList.addAll(sortedList)
             }
         }
     }

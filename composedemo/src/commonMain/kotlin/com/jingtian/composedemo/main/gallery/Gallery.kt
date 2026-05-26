@@ -37,6 +37,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -151,7 +152,7 @@ fun GalleryStateHolder.Gallery() {
     }
 
     val filterChanged by viewModel.filterCheckChanged.observeAsState()
-    LaunchedEffect(filterChanged, itemList, filterConfig) {
+    LaunchedEffect(filterChanged, itemList, gallerySearchWord, gallerySearchEnabled, filterConfig.value.labelOr.value) {
         updateFilterList()
     }
 
@@ -190,10 +191,36 @@ fun GalleryStateHolder.Gallery() {
                 AppThemeText(albumName.trim(),
                     Modifier
                         .align(Alignment.CenterVertically)
-                        .fillMaxWidth()
                         .weight(1f), style = LocalTextStyle.current.copy(fontSize = 24.sp, fontWeight = FontWeight(600)),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
+                )
+                Spacer(Modifier.width(6.dp))
+                if (gallerySearchEnabled) {
+                    OutlinedTextField(
+                        value = gallerySearchWord,
+                        onValueChange = ::updateGallerySearchWord,
+                        modifier = Modifier
+                            .align(Alignment.CenterVertically)
+                            .weight(1f),
+                        singleLine = true,
+                    )
+                    Spacer(Modifier.width(6.dp))
+                }
+                Icon(
+                    painter = getPainter(DrawableIcon.DrawableSearch),
+                    contentDescription = "搜索",
+                    modifier = Modifier
+                        .size(LocalAppUIConstants.current.filterLabelHeight)
+                        .background(LocalAppPalette.current.labelUnChecked, shape = CircleShape)
+                        .clickable {
+                            gallerySearchEnabled = !gallerySearchEnabled
+                            if (!gallerySearchEnabled) {
+                                updateGallerySearchWord("")
+                            }
+                        }
+                        .padding(4.dp)
+                        .align(Alignment.CenterVertically)
                 )
                 Spacer(Modifier.width(6.dp))
                 Icon(
