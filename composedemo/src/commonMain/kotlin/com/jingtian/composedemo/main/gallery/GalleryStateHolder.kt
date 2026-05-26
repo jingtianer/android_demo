@@ -64,11 +64,16 @@ class GalleryStateHolder(val album: IndexedValue<Album>, val albumList: List<Alb
     var selectNone by mutableStateOf(false)
     val size = 160.dp
     val galleryItemPadding = 4.dp
-    var scrollOffsetY by mutableFloatStateOf(0f)
+    var defaultScrollOffsetY by mutableFloatStateOf(0f)
+    val searchScrollOffsetY by lazy {
+        mutableFloatStateOf(0f)
+    }
     val scrollBarSize = mutableStateListOf(galleryDpConstants.scrollBarWidthDp, galleryDpConstants.scrollBarHeightDp)
     val scrollAreaWidth = 28.dp
     val scrollBarOffset = mutableStateListOf(galleryDpConstants.scrollAreaWidthDp - scrollBarSize[0], 0f)
-    val galleryScrollState = LazyStaggeredGridState(0, 0)
+    val defaultGalleryScrollState = LazyStaggeredGridState(0, 0)
+    val searchGalleryScrollState by lazy { LazyStaggeredGridState(0, 0) }
+    val galleryScrollState get() = if (gallerySearchEnabled) searchGalleryScrollState else defaultGalleryScrollState
 
     var showEditDialog by mutableStateOf(false)
     var showConfirmDeleteDialog by mutableStateOf(false)
@@ -81,6 +86,17 @@ class GalleryStateHolder(val album: IndexedValue<Album>, val albumList: List<Alb
     val filterConfig = mutableStateOf(FilterConfig())
     var gallerySearchWord by mutableStateOf("")
     var gallerySearchEnabled by mutableStateOf(false)
+
+    var scrollOffsetY = if (gallerySearchEnabled) searchScrollOffsetY.value else defaultScrollOffsetY
+        get() = if (gallerySearchEnabled) searchScrollOffsetY.value else defaultScrollOffsetY
+        set(value) {
+            field = value
+            if (gallerySearchEnabled) {
+                searchScrollOffsetY.value = value
+            } else {
+                defaultScrollOffsetY = value
+            }
+        }
 
     fun updateGallerySearchWord(searchWord: String) {
         gallerySearchWord = searchWord

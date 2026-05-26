@@ -169,39 +169,42 @@ fun GalleryStateHolder.Gallery() {
                     .padding(horizontal = 8.dp, vertical = 8.dp)
                     .wrapContentHeight()
             ) {
-                Icon(
-                    painter = getPainter(DrawableIcon.DrawableDrawer),
-                    contentDescription = "打开drawer",
-                    modifier = Modifier
-                        .align(Alignment.CenterVertically)
-                        .size(LocalAppUIConstants.current.filterLabelHeight)
-                        .background(LocalAppPalette.current.labelUnChecked, shape = CircleShape)
-                        .clickable {
-                            scope.launch {
-                                if (drawerState.isOpen) {
-                                    drawerState.close()
-                                } else {
-                                    drawerState.open()
+                if (!gallerySearchEnabled) {
+                    Icon(
+                        painter = getPainter(DrawableIcon.DrawableDrawer),
+                        contentDescription = "打开drawer",
+                        modifier = Modifier
+                            .align(Alignment.CenterVertically)
+                            .size(LocalAppUIConstants.current.filterLabelHeight)
+                            .background(LocalAppPalette.current.labelUnChecked, shape = CircleShape)
+                            .clickable {
+                                scope.launch {
+                                    if (drawerState.isOpen) {
+                                        drawerState.close()
+                                    } else {
+                                        drawerState.open()
+                                    }
                                 }
                             }
-                        }
-                        .padding(4.dp)
-                )
-                Spacer(Modifier.width(12.dp))
-                AppThemeText(albumName.trim(),
-                    Modifier
-                        .align(Alignment.CenterVertically)
-                        .weight(1f), style = LocalTextStyle.current.copy(fontSize = 24.sp, fontWeight = FontWeight(600)),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(Modifier.width(6.dp))
+                            .padding(4.dp)
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    AppThemeText(albumName.trim(),
+                        Modifier
+                            .align(Alignment.CenterVertically)
+                            .weight(1f), style = LocalTextStyle.current.copy(fontSize = 24.sp, fontWeight = FontWeight(600)),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(Modifier.width(6.dp))
+                }
                 if (gallerySearchEnabled) {
                     OutlinedTextField(
                         value = gallerySearchWord,
                         onValueChange = ::updateGallerySearchWord,
                         modifier = Modifier
                             .align(Alignment.CenterVertically)
+                            .fillMaxWidth()
                             .weight(1f),
                         singleLine = true,
                     )
@@ -215,8 +218,15 @@ fun GalleryStateHolder.Gallery() {
                         .background(LocalAppPalette.current.labelUnChecked, shape = CircleShape)
                         .clickable {
                             gallerySearchEnabled = !gallerySearchEnabled
-                            if (!gallerySearchEnabled) {
-                                updateGallerySearchWord("")
+                            scope.launch {
+                                if (gallerySearchEnabled) {
+                                    scrollOffsetY = 0f
+                                    searchGalleryScrollState.scrollToItem(0, 0)
+                                }
+                                updateScrollOffset()
+                                if (!gallerySearchEnabled) {
+                                    updateGallerySearchWord("")
+                                }
                             }
                         }
                         .padding(4.dp)
