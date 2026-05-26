@@ -608,13 +608,5 @@ fun GalleryStateHolder.Gallery() {
         }
     }
 
-    BackPressHandler(drawerState, enterEditMode) {
-        if (drawerState.isOpen) {
-            scope.launch {
-                drawerState.close()
-            }
-        } else if (enterEditMode) {
-            enterEditMode = false
-        }
-    }
+    BackPressHandler()
 }

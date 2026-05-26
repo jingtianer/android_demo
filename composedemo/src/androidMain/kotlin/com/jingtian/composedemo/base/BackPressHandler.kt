@@ -8,50 +8,53 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.jingtian.composedemo.main.gallery.GalleryStateHolder
 import com.jingtian.composedemo.viewmodels.AndroidMigrateViewModel
+import kotlinx.coroutines.launch
 
 @Composable
-actual fun GalleryStateHolder.BackPressHandler(
-    drawerState: DrawerState,
-    enterEditMode: Boolean,
-    onBackPressed: () -> Unit
-) {
+actual fun GalleryStateHolder.BackPressHandler() {
 
     val androidViewModel: AndroidMigrateViewModel = viewModel(factory = viewModelFactory {
         initializer {
             AndroidMigrateViewModel()
         }
     })
+    val scope = rememberCoroutineScope()
     val dispatcher = LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
 
     class GalleryOnBackPressCallBack : OnBackPressedCallback(true) {
         override fun handleOnBackPressed() {
-            if (!drawerState.isOpen && !enterEditMode) {
-                this.isEnabled = false
-                androidViewModel.isPasswordChecked.value = false
-                dispatcher?.onBackPressed()
-                this.isEnabled = true
-                return
+            scope.launch {
+                val isEnabled = this@BackPressHandler.onBackPressed()
+                this@GalleryOnBackPressCallBack.isEnabled = isEnabled
+                if (!isEnabled) {
+                    androidViewModel.isPasswordChecked.value = false
+                    dispatcher?.onBackPressed()
+                    this@GalleryOnBackPressCallBack.isEnabled = true
+                }
             }
-            onBackPressed()
         }
     }
-    var backPressedCallback by remember {
-        mutableStateOf<OnBackPressedCallback>(GalleryOnBackPressCallBack())
-    }
+
+    var backPressedCallback by remember { mutableStateOf<GalleryOnBackPressCallBack?>(null) }
+
     DisposableEffect(dispatcher, this) {
-        backPressedCallback.isEnabled = false
-        backPressedCallback.remove()
-        backPressedCallback = GalleryOnBackPressCallBack()
-        dispatcher?.addCallback(backPressedCallback)
+        backPressedCallback?.apply {
+            isEnabled = false
+            remove()
+        }
+        val innerBackPressedCallback = GalleryOnBackPressCallBack()
+        backPressedCallback = innerBackPressedCallback
+        innerBackPressedCallback.isEnabled = true
+        dispatcher?.addCallback(innerBackPressedCallback)
         onDispose {
-            backPressedCallback.isEnabled = false
-            backPressedCallback.remove()
+            innerBackPressedCallback.remove()
         }
     }
 }

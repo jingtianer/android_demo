@@ -209,4 +209,19 @@ class GalleryStateHolder(val album: IndexedValue<Album>, val albumList: List<Alb
             }
         }
     }
+
+    suspend fun onBackPressed(): Boolean {
+        return if (drawerState.isOpen) {
+            drawerState.close()
+            true
+        } else if (enterEditMode) {
+            enterEditMode = false
+            true
+        } else if (gallerySearchEnabled) {
+            gallerySearchEnabled = false
+            true
+        } else {
+            false
+        }
+    }
 }
