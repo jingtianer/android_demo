@@ -14,7 +14,7 @@ import platform.UIKit.UIDocumentInteractionController
 class FileShareLauncher : IFileShareLauncher {
     override suspend fun launch(file: MultiplatformFile) {
         val filePath = withContext(Dispatchers.IO) {
-            file.file ?: return@withContext null
+            file.file() ?: return@withContext null
         } ?: return
 //        println("openFile: file: $filePath")
 

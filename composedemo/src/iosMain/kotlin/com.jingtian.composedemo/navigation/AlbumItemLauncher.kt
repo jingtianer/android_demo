@@ -7,6 +7,7 @@ import androidx.compose.runtime.remember
 import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.FileType
 import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
+import com.jingtian.composedemo.multiplatform.MultiplatformFileImpl
 import com.jingtian.composedemo.utils.CoroutineUtils
 import com.jingtian.composedemo.utils.copyTo
 import com.jingtian.composedemo.utils.createNewFile
@@ -36,7 +37,7 @@ class AlbumItemLauncher : IAlbumItemLauncher {
     private suspend fun openFile(fileName: String, file: FileInfo) {
 //        println("openFile: file:${file.fileType.name}, ${file.getFileUri()}, ${file.getFileUri()?.file}")
         val filePath = withContext(Dispatchers.IO) {
-            file.getFileUri()?.file ?: return@withContext null
+            (file.getFileUri() as? MultiplatformFileImpl)?.file() ?: return@withContext null
         } ?: return
 //        println("openFile: file: $filePath")
 

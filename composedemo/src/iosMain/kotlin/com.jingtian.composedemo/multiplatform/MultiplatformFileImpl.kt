@@ -88,43 +88,31 @@ class MultiplatformFileImpl(val realFile: Path, val realExtension: String, val r
     private val Path.isHidden: Boolean
         get() = name.startsWith(".")
 
-    override val fileName: String?
-        get() = realFile.name
-    override val isHidden: Boolean
-        get() = realFile.isHidden
-    override val mediaType: FileType
-        get() = when(realFile.extension.lowercase()) {
+    override suspend fun fileName(): String = realFile.name
+    override suspend fun isHidden(): Boolean = realFile.isHidden
+    override suspend fun mediaType(): FileType = when(realFile.extension.lowercase()) {
             in imageExtensions -> FileType.IMAGE
             in videoExtensions -> FileType.VIDEO
             in audioExtensions -> FileType.AUDIO
             in htmlExtensions -> FileType.HTML
             else -> FileType.RegularFile
         }
-    override val inputStream: RawSource?
-        get() = SystemFileSystem.source(realFile)
+    override suspend fun inputStream(): RawSource? = SystemFileSystem.source(realFile)
 
-    override val videoThumbnail: ImageBitmap?
-        get() = getVideoThumbnail(realFile)
+    override suspend fun videoThumbnail(): ImageBitmap? = getVideoThumbnail(realFile)
 
-    override val audioThumbnail: ImageBitmap?
-        get() = getAudioCoverImage(realFile)
+    override suspend fun audioThumbnail(): ImageBitmap? = getAudioCoverImage(realFile)
 
-    override val imageRatio: Pair<Int, Int>
-        get() = runCatching {
-            SystemFileSystem.source(realFile).use { src ->
-                uriToImageSize(src)
-            }
-        }.getOrElse { 1 to 1 }
-
-    override val fileStoreInputStream: RawSource?
-        get() {
-            return SystemFileSystem.source(realFile)
+    override suspend fun imageRatio(): Pair<Int, Int> = runCatching {
+        SystemFileSystem.source(realFile).use { src ->
+            uriToImageSize(src)
         }
-    override val file: Path
-        get() = Path(realFile)
-    override val extension: String = realExtension
-    override val path: String
-        get() = relativePath.toString()
+    }.getOrElse { 1 to 1 }
+
+    override suspend fun fileStoreInputStream(): RawSource? = SystemFileSystem.source(realFile)
+    override suspend fun file(): Path = Path(realFile)
+    override suspend fun extension(): String = realExtension
+    override suspend fun path(): String = relativePath.toString()
 
     override fun onStoreFinish() {
         nsurl?.stopAccessingSecurityScopedResource()
