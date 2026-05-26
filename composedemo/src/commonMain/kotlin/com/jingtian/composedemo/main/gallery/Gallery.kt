@@ -151,7 +151,7 @@ fun GalleryStateHolder.Gallery() {
     }
 
     val filterChanged by viewModel.filterCheckChanged.observeAsState()
-    LaunchedEffect(filterChanged, itemList) {
+    LaunchedEffect(filterChanged, itemList, filterConfig) {
         updateFilterList()
     }
 
@@ -565,6 +565,7 @@ fun GalleryStateHolder.Gallery() {
             totalItemRankList,
             labelFilterCheckedInfo,
             totalLabelList,
+            filterConfig,
         ) {
             showLabelFilter = false
         }

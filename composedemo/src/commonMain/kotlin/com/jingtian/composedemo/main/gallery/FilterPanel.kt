@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -17,11 +18,21 @@ import androidx.compose.foundation.lazy.staggeredgrid.LazyHorizontalStaggeredGri
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledIconToggleButton
+import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.SheetState
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.State
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,6 +51,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.sqrt
 
+private val checkButtonText = listOf("or", "and")
+
+data class FilterConfig(val labelOr: Boolean = true) {
+    val labelChecked: Int get() = if (labelOr) 0 else 1
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FilterPanel(
@@ -50,13 +67,13 @@ fun FilterPanel(
     itemRankList: List<String>,
     labelCheckStateList: SnapshotStateMap<String, Boolean>?,
     labelList: List<String>,
+    filterConfig: MutableState<FilterConfig> = mutableStateOf(FilterConfig()),
     onDismiss: () -> Unit,
 ) {
     val horizontalPadding = 6.dp
     val verticalPadding = 6.dp
     val horizontalInnerPadding = LocalAppUIConstants.current.filterLabelPaddings[2]
     val viewModel: AlbumViewModel = viewModel(factory = AlbumViewModel.viewModelFactory)
-
     Box(Modifier.fillMaxSize()) {
         ModalBottomSheet(
             onDismissRequest = onDismiss,
@@ -122,17 +139,24 @@ fun FilterPanel(
                 }
                 if (labelCheckStateList != null && labelList.isNotEmpty()) {
                     item(span = { GridItemSpan(this.maxLineSpan) }) {
-                        AppThemeText(
-                            text = "标签筛选",
-                            Modifier.padding(
-                                horizontal = horizontalInnerPadding,
-                                vertical = verticalPadding
-                            ),
-                            style = LocalTextStyle.current.copy(
-                                fontWeight = FontWeight(600),
-                                fontSize = 16.sp
+
+                        Box(modifier = Modifier.padding(
+                            horizontal = horizontalInnerPadding,
+                            vertical = verticalPadding
+                        )) {
+                            AppThemeText(
+                                text = "标签筛选",
+                                style = LocalTextStyle.current.copy(
+                                    fontWeight = FontWeight(600),
+                                    fontSize = 16.sp
+                                ),
+                                modifier = Modifier.align(Alignment.CenterStart)
                             )
-                        )
+                            RadioGroup(Modifier.align(Alignment.CenterEnd), checkButtonText, filterConfig.value.labelChecked) {
+                                filterConfig.value = filterConfig.value.copy(labelOr = it == 0)
+                                viewModel.filterCheckChanged.notifyChange()
+                            }
+                        }
                     }
                     item(span = { GridItemSpan(this.maxLineSpan) }) {
 
@@ -218,6 +242,38 @@ fun FilterPanel(
                     AppThemeText(text = "确认")
                 }
                 Spacer(Modifier.height(16.dp))
+            }
+        }
+    }
+}
+
+@Composable
+fun RadioGroup(modifier: Modifier, textString: List<String>, checked: Int, onCheckChange: (Int)->Unit) {
+    Box(modifier) {
+        // 记录当前选中项 ID
+        var selectedId by remember(checked) { mutableStateOf(checked) }
+
+        // 选项列表
+        val options = textString.withIndex()
+
+        Row(modifier = Modifier.align(Alignment.Center)) {
+            options.forEach { option ->
+                Row(
+                    modifier = Modifier.padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    RadioButton(
+                        selected = selectedId == option.index,
+                        onClick = {
+                            selectedId = option.index
+                            onCheckChange(option.index)
+                        },
+                    )
+                    Text(
+                        text = option.value,
+                        modifier = Modifier
+                    )
+                }
             }
         }
     }

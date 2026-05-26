@@ -19,25 +19,25 @@ const val PREFIX_WTF = "\uD83D\uDEBE WFT"
 const val PREFIX_INFO = "\uD83D\uDFE2 I"
 const val PREFIX_VERBOSE = "\uD83D\uDFE1 V"
 
-val LOG_LEVEL: LogLevel = if (BuildKonfig.isDebug) LOG_LEVEL_WARN else LOG_LEVEL_WARN
+val LOG_LEVEL: LogLevel = if (BuildKonfig.isDebug) LOG_LEVEL_DEBUG else LOG_LEVEL_WARN
 
 expect fun printLog(level: LogLevel, tag: String, msg: String)
 expect fun printLog(level: LogLevel, tag: String, msg: String, t: Throwable?)
 
-fun logE(level: LogLevel, tag: String, msg: String, t: Throwable) {
-    if (level <= LOG_LEVEL) {
-        printLog(level, tag, msg, t)
+fun logE(tag: String, msg: String, t: Throwable) {
+    if (LOG_LEVEL_ERROR <= LOG_LEVEL) {
+        printLog(LOG_LEVEL_ERROR, tag, msg, t)
     }
 }
 
-inline fun logD(level: LogLevel, tag: String, crossinline msg: () -> String) {
-    if (level <= LOG_LEVEL) {
-        printLog(level, tag, msg())
+inline fun logD(tag: String, crossinline msg: () -> String) {
+    if (LOG_LEVEL_DEBUG <= LOG_LEVEL) {
+        printLog(LOG_LEVEL_DEBUG, tag, msg())
     }
 }
 
-inline fun logI(level: LogLevel, tag: String, crossinline msg: () -> String) {
-    if (level <= LOG_LEVEL) {
-        printLog(level, tag, msg())
+inline fun logI(tag: String, crossinline msg: () -> String) {
+    if (LOG_LEVEL_INFO <= LOG_LEVEL) {
+        printLog(LOG_LEVEL_INFO, tag, msg())
     }
 }

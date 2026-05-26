@@ -17,6 +17,7 @@ import com.jingtian.composedemo.dao.model.FileType
 import com.jingtian.composedemo.dao.model.ItemRank
 import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
 import com.jingtian.composedemo.main.albumItem.AlbumItemViewStateHolder
+import com.jingtian.composedemo.multiplatform.logD
 import com.jingtian.composedemo.utils.dpValue
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
 import kotlinx.coroutines.Dispatchers
@@ -77,12 +78,23 @@ class GalleryStateHolder(val album: IndexedValue<Album>, val albumList: List<Alb
 
     val albumViewMap = mutableStateMapOf<Long, WeakRef<AlbumItemViewStateHolder>>()
 
+    val filterConfig = mutableStateOf(FilterConfig())
+
     suspend fun updateFilterList() {
         withContext(Dispatchers.Default) {
             val labelFilterCheckedInfo = labelFilterCheckedInfo
             val filteredList = mutableListOf<AlbumItemRelation>()
             for (item in itemList) {
-                val labelCheck = labelFilterCheckedInfo.isNullOrEmpty() || item.labelInfos.map { it.label }.intersect(labelFilterCheckedInfo.keys).isNotEmpty()
+                val labelCheck = labelFilterCheckedInfo.isNullOrEmpty() || item.labelInfos.map { it.label }.toSet().let {
+                    if (filterConfig.value.labelOr) {
+                        it.intersect(labelFilterCheckedInfo.keys).isNotEmpty()
+                    } else {
+                        logD("updateFilterList") {
+                            "checked: ${labelFilterCheckedInfo.keys.toTypedArray().contentDeepToString()}, it = ${it.toTypedArray().contentDeepToString()} minus=${labelFilterCheckedInfo.keys.minus(it)}"
+                        }
+                        labelFilterCheckedInfo.keys.minus(it).isEmpty()
+                    }
+                }
                 val fileTypeCheck = fileTypeCheckState.isEmpty() || fileTypeCheckState.get(item.fileInfo.fileType.typeName) == true
                 val itemRankCheck = itemRankTypeCheckState.isEmpty() || itemRankTypeCheckState.get(item.albumItem.rank.name) == true
                 if (labelCheck && fileTypeCheck && itemRankCheck) {
