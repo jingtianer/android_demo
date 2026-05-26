@@ -6,6 +6,7 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -32,6 +33,9 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -56,6 +60,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -103,6 +108,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.jingtian.composedemo.base.resources.getPainter
+import com.jingtian.composedemo.utils.AppTheme
 import kotlinx.coroutines.IO
 
 @Composable
@@ -199,14 +205,22 @@ fun GalleryStateHolder.Gallery() {
                     Spacer(Modifier.width(6.dp))
                 }
                 if (gallerySearchEnabled) {
-                    OutlinedTextField(
+                    BasicTextField(
                         value = gallerySearchWord,
                         onValueChange = ::updateGallerySearchWord,
                         modifier = Modifier
                             .align(Alignment.CenterVertically)
                             .fillMaxWidth()
+                            .padding(horizontal = 4.dp)
+                            .background(
+                                color = LocalAppPalette.current.galleryCardBg,
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                            .padding(start = 12.dp, end = 6.dp, top = 8.dp, bottom = 8.dp)
                             .weight(1f),
                         singleLine = true,
+                        textStyle = LocalTextStyle.current.copy(fontSize = 16.sp, fontWeight = FontWeight(400), color = LocalTextStyle.current.color),
+                        cursorBrush = SolidColor(LocalTextStyle.current.color)
                     )
                     Spacer(Modifier.width(6.dp))
                 }

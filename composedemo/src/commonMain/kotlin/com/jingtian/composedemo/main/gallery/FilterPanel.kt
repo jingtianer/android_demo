@@ -20,6 +20,8 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.staggeredgrid.LazyHorizontalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconToggleButton
@@ -44,6 +46,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -287,31 +290,40 @@ fun FilterPanel(
                         ) {
                             Row(Modifier.align(Alignment.CenterEnd)) {
                                 if (filterConfig.value.isInSearch.value) {
-                                    OutlinedTextField(
-                                        filterConfig.value.searchWord.value, {
+                                    BasicTextField(
+                                        value = filterConfig.value.searchWord.value,
+                                        onValueChange = {
                                             scope.launch {
                                                 filterConfig.value.updateSearchWord(it, labelList)
                                             }
-                                        }, modifier = Modifier.fillMaxWidth()
-                                            .weight(1f)
+                                        },
+                                        modifier = Modifier
+                                            .align(Alignment.CenterVertically)
+                                            .fillMaxWidth()
+                                            .background(
+                                                color = LocalAppPalette.current.galleryCardBg,
+                                                shape = RoundedCornerShape(12.dp)
+                                            )
+                                            .padding(start = 12.dp, end = 6.dp, top = 8.dp, bottom = 8.dp)
+                                            .weight(1f),
+                                        singleLine = true,
+                                        textStyle = LocalTextStyle.current.copy(fontSize = 16.sp, fontWeight = FontWeight(400), color = LocalTextStyle.current.color),
+                                        cursorBrush = SolidColor(LocalTextStyle.current.color)
                                     )
                                 }
                                 Icon(
                                     painter = getPainter(DrawableIcon.DrawableSearch),
                                     contentDescription = "搜索",
                                     modifier = Modifier
-                                        .align(Alignment.CenterVertically)
-                                        .padding(4.dp)
-                                        .size(LocalAppUIConstants.current.filterLabelHeight + 8.dp)
-                                        .background(
-                                            LocalAppPalette.current.labelUnChecked,
-                                            shape = CircleShape
-                                        )
+                                        .padding(horizontal = 4.dp)
+                                        .size(LocalAppUIConstants.current.filterLabelHeight + 4.dp)
+                                        .background(LocalAppPalette.current.labelUnChecked, shape = CircleShape)
                                         .clickable {
                                             filterConfig.value.isInSearch.value =
                                                 !filterConfig.value.isInSearch.value
                                         }
                                         .padding(8.dp)
+                                        .align(Alignment.CenterVertically)
                                 )
                             }
                         }
