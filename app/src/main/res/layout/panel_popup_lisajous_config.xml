@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@color/color_card_bg"
+    android:padding="12dp">
+
+    <TextView
+        android:id="@+id/a_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:hint="a="
+        app:layout_constraintBottom_toBottomOf="@id/a_expr"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@id/a_expr" />
+
+    <EditText
+        android:id="@+id/a_expr"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:hint="a"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@id/a_text"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/b_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:hint="b="
+        app:layout_constraintBottom_toBottomOf="@id/b_expr"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@id/b_expr" />
+
+    <EditText
+        android:id="@+id/b_expr"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:hint="y"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@id/b_text"
+        app:layout_constraintTop_toBottomOf="@id/a_expr" />
+
+
+    <TextView
+        android:id="@+id/x_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:hint="x="
+        app:layout_constraintBottom_toBottomOf="@id/x_expr"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@id/x_expr" />
+
+    <EditText
+        android:id="@+id/x_expr"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:hint="x"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@id/x_text"
+        app:layout_constraintTop_toBottomOf="@id/b_expr"/>
+
+    <LinearLayout
+        android:id="@+id/t_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/x_expr">
+
+        <EditText
+            android:id="@+id/t_min_value"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:hint="min:(float)" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="≤" />
+
+        <TextView
+            android:id="@+id/t_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text=" t "/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="≤" />
+
+        <EditText
+            android:id="@+id/t_max_value"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:hint="max:(float)" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text=", 精度" />
+
+        <EditText
+            android:id="@+id/t_step_count"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:hint="max:(int)" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/more"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/t_container"
+        android:gravity="center"
+        android:text="更多 >"/>
+</androidx.constraintlayout.widget.ConstraintLayout>

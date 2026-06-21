@@ -37,6 +37,7 @@ import com.jingtian.demoapp.main.fragments.RxZipFragment
 import com.jingtian.demoapp.main.fragments.StaggeredListFragment
 import com.jingtian.demoapp.main.fragments.TextOnFingerFragment
 import com.jingtian.demoapp.main.fragments.WidthAnimFragment
+import com.jingtian.demoapp.main.lissajous.LisajousCurveFragment
 import com.jingtian.demoapp.main.rank.fragment.RankFragment
 
 class MainActivity : BaseActivity(), BaseFragmentCallback {
@@ -45,6 +46,7 @@ class MainActivity : BaseActivity(), BaseFragmentCallback {
 
         private val fragmentList = listOf(
             FootCurveFragment::class.java to arrayOf<Any>(),
+            LisajousCurveFragment::class.java to arrayOf<Any>(),
             NBPlusTextFragment::class.java to arrayOf<Any>(),
             TextOnFingerFragment::class.java to arrayOf<Any>(),
             RankFragment::class.java to arrayOf<Any>(),
