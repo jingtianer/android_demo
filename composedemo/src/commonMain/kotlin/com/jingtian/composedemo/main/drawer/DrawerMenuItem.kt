@@ -42,12 +42,10 @@ import com.jingtian.composedemo.base.resources.getPainter
 @Composable
 fun DrawerMenuItem(
     item: Album,
-    enableEdit: Boolean,
     onItemClick: () -> Unit,
 ) {
     var deleteConfirmDialogState by remember { mutableStateOf(false) }
     var albumName by remember { mutableStateOf(item.albumName) }
-    var changeNameJob by remember { mutableStateOf<Job?>(null) }
     val viewModel: AlbumViewModel = viewModel(factory = AlbumViewModel.viewModelFactory)
     val size = 36.dp
     val modifier = Modifier

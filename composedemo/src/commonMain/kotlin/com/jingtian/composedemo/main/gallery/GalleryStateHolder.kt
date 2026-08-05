@@ -81,7 +81,7 @@ class GalleryStateHolder(val album: IndexedValue<Album>, val albumList: List<Alb
 
     var platformExtraModel by mutableStateOf(getPlatformExtra())
 
-    val albumViewMap = mutableStateMapOf<Long, WeakRef<AlbumItemViewStateHolder>>()
+    val albumViewMap = mutableStateMapOf<Triple<Long, Long, Long>, WeakRef<AlbumItemViewStateHolder>>()
 
     val filterConfig = mutableStateOf(FilterConfig())
     var gallerySearchWord by mutableStateOf("")

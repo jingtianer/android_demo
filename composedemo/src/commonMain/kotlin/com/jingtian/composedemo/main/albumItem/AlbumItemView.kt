@@ -189,7 +189,7 @@ class AlbumItemViewStateHolder(
 
 @Composable
 fun AlbumItemView(
-    albumViewMap: SnapshotStateMap<Long, WeakRef<AlbumItemViewStateHolder>>,
+    albumViewMap: SnapshotStateMap<Triple<Long, Long, Long>, WeakRef<AlbumItemViewStateHolder>>,
     albumItemRelation: AlbumItemRelation,
     size: Dp,
     padding: Dp,
@@ -198,26 +198,24 @@ fun AlbumItemView(
     itemSelectStateChangeState: MutableState<Long>,
     showEditDialogState: MutableState<AlbumItemRelation?>
 ) {
-    val itemId = albumItemRelation.albumItem.itemId ?: return
+    val itemId = Triple(albumItemRelation.albumItem.itemId ?: DataBase.INVALID_ID, albumItemRelation.albumItem.fileId, albumItemRelation.fileInfo.storageId) ?: return
     val dpSize = size.dpValue()
     val viewModel: AlbumViewModel = viewModel(factory = AlbumViewModel.viewModelFactory)
-    val stateHolder by remember(itemId) {
-        mutableStateOf(
-            albumViewMap.getOrPutRef(itemId) {
+    val stateHolder = remember(itemId) {
+        albumViewMap.getOrPutRef(itemId) {
 //                Log.d("jingtian", "AlbumItemView: getOrPut ${itemId}, ${albumViewMap.hashCode()}")
-                AlbumItemViewStateHolder(
-                    viewModel,
-                    albumItemRelation,
-                    size,
-                    dpSize,
-                    padding,
-                    currentSelectedItem,
-                    enterEditState,
-                    itemSelectStateChangeState,
-                    showEditDialogState
-                )
-            }
-        )
+            AlbumItemViewStateHolder(
+                viewModel,
+                albumItemRelation,
+                size,
+                dpSize,
+                padding,
+                currentSelectedItem,
+                enterEditState,
+                itemSelectStateChangeState,
+                showEditDialogState
+            )
+        }
     }
     stateHolder.AlbumItemView()
 }

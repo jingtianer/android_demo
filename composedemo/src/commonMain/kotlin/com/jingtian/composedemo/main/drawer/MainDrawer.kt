@@ -29,8 +29,6 @@ fun MainDrawer(
     albumData: List<Album>,
     onAlbumSelected: (Int, Album) -> Unit,
 ) {
-    val enableEdit = false
-//    var enableEdit by remember { mutableStateOf(false) }
     Column(
         Modifier
             .fillMaxHeight()
@@ -63,7 +61,7 @@ fun MainDrawer(
                     (albumData[index].albumId ?: DataBase.INVALID_ID) to albumData[index].albumName
                 }) { index ->
                 val item = albumData[index]
-                DrawerMenuItem(item, enableEdit) {
+                DrawerMenuItem(item) {
                     onAlbumSelected(index, item)
                 }
             }
