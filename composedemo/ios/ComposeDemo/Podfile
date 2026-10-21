@@ -1,0 +1,4 @@
+target 'ComposeDemo' do
+  use_frameworks!
+  pod 'NMSSH', '~> 2.3.0'
+end
