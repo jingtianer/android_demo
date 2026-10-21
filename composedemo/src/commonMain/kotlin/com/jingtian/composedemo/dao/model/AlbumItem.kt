@@ -7,8 +7,9 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.jingtian.composedemo.dao.AlbumItemDao
 import com.jingtian.composedemo.dao.DataBase
-import kotlinx.datetime.Clock
 import kotlinx.serialization.Serializable
+import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
 
 @Entity(
     tableName = AlbumItemDao.TABLE_NAME,
@@ -31,6 +32,7 @@ import kotlinx.serialization.Serializable
     indices = [Index(value = ["itemId", "albumId", "fileId"])],
 )
 @Serializable
+@OptIn(ExperimentalTime::class)
 class AlbumItem(
     @PrimaryKey(autoGenerate = true)
     var itemId: Long? = null,

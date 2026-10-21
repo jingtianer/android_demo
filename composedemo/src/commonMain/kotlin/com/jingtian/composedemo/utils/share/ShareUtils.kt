@@ -48,7 +48,7 @@ object ShareUtils {
 
     private suspend fun getShareFile(): Path {
         return withContext(Dispatchers.IO) {
-            val file = Path(shareFileRootDir, "share_${Random.nextULong()}.json")
+            val file = Path(shareFileRootDir, "share_${Random.nextLong(0, Long.MAX_VALUE)}.json")
             if (SystemFileSystem.exists(file)) {
                 if (file.isFile) {
                     file.delete()

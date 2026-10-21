@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace 'com.jingtian.demoapp'
-    compileSdk 34
+    compileSdk 35
     lintOptions {
         abortOnError false
     }

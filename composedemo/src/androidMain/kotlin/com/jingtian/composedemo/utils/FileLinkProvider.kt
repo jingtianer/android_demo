@@ -33,7 +33,7 @@ object FileLinkProvider {
 //        val originalFile = (fileInfo.getFileUri() as? MultiplatformFileImpl)?.uri ?: return null
 //        val tmpLinkFile = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
 //            Files.createLink(
-//                Path(fileLinkDir.path, "${fileName}_tmplink_${Random.nextULong()}.${fileInfo.extension ?: defaultExtension}"),
+//                Path(fileLinkDir.path, "${fileName}_tmplink_${Random.nextLong(0, Long.MAX_VALUE)}.${fileInfo.extension ?: defaultExtension}"),
 //                Path(originalFile.path ?: return null)
 //            ).toFile()
 //        } else {

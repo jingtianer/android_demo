@@ -4,10 +4,12 @@ plugins {
     alias(libs.plugins.kotlin.android) apply false
     alias(libs.plugins.kotlin.jvm) apply false
     alias(libs.plugins.kotlin.multiplatform) apply false
+    alias(libs.plugins.kotlin.native.cocoapods) apply false
     alias(libs.plugins.kotlin.serialization) apply false
     alias(libs.plugins.ksp) apply false
 //    id("com.chaquo.python") version "15.0.1" apply false
     alias(libs.plugins.jetbrains.compose) apply false
     alias(libs.plugins.kotlin.compose) apply false
     alias(libs.plugins.buildkonfig.gradle.plugin) apply false
+    alias(libs.plugins.androidx.room) apply false
 }

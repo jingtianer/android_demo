@@ -30,7 +30,7 @@ class AlbumItemLauncher : IAlbumItemLauncher {
 
 //        fun FileInfo.tmpLinkFile(fileName: String, defaultExtension: String = ""): Path? {
 //            val originalFile = this.getFileUri()?.file ?: return null
-//            val linkedFile = Files.createLink(Path(linkDir.path, fileName + "_tmplink_${Random.nextULong()}.${extension ?: defaultExtension}"), Path(originalFile.parentFile.path, originalFile.name))
+//            val linkedFile = Files.createLink(Path(linkDir.path, fileName + "_tmplink_${Random.nextLong(0, Long.MAX_VALUE)}.${extension ?: defaultExtension}"), Path(originalFile.parentFile.path, originalFile.name))
 //            linkedFile.toFile().deleteOnExit()
 //            return originalFile.toPath()
 //        }

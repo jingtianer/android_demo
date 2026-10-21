@@ -334,7 +334,7 @@ private class InputStreamRawSource(
 
 fun Bitmap?.toImmutable(): Bitmap? {
     return if (this != null && this.isMutable) {
-        return this.copy(this.config, false)
+        return this.copy(this.config ?: Bitmap.Config.ARGB_8888, false)
     } else {
         this
     }

@@ -1,16 +1,19 @@
 import com.codingfeline.buildkonfig.compiler.FieldSpec
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.util.Properties
 import kotlin.math.min
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.kotlin.native.cocoapods)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.jetbrains.compose)
     alias(libs.plugins.android.application)
     alias(libs.plugins.buildkonfig.gradle.plugin)
+    alias(libs.plugins.androidx.room)
 }
 
 // ======================== 版本常量管理 ========================
@@ -45,26 +48,28 @@ kotlin {
 
     androidTarget()
 
-    if (isIOS) {
-        listOf(
-            iosX64(),
-            iosArm64(),
-            iosSimulatorArm64()
-        ).forEach { iosTarget->
-            iosTarget.binaries {
-                framework {
-                    baseName = "SharedComposeDemo"
-                    isStatic = true
-                }
+    cocoapods {
+        version = appVersion
+        summary = "ComposeDemo shared framework"
+        homepage = "https://example.com"
+        podfile = project.file("ios/ComposeDemo/Podfile")
+        ios.deploymentTarget = "15.6"
+        pod("NMSSH") { version = "2.3.0" }
+    }
+    listOf(
+        iosArm64()
+    ).forEach { iosTarget->
+        iosTarget.binaries {
+            framework {
+                baseName = "SharedComposeDemo"
+                isStatic = true
             }
         }
     }
 
     jvm("desktop") {
-        compilations.all {
-            kotlinOptions {
-                jvmTarget = "17"
-            }
+        compilerOptions {
+            jvmTarget.set(JvmTarget.JVM_17)
         }
     }
 
@@ -84,11 +89,9 @@ kotlin {
 
                 // 数据库 - Room
                 implementation(libs.androidx.room.runtime.get().toString())
-                implementation(libs.androidx.room.ktx.get().toString())
 
                 // 生命周期
                 implementation(libs.androidx.lifecycle.viewmodel.core.get().toString())
-                implementation(libs.androidx.lifecycle.viewmodel.ktx.get().toString())
                 implementation(libs.androidx.lifecycle.viewmodel.compose.get().toString())
 
                 // 工具类
@@ -139,28 +142,18 @@ kotlin {
             }
         }
 
-        if (isIOS) {
-            val iosMain by creating {
-                dependsOn(commonMain)
-                dependencies {
-                    implementation(libs.kotlinx.coroutines.core)
-                    implementation(libs.sqlite.bundled)
-//                implementation(libs.androidx.room.runtime)
-//                implementation(libs.androidx.room.ktx)
-                }
+        val iosMain by creating {
+            dependsOn(commonMain)
+            dependencies {
+                implementation(libs.kotlinx.coroutines.core)
+                implementation(libs.sqlite.bundled)
+//              implementation(libs.androidx.room.runtime)
+//              implementation(libs.androidx.room.ktx)
             }
+        }
 
-            val iosArm64Main by getting {
-                dependsOn(iosMain)
-            }
-
-            val iosSimulatorArm64Main by getting {
-                dependsOn(iosMain)
-            }
-
-            val iosX64Main by getting {
-                dependsOn(iosMain)
-            }
+        val iosArm64Main by getting {
+            dependsOn(iosMain)
         }
 
         // Desktop 平台依赖 (DesktopMain)
@@ -202,6 +195,20 @@ kotlin {
             }
         }
     }
+    if (isIOS) {
+        configurations {
+            matching { it.name.endsWith("CInterop") }.configureEach {
+                resolutionStrategy.eachDependency {
+                    if (requested.group == "org.jetbrains.androidx.savedstate" && requested.name == "savedstate") {
+                        useVersion("1.2.1")
+                    }
+                    if (requested.group == "org.jetbrains.androidx.lifecycle" && requested.name == "lifecycle-viewmodel-savedstate") {
+                        useVersion("2.8.1")
+                    }
+                }
+            }
+        }
+    }
 }
 
 buildkonfig {
@@ -227,7 +234,7 @@ buildkonfig {
 // ======================== Android 配置 ========================
 android {
     namespace = appAid
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = appAid
@@ -282,6 +289,10 @@ android {
     }
 }
 
+room {
+    schemaDirectory("${layout.buildDirectory.get().asFile}/schemas")
+}
+
 // ======================== 全局依赖 ========================
 dependencies {
     // Room 编译器 (KSP)
@@ -291,12 +302,9 @@ dependencies {
 
     if (isIOS) {
         // iOS 仅使用 Kotlin Inject 的 KSP，不运行 Room KSP，以避免 commonMain 中 JVM-only 类型（如 java.util.Date）导致 MissingType
-        add("kspIosSimulatorArm64", libs.kotlin.inject.compiler)
         add("kspIosArm64", libs.kotlin.inject.compiler)
-        add("kspIosX64", libs.kotlin.inject.compiler)
-        add("kspIosSimulatorArm64", libs.androidx.room.compiler)
         add("kspIosArm64", libs.androidx.room.compiler)
-        add("kspIosX64", libs.androidx.room.compiler)
+        add("iosArm64CInterop", "androidx.lifecycle:lifecycle-viewmodel-savedstate:2.9.4")
     }
 
     // Compose 布局

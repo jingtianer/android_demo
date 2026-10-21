@@ -19,14 +19,14 @@ interface RemoteSftpFile: MultiplatformFile
 
 @kotlinx.serialization.Serializable
 abstract class RemoteServer(
-    var serverName: String = "新建: ${Random.nextULong()}",
+    var serverName: String = "新建: ${Random.nextLong(0, Long.MAX_VALUE)}",
     var serverId: String = "",
 ) {
     abstract suspend fun deleteFiles(files: List<RemoteSftpFile>)
 }
 
 expect fun createSftpServer(
-        serverName: String = "新建: ${Random.nextULong()}",
+        serverName: String = "新建: ${Random.nextLong(0, Long.MAX_VALUE)}",
         serverId: String = "",
         userName: String = "",
         port: Int = 22,
@@ -44,7 +44,7 @@ abstract class SftpServer : RemoteServer {
     var password: String
     var passwordIv: String?
     var path: String
-    constructor(serverName: String = "新建: ${Random.nextULong()}",
+    constructor(serverName: String = "新建: ${Random.nextLong(0, Long.MAX_VALUE)}",
                 serverId: String = "",
                 userName: String = "",
                 port: Int = 22,

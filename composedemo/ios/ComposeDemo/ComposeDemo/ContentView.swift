@@ -6,7 +6,7 @@
 //
 
 import SwiftUI
-import SharedComposeDemo
+import composedemo
 
 struct ContentView: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UIViewController {

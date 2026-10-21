@@ -54,7 +54,7 @@ actual fun sftpServerImplSerializer(): KSerializer<out SftpServer> = SftpServerI
 
 @kotlinx.serialization.Serializable
 class SftpServerImpl : SftpServer {
-    constructor(    serverName: String = "新建: ${Random.nextULong()}",
+    constructor(    serverName: String = "新建: ${Random.nextLong(0, Long.MAX_VALUE)}",
                     serverId: String = "",
                     userName: String = "",
                     port: Int = 22,

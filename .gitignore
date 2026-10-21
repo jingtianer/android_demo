@@ -20,6 +20,7 @@ local.properties
 */py311
 */py312
 /.kotlin/
+composedemo/schemas/
 
 # ios ignore
 
