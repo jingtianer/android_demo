@@ -94,6 +94,7 @@ class SftpServerImpl : SftpServer {
                 port
             )
             val password = Base64Utils.decrypt(password)
+            logger("newSession", password)
             session.setPassword(password)
             val config = Properties()
 
@@ -141,10 +142,15 @@ class SftpServerImpl : SftpServer {
             val sftpChannel = connect { tag, msg ->
                 viewModel.sendMessage("$tag: $msg")
 //                 Log.d(tag, msg)
-            } ?: return@withContext
+            }
+            if (sftpChannel == null) {
+                viewModel.sendMessage("失败 未知错误")
+                return@withContext
+            }
             val pathSet = DataBase.dbImpl.getAlbumItemDao().getAllAlbumItemWithExtra(album.albumId ?: return@withContext).map { it.fileInfo.filePath }.toSet()
             runCatching {
                 val fileInfoList: MutableList<Pair<FileInfo, AlbumItem>> = mutableListOf()
+                viewModel.sendMessage("开始")
                 traverseEntry(sftpChannel, viewModel, pathSet, path, album, fileInfoList)
                 viewModel.sendMessage("正在写入数据库")
                 viewModel.importFiles(album, fileInfoList)
@@ -161,6 +167,9 @@ class SftpServerImpl : SftpServer {
             val entry = (entry as? ChannelSftp.LsEntry) ?: continue
             viewModel.sendMessage("导入: ${entry.filename}: $root")
             if (entry.attrs.isDir) {
+                if (entry.filename == "." || entry.filename == "..") {
+                    return
+                }
                 traverseEntry(sftpChannel, viewModel, pathSet, "${root}/${entry.filename}", album, fileInfoList)
             } else {
                 readFile(sftpChannel, viewModel, pathSet, root, entry, album, fileInfoList)

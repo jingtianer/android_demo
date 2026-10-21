@@ -5,7 +5,6 @@ import com.jingtian.composedemo.viewmodels.AuthParams
 import java.nio.charset.Charset
 
 actual fun onServerEditAuthSuccess(cipher: AuthParams, sftpServer: SftpServer) {
-    Base64Utils.decryptAsByteArray(sftpServer.password)
-    sftpServer.password =  Base64Utils.decrypt(sftpServer.password)
-
+    sftpServer.password = Base64Utils.decrypt(sftpServer.password)
+    sftpServer.passwordIv = ""
 }

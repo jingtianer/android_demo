@@ -146,6 +146,7 @@ class SftpServerStateHolder(private val sftpServer: SftpServer = createSftpServe
 
     fun onServerEditAuthSuccess(cipher: AuthParams) {
         onServerEditAuthSuccess(cipher, sftpServer)
+        reset()
     }
 }
 
