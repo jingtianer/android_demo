@@ -19,7 +19,7 @@ import javax.imageio.ImageIO
 import javax.imageio.ImageReader
 
 
-class MultiplatformFileImpl(val realFile: File, val realExtension: String) : MultiplatformFile {
+open class MultiplatformFileImpl(val realFile: File, val realExtension: String) : MultiplatformFile {
     companion object {
         val imageExtensions = arrayOf("jpg", "jpeg", "png", "gif", "bmp", "webp", "tiff", "ico", "heic", "heif", "jfif")
         val videoExtensions = arrayOf("mp4", "mov", "mkv", "avi", "webm", "flv", "wmv")
@@ -28,7 +28,7 @@ class MultiplatformFileImpl(val realFile: File, val realExtension: String) : Mul
     }
 
     // 视频第一帧提取函数
-    private fun extractVideoFirstFrame(videoFile: File): ImageBitmap? {
+    fun extractVideoFirstFrame(videoFile: File): ImageBitmap? {
         val grabber = FFmpegFrameGrabber(videoFile)
 
         return try {
@@ -48,7 +48,7 @@ class MultiplatformFileImpl(val realFile: File, val realExtension: String) : Mul
     }
 
     // 音频封面提取函数
-    private fun extractAudioCover(audioFile: File): ImageBitmap? {
+    fun extractAudioCover(audioFile: File): ImageBitmap? {
         return try {
             val audioFileObj = AudioFileIO.readAs(audioFile, realExtension)
             val tag = audioFileObj.tag
@@ -69,7 +69,7 @@ class MultiplatformFileImpl(val realFile: File, val realExtension: String) : Mul
         }
     }
 
-    private fun getImageSize(imageFile: File): Pair<Int, Int>? {
+    fun getImageSize(imageFile: File): Pair<Int, Int>? {
         if (!imageFile.exists() || !imageFile.isFile) {
             return null
         }

@@ -42,6 +42,7 @@ class RemoteFileStore(serverType: ServerType) {
     private val locks = ConcurrentHashMap<String, Semaphore>()
 
     suspend fun loadFile(originUri: Uri, server: SftpServer): File {
+        val server = server as SftpServerImpl
         return withContext(Dispatchers.IO) {
             val realFile = get(originUri)
             val tmpFile = getTmp(originUri)

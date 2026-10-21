@@ -187,6 +187,9 @@ kotlin {
                 implementation(libs.javacv.get().toString())
                 implementation(libs.ffmpeg.platform.get().toString())
                 implementation(libs.jaudiotagger.get().toString())
+
+                implementation(libs.jsch)
+                implementation(libs.jzlib)
             }
         }
     }

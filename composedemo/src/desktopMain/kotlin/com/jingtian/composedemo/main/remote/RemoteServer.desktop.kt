@@ -1,8 +1,5 @@
 package com.jingtian.composedemo.main.remote
 
-import android.security.keystore.KeyGenParameterSpec
-import android.security.keystore.KeyProperties
-import android.util.Log
 import com.jcraft.jsch.ChannelSftp
 import com.jcraft.jsch.ChannelSftp.LsEntry
 import com.jcraft.jsch.JSch
@@ -15,35 +12,17 @@ import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.utils.Base64Utils
 import com.jingtian.composedemo.utils.FileStorageUtils
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
+import com.jingtian.composedemo.viewmodels.AuthParams
+import com.jingtian.composedemo.viewmodels.AuthSuccess
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.nio.charset.Charset
-import java.nio.file.Path
-import java.security.KeyStore
+import kotlinx.serialization.KSerializer
 import java.util.Properties
-import javax.crypto.Cipher
-import javax.crypto.KeyGenerator
-import javax.crypto.SecretKey
-import javax.crypto.spec.GCMParameterSpec
-import javax.crypto.spec.IvParameterSpec
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
 import kotlin.random.Random
 import kotlin.random.nextULong
-
-
-enum class ServerType(val type: Int) {
-    SFTP(0)
-}
-
-@kotlinx.serialization.Serializable
-abstract class RemoteServer(
-    var serverName: String = "新建: ${Random.nextULong()}",
-    var serverId: String = "",
-) {
-    abstract suspend fun deleteFiles(files: List<RemoteSftpFileImpl>)
-}
 
 @OptIn(ExperimentalContracts::class)
 inline fun <T> ChannelSftp.use(block: (ChannelSftp)->T): T? {
@@ -57,31 +36,24 @@ inline fun <T> ChannelSftp.use(block: (ChannelSftp)->T): T? {
     }
 }
 
+actual fun createSftpServer(serverName: String, serverId: String, userName: String, port: Int, ip: String, password: String, passwordIv: String?, path: String,
+) : SftpServer {
+    return SftpServerImpl(serverName, serverId, userName, port, ip, password, passwordIv, path)
+}
+
+actual fun sftpServerImplSerializer(): KSerializer<out SftpServer> = SftpServerImpl.serializer()
+
 @kotlinx.serialization.Serializable
-class SftpServer : RemoteServer {
-    var userName: String = ""
-    var port: Int = 22
-    var ip: String = "localhost"
-    var password: String = ""
-    var passwordIv: String? = null
-    var path: String = "/"
-    constructor(
-        serverName: String = "新建: ${Random.nextULong()}",
-        serverId: String = "",
-        userName: String = "",
-        port: Int = 22,
-        ip: String = "localhost",
-        password: String = "",
-        passwordIv: String? = null,
-        path: String = "/",
-    ) : super(serverName, serverId) {
-        this.userName = userName
-        this.port = port
-        this.ip = ip
-        this.password = password
-        this.passwordIv = passwordIv
-        this.path = path
-    }
+class SftpServerImpl : SftpServer {
+    constructor(    serverName: String = "新建: ${Random.nextULong()}",
+                    serverId: String = "",
+                    userName: String = "",
+                    port: Int = 22,
+                    ip: String = "localhost",
+                    password: String = "",
+                    passwordIv: String? = null,
+                    path: String = "/"
+    ): super(serverName, serverId, userName, port, ip, password, passwordIv, path)
     @kotlinx.serialization.Transient
     private var session: Session? = null
     private fun getSession(logger: (String, String)->Unit): Session? {
@@ -121,8 +93,7 @@ class SftpServer : RemoteServer {
                 ip,
                 port
             )
-            val decryptCipher = getDecryptCipher(this)
-            val password = decryptCipher?.doFinal(Base64Utils.decryptAsByteArray(password))?.toString(Charset.defaultCharset()) ?: password
+            val password = Base64Utils.decrypt(password)
             session.setPassword(password)
             val config = Properties()
 
@@ -136,7 +107,7 @@ class SftpServer : RemoteServer {
                 }
 
                 override fun getPassword(): String {
-                    return this@SftpServer.password
+                    return this@SftpServerImpl.password
                 }
 
                 override fun promptPassword(message: String): Boolean {
@@ -165,7 +136,7 @@ class SftpServer : RemoteServer {
         } ?: return null
         return session
     }
-    suspend fun importFiles(viewModel: AlbumViewModel, album: Album) {
+    override suspend fun importFiles(viewModel: AlbumViewModel, album: Album) {
         withContext(Dispatchers.IO) {
             val sftpChannel = connect { tag, msg ->
                 viewModel.sendMessage("$tag: $msg")
@@ -219,63 +190,27 @@ class SftpServer : RemoteServer {
         fileInfoList.add(fileInfo to albumItem)
     }
 
-    fun getSecretKey(server: RemoteServer, encrypt: Boolean = true): SecretKey {
-        val keyStore = KeyStore.getInstance("AndroidKeyStore")
-        keyStore.load(null)
-        if (encrypt) {
-            keyStore.deleteEntry(server.serverId)
-        }
-        if (!keyStore.containsAlias(server.serverId)) {
-            val keyGenerator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore")
-            val keySpec = KeyGenParameterSpec.Builder(
-                server.serverId,
-                KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
-            )
-                .setBlockModes(KeyProperties.BLOCK_MODE_CBC)
-                .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_PKCS7)
-//                .setUserAuthenticationRequired(true)
-//                .setInvalidatedByBiometricEnrollment(true)
-//                .let {
-//                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-//                        it.setUserAuthenticationParameters(0 /* duration */,
-//                        KeyProperties.AUTH_BIOMETRIC_STRONG or
-//                                KeyProperties.AUTH_DEVICE_CREDENTIAL
-//                        )
-//                    } else {
-//                        it
-//                    }
-//                }
-                .build()
-            keyGenerator.init(keySpec)
-            keyGenerator.generateKey()
-        }
-        return keyStore.getKey(server.serverId, null) as SecretKey
+    override fun getInitializedCipher(): AuthParams {
+        return AuthParams()
     }
 
-    fun getCipher(): Cipher {
-        return Cipher.getInstance(
-            KeyProperties.KEY_ALGORITHM_AES + "/"
-                    + KeyProperties.BLOCK_MODE_CBC + "/"
-                    + KeyProperties.ENCRYPTION_PADDING_PKCS7)
+    override fun onUpdateAuthSuccess(authResult: AuthSuccess){
+        val encodedPassword = Base64Utils.encrypt(this.password)
+        this.password = encodedPassword
+        this.passwordIv = ""
     }
 
-    fun getDecryptCipher(server: SftpServer): Cipher? {
-        val cipher = getCipher()
-        val sk = getSecretKey(server, false)
-        val iv = Base64Utils.decryptAsByteArray(server.passwordIv ?: return null)
-
-        // 兼容 AndroidKeyStore2：优先 GCMParameterSpec，失败则用 IvParameterSpec
-        try {
-            val gcmSpec = GCMParameterSpec(128, iv)
-            cipher.init(Cipher.DECRYPT_MODE, sk, gcmSpec)
-        } catch (e: Exception) {
-            val ivSpec = IvParameterSpec(iv)
-            cipher.init(Cipher.DECRYPT_MODE, sk, ivSpec)
-        }
-        return cipher
+    override fun onAddSftpServerAuthSuccess(authResult: AuthSuccess) {
+        val encodedPassword = Base64Utils.encrypt(this.password)
+        this.password = encodedPassword
+        this.passwordIv = ""
     }
 
-    override suspend fun deleteFiles(files: List<RemoteSftpFileImpl>) {
+    override fun getDecryptCipher(server: SftpServer): AuthParams {
+        return AuthParams()
+    }
+
+    override suspend fun deleteFiles(files: List<RemoteSftpFile>) {
         connect { tag, msg ->
 //            Log.d(tag, "deleteFiles: $msg")
         }?.use { channel->

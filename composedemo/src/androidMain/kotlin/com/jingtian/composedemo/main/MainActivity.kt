@@ -35,6 +35,8 @@ import com.jingtian.composedemo.utils.getFileStorageRootDir
 import com.jingtian.composedemo.utils.traverseDirFiles
 import com.jingtian.composedemo.utils.traverseDirNio
 import com.jingtian.composedemo.viewmodels.AndroidMigrateViewModel
+import com.jingtian.composedemo.viewmodels.AuthSuccess
+import com.jingtian.composedemo.viewmodels.AuthViewModel
 import com.jingtian.composedemo.web.WebViewActivity
 import java.io.File
 import java.nio.file.Files
@@ -46,13 +48,11 @@ class MainActivity : BaseActivity() {
     companion object {
         private const val MEDIA_PERMISSION_REQUEST_CODE = 1001
     }
-    private val viewModel: AndroidMigrateViewModel by viewModels {
-        viewModelFactory {
-            initializer {
-                AndroidMigrateViewModel()
-            }
-        }
+    private val _viewModel: AuthViewModel by viewModels<AuthViewModel> {
+        AndroidMigrateViewModel.factory
     }
+
+    private val viewModel: AndroidMigrateViewModel get() = _viewModel as AndroidMigrateViewModel
 
     private val requiredPermissions = arrayOf(
         Manifest.permission.READ_MEDIA_AUDIO,
@@ -85,14 +85,14 @@ class MainActivity : BaseActivity() {
     }
 
     private fun checkBioAuth() {
-        val authCallback = object : BiometricPrompt.AuthenticationCallback() {
-            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                super.onAuthenticationSucceeded(result)
-                viewModel.isPasswordChecked.value = true
-                checkAndRequestMediaPermissions()
+        viewModel.bioticAuth.doAuth { authResult ->
+            when(authResult) {
+                is AuthSuccess -> {
+                    viewModel.isPasswordChecked.value = true
+                    checkAndRequestMediaPermissions()
+                }
             }
         }
-        viewModel.bioticAuth.doAuth(authCallback)
     }
 
     override fun onRequestPermissionsResult(

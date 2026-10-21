@@ -72,6 +72,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.jingtian.composedemo.BuildKonfig
 import com.jingtian.composedemo.base.AppThemeConfirmDialog
 import com.jingtian.composedemo.base.AppThemeText
 import com.jingtian.composedemo.base.BackPressHandler
@@ -485,6 +486,12 @@ fun GalleryStateHolder.Gallery() {
                                     GalleryFunctionView(func) {
                                         showMoveToDialog = true
                                     }
+                                }
+                                GalleryFunctions.IMPORT_CIFS -> {
+                                    ImportRemoteFunctionView(this@Gallery, func) {}
+                                }
+                                GalleryFunctions.DELETE_CIFS_FILE -> {
+                                    DeleteRemoteFileFunctionView(this@Gallery, func) {}
                                 }
                                 else -> {}
                             }

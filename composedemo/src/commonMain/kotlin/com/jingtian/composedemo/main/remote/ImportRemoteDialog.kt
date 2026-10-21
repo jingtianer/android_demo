@@ -1,23 +1,10 @@
 package com.jingtian.composedemo.main.remote
 
-import android.content.Context
-import android.os.Build
-import android.security.keystore.KeyGenParameterSpec
-import android.security.keystore.KeyProperties
-import android.util.Base64
-import android.util.Log
-import android.widget.Toast
 import androidx.annotation.CallSuper
-import androidx.biometric.BiometricManager
-import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentHeight
@@ -31,47 +18,34 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.ViewModelFactoryDsl
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.lifecycle.viewmodel.initializer
-import androidx.lifecycle.viewmodel.viewModelFactory
 import com.jingtian.composedemo.base.AppThemeDialog
 import com.jingtian.composedemo.base.AppThemeText
 import com.jingtian.composedemo.base.resources.DrawableIcon
 import com.jingtian.composedemo.base.resources.getPainter
 import com.jingtian.composedemo.dao.model.Album
 import com.jingtian.composedemo.main.drawer.DrawerFunctionView
-import com.jingtian.composedemo.main.gallery.PlatformExtra
 import com.jingtian.composedemo.ui.theme.LocalAppPalette
 import com.jingtian.composedemo.ui.theme.LocalAppUIConstants
 import com.jingtian.composedemo.ui.theme.LocalMiddleButtonConfig
-import com.jingtian.composedemo.ui.theme.dialogBackground
-import com.jingtian.composedemo.utils.Base64Utils
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
-import com.jingtian.composedemo.viewmodels.AndroidMigrateViewModel
+import com.jingtian.composedemo.viewmodels.AuthParams
+import com.jingtian.composedemo.viewmodels.AuthSuccess
+import com.jingtian.composedemo.viewmodels.AuthViewModel
+import com.jingtian.composedemo.viewmodels.authViewModel
 import kotlinx.coroutines.launch
-import java.nio.charset.Charset
-import java.security.KeyStore
-import javax.crypto.Cipher
-import javax.crypto.KeyGenerator
-import javax.crypto.SecretKey
-import javax.crypto.spec.GCMParameterSpec
-import javax.crypto.spec.IvParameterSpec
 
 class ImportRemoteDialogStateHolder {
     val sftpServerHolderList = mutableStateListOf(*(ServerStorage.getStorage<SftpServer>(ServerType.SFTP).allServer().map { it.toHolder() }.toTypedArray()))
@@ -79,63 +53,36 @@ class ImportRemoteDialogStateHolder {
     var sftpEditServerDialog by mutableStateOf<SftpServerStateHolder?>(null)
 
 
-    fun addSftpServer(viewModel: AndroidMigrateViewModel, serverHolder: SftpServerStateHolder, context: Context, onSuccess: ()->Unit) {
+    fun addSftpServer(viewModel: AuthViewModel, serverHolder: SftpServerStateHolder, onSuccess: ()->Unit) {
         sftpServerHolderList.add(0, serverHolder)
         val storage = ServerStorage.getStorage<SftpServer>(ServerType.SFTP)
         val server = serverHolder.get()
         storage.allocateServerId(server)
-        val cipher = server.getCipher()
-        val sk = server.getSecretKey(server)
-        cipher.init(Cipher.ENCRYPT_MODE, sk)
-        viewModel.bioticAuth.doAuth(cipher, object : BiometricPrompt.AuthenticationCallback() {
-            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                super.onAuthenticationSucceeded(result)
-//                when (result.authenticationType) {
-//                    BiometricPrompt.AUTHENTICATION_RESULT_TYPE_UNKNOWN -> {
-//                        return
-//                    }
-//                }
-                result.cryptoObject?.cipher?.let { cipher->
-                    cipher.doFinal(server.password.toByteArray(Charset.defaultCharset()))?.let { cipherResult->
-                        val encodedPassword = Base64Utils.encrypt(cipherResult)
-//                        Log.d("jingtian", "onAuthenticationSucceeded: password=${server.password}, encodedPassword=${encodedPassword}")
-                        server.password = encodedPassword
-                        server.passwordIv = Base64Utils.encrypt(cipher.iv)
-                    }
+        val cipher = server.getInitializedCipher()
+        viewModel.doAuth(cipher) { authResult ->
+            when (authResult) {
+                is AuthSuccess -> {
+                    server.onAddSftpServerAuthSuccess(authResult)
+                    storage.addServer(server)
+                    onSuccess()
                 }
-                storage.addServer(server)
-
-                onSuccess()
             }
-        })
+        }
     }
 
-    fun updateHolder(viewModel: AndroidMigrateViewModel, serverStateHolder: SftpServerStateHolder, context: Context, onSuccess: () -> Unit) {
+    fun updateHolder(viewModel: AuthViewModel, serverStateHolder: SftpServerStateHolder, onSuccess: () -> Unit) {
         val server = serverStateHolder.get()
         val storage = ServerStorage.getStorage<RemoteServer>(serverStateHolder.serverType)
-        val cipher = server.getCipher()
-        val sk = server.getSecretKey(server)
-        cipher.init(Cipher.ENCRYPT_MODE, sk)
-        viewModel.bioticAuth.doAuth(cipher, object : BiometricPrompt.AuthenticationCallback() {
-            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                super.onAuthenticationSucceeded(result)
-//                when (result.authenticationType) {
-//                    BiometricPrompt.AUTHENTICATION_RESULT_TYPE_UNKNOWN -> {
-//                        return
-//                    }
-//                }
-                result.cryptoObject?.cipher?.let { cipher->
-                    cipher.doFinal(server.password.toByteArray(Charset.defaultCharset()))?.let { cipherResult->
-                        val encodedPassword = Base64Utils.encrypt(cipherResult)
-//                        Log.d("jingtian", "onAuthenticationSucceeded: password=${server.password}, encodedPassword=${encodedPassword}")
-                        server.password = encodedPassword
-                        server.passwordIv = Base64Utils.encrypt(cipher.iv)
-                    }
+        val cipher = server.getInitializedCipher()
+        viewModel.doAuth(cipher) { authResult ->
+            when(authResult) {
+                is AuthSuccess -> {
+                    server.onUpdateAuthSuccess(authResult)
+                    storage.updateServer(server.serverId, server)
+                    onSuccess()
                 }
-                storage.updateServer(server.serverId, server)
-                onSuccess()
             }
-        })
+        }
     }
 
     fun removeSftpServer(serverStateHolder: ServerStateHolder) {
@@ -165,7 +112,7 @@ open class ServerStateHolder(private val remoteServer: RemoteServer, val serverT
     }
 }
 
-class SftpServerStateHolder(private val sftpServer: SftpServer = SftpServer()) : ServerStateHolder(sftpServer, ServerType.SFTP) {
+class SftpServerStateHolder(private val sftpServer: SftpServer = createSftpServer()) : ServerStateHolder(sftpServer, ServerType.SFTP) {
     var userName: String by mutableStateOf(sftpServer.userName)
     var port: Int by mutableIntStateOf(sftpServer.port)
     var ip: String by mutableStateOf(sftpServer.ip)
@@ -196,7 +143,13 @@ class SftpServerStateHolder(private val sftpServer: SftpServer = SftpServer()) :
         sftpServer.path = path
         return sftpServer
     }
+
+    fun onServerEditAuthSuccess(cipher: AuthParams) {
+        onServerEditAuthSuccess(cipher, sftpServer)
+    }
 }
+
+expect fun onServerEditAuthSuccess(cipher: AuthParams, sftpServer: SftpServer)
 
 @Composable
 fun ImportRemoteDialogStateHolder.ImportRemoteDialog(album: Album, onDismiss: ()->Unit) {
@@ -287,22 +240,18 @@ fun ImportRemoteDialogStateHolder.ImportRemoteDialog(album: Album, onDismiss: ()
 
 @Composable
 fun ImportRemoteDialogStateHolder.SftpServerEditDialog(sftpServer: SftpServerStateHolder, isEdit: Boolean, onDismiss: ()->Unit) {
-    val context = LocalContext.current
-    val viewModel: AndroidMigrateViewModel = viewModel(factory = viewModelFactory { initializer { AndroidMigrateViewModel() } })
+    val viewModel: AuthViewModel = authViewModel()
     if (!sftpServer.authed && isEdit) {
         val cipher = sftpServer.get().getDecryptCipher(sftpServer.get())
-        viewModel.bioticAuth.doAuth(cipher, object : BiometricPrompt.AuthenticationCallback() {
-            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                super.onAuthenticationSucceeded(result)
-                cipher?.doFinal(
-                    Base64Utils.decryptAsByteArray(sftpServer.password)
-                )?.toString(Charset.defaultCharset())?.let { password ->
-                    sftpServer.password = password
-                }
+        viewModel.doAuth(cipher) { authResult ->
+            when(authResult) {
+                is AuthSuccess -> {
+                    sftpServer.onServerEditAuthSuccess(cipher)
 //                Log.d("jingtian", "newSession: pwd=${sftpServer.password}")
-                sftpServer.authed = true
+                    sftpServer.authed = true
+                }
             }
-        })
+        }
         return
     }
     AppThemeDialog(
@@ -330,12 +279,12 @@ fun ImportRemoteDialogStateHolder.SftpServerEditDialog(sftpServer: SftpServerSta
         },
         onPositive = {
             if (!isEdit) {
-                addSftpServer(viewModel, sftpServer, context) {
+                addSftpServer(viewModel, sftpServer) {
                     sftpServer.authed = true
                     onDismiss()
                 }
             } else {
-                updateHolder(viewModel, sftpServer, context) {
+                updateHolder(viewModel, sftpServer) {
                     onDismiss()
                 }
             }
@@ -448,7 +397,7 @@ fun ImportRemoteDialogStateHolder.SftpServerEditDialog(sftpServer: SftpServerSta
 
 @Composable
 fun ColumnScope.SftpServerDescView(sftpServer: SftpServerStateHolder, onClick: ()->Unit, onLongPress: ()->Unit) {
-    val viewModel: AndroidMigrateViewModel = viewModel(factory = viewModelFactory { initializer { AndroidMigrateViewModel() } })
+    val viewModel: AuthViewModel = authViewModel()
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -456,13 +405,13 @@ fun ColumnScope.SftpServerDescView(sftpServer: SftpServerStateHolder, onClick: (
             .pointerInput(sftpServer) {
                 detectTapGestures(
                     onTap = {
-                        viewModel.bioticAuth.doAuth(object :
-                            BiometricPrompt.AuthenticationCallback() {
-                            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                                super.onAuthenticationSucceeded(result)
-                                onClick()
+                        viewModel.doAuth { authResult ->
+                            when(authResult) {
+                                is AuthSuccess -> {
+                                    onClick()
+                                }
                             }
-                        })
+                        }
                     },
                     onLongPress = {
                         onLongPress()

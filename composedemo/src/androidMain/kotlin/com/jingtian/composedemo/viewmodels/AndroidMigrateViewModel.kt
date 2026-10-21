@@ -3,33 +3,50 @@ package com.jingtian.composedemo.viewmodels
 import android.os.SystemClock
 import androidx.biometric.BiometricPrompt
 import androidx.biometric.BiometricPrompt.AuthenticationCallback
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
 import javax.crypto.Cipher
 
-class AndroidMigrateViewModel : ViewModel() {
-    val isMigrationFinished = mutableIntStateOf(0)
+actual class AuthParams(val cipher: Cipher? = null)
+
+actual class AuthSuccess(val result: BiometricPrompt.AuthenticationResult): AuthResult()
+actual class AuthFailed: AuthResult()
+actual class AuthError(val errorCode: Int, val errString: CharSequence): AuthResult()
+
+@Composable
+actual fun authViewModel(): AuthViewModel {
+    return viewModel(factory = AndroidMigrateViewModel.factory)
+}
+
+class AndroidMigrateViewModel : AuthViewModel() {
+    companion object {
+        val factory = viewModelFactory { initializer<AuthViewModel> { AndroidMigrateViewModel() } }
+    }
     var isPasswordChecked = mutableStateOf(false)
     private val currentBiometricPrompt: MutableList<BiometricPrompt> = mutableListOf()
 
-    class AuthenticationCallbackWrapper(val callback: AuthenticationCallback, var onAuthFinished: ()->Unit = {}) : BiometricPrompt.AuthenticationCallback() {
+    class AuthenticationCallbackWrapper(val callback: (AuthResult)->Unit, var onAuthFinished: ()->Unit = {}) : BiometricPrompt.AuthenticationCallback() {
         override fun onAuthenticationFailed() {
             super.onAuthenticationFailed()
-            callback.onAuthenticationFailed()
+            callback(AuthFailed())
             onAuthFinished()
         }
 
         override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
             super.onAuthenticationSucceeded(result)
-            callback.onAuthenticationSucceeded(result)
+            callback(AuthSuccess(result))
             onAuthFinished()
         }
 
         override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
             super.onAuthenticationError(errorCode, errString)
-            callback.onAuthenticationError(errorCode, errString)
+            callback(AuthError(errorCode, errString))
             onAuthFinished()
         }
     }
@@ -38,7 +55,7 @@ class AndroidMigrateViewModel : ViewModel() {
         val promptCreator: (BiometricPrompt.AuthenticationCallback)->BiometricPrompt,
         private val promptInfo: BiometricPrompt.PromptInfo
     ) {
-        fun doAuth(cipher: Cipher?, callback : BiometricPrompt.AuthenticationCallback) {
+        fun doAuth(cipher: Cipher?, callback : (AuthResult)->Unit) {
             val callbackWrapper = AuthenticationCallbackWrapper(callback)
             val prompt = promptCreator(callbackWrapper)
             callbackWrapper.onAuthFinished = {
@@ -52,7 +69,7 @@ class AndroidMigrateViewModel : ViewModel() {
             }
         }
 
-        fun doAuth(callback : BiometricPrompt.AuthenticationCallback) {
+        fun doAuth(callback : (AuthResult)->Unit) {
             val callbackWrapper = AuthenticationCallbackWrapper(callback)
             val prompt = promptCreator(callbackWrapper)
             callbackWrapper.onAuthFinished = {
@@ -79,4 +96,16 @@ class AndroidMigrateViewModel : ViewModel() {
     }
 
     lateinit var bioticAuth: Authenticator
+    override fun doAuth(authParams: AuthParams, onAuthResult: (AuthResult)->Unit) {
+        val cipher = authParams.cipher
+        if (cipher != null) {
+            bioticAuth.doAuth(cipher, onAuthResult)
+        } else {
+            doAuth(onAuthResult)
+        }
+    }
+
+    override fun doAuth(onAuthResult: (AuthResult) -> Unit) {
+        bioticAuth.doAuth(onAuthResult)
+    }
 }

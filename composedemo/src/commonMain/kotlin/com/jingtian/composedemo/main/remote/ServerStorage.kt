@@ -10,6 +10,8 @@ import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
+expect fun sftpServerImplSerializer(): KSerializer<out SftpServer>
+
 object ServerStorage {
 
     private val serverIdStorage = getLongStorage("server_id_storage")
@@ -50,7 +52,7 @@ object ServerStorage {
         }
     }
 
-    private val sftpServerStorage = Storage(ServerType.SFTP, SftpServer.serializer())
+    private val sftpServerStorage = Storage(ServerType.SFTP, sftpServerImplSerializer())
 
     fun <T: RemoteServer> getStorage(serverType: ServerType): Storage<T> {
         return when(serverType) {
