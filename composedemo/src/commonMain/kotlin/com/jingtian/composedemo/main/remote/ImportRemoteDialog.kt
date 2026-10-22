@@ -3,21 +3,29 @@ package com.jingtian.composedemo.main.remote
 import androidx.annotation.CallSuper
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.InteractionSource
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -27,6 +35,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewModelScope
@@ -48,12 +57,19 @@ import com.jingtian.composedemo.viewmodels.authViewModel
 import kotlinx.coroutines.launch
 
 class ImportRemoteDialogStateHolder {
-    val sftpServerHolderList = mutableStateListOf(*(ServerStorage.getStorage<SftpServer>(ServerType.SFTP).allServer().map { it.toHolder() }.toTypedArray()))
+    val sftpServerHolderList = mutableStateListOf(
+        *(ServerStorage.getStorage<SftpServer>(ServerType.SFTP).allServer().map { it.toHolder() }
+            .toTypedArray())
+    )
     var addServerDialog by mutableStateOf(false)
     var sftpEditServerDialog by mutableStateOf<SftpServerStateHolder?>(null)
 
 
-    fun addSftpServer(viewModel: AuthViewModel, serverHolder: SftpServerStateHolder, onSuccess: ()->Unit) {
+    fun addSftpServer(
+        viewModel: AuthViewModel,
+        serverHolder: SftpServerStateHolder,
+        onSuccess: () -> Unit
+    ) {
         sftpServerHolderList.add(0, serverHolder)
         val storage = ServerStorage.getStorage<SftpServer>(ServerType.SFTP)
         val server = serverHolder.get()
@@ -70,12 +86,16 @@ class ImportRemoteDialogStateHolder {
         }
     }
 
-    fun updateHolder(viewModel: AuthViewModel, serverStateHolder: SftpServerStateHolder, onSuccess: () -> Unit) {
+    fun updateHolder(
+        viewModel: AuthViewModel,
+        serverStateHolder: SftpServerStateHolder,
+        onSuccess: () -> Unit
+    ) {
         val server = serverStateHolder.get()
         val storage = ServerStorage.getStorage<RemoteServer>(serverStateHolder.serverType)
         val cipher = server.getInitializedCipher()
         viewModel.doAuth(cipher) { authResult ->
-            when(authResult) {
+            when (authResult) {
                 is AuthSuccess -> {
                     server.onUpdateAuthSuccess(authResult)
                     storage.updateServer(server.serverId, server)
@@ -87,7 +107,8 @@ class ImportRemoteDialogStateHolder {
 
     fun removeSftpServer(serverStateHolder: ServerStateHolder) {
         sftpServerHolderList.remove(serverStateHolder)
-        ServerStorage.getStorage<SftpServer>(serverStateHolder.serverType).deleteServer(serverStateHolder.serverId)
+        ServerStorage.getStorage<SftpServer>(serverStateHolder.serverType)
+            .deleteServer(serverStateHolder.serverId)
     }
 }
 
@@ -112,7 +133,8 @@ open class ServerStateHolder(private val remoteServer: RemoteServer, val serverT
     }
 }
 
-class SftpServerStateHolder(private val sftpServer: SftpServer = createSftpServer()) : ServerStateHolder(sftpServer, ServerType.SFTP) {
+class SftpServerStateHolder(private val sftpServer: SftpServer = createSftpServer()) :
+    ServerStateHolder(sftpServer, ServerType.SFTP) {
     var userName: String by mutableStateOf(sftpServer.userName)
     var port: Int by mutableIntStateOf(sftpServer.port)
     var ip: String by mutableStateOf(sftpServer.ip)
@@ -153,7 +175,7 @@ class SftpServerStateHolder(private val sftpServer: SftpServer = createSftpServe
 expect fun onServerEditAuthSuccess(cipher: AuthParams, sftpServer: SftpServer)
 
 @Composable
-fun ImportRemoteDialogStateHolder.ImportRemoteDialog(album: Album, onDismiss: ()->Unit) {
+fun ImportRemoteDialogStateHolder.ImportRemoteDialog(album: Album, onDismiss: () -> Unit) {
     AppThemeDialog(
         Modifier
             .fillMaxWidth(LocalAppUIConstants.current.dialogPercent)
@@ -173,7 +195,8 @@ fun ImportRemoteDialogStateHolder.ImportRemoteDialog(album: Album, onDismiss: ()
                 .fillMaxWidth()
                 .wrapContentHeight()
                 .clip(RoundedCornerShape(4.dp))
-                .background(LocalAppPalette.current.dialogBg)) {
+                .background(LocalAppPalette.current.dialogBg)
+        ) {
 
             item {
                 DrawerFunctionView(
@@ -187,8 +210,8 @@ fun ImportRemoteDialogStateHolder.ImportRemoteDialog(album: Album, onDismiss: ()
 
             items(
                 sftpServerHolderList.size,
-                key = { index-> sftpServerHolderList[index].serverId }
-            ) { index->
+                key = { index -> sftpServerHolderList[index].serverId }
+            ) { index ->
                 val serverItem = sftpServerHolderList[index]
                 SftpServerDescView(serverItem, onClick = {
                     viewModel.viewModelScope.launch {
@@ -212,11 +235,14 @@ fun ImportRemoteDialogStateHolder.ImportRemoteDialog(album: Album, onDismiss: ()
         }
 
     }
-    sftpEditServerDialog?.let { sftpEditServerDialog->
+    sftpEditServerDialog?.let { sftpEditServerDialog ->
         CompositionLocalProvider(
             LocalMiddleButtonConfig provides LocalMiddleButtonConfig.current.copy(
                 text = "删除",
-                colors = LocalMiddleButtonConfig.current.colors.copy(containerColor = LocalAppPalette.current.deleteButtonColor, contentColor = Color.White),
+                colors = LocalMiddleButtonConfig.current.colors.copy(
+                    containerColor = LocalAppPalette.current.deleteButtonColor,
+                    contentColor = Color.White
+                ),
             )
         ) {
             SftpServerEditDialog(sftpEditServerDialog, true) {
@@ -229,7 +255,10 @@ fun ImportRemoteDialogStateHolder.ImportRemoteDialog(album: Album, onDismiss: ()
         CompositionLocalProvider(
             LocalMiddleButtonConfig provides LocalMiddleButtonConfig.current.copy(
                 text = "删除",
-                colors = LocalMiddleButtonConfig.current.colors.copy(containerColor = LocalAppPalette.current.deleteButtonColor, contentColor = Color.White),
+                colors = LocalMiddleButtonConfig.current.colors.copy(
+                    containerColor = LocalAppPalette.current.deleteButtonColor,
+                    contentColor = Color.White
+                ),
             )
         ) {
             SftpServerEditDialog(SftpServerStateHolder(), false) {
@@ -240,12 +269,16 @@ fun ImportRemoteDialogStateHolder.ImportRemoteDialog(album: Album, onDismiss: ()
 }
 
 @Composable
-fun ImportRemoteDialogStateHolder.SftpServerEditDialog(sftpServer: SftpServerStateHolder, isEdit: Boolean, onDismiss: ()->Unit) {
+fun ImportRemoteDialogStateHolder.SftpServerEditDialog(
+    sftpServer: SftpServerStateHolder,
+    isEdit: Boolean,
+    onDismiss: () -> Unit
+) {
     val viewModel: AuthViewModel = authViewModel()
     if (!sftpServer.authed && isEdit) {
         val cipher = sftpServer.get().getDecryptCipher(sftpServer.get())
         viewModel.doAuth(cipher) { authResult ->
-            when(authResult) {
+            when (authResult) {
                 is AuthSuccess -> {
                     sftpServer.onServerEditAuthSuccess(cipher)
 //                Log.d("jingtian", "newSession: pwd=${sftpServer.password}")
@@ -321,7 +354,8 @@ fun ImportRemoteDialogStateHolder.SftpServerEditDialog(sftpServer: SftpServerSta
             }
 
             item {
-                OutlinedTextField(sftpServer.port.toString(),
+                OutlinedTextField(
+                    sftpServer.port.toString(),
                     {
                         sftpServer.port = it.toIntOrNull() ?: 22
                     },
@@ -364,6 +398,15 @@ fun ImportRemoteDialogStateHolder.SftpServerEditDialog(sftpServer: SftpServerSta
             }
 
             item {
+                var keyboardType by remember {
+                    mutableIntStateOf(0)
+                } // 0 password, 1 text
+                val interactiveSource = remember { MutableInteractionSource() }
+                if (interactiveSource.collectIsFocusedAsState().value) {
+                    keyboardType = 1
+                } else {
+                    keyboardType = 0
+                }
                 OutlinedTextField(
                     sftpServer.password,
                     {
@@ -376,11 +419,28 @@ fun ImportRemoteDialogStateHolder.SftpServerEditDialog(sftpServer: SftpServerSta
                     label = {
                         AppThemeText("password")
                     },
-                    keyboardOptions = KeyboardOptions.Default.copy(
-                        keyboardType = KeyboardType.Password,
-                        capitalization = KeyboardCapitalization.None
-                    ),
-                    visualTransformation = PasswordVisualTransformation()
+                    keyboardOptions = when(keyboardType) {
+                        1 -> {
+                            KeyboardOptions.Default.copy(
+                                capitalization = KeyboardCapitalization.None
+                            )
+                        }
+                        else -> {
+                            KeyboardOptions.Default.copy(
+                                keyboardType = KeyboardType.Password,
+                                capitalization = KeyboardCapitalization.None
+                            )
+                        }
+                    },
+                    visualTransformation = when(keyboardType) {
+                        1 -> {
+                            VisualTransformation.None
+                        }
+                        else -> {
+                            PasswordVisualTransformation()
+                        }
+                    },
+                    interactionSource = interactiveSource,
                 )
             }
 
@@ -397,7 +457,11 @@ fun ImportRemoteDialogStateHolder.SftpServerEditDialog(sftpServer: SftpServerSta
 }
 
 @Composable
-fun ColumnScope.SftpServerDescView(sftpServer: SftpServerStateHolder, onClick: ()->Unit, onLongPress: ()->Unit) {
+fun ColumnScope.SftpServerDescView(
+    sftpServer: SftpServerStateHolder,
+    onClick: () -> Unit,
+    onLongPress: () -> Unit
+) {
     val viewModel: AuthViewModel = authViewModel()
     Column(
         modifier = Modifier
@@ -407,7 +471,7 @@ fun ColumnScope.SftpServerDescView(sftpServer: SftpServerStateHolder, onClick: (
                 detectTapGestures(
                     onTap = {
                         viewModel.doAuth { authResult ->
-                            when(authResult) {
+                            when (authResult) {
                                 is AuthSuccess -> {
                                     onClick()
                                 }
