@@ -167,12 +167,11 @@ class SftpServerStateHolder(private val sftpServer: SftpServer = createSftpServe
     }
 
     fun onServerEditAuthSuccess(cipher: AuthParams) {
-        onServerEditAuthSuccess(cipher, sftpServer)
-        reset()
+        onServerEditAuthSuccess(cipher, this)
     }
 }
 
-expect fun onServerEditAuthSuccess(cipher: AuthParams, sftpServer: SftpServer)
+expect fun onServerEditAuthSuccess(cipher: AuthParams, sftpServer: SftpServerStateHolder)
 
 @Composable
 fun ImportRemoteDialogStateHolder.ImportRemoteDialog(album: Album, onDismiss: () -> Unit) {

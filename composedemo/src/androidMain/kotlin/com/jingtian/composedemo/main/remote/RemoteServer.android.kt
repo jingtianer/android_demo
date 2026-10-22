@@ -171,6 +171,9 @@ class SftpServerImpl : SftpServer {
             val entry = (entry as? ChannelSftp.LsEntry) ?: continue
             viewModel.sendMessage("导入: ${entry.filename}: $root")
             if (entry.attrs.isDir) {
+                if (entry.filename == "." || entry.filename == "..") {
+                    continue
+                }
                 traverseEntry(sftpChannel, viewModel, pathSet, "${root}/${entry.filename}", album, fileInfoList)
             } else {
                 readFile(sftpChannel, viewModel, pathSet, root, entry, album, fileInfoList)

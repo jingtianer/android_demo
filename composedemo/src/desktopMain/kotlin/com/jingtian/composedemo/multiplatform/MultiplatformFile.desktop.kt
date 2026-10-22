@@ -40,6 +40,14 @@ actual fun getMultiplatformFileFactory() : IMultiplatformFileFactory {
             return MultiplatformFileImpl(realFile, realFile.extension)
         }
         override fun fromFile(file: Path, extension: String?): MultiplatformFile {
+            if (BuildKonfig.isRemote) {
+                val uri = File(file.toString()).inputStream().readAsUri()
+                if (uri?.scheme?.startsWith("jingtian") == true) {
+                    RemoteUriUtils.parse(uri)?.let {
+                        return it
+                    }
+                }
+            }
             val realFile = SystemFileSystem.source(file).buffered().use { fis->
                 val bytes = fis.readAllBytesOrNull()
                 File(bytes?.toString(StandardCharsets.UTF_8) ?: throw RuntimeException("file not found $file, bytes=$bytes"))

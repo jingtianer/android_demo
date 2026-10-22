@@ -6,6 +6,7 @@ import com.jingtian.composedemo.dao.DataBase
 import com.jingtian.composedemo.dao.model.Album
 import com.jingtian.composedemo.dao.model.AlbumItem
 import com.jingtian.composedemo.dao.model.FileInfo
+import com.jingtian.composedemo.utils.Base64Utils
 import com.jingtian.composedemo.utils.FileStorageUtils
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
 import com.jingtian.composedemo.viewmodels.AuthParams
@@ -189,9 +190,18 @@ class IosSftpServer : SftpServer {
 
     override fun getInitializedCipher(): AuthParams = AuthParams()
 
-    override fun onUpdateAuthSuccess(authResult: AuthSuccess) = Unit
+    override fun onUpdateAuthSuccess(authResult: AuthSuccess){
+        val encodedPassword = Base64Utils.encrypt(this.password)
+        this.password = encodedPassword
+        this.passwordIv = ""
+    }
 
-    override fun onAddSftpServerAuthSuccess(authResult: AuthSuccess) = Unit
+    override fun onAddSftpServerAuthSuccess(authResult: AuthSuccess) {
+        val encodedPassword = Base64Utils.encrypt(this.password)
+        this.password = encodedPassword
+        this.passwordIv = ""
+    }
+
 
     override fun getDecryptCipher(server: SftpServer): AuthParams = AuthParams()
 

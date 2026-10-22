@@ -36,6 +36,12 @@ inline fun logD(tag: String, crossinline msg: () -> String) {
     }
 }
 
+inline fun logD(tag: String, msg: String) {
+    if (LOG_LEVEL_DEBUG <= LOG_LEVEL) {
+        printLog(LOG_LEVEL_DEBUG, tag, msg)
+    }
+}
+
 inline fun logI(tag: String, crossinline msg: () -> String) {
     if (LOG_LEVEL_INFO <= LOG_LEVEL) {
         printLog(LOG_LEVEL_INFO, tag, msg())

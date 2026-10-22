@@ -147,6 +147,9 @@ kotlin {
             dependencies {
                 implementation(libs.kotlinx.coroutines.core)
                 implementation(libs.sqlite.bundled)
+                implementation("org.jetbrains.androidx.savedstate:savedstate:1.2.1")
+                implementation("org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-savedstate:2.8.1")
+                implementation("androidx.lifecycle:lifecycle-viewmodel-savedstate:2.9.4")
 //              implementation(libs.androidx.room.runtime)
 //              implementation(libs.androidx.room.ktx)
             }
@@ -187,25 +190,23 @@ kotlin {
         }
     }
 
+    configurations {
+        matching { it.name.contains("ios", ignoreCase = true) }.configureEach {
+            resolutionStrategy.eachDependency {
+                if (requested.group == "org.jetbrains.androidx.savedstate" && requested.name == "savedstate") {
+                    useVersion("1.2.1")
+                }
+                if (requested.group == "org.jetbrains.androidx.lifecycle" && requested.name == "lifecycle-viewmodel-savedstate") {
+                    useVersion("2.8.1")
+                }
+            }
+        }
+    }
     if (!isAndroid) {
         configurations {
             all {
                 exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
                 exclude(group = "com.intellij", module = "annotations")
-            }
-        }
-    }
-    if (isIOS) {
-        configurations {
-            matching { it.name.endsWith("CInterop") }.configureEach {
-                resolutionStrategy.eachDependency {
-                    if (requested.group == "org.jetbrains.androidx.savedstate" && requested.name == "savedstate") {
-                        useVersion("1.2.1")
-                    }
-                    if (requested.group == "org.jetbrains.androidx.lifecycle" && requested.name == "lifecycle-viewmodel-savedstate") {
-                        useVersion("2.8.1")
-                    }
-                }
             }
         }
     }
@@ -304,7 +305,6 @@ dependencies {
         // iOS 仅使用 Kotlin Inject 的 KSP，不运行 Room KSP，以避免 commonMain 中 JVM-only 类型（如 java.util.Date）导致 MissingType
         add("kspIosArm64", libs.kotlin.inject.compiler)
         add("kspIosArm64", libs.androidx.room.compiler)
-        add("iosArm64CInterop", "androidx.lifecycle:lifecycle-viewmodel-savedstate:2.9.4")
     }
 
     // Compose 布局

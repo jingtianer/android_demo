@@ -1,6 +1,8 @@
 package com.jingtian.composedemo.main.remote
 
 import com.jcraft.jsch.SftpProgressMonitor
+import com.jingtian.composedemo.multiplatform.logD
+import com.jingtian.composedemo.multiplatform.logE
 import com.jingtian.composedemo.utils.CoroutineUtils
 import com.jingtian.composedemo.utils.getFileCacheStorageRootDir
 import kotlinx.coroutines.Dispatchers
@@ -12,14 +14,15 @@ import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
-import java.nio.charset.Charset
 import java.util.Objects
 import java.util.concurrent.ConcurrentHashMap
-import kotlin.coroutines.resume
 
 class Uri(val lastPathSegment: String, val path: String, val authority: String, val scheme: String) {
     constructor(path: String, authority: String, scheme: String): this(path.split("/").lastOrNull() ?: "", path, authority, scheme)
-    val raw = "${scheme}://${authority}/${path}"
+    private val raw = "${scheme}://${authority}${if (path[0] == '/') "" else "/"}${path}"
+    init {
+        logD("Uri", raw)
+    }
     fun toInputStream() : InputStream {
         return ByteArrayInputStream(raw.toByteArray(Charsets.UTF_8))
     }
@@ -70,14 +73,14 @@ class RemoteFileStore(serverType: ServerType) {
             val lock = locks.computeIfAbsent(originUri.toString()) { Semaphore(1) }
             return@withContext lock.withPermit {
                 suspendCancellableCoroutine { cancelable->
-//                    Log.d("jingtian", "start: ${originUri.path}")
+                    logD("jingtian", "start: ${originUri.path}")
                     try {
                         val path = originUri.path ?: "/"
-//                Log.d("jingtian", "读取文件 获得锁 ${originUri.path}")
+                        logD("jingtian", "读取文件 获得锁 ${originUri.path}")
                         if (realFile.exists() && realFile.length() > 0 && !tmpFile.exists()) {
                             if (realFile.isFile) {
-//                                Log.d("jingtian", "end5: ${originUri.path}")
-                                cancelable.resume(realFile)
+                                logD("jingtian", "end5: ${originUri.path}")
+                                cancelable.resume(realFile) { logE("jingtian", "end5: ${originUri.path}", it) }
                                 return@suspendCancellableCoroutine
                             }
                         }
@@ -89,22 +92,22 @@ class RemoteFileStore(serverType: ServerType) {
                             }
                         }
                         if (cancelable.isCancelled) {
-//                            Log.d("jingtian", "canceled 2: ${originUri.path}")
+                            logD("jingtian", "canceled 2: ${originUri.path}")
                             throw InterruptedException()
                         } else {
-//                            Log.d("jingtian", "start download: ${originUri.path}")
+                            logD("jingtian", "start download: ${originUri.path}")
                         }
                         runCatching {
                             tmpFile.ensureFileExist { file->
                                 server.connect({ _, msg ->
-//                                    Log.d("jingtian", "读取文件 $path $msg")
+                                    logD("jingtian", "读取文件 $path $msg")
                                 })?.use { channel ->
-//                                    Log.d("jingtian", "读取文件 $path 开始")
+                                    logD("jingtian", "读取文件 $path 开始")
                                     if (cancelable.isCancelled) {
-//                                        Log.d("jingtian", "canceled 1: ${originUri.path}")
+                                        logD("jingtian", "canceled 1: ${originUri.path}")
                                         throw InterruptedException()
                                     } else {
-//                                        Log.d("jingtian", "start download: ${originUri.path}")
+                                        logD("jingtian", "start download: ${originUri.path}")
                                     }
                                     val bos = FileOutputStream(file)
                                     bos.use {
@@ -114,7 +117,7 @@ class RemoteFileStore(serverType: ServerType) {
 
                                             override fun count(count: Long): Boolean {
                                                 if (cancelable.isCancelled) {
-//                                                    Log.d("jingtian", "canceled 0: ${originUri.path}")
+                                                    logD("jingtian", "canceled 0: ${originUri.path}")
                                                     return false
                                                 }
                                                 return true
@@ -132,20 +135,20 @@ class RemoteFileStore(serverType: ServerType) {
                             }
                         }.fold(onSuccess = { file->
                             file.renameTo(realFile)
-//                    Log.d("jingtian", "读取文件 $path 完成")
+                            logD("jingtian", "读取文件 $path 完成")
                         }, onFailure = {
-//                    Log.d("jingtian", "读取文件 ${originUri.path} 失败 $it")
-//                            Log.d("jingtian", "end3: ${originUri.path}, ${it.message}")
-                            cancelable.resume(tmpFile)
+                            logD("jingtian", "读取文件 ${originUri.path} 失败 $it")
+                            logD("jingtian", "end3: ${originUri.path}, ${it.message}")
+                            cancelable.resume(tmpFile) { logE("jingtian", "end3: ${originUri.path}", it) }
                             return@suspendCancellableCoroutine
                         })
                     } catch (e : Exception) {
-//                        Log.d("jingtian", "end2: ${originUri.path}")
-                        cancelable.resume(tmpFile.ensureFileExist {  })
+                        logD("jingtian", "end2: ${originUri.path}")
+                        cancelable.resume(tmpFile.ensureFileExist {  }) { logE("jingtian", "end2: ${originUri.path}", it) }
                         return@suspendCancellableCoroutine
                     }
-//                    Log.d("jingtian", "end1: ${originUri.path}")
-                    cancelable.resume(realFile)
+                    logD("jingtian", "end1: ${originUri.path}")
+                    cancelable.resume(realFile) { logE("jingtian", "end2: ${originUri.path}", it) }
                     return@suspendCancellableCoroutine
                 }
             }

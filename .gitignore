@@ -64,3 +64,5 @@ fastlane/test_output/
 .DS_Store
 *.swp
 *.lock
+
+composedemo/ComposeDemo/workdir

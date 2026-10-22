@@ -43,6 +43,14 @@ actual fun getMultiplatformFileFactory() : IMultiplatformFileFactory {
             return MultiplatformFileImpl(realFile, realFile.extension, relativePath = file.relativeTo(getFileStorageRootDir()))
         }
         override fun fromFile(file: Path, extension: String?): MultiplatformFile {
+            if (BuildKonfig.isRemote) {
+                val uri = readAsRemoteUri(file)
+                if (uri?.scheme?.startsWith("jingtian") == true) {
+                    RemoteUriUtils.parse(uri)?.let {
+                        return it
+                    }
+                }
+            }
             val realFile = Path(
                 getFileStorageRootDir(),
                 SystemFileSystem.source(file).buffered().use {

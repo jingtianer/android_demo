@@ -1,5 +1,6 @@
 package com.jingtian.composedemo.main.remote
 
+import com.jingtian.composedemo.multiplatform.*
 import com.jcraft.jsch.ChannelSftp
 import com.jcraft.jsch.ChannelSftp.LsEntry
 import com.jcraft.jsch.JSch
@@ -141,21 +142,26 @@ class SftpServerImpl : SftpServer {
         withContext(Dispatchers.IO) {
             val sftpChannel = connect { tag, msg ->
                 viewModel.sendMessage("$tag: $msg")
+                logD(tag, msg)
 //                 Log.d(tag, msg)
             }
             if (sftpChannel == null) {
                 viewModel.sendMessage("失败 未知错误")
+                logD("importFiles", "失败 未知错误")
                 return@withContext
             }
             val pathSet = DataBase.dbImpl.getAlbumItemDao().getAllAlbumItemWithExtra(album.albumId ?: return@withContext).map { it.fileInfo.filePath }.toSet()
             runCatching {
                 val fileInfoList: MutableList<Pair<FileInfo, AlbumItem>> = mutableListOf()
                 viewModel.sendMessage("开始")
+                logD("importFiles", "开始")
                 traverseEntry(sftpChannel, viewModel, pathSet, path, album, fileInfoList)
                 viewModel.sendMessage("正在写入数据库")
+                logD("importFiles", "正在写入数据库")
                 viewModel.importFiles(album, fileInfoList)
             }.getOrElse {
                 viewModel.sendMessage("导入失败 $it")
+                logE("importFiles", "导入失败", it)
             }
             sftpChannel.disconnect()
         }
@@ -166,12 +172,14 @@ class SftpServerImpl : SftpServer {
         for (entry in ls) {
             val entry = (entry as? ChannelSftp.LsEntry) ?: continue
             viewModel.sendMessage("导入: ${entry.filename}: $root")
+            logD("traverseEntry") { "导入: ${entry.filename}: $root" }
             if (entry.attrs.isDir) {
                 if (entry.filename == "." || entry.filename == "..") {
-                    return
+                    continue
                 }
                 traverseEntry(sftpChannel, viewModel, pathSet, "${root}/${entry.filename}", album, fileInfoList)
             } else {
+                logD("traverseEntry") { "readFile: ${entry.filename}: $root" }
                 readFile(sftpChannel, viewModel, pathSet, root, entry, album, fileInfoList)
             }
             // Log.d("jingtian", "导入: ${entry.filename}: $root")

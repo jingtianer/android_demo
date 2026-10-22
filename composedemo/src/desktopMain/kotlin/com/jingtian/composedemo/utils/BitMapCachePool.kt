@@ -10,6 +10,7 @@ import com.jingtian.composedemo.dao.DataBase
 import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.FileType
 import com.jingtian.composedemo.multiplatform.MultiplatformFile
+import com.jingtian.composedemo.multiplatform.logE
 import com.jingtian.composedemo.multiplatform.readAllBytesOrNull
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -39,7 +40,12 @@ import kotlin.math.max
 
 actual fun uriToImageBitmap(`is`: RawSource, scaleFactor: Int): ImageBitmap? {
     val bytes = `is`.buffered().readAllBytesOrNull() ?: return null
-    val image = Image.makeFromEncoded(bytes)
+    val image = try {
+        Image.makeFromEncoded(bytes)
+    } catch (e: Exception) {
+        logE("makeFromEncoded", "\n${bytes}\n", e)
+        return null
+    }
     if (scaleFactor == 1 || scaleFactor <= 0) {
         return image.toComposeImageBitmap()
     }
@@ -82,7 +88,12 @@ actual fun uriToImageBitmap(`is`: RawSource, scaleFactor: Int): ImageBitmap? {
 actual fun uriToImageBitmap(`is`: RawSource): ImageBitmap? = uriToImageBitmap(`is`, 1)
 actual fun uriToImageSize(`is`: RawSource): Pair<Int, Int> {
     val bytes = `is`.buffered().readAllBytesOrNull() ?: return 1 to 1
-    val image = Image.makeFromEncoded(bytes)
+    val image = try {
+        Image.makeFromEncoded(bytes)
+    } catch (e: Exception) {
+        logE("makeFromEncoded", "\n${bytes}\n", e)
+        return (1 to 1)
+    }
     return image.width to image.height
 }
 actual fun writeImage(bitmap: ImageBitmap, os: RawSink) {
