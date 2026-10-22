@@ -9,7 +9,7 @@ Pod::Spec.new do |spec|
     spec.vendored_frameworks      = 'build/cocoapods/framework/ComposeDemoFramework.framework'
     spec.libraries                = 'c++'
     spec.ios.deployment_target    = '15.6'
-    spec.dependency 'NMSSH', '2.3.0'
+    spec.dependency 'NMSSHT7', '2.9.1'
                 
     if !Dir.exist?('build/cocoapods/framework/ComposeDemoFramework.framework') || Dir.empty?('build/cocoapods/framework/ComposeDemoFramework.framework')
         raise "

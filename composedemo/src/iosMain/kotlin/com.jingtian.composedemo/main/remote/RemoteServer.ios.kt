@@ -1,7 +1,7 @@
 package com.jingtian.composedemo.main.remote
 
-import cocoapods.NMSSH.NMSFTPFile
-import cocoapods.NMSSH.NMSSHSession
+import cocoapods.NMSSHT7.NMSFTPFile
+import cocoapods.NMSSHT7.NMSSHSession
 import com.jingtian.composedemo.dao.DataBase
 import com.jingtian.composedemo.dao.model.Album
 import com.jingtian.composedemo.dao.model.AlbumItem
@@ -66,14 +66,21 @@ class IosSftpServer : SftpServer {
         }
 
         val newSession = runCatching {
+            logger("jingtian", "开始连接 SFTP $userName@$ip:$port")
             val created = NMSSHSession.connectToHost(ip, port = port.toLong(), withUsername = userName)
             if (!created.connected) {
-                logger("jingtian", "session连接失败")
+                logger("jingtian", "session连接失败 ${created.lastError?.localizedDescription ?: ""}")
                 return null
             }
-            if (!created.authenticateByPassword(password)) {
+            val decryptedPassword = runCatching {
+                Base64Utils.decrypt(password)
+            }.getOrElse {
+                password
+            }
+            if (!created.authenticateByPassword(decryptedPassword)) {
+                val error = created.lastError?.localizedDescription ?: ""
                 created.disconnect()
-                logger("jingtian", "密码认证失败")
+                logger("jingtian", "密码认证失败 $error")
                 return null
             }
             created
@@ -96,7 +103,7 @@ class IosSftpServer : SftpServer {
         }
         activeSession.disconnect()
         session = null
-        logger("jingtian", "sftp连接失败")
+        logger("jingtian", "sftp连接失败 ${activeSession.lastError?.localizedDescription ?: ""}")
         return null
     }
 

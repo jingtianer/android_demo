@@ -74,7 +74,7 @@ kotlin {
             transitiveExport = false // This is default.
         }
         ios.deploymentTarget = "15.6"
-        pod("NMSSH") { version = "2.3.0" }
+        pod("NMSSHT7") { version = "2.9.1" }
         // Maps custom Xcode configuration to NativeBuildType
         xcodeConfigurationToNativeBuildType["CUSTOM_DEBUG"] = NativeBuildType.DEBUG
         xcodeConfigurationToNativeBuildType["CUSTOM_RELEASE"] = NativeBuildType.RELEASE

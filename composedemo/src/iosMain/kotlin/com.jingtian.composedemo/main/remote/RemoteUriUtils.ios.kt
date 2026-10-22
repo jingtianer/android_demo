@@ -1,6 +1,6 @@
 package com.jingtian.composedemo.main.remote
 
-import cocoapods.NMSSH.NMSFTPFile
+import cocoapods.NMSSHT7.NMSFTPFile
 import com.jingtian.composedemo.multiplatform.MultiplatformFileImpl
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.io.Buffer
