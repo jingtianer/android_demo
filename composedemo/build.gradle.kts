@@ -61,7 +61,7 @@ kotlin {
     ).forEach { iosTarget->
         iosTarget.binaries {
             framework {
-                baseName = "SharedComposeDemo"
+                baseName = "composedemo"
                 isStatic = true
             }
         }
