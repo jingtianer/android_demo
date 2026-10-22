@@ -1,6 +1,7 @@
 import com.codingfeline.buildkonfig.compiler.FieldSpec
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.plugin.mpp.NativeBuildType
 import java.util.Properties
 import kotlin.math.min
 
@@ -48,23 +49,35 @@ kotlin {
 
     androidTarget()
 
+    iosArm64()
+
+    applyDefaultHierarchyTemplate()
+
     cocoapods {
         version = appVersion
         summary = "ComposeDemo shared framework"
         homepage = "https://example.com"
+        name = "ComposeDemoLib"
         podfile = project.file("ios/ComposeDemo/Podfile")
+        framework {
+            // Required properties
+            // Framework name configuration. Use this property instead of deprecated 'frameworkName'
+            baseName = "ComposeDemoFramework"
+
+            // Optional properties
+            // Specify the framework linking type. It's dynamic by default.
+            isStatic = false
+            binaryOption("bundleId", "com.jingtian.ComposeDemoFramework")
+            // Dependency export
+            // Uncomment and specify another project module if you have one:
+            // export(project(":<your other KMP module>"))
+            transitiveExport = false // This is default.
+        }
         ios.deploymentTarget = "15.6"
         pod("NMSSH") { version = "2.3.0" }
-    }
-    listOf(
-        iosArm64()
-    ).forEach { iosTarget->
-        iosTarget.binaries {
-            framework {
-                baseName = "composedemo"
-                isStatic = true
-            }
-        }
+        // Maps custom Xcode configuration to NativeBuildType
+        xcodeConfigurationToNativeBuildType["CUSTOM_DEBUG"] = NativeBuildType.DEBUG
+        xcodeConfigurationToNativeBuildType["CUSTOM_RELEASE"] = NativeBuildType.RELEASE
     }
 
     jvm("desktop") {
@@ -142,14 +155,11 @@ kotlin {
             }
         }
 
-        val iosMain by creating {
+        val iosMain by getting {
             dependsOn(commonMain)
             dependencies {
                 implementation(libs.kotlinx.coroutines.core)
                 implementation(libs.sqlite.bundled)
-                implementation("org.jetbrains.androidx.savedstate:savedstate:1.2.1")
-                implementation("org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-savedstate:2.8.1")
-                implementation("androidx.lifecycle:lifecycle-viewmodel-savedstate:2.9.4")
 //              implementation(libs.androidx.room.runtime)
 //              implementation(libs.androidx.room.ktx)
             }
@@ -186,19 +196,7 @@ kotlin {
 
                 implementation(libs.jsch)
                 implementation(libs.jzlib)
-            }
-        }
-    }
 
-    configurations {
-        matching { it.name.contains("ios", ignoreCase = true) }.configureEach {
-            resolutionStrategy.eachDependency {
-                if (requested.group == "org.jetbrains.androidx.savedstate" && requested.name == "savedstate") {
-                    useVersion("1.2.1")
-                }
-                if (requested.group == "org.jetbrains.androidx.lifecycle" && requested.name == "lifecycle-viewmodel-savedstate") {
-                    useVersion("2.8.1")
-                }
             }
         }
     }

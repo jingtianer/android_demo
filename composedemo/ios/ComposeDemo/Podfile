@@ -1,14 +1,23 @@
-platform :ios, '15.6'
-
+deployment_target = '15.6'
 target 'ComposeDemo' do
-  use_frameworks!
-  pod 'composedemo', :path => '../..'
+    use_frameworks!
+    platform :ios, deployment_target
+
+    # Pods for iosApp
+    pod 'ComposeDemoLib', :path => '../../'
 end
 
 post_install do |installer|
-  installer.pods_project.targets.each do |target|
-    target.build_configurations.each do |config|
-      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.6'
+    installer.generated_projects.each do |project|
+        project.targets.each do |target|
+            target.build_configurations.each do |config|
+                config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = deployment_target
+                puts "✅ Patching deployment config for: #{target.name}-#{config.name}"
+            end
+        end
+        project.build_configurations.each do |config|
+            config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = deployment_target
+            puts "✅ Patching deployment config for: #{config.name}"
+        end
     end
-  end
 end

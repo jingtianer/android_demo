@@ -6,7 +6,7 @@
 //
 
 import SwiftUI
-import composedemo
+import ComposeDemoFramework
 
 struct ContentView: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UIViewController {

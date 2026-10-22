@@ -7,14 +7,14 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		E9906E6286BE94E7F15FDD91 /* Pods_ComposeDemo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 78A5C25E20D17D27603E94C3 /* Pods_ComposeDemo.framework */; };
+		6163E2531FD50E163D42BC50 /* Pods_ComposeDemo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3E4ABCC25CC53CE25443054F /* Pods_ComposeDemo.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		078982814788C8EA6C293029 /* Pods-ComposeDemo.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ComposeDemo.release.xcconfig"; path = "Target Support Files/Pods-ComposeDemo/Pods-ComposeDemo.release.xcconfig"; sourceTree = "<group>"; };
-		2B839E8D2F8D189400BC3C53 /* ComposeDemo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ComposeDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		398038A21FB2B0AC904175FA /* Pods-ComposeDemo.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ComposeDemo.debug.xcconfig"; path = "Target Support Files/Pods-ComposeDemo/Pods-ComposeDemo.debug.xcconfig"; sourceTree = "<group>"; };
-		78A5C25E20D17D27603E94C3 /* Pods_ComposeDemo.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_ComposeDemo.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		2BECBEBB308A028A005621B5 /* ComposeDemo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ComposeDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		3950E793B8DB9306D2F0CCAF /* Pods-ComposeDemo.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ComposeDemo.release.xcconfig"; path = "Target Support Files/Pods-ComposeDemo/Pods-ComposeDemo.release.xcconfig"; sourceTree = "<group>"; };
+		3D6554F83F7E0F9845CA09A0 /* Pods-ComposeDemo.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ComposeDemo.debug.xcconfig"; path = "Target Support Files/Pods-ComposeDemo/Pods-ComposeDemo.debug.xcconfig"; sourceTree = "<group>"; };
+		3E4ABCC25CC53CE25443054F /* Pods_ComposeDemo.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_ComposeDemo.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -43,7 +43,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				E9906E6286BE94E7F15FDD91 /* Pods_ComposeDemo.framework in Frameworks */,
+				6163E2531FD50E163D42BC50 /* Pods_ComposeDemo.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -54,35 +54,26 @@
 			isa = PBXGroup;
 			children = (
 				2B839E8F2F8D189400BC3C53 /* ComposeDemo */,
-				2B839E8E2F8D189400BC3C53 /* Products */,
-				985433DAB5639311CA4AD46D /* Pods */,
-				8F06AF266BA3E23A78D04037 /* Frameworks */,
+				ECEAD8605072B4F1AF69F436 /* Pods */,
+				4E410BB5502DFE54DF2CD8A9 /* Frameworks */,
+				2BECBEBB308A028A005621B5 /* ComposeDemo.app */,
 			);
 			sourceTree = "<group>";
 		};
-		2B839E8E2F8D189400BC3C53 /* Products */ = {
+		4E410BB5502DFE54DF2CD8A9 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				2B839E8D2F8D189400BC3C53 /* ComposeDemo.app */,
-			);
-			name = Products;
-			sourceTree = "<group>";
-		};
-		8F06AF266BA3E23A78D04037 /* Frameworks */ = {
-			isa = PBXGroup;
-			children = (
-				78A5C25E20D17D27603E94C3 /* Pods_ComposeDemo.framework */,
+				3E4ABCC25CC53CE25443054F /* Pods_ComposeDemo.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
-		985433DAB5639311CA4AD46D /* Pods */ = {
+		ECEAD8605072B4F1AF69F436 /* Pods */ = {
 			isa = PBXGroup;
 			children = (
-				398038A21FB2B0AC904175FA /* Pods-ComposeDemo.debug.xcconfig */,
-				078982814788C8EA6C293029 /* Pods-ComposeDemo.release.xcconfig */,
+				3D6554F83F7E0F9845CA09A0 /* Pods-ComposeDemo.debug.xcconfig */,
+				3950E793B8DB9306D2F0CCAF /* Pods-ComposeDemo.release.xcconfig */,
 			);
-			name = Pods;
 			path = Pods;
 			sourceTree = "<group>";
 		};
@@ -97,8 +88,8 @@
 				2B839E892F8D189400BC3C53 /* Sources */,
 				2B839E8A2F8D189400BC3C53 /* Frameworks */,
 				2B839E8B2F8D189400BC3C53 /* Resources */,
-				2573CEC8A50E73D15C72BFF5 /* [CP] Embed Pods Frameworks */,
-				10F4339375FF645B8B60D308 /* [CP] Copy Pods Resources */,
+				5A9E61A77B0C0FCCFB6D0D1B /* [CP] Embed Pods Frameworks */,
+				0C34BA3BB7EE4FB17A0A8D58 /* [CP] Copy Pods Resources */,
 			);
 			buildRules = (
 			);
@@ -109,7 +100,7 @@
 			);
 			name = ComposeDemo;
 			productName = ComposeDemo;
-			productReference = 2B839E8D2F8D189400BC3C53 /* ComposeDemo.app */;
+			productReference = 2BECBEBB308A028A005621B5 /* ComposeDemo.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -137,7 +128,7 @@
 			mainGroup = 2B839E842F8D189400BC3C53;
 			minimizedProjectReferenceProxies = 1;
 			preferredProjectObjectVersion = 77;
-			productRefGroup = 2B839E8E2F8D189400BC3C53 /* Products */;
+			productRefGroup = 2B839E842F8D189400BC3C53;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -157,7 +148,7 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		10F4339375FF645B8B60D308 /* [CP] Copy Pods Resources */ = {
+		0C34BA3BB7EE4FB17A0A8D58 /* [CP] Copy Pods Resources */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -174,7 +165,7 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-ComposeDemo/Pods-ComposeDemo-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		2573CEC8A50E73D15C72BFF5 /* [CP] Embed Pods Frameworks */ = {
+		5A9E61A77B0C0FCCFB6D0D1B /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -347,7 +338,7 @@
 		};
 		2B839E992F8D189600BC3C53 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 398038A21FB2B0AC904175FA /* Pods-ComposeDemo.debug.xcconfig */;
+			baseConfigurationReference = 3D6554F83F7E0F9845CA09A0 /* Pods-ComposeDemo.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -390,7 +381,7 @@
 		};
 		2B839E9A2F8D189600BC3C53 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 078982814788C8EA6C293029 /* Pods-ComposeDemo.release.xcconfig */;
+			baseConfigurationReference = 3950E793B8DB9306D2F0CCAF /* Pods-ComposeDemo.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;

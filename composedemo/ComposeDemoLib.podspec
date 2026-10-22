@@ -1,20 +1,20 @@
 Pod::Spec.new do |spec|
-    spec.name                     = 'composedemo'
+    spec.name                     = 'ComposeDemoLib'
     spec.version                  = '1.0.0'
     spec.homepage                 = 'https://example.com'
     spec.source                   = { :http=> ''}
     spec.authors                  = ''
     spec.license                  = ''
     spec.summary                  = 'ComposeDemo shared framework'
-    spec.vendored_frameworks      = 'build/cocoapods/framework/composedemo.framework'
+    spec.vendored_frameworks      = 'build/cocoapods/framework/ComposeDemoFramework.framework'
     spec.libraries                = 'c++'
     spec.ios.deployment_target    = '15.6'
     spec.dependency 'NMSSH', '2.3.0'
                 
-    if !Dir.exist?('build/cocoapods/framework/composedemo.framework') || Dir.empty?('build/cocoapods/framework/composedemo.framework')
+    if !Dir.exist?('build/cocoapods/framework/ComposeDemoFramework.framework') || Dir.empty?('build/cocoapods/framework/ComposeDemoFramework.framework')
         raise "
 
-        Kotlin framework 'composedemo' doesn't exist yet, so a proper Xcode project can't be generated.
+        Kotlin framework 'ComposeDemoFramework' doesn't exist yet, so a proper Xcode project can't be generated.
         'pod install' should be executed after running ':generateDummyFramework' Gradle task:
 
             ./gradlew :composedemo:generateDummyFramework
@@ -28,12 +28,12 @@ Pod::Spec.new do |spec|
                 
     spec.pod_target_xcconfig = {
         'KOTLIN_PROJECT_PATH' => ':composedemo',
-        'PRODUCT_MODULE_NAME' => 'composedemo',
+        'PRODUCT_MODULE_NAME' => 'ComposeDemoFramework',
     }
                 
     spec.script_phases = [
         {
-            :name => 'Build composedemo',
+            :name => 'Build ComposeDemoLib',
             :execution_position => :before_compile,
             :shell_path => '/bin/sh',
             :script => <<-SCRIPT
