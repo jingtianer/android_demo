@@ -4,6 +4,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import com.jingtian.composedemo.BuildKonfig
 import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.FileType
+import com.jingtian.composedemo.main.remote.RemoteSftpFile
 import com.jingtian.composedemo.multiplatform.MultiplatformFile
 import com.jingtian.composedemo.multiplatform.WeakRef
 import com.jingtian.composedemo.multiplatform.getLongStorage
@@ -155,13 +156,19 @@ object FileStorageUtils {
         }
 
         private suspend fun storeIos(uri: MultiplatformFile, storageFile: Path, id: Long) {
-            val realFile = getIosRealFileStoreFile(id, uri.fileName() ?: "real")
-            val bytes = realFile.relativeTo(getFileStorageRootDir()).toString().encodeToByteArray()
-            val buffer = Buffer()
-            buffer.write(bytes, 0, bytes.size)
-            innerStoreImage(id, buffer, storageFile, uri.extension())
-            uri.inputStream()?.use { `is`->
-                `is`.copyTo(realFile)
+            if (BuildKonfig.isRemote && uri is RemoteSftpFile) {
+                uri.fileStoreInputStream()?.let {
+                    innerStoreImage(id, it, storageFile, uri.extension())
+                }
+            } else {
+                val realFile = getIosRealFileStoreFile(id, uri.fileName() ?: "real_$id")
+                val bytes = realFile.relativeTo(getFileStorageRootDir()).toString().encodeToByteArray()
+                val buffer = Buffer()
+                buffer.write(bytes, 0, bytes.size)
+                innerStoreImage(id, buffer, storageFile, uri.extension())
+                uri.inputStream()?.use { `is`->
+                    `is`.copyTo(realFile)
+                }
             }
         }
 

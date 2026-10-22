@@ -64,6 +64,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.jingtian.composedemo.base.resources.getPainter
 import com.jingtian.composedemo.base.resources.DrawableIcon
+import com.jingtian.composedemo.multiplatform.logD
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
 import kotlinx.coroutines.IO
 
@@ -94,7 +95,7 @@ class AlbumItemViewStateHolder(
     }
 
     suspend fun initImage(scope: CoroutineScope) {
-//        Log.d("jingtian", "initImage: ${albumItemRelation.fileInfo.fileType.name}, ${albumItemRelation.fileInfo.storageId}")
+        logD("jingtian", "initImage: ${albumItemRelation.fileInfo.fileType.name}, ${albumItemRelation.fileInfo.storageId}")
         if (imageBitmap == null) {
             fetchImage(scope)
         }

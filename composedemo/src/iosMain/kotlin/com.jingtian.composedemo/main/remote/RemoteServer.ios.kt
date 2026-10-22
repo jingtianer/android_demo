@@ -55,16 +55,7 @@ class IosSftpServer : SftpServer {
     ) : super(serverName, serverId, userName, port, ip, password, passwordIv, path)
 
     @OptIn(ExperimentalForeignApi::class)
-    @kotlinx.serialization.Transient
-    private var session: NMSSHSession? = null
-
-    @OptIn(ExperimentalForeignApi::class)
     private fun getSession(logger: (String, String) -> Unit): NMSSHSession? {
-        val currentSession = session
-        if (currentSession != null && currentSession.connected && currentSession.authorized) {
-            return currentSession
-        }
-
         val newSession = runCatching {
             logger("jingtian", "开始连接 SFTP $userName@$ip:$port")
             val created = NMSSHSession.connectToHost(ip, port = port.toLong(), withUsername = userName)
@@ -88,8 +79,6 @@ class IosSftpServer : SftpServer {
             logger("jingtian", "session创建失败 $it")
             null
         }
-
-        session = newSession
         return newSession
     }
 
@@ -102,16 +91,12 @@ class IosSftpServer : SftpServer {
             return activeSession
         }
         activeSession.disconnect()
-        session = null
         logger("jingtian", "sftp连接失败 ${activeSession.lastError?.localizedDescription ?: ""}")
         return null
     }
 
     @OptIn(ExperimentalForeignApi::class)
     private fun disconnect() {
-        session?.sftp?.disconnect()
-        session?.disconnect()
-        session = null
     }
 
     @OptIn(ExperimentalForeignApi::class)
@@ -181,7 +166,7 @@ class IosSftpServer : SftpServer {
         val type = uri.mediaType()
         val fileName = uri.fileName() ?: ""
         val (fileStorageId, _) = FileStorageUtils.getStorage(type).asyncStore(uri)
-        val (width, height) = FileStorageUtils.getFileIntrinsicSize(uri, type)
+        val (width, height) = -1 to -1 //FileStorageUtils.getFileIntrinsicSize(uri, type)
         val fileInfo = FileInfo(
             storageId = fileStorageId,
             fileType = type,

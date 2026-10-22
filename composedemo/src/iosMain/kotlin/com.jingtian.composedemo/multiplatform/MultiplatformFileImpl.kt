@@ -7,8 +7,10 @@ import com.jingtian.composedemo.utils.delete
 import com.jingtian.composedemo.utils.exists
 import com.jingtian.composedemo.utils.extension
 import com.jingtian.composedemo.utils.uriToImageSize
+import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
+import kotlinx.cinterop.autoreleasepool
 import kotlinx.cinterop.usePinned
 import kotlinx.io.Buffer
 import kotlinx.io.RawSource
@@ -54,24 +56,27 @@ open class MultiplatformFileImpl(val realFile: Path, val realExtension: String, 
         val htmlExtensions = arrayOf("html", "svg")
     }
 
-    @OptIn(ExperimentalForeignApi::class)
-    private fun getVideoThumbnail(filePath: Path): ImageBitmap?  {
+    @OptIn(ExperimentalForeignApi::class, BetaInteropApi::class)
+    fun getVideoThumbnail(filePath: Path): ImageBitmap?  {
         return try {
-            val url = NSURL.fileURLWithPath(filePath.toString())
-            val asset = AVAsset.assetWithURL(url)
-            val generator = AVAssetImageGenerator(asset)
-            generator.appliesPreferredTrackTransform = true
+            autoreleasepool {
+                val url = NSURL.fileURLWithPath(filePath.toString())
+                val asset = AVAsset.assetWithURL(url)
+                val generator = AVAssetImageGenerator(asset)
+                generator.appliesPreferredTrackTransform = true
 
-            val time = CMTimeMake(1, 60)
-            val cgImage = generator.copyCGImageAtTime(time, null, null)
-            val uiImage = UIImage.imageWithCGImage(cgImage)
-            uiImage.toImageBitmap()
+                val time = CMTimeMake(1, 60)
+                val cgImage = generator.copyCGImageAtTime(time, null, null)
+                val uiImage = UIImage.imageWithCGImage(cgImage)
+                uiImage.toImageBitmap()
+            }
         } catch (e: Exception) {
+            logE("getVideoThumbnail", "error", e)
             null
         }
     }
 
-    private fun getAudioCoverImage(filePath: Path): ImageBitmap? {
+    fun getAudioCoverImage(filePath: Path): ImageBitmap? {
         val asset = AVURLAsset.URLAssetWithURL(NSURL.fileURLWithPath(filePath.toString()), null)
 
         // Look for common metadata (artwork)

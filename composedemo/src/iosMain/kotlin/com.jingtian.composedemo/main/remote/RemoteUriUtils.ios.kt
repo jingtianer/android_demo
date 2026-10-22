@@ -1,8 +1,16 @@
 package com.jingtian.composedemo.main.remote
 
+import androidx.compose.ui.graphics.ImageBitmap
 import cocoapods.NMSSHT7.NMSFTPFile
+import com.jingtian.composedemo.dao.model.FileType
 import com.jingtian.composedemo.multiplatform.MultiplatformFileImpl
+import com.jingtian.composedemo.multiplatform.logD
+import com.jingtian.composedemo.multiplatform.logE
+import com.jingtian.composedemo.multiplatform.use
+import com.jingtian.composedemo.utils.extension
+import com.jingtian.composedemo.utils.uriToImageSize
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.usePinned
 import kotlinx.io.Buffer
 import kotlinx.io.RawSource
 import kotlinx.io.files.Path
@@ -41,18 +49,54 @@ class RemoteSftpFileImpl(
         return fileStore.loadFile(originUri, server)
     }
 
-    override suspend fun fileName(): String = originUri.lastPathSegment
+    private fun getOrignExtension(): String {
+        return originUri.lastPathSegment?.split(".")?.lastOrNull() ?: ""
+    }
+
+    private fun getOrignFileName(): String {
+        return originUri.lastPathSegment ?: ""
+    }
+
+    override suspend fun fileName(): String = getOrignFileName()
 
     override suspend fun isHidden(): Boolean {
         val fileName = fileName()
         return fileName.startsWith(".") && fileName != "." && fileName != ".."
     }
 
-    override suspend fun extension(): String = realExtension
+    override suspend fun mediaType(): FileType = when(getOrignExtension().lowercase()) {
+        in imageExtensions -> FileType.IMAGE
+        in videoExtensions -> FileType.VIDEO
+        in audioExtensions -> FileType.AUDIO
+        in htmlExtensions -> FileType.HTML
+        else -> FileType.RegularFile
+    }
+
+    override suspend fun extension(): String = getOrignExtension()
 
     override suspend fun inputStream(): RawSource? = SystemFileSystem.source(getContentFile())
 
-    override suspend fun fileStoreInputStream(): RawSource? = StringRawSource(originUri.raw)
+    override suspend fun fileStoreInputStream(): RawSource? {
+        logD("jingtian", "fileStoreInputStream: ${originUri.raw}")
+        return StringRawSource(originUri.raw)
+    }
+
+    override suspend fun videoThumbnail(): ImageBitmap? {
+        return getVideoThumbnail(getContentFile())
+    }
+
+    override suspend fun audioThumbnail(): ImageBitmap? {
+        return getAudioCoverImage(getContentFile())
+    }
+
+    @OptIn(ExperimentalForeignApi::class)
+    override suspend fun imageRatio(): Pair<Int, Int> {
+        return runCatching {
+            SystemFileSystem.source(getContentFile()).usePinned {
+                uriToImageSize(it.get())
+            }
+        }.getOrElse { 1 to 1 }
+    }
 
     override suspend fun file(): Path = getContentFile()
 

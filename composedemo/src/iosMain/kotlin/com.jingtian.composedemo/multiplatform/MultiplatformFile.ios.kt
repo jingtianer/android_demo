@@ -17,16 +17,19 @@ actual fun getMultiplatformFileFactory() : IMultiplatformFileFactory {
         val url = SystemFileSystem.source(file).buffered().use {
             it.readString()
         }
+        logD("readAsRemoteUri", "url: $url")
         val matchResult = regex.matchEntire(url) ?: return null
         val scheme = matchResult.groups[1]?.value ?: return null
         val authority = matchResult.groups[2]?.value ?: return null
         val path = matchResult.groups[3]?.value ?: return null
+        logD("readAsRemoteUri", "url: $url, scheme=$scheme, authority=$authority, path=$path")
         return Uri(scheme = scheme, authority = authority, path = path)
     }
 
     return object : IMultiplatformFileFactory {
         override fun fromFile(file: Path): MultiplatformFile {
             if (BuildKonfig.isRemote) {
+                logD("fromFile", "$file")
                 val uri = readAsRemoteUri(file)
                 if (uri?.scheme?.startsWith("jingtian") == true) {
                     RemoteUriUtils.parse(uri)?.let {
@@ -44,6 +47,7 @@ actual fun getMultiplatformFileFactory() : IMultiplatformFileFactory {
         }
         override fun fromFile(file: Path, extension: String?): MultiplatformFile {
             if (BuildKonfig.isRemote) {
+                logD("fromFile", "$file, extension=$extension")
                 val uri = readAsRemoteUri(file)
                 if (uri?.scheme?.startsWith("jingtian") == true) {
                     RemoteUriUtils.parse(uri)?.let {

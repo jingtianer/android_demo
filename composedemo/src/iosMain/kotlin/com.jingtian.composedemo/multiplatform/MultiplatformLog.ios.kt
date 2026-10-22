@@ -8,7 +8,7 @@ actual fun printLog(level: LogLevel, tag: String, msg: String) {
 }
 
 private fun logToString(level: String, tag: String, msg: String, t: Throwable?): String {
-    return "[$level] $tag: $msg" + (if (t != null) "error: ${t.message} stacktrace:\n${t.stackTraceToString()}" else "")
+    return "[$level] $tag: $msg, " + (if (t != null) "error: ${t.message} stacktrace:\n${t.stackTraceToString()}" else "")
 }
 
 actual fun printLog(level: LogLevel, tag: String, msg: String, t: Throwable?) {

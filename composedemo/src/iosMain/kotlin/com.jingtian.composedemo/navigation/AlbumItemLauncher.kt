@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.FileType
 import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
@@ -19,9 +20,13 @@ import com.jingtian.composedemo.utils.globalWorkDir
 import com.jingtian.composedemo.utils.isDirectory
 import com.jingtian.composedemo.utils.isFile
 import com.jingtian.composedemo.utils.mkdirs
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.io.buffered
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
@@ -32,13 +37,10 @@ import platform.UIKit.UIDocumentInteractionControllerDelegateProtocol
 import platform.UIKit.UIViewController
 import platform.darwin.NSObject
 
-class AlbumItemLauncher : IAlbumItemLauncher {
+class AlbumItemLauncher(val scope: CoroutineScope) : IAlbumItemLauncher {
 
-    private suspend fun openFile(fileName: String, file: FileInfo) {
+    private suspend fun openFile(filePath: Path, file: FileInfo) {
 //        println("openFile: file:${file.fileType.name}, ${file.getFileUri()}, ${file.getFileUri()?.file}")
-        val filePath = withContext(Dispatchers.IO) {
-            (file.getFileUri() as? MultiplatformFileImpl)?.file() ?: return@withContext null
-        } ?: return
 //        println("openFile: file: $filePath")
 
         // 1. 创建文档控制器
@@ -51,9 +53,28 @@ class AlbumItemLauncher : IAlbumItemLauncher {
     }
 
     override suspend fun launch(fileName: String, fileInfo: FileInfo) {
-        when(fileInfo.fileType) {
-            FileType.HTML -> openFile(fileName, fileInfo)
-            else -> openFile(fileName, fileInfo)
+        scope.launch(Dispatchers.Main) {
+            val timeoutJob = scope.launch(Dispatchers.Main) {
+                withContext(Dispatchers.IO) {
+                    delay(2000)
+                }
+//                Toast.makeText(app, "创建intent超时 $fileName", Toast.LENGTH_SHORT).show()
+            }
+            val filePath = withTimeoutOrNull(2000) {
+                withContext(Dispatchers.IO) {
+                    val filePath = withContext(Dispatchers.IO) {
+                        (fileInfo.getFileUri() as? MultiplatformFileImpl)?.file() ?: return@withContext null
+                    }
+                    filePath
+                }
+            }
+            if (filePath != null) {
+                timeoutJob.cancel()
+                when(fileInfo.fileType) {
+                    FileType.HTML -> openFile(filePath, fileInfo)
+                    else -> openFile(filePath, fileInfo)
+                }
+            }
         }
     }
 
@@ -66,8 +87,9 @@ class AlbumItemLauncher : IAlbumItemLauncher {
 
 @Composable
 actual fun rememberAlbumLauncher(onResult: (Long)->Unit): MutableState<IAlbumItemLauncher> {
+    val scope = rememberCoroutineScope()
     return remember {
-        mutableStateOf(AlbumItemLauncher())
+        mutableStateOf(AlbumItemLauncher(scope))
     }
 }
 
