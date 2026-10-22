@@ -82,11 +82,11 @@ object ShareUtils {
                 json.decodeFromString<List<AlbumRelation>>(bytes).associate { albumRelation ->
                     val albumMap = mutableMapOf<String, AlbumItemRelation>()
                     for(albumItem in albumRelation.albumItemList) {
-                        val oldAlbumItem = albumMap[albumItem.albumItem.itemName]
+                        val oldAlbumItem = albumMap[albumItem.fileInfo.filePath]
                         if (oldAlbumItem == null) {
-                            albumMap[albumItem.albumItem.itemName] = albumItem
+                            albumMap[albumItem.fileInfo.filePath] = albumItem
                         } else {
-                            albumMap[albumItem.albumItem.itemName] = AlbumItemRelation(
+                            albumMap[albumItem.fileInfo.filePath] = AlbumItemRelation(
                                 albumItem = oldAlbumItem.albumItem,
                                 labelInfos = mutableListOf<LabelInfo>().apply {
                                     addAll(oldAlbumItem.labelInfos)
@@ -104,7 +104,7 @@ object ShareUtils {
             for (album in albumList) {
                 val importedAlbumItemMap = importedAlbumList[album.albumItem.albumName] ?: continue
                 for (albumRelation in album.albumItemList) {
-                    val importedAlbumRelation = importedAlbumItemMap[albumRelation.albumItem.itemName] ?: continue
+                    val importedAlbumRelation = importedAlbumItemMap[albumRelation.fileInfo.filePath] ?: continue
                     val importedAlbumItem = importedAlbumRelation.albumItem
                     val albumItem = albumRelation.albumItem
                     DataBase.dbImpl.getAlbumItemDao().updateAlbumItem(
