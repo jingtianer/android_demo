@@ -9,17 +9,8 @@ import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.FileType
 import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
 import com.jingtian.composedemo.multiplatform.MultiplatformFileImpl
-import com.jingtian.composedemo.utils.CoroutineUtils
-import com.jingtian.composedemo.utils.copyTo
-import com.jingtian.composedemo.utils.createNewFile
-import com.jingtian.composedemo.utils.delete
-import com.jingtian.composedemo.utils.deleteRecursively
 import com.jingtian.composedemo.utils.exists
-import com.jingtian.composedemo.utils.getFileCacheStorageRootDir
-import com.jingtian.composedemo.utils.globalWorkDir
-import com.jingtian.composedemo.utils.isDirectory
-import com.jingtian.composedemo.utils.isFile
-import com.jingtian.composedemo.utils.mkdirs
+import kotlinx.atomicfu.atomic
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -40,7 +31,7 @@ import platform.darwin.NSObject
 class AlbumItemLauncher(val scope: CoroutineScope) : IAlbumItemLauncher {
 
     private suspend fun openFile(filePath: Path, file: FileInfo) {
-//        println("openFile: file:${file.fileType.name}, ${file.getFileUri()}, ${file.getFileUri()?.file}")
+        println("openFile: file:${filePath.name}, ${filePath.exists()}, ${filePath}")
 //        println("openFile: file: $filePath")
 
         // 1. 创建文档控制器
@@ -54,22 +45,15 @@ class AlbumItemLauncher(val scope: CoroutineScope) : IAlbumItemLauncher {
 
     override suspend fun launch(fileName: String, fileInfo: FileInfo) {
         scope.launch(Dispatchers.Main) {
-            val timeoutJob = scope.launch(Dispatchers.Main) {
-                withContext(Dispatchers.IO) {
-                    delay(2000)
-                }
-//                Toast.makeText(app, "创建intent超时 $fileName", Toast.LENGTH_SHORT).show()
+            val timeoutCancel = atomic(false)
+            scope.launch {
+                delay(2000)
+                timeoutCancel.value = true
             }
-            val filePath = withTimeoutOrNull(2000) {
-                withContext(Dispatchers.IO) {
-                    val filePath = withContext(Dispatchers.IO) {
-                        (fileInfo.getFileUri() as? MultiplatformFileImpl)?.file() ?: return@withContext null
-                    }
-                    filePath
-                }
+            val filePath = withContext(Dispatchers.IO) {
+                (fileInfo.getFileUri() as? MultiplatformFileImpl)?.file() ?: return@withContext null
             }
-            if (filePath != null) {
-                timeoutJob.cancel()
+            if (filePath != null && !timeoutCancel.value) {
                 when(fileInfo.fileType) {
                     FileType.HTML -> openFile(filePath, fileInfo)
                     else -> openFile(filePath, fileInfo)
