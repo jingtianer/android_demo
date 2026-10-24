@@ -4,6 +4,7 @@ import android.os.SystemClock
 import androidx.biometric.BiometricPrompt
 import androidx.biometric.BiometricPrompt.AuthenticationCallback
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -27,8 +28,9 @@ actual fun authViewModel(): AuthViewModel {
 class AndroidMigrateViewModel : AuthViewModel() {
     companion object {
         val factory = viewModelFactory { initializer<AuthViewModel> { AndroidMigrateViewModel() } }
+        private val sIsPasswordChecked = mutableStateOf(false)
     }
-    var isPasswordChecked = mutableStateOf(false)
+    val isPasswordChecked: MutableState<Boolean> get() = sIsPasswordChecked
     private val currentBiometricPrompt: MutableList<BiometricPrompt> = mutableListOf()
 
     class AuthenticationCallbackWrapper(val callback: (AuthResult)->Unit, var onAuthFinished: ()->Unit = {}) : BiometricPrompt.AuthenticationCallback() {
