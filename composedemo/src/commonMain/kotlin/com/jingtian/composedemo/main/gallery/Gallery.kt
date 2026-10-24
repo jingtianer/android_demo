@@ -335,7 +335,7 @@ fun GalleryStateHolder.Gallery() {
                 state = galleryScrollState,
             ) {
                 items(filteredItemList.size, key = { index-> filteredItemList[index].let {
-                    Triple(it.albumItem.itemId ?: DataBase.INVALID_ID, it.albumItem.fileId, it.fileInfo.storageId)
+                    Triple(it.albumItem.itemId ?: DataBase.INVALID_ID, it.albumItem.fileId, it.fileInfo.storageId) to it.hashCode()
                 } }, contentType = { index-> filteredItemList[index].fileInfo.fileType.value }) { index: Int ->
                     AlbumItemView(albumViewMap, filteredItemList[index], size, galleryItemPadding, currentSelectedItem, enterEditModeState, itemSelectStateChangeState, showEditDialogStateOnLongClickState)
                 }

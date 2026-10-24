@@ -76,17 +76,21 @@ object ShareUtils {
         }
     }
 
+    private fun AlbumItemRelation.importKey(): String {
+        return this.fileInfo.filePath
+    }
+
     suspend fun importSharedDb(albumViewModel: AlbumViewModel, file: MultiplatformFile) {
         withContext(Dispatchers.IO) {
             val importedAlbumList = file.inputStream()?.buffered()?.readString()?.let { bytes ->
                 json.decodeFromString<List<AlbumRelation>>(bytes).associate { albumRelation ->
                     val albumMap = mutableMapOf<String, AlbumItemRelation>()
                     for(albumItem in albumRelation.albumItemList) {
-                        val oldAlbumItem = albumMap[albumItem.fileInfo.filePath]
+                        val oldAlbumItem = albumMap[albumItem.importKey()]
                         if (oldAlbumItem == null) {
-                            albumMap[albumItem.fileInfo.filePath] = albumItem
+                            albumMap[albumItem.importKey()] = albumItem
                         } else {
-                            albumMap[albumItem.fileInfo.filePath] = AlbumItemRelation(
+                            albumMap[albumItem.importKey()] = AlbumItemRelation(
                                 albumItem = oldAlbumItem.albumItem,
                                 labelInfos = mutableListOf<LabelInfo>().apply {
                                     addAll(oldAlbumItem.labelInfos)
@@ -95,7 +99,7 @@ object ShareUtils {
                                 fileInfo = oldAlbumItem.fileInfo
                             )
                         }
-                }
+                    }
                     albumRelation.albumItem.albumName to albumMap
                 }
             } ?: return@withContext
@@ -104,7 +108,7 @@ object ShareUtils {
             for (album in albumList) {
                 val importedAlbumItemMap = importedAlbumList[album.albumItem.albumName] ?: continue
                 for (albumRelation in album.albumItemList) {
-                    val importedAlbumRelation = importedAlbumItemMap[albumRelation.fileInfo.filePath] ?: continue
+                    val importedAlbumRelation = importedAlbumItemMap[albumRelation.importKey()] ?: continue
                     val importedAlbumItem = importedAlbumRelation.albumItem
                     val albumItem = albumRelation.albumItem
                     DataBase.dbImpl.getAlbumItemDao().updateAlbumItem(
