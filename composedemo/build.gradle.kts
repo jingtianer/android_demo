@@ -106,6 +106,7 @@ kotlin {
                 // 生命周期
                 implementation(libs.androidx.lifecycle.viewmodel.core.get().toString())
                 implementation(libs.androidx.lifecycle.viewmodel.compose.get().toString())
+                implementation(libs.androidx.lifecycle.runtime.compose.get().toString())
 
                 // 工具类
                 implementation(libs.kotlinx.serialization.json)

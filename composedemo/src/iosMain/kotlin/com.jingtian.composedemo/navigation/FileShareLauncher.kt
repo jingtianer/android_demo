@@ -3,6 +3,7 @@ package com.jingtian.composedemo.navigation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
+import com.jingtian.composedemo.base.JumpOnPurposeMarkHolder
 import com.jingtian.composedemo.multiplatform.MultiplatformFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -16,6 +17,8 @@ class FileShareLauncher : IFileShareLauncher {
         val filePath = withContext(Dispatchers.IO) {
             file.file() ?: return@withContext null
         } ?: return
+        JumpOnPurposeMarkHolder.isJumpOnPurpose.value = true
+
 //        println("openFile: file: $filePath")
 
         // 1. 创建文档控制器

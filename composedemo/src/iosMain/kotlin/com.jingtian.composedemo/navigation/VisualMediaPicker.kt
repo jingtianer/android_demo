@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import com.jingtian.composedemo.base.JumpOnPurposeMarkHolder
 import com.jingtian.composedemo.multiplatform.MultiplatformFile
 import com.jingtian.composedemo.multiplatform.MultiplatformFileImpl
 import com.jingtian.composedemo.utils.extension
@@ -29,6 +30,7 @@ class ImagePicker(
     override fun launch() {
         val rootVC = UIApplication.sharedApplication.keyWindow?.rootViewController
             ?: return
+        JumpOnPurposeMarkHolder.isJumpOnPurpose.value = true
 
         val delegate = ImagePickDelegate(onResult)
         val picker = UIImagePickerController()

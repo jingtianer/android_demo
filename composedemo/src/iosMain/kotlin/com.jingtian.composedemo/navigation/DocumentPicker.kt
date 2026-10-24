@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import com.jingtian.composedemo.base.JumpOnPurposeMarkHolder
 import com.jingtian.composedemo.multiplatform.MultiplatformFile
 import com.jingtian.composedemo.multiplatform.MultiplatformFileImpl
 import com.jingtian.composedemo.utils.extension
@@ -86,6 +87,7 @@ class DocumentPicker(
     override fun launch(mimes: Array<String>) {
         val rootVC = UIApplication.sharedApplication.keyWindow?.rootViewController
             ?: return
+        JumpOnPurposeMarkHolder.isJumpOnPurpose.value = true
 
         val delegate = DocumentPickerDelegate(onResult)
         val picker = UIDocumentPickerViewController(forOpeningContentTypes = extensions, asCopy = false).apply {

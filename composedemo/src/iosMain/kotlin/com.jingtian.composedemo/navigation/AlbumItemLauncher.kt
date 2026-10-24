@@ -5,10 +5,12 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import com.jingtian.composedemo.base.JumpOnPurposeMarkHolder
 import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.FileType
 import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
 import com.jingtian.composedemo.multiplatform.MultiplatformFileImpl
+import com.jingtian.composedemo.multiplatform.logD
 import com.jingtian.composedemo.utils.exists
 import kotlinx.atomicfu.atomic
 import kotlinx.coroutines.CoroutineScope
@@ -17,10 +19,7 @@ import kotlinx.coroutines.IO
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
-import kotlinx.io.buffered
 import kotlinx.io.files.Path
-import kotlinx.io.files.SystemFileSystem
 import platform.Foundation.NSURL
 import platform.UIKit.UIApplication
 import platform.UIKit.UIDocumentInteractionController
@@ -31,9 +30,9 @@ import platform.darwin.NSObject
 class AlbumItemLauncher(val scope: CoroutineScope) : IAlbumItemLauncher {
 
     private suspend fun openFile(filePath: Path, file: FileInfo) {
-        println("openFile: file:${filePath.name}, ${filePath.exists()}, ${filePath}")
+        logD("AlbumItemLauncher") { "openFile: file:${filePath.name}, ${filePath.exists()}, ${filePath}" }
 //        println("openFile: file: $filePath")
-
+        JumpOnPurposeMarkHolder.isJumpOnPurpose.value = true
         // 1. 创建文档控制器
         val docController = UIDocumentInteractionController()
 

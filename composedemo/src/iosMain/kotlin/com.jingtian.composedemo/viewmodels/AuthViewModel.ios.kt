@@ -3,9 +3,7 @@ package com.jingtian.composedemo.viewmodels
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.jingtian.composedemo.multiplatform.logD
-import com.jingtian.composedemo.multiplatform.logE
 import kotlinx.cinterop.BetaInteropApi
-import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.ObjCObjectVar
 import kotlinx.cinterop.alloc
@@ -35,8 +33,8 @@ class AuthViewModelImpl : AuthViewModel() {
     @OptIn(ExperimentalForeignApi::class, BetaInteropApi::class)
     override fun doAuth(onAuthResult: (AuthResult)->Unit) {
         val context = LAContext()
-//        context.localizedCancelTitle = "取消"
-//        context.localizedFallbackTitle = "输入密码"
+        context.localizedCancelTitle = "取消"
+        context.localizedFallbackTitle = "输入密码"
         val canAuth = memScoped {
             val errorPtr = alloc<ObjCObjectVar<NSError?>>()
             val canAuth = context.canEvaluatePolicy(LAPolicyDeviceOwnerAuthentication, errorPtr.ptr)
