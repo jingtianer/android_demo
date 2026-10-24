@@ -46,6 +46,10 @@ fun MainViewController() = ComposeUIViewController {
                     isAuthed = false
                 }
 
+                override fun onPause(owner: LifecycleOwner) {
+                    isVisible = false
+                }
+
                 override fun onResume(owner: LifecycleOwner) {
                     if (!isAuthed && !JumpOnPurposeMarkHolder.isJumpOnPurpose.getAndSet(false)) {
                         doAuth.invoke()
