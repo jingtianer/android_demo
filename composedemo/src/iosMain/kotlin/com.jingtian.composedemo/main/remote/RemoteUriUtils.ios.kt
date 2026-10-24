@@ -54,6 +54,9 @@ class RemoteSftpFileImpl(
     }
 
     private fun getOrignFileName(): String {
+        logD("getOrignFileName") {
+            Exception().stackTraceToString()
+        }
         return originUri.lastPathSegment ?: ""
     }
 
@@ -129,8 +132,7 @@ private class StringRawSource(
 
 object RemoteUriUtils {
     @OptIn(ExperimentalForeignApi::class)
-    fun fromSftpEntry(server: SftpServer, root: String, entry: NMSFTPFile): RemoteSftpFileImpl {
-        val filename = entry.filename
+    fun fromSftpEntry(server: SftpServer, root: String, filename: String): RemoteSftpFileImpl {
         return RemoteSftpFileImpl(
             Uri(
                 path = joinRemotePath(root, filename),

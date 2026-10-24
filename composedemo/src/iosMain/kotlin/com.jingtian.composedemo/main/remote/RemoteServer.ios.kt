@@ -1,23 +1,36 @@
 package com.jingtian.composedemo.main.remote
 
+import androidx.compose.ui.graphics.ImageBitmap
 import cocoapods.NMSSHT7.NMSFTPFile
 import cocoapods.NMSSHT7.NMSSHSession
 import com.jingtian.composedemo.dao.DataBase
 import com.jingtian.composedemo.dao.model.Album
 import com.jingtian.composedemo.dao.model.AlbumItem
 import com.jingtian.composedemo.dao.model.FileInfo
+import com.jingtian.composedemo.dao.model.LabelInfo
+import com.jingtian.composedemo.multiplatform.MultiplatformFile
 import com.jingtian.composedemo.utils.Base64Utils
+import com.jingtian.composedemo.utils.BitMapCachePool
 import com.jingtian.composedemo.utils.FileStorageUtils
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
 import com.jingtian.composedemo.viewmodels.AuthParams
 import com.jingtian.composedemo.viewmodels.AuthSuccess
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.usePinned
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
+import kotlinx.io.asNSInputStream
+import kotlinx.io.asSink
+import kotlinx.io.buffered
+import kotlinx.io.files.Path
 import kotlinx.serialization.KSerializer
+import platform.Foundation.NSInputStream
+import platform.Foundation.NSString
 import platform.Foundation.writeToFile
 import kotlin.random.Random
+import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
 
 actual fun createSftpServer(
     serverName: String,
@@ -144,7 +157,7 @@ class IosSftpServer : SftpServer {
             if (entry.isDirectory) {
                 traverseEntry(activeSession, viewModel, pathSet, entryPath, album, fileInfoList)
             } else {
-                readFile(viewModel, pathSet, root, entry, album, fileInfoList)
+                readFile(viewModel, pathSet, root, entry.filename, album, fileInfoList)
             }
         }
     }
@@ -154,13 +167,13 @@ class IosSftpServer : SftpServer {
         viewModel: AlbumViewModel,
         pathSet: Set<String>,
         root: String,
-        entry: NMSFTPFile,
+        entry: String,
         album: Album,
-        fileInfoList: MutableList<Pair<FileInfo, AlbumItem>>,
-    ) {
+        fileInfoList: MutableList<Pair<FileInfo, AlbumItem>>?,
+    ): Pair<FileInfo, AlbumItem>? {
         val uri = RemoteUriUtils.fromSftpEntry(this, root, entry)
         if (uri.isHidden() || pathSet.contains(uri.path())) {
-            return
+            return null
         }
 
         val type = uri.mediaType()
@@ -177,7 +190,9 @@ class IosSftpServer : SftpServer {
         )
         val albumItem = AlbumItem(itemName = fileName, albumId = album.albumId ?: DataBase.INVALID_ID)
         viewModel.sendMessage("正在导入: $fileName")
-        fileInfoList.add(fileInfo to albumItem)
+        return (fileInfo to albumItem).also {
+            fileInfoList?.add(it)
+        }
     }
 
     override fun getInitializedCipher(): AuthParams = AuthParams()
@@ -216,12 +231,94 @@ class IosSftpServer : SftpServer {
             ?.writeToFile(localPath, atomically = true)
             ?: false
     }
+
+    @OptIn(ExperimentalForeignApi::class, ExperimentalTime::class)
+    override suspend fun uploadFileAndStore(
+        album: Album,
+        albumViewModel: AlbumViewModel,
+        albumItem: AlbumItem,
+        labelInfoList: List<LabelInfo>,
+        webSnapshot: ImageBitmap?,
+        uri: MultiplatformFile,
+        onResult: suspend (success: Boolean, errMsg: String?) -> Unit
+    ) {
+        val activeSession = connect { _, _ -> }
+        if (activeSession == null) {
+            onResult(false, "connection 创建失败")
+            return
+        }
+        when(uri) {
+            is RemoteSftpFile -> {
+                onResult(false, "文件: ${uri.path()}已经是RemoteFile了")
+                return
+            }
+            else -> {
+                val fileName = fileNameAddSuffix(albumItem.itemName, "_${Clock.System.now().toEpochMilliseconds()}_${albumItem.hashCode()}")
+                val targetFile = joinRemotePath(this.path, fileName)
+                try {
+                    ensureSftpDir(activeSession, path)
+                    val fileNameConflict = activeSession.sftp.fileExistsAtPath(targetFile)
+                    if (fileNameConflict) {
+                        onResult(false, "文件名冲突")
+                        return
+                    }
+                    var lastReportProgress = -1L
+                    val reportGap = 256 * 1024L
+                    val writeSuccess = activeSession.sftp.writeFileAtPath(uri.path(), targetFile) { progressNS->
+                        val progress = progressNS.toLong()
+                        if (progress - lastReportProgress >= reportGap || lastReportProgress == -1L) {
+                            lastReportProgress = progress
+                            albumViewModel.sendMessage("上传中: ${progress / 1024}KB")
+                        }
+                        true
+                    }
+                    if (!writeSuccess) {
+                        onResult(false, "文件上传失败1")
+                        return
+                    }
+                } catch (e: Exception) {
+                    onResult(false, "文件拷贝发生错误: ${e.message}")
+                    return
+                } finally {
+                    withContext(Dispatchers.Main) {
+                        uri.onStoreFinish()
+                    }
+                    activeSession.disconnect()
+                }
+                try {
+                    val fileInfo = readFile(albumViewModel, setOf(), path, fileName, album, null)
+                    if (fileInfo == null) {
+                        onResult(false, "文件创建失败: readFile")
+                        return
+                    }
+                    albumItem.wire(fileInfo.second) { that->
+                        this.itemName = that.itemName
+                    }
+                    albumViewModel.importFile(album, fileInfo.first, albumItem, labelInfoList)
+                    BitMapCachePool.loadImage(fileInfo.first) { webSnapshot }
+                    onResult(true,  null)
+                } catch (e: Exception) {
+                    onResult(false, "写入数据库失败: $e")
+                    return
+                }
+            }
+        }
+    }
 }
 
-internal fun joinRemotePath(root: String, filename: String): String {
-    return when {
-        root.isEmpty() || root == "/" -> "/$filename"
-        root.endsWith("/") -> "$root$filename"
-        else -> "$root/$filename"
+@OptIn(ExperimentalForeignApi::class)
+fun ensureSftpDir(sftp: NMSSHSession, remoteDir: String): Boolean {
+    if (remoteDir.isEmpty()) return true
+    if (sftp.sftp.fileExistsAtPath(remoteDir)) {
+        return true
     }
+    val lastSlashIndex = remoteDir.lastIndexOf('/')
+    if (lastSlashIndex <= 0) {
+        return sftp.sftp.createDirectoryAtPath(remoteDir)
+    }
+    val parentDir = remoteDir.substring(0, lastSlashIndex)
+    if (!ensureSftpDir(sftp, parentDir)) {
+        return false
+    }
+    return sftp.sftp.createDirectoryAtPath(remoteDir)
 }

@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -34,6 +35,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.jingtian.composedemo.BuildKonfig
 import com.jingtian.composedemo.base.AppThemeDialog
 import com.jingtian.composedemo.base.AppThemeText
 import com.jingtian.composedemo.base.screenHeight
@@ -61,6 +63,12 @@ import kotlinx.coroutines.launch
 import kotlin.math.min
 import com.jingtian.composedemo.base.resources.getPainter
 import com.jingtian.composedemo.base.resources.DrawableIcon
+import com.jingtian.composedemo.main.remote.RemoteServer
+import com.jingtian.composedemo.main.remote.ServerStorage
+import com.jingtian.composedemo.main.remote.ServerType
+import com.jingtian.composedemo.main.remote.SftpServer
+import com.jingtian.composedemo.main.remote.SftpServerDescView
+import com.jingtian.composedemo.main.remote.toHolder
 
 @Composable
 fun AddItemDialog(album: Album, totalLabelList: List<String>, albumData: List<Album>, onDismiss: () -> Unit) {
@@ -74,6 +82,18 @@ fun AddItemDialog(album: Album, totalLabelList: List<String>, albumData: List<Al
     val itemLabel = remember { mutableStateListOf<String>() }
     val itemLabelSet = remember { mutableStateMapOf<String, String>() }
     var webSnapShotTaker: (suspend ()-> ImageBitmap)? by remember { mutableStateOf(null) }
+
+    var serverList by remember { mutableStateOf(emptyList<SftpServer>()) }
+
+    if (BuildKonfig.isRemote) {
+        LaunchedEffect(Unit) {
+            serverList = ServerStorage.getStorage<SftpServer>(ServerType.SFTP).allServer()
+        }
+    }
+
+    var currentSelectedServer by remember {
+        mutableStateOf<SftpServer?>(null)
+    }
 
     var selectedUri by remember { mutableStateOf<MultiplatformFile?>(null) }
     val scope = rememberCoroutineScope()
@@ -100,7 +120,7 @@ fun AddItemDialog(album: Album, totalLabelList: List<String>, albumData: List<Al
                     null
                 }
                 onDismiss()
-                viewModel.addItem(currentSelectedAlbum, selectedUri, itemName, itemRank, itemDesc, itemScore, itemLabelSet.keys, webSnapShot)
+                viewModel.addItem(currentSelectedAlbum, selectedUri, itemName, itemRank, itemDesc, itemScore, itemLabelSet.keys, webSnapShot, currentSelectedServer)
             }
         }
     }
@@ -190,6 +210,7 @@ fun AddItemDialog(album: Album, totalLabelList: List<String>, albumData: List<Al
         onPositive = { saveItem() }
     ) { _, actionButtons ->
         var openAlbumList by remember { mutableStateOf(false) }
+        var openServerList by remember { mutableStateOf(false) }
         Box {
             LazyColumn(
                 Modifier
@@ -246,6 +267,34 @@ fun AddItemDialog(album: Album, totalLabelList: List<String>, albumData: List<Al
                             currentSelectedAlbum = item
                             openAlbumList = false
                         }
+                    }
+                }
+
+                if (BuildKonfig.isRemote) {
+                    item {
+                        AppThemeText("选择server: ${currentSelectedServer?.serverName ?: "None"}",
+                            Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    openServerList = !openServerList
+                                }
+                                .padding(horizontal = 6.dp, vertical = 10.dp))
+                    }
+                }
+
+                if (openServerList) {
+                    items(count = serverList.size) { serverIdx->
+                        val server = serverList[serverIdx]
+                        SftpServerDescView(
+                            sftpServer = server.toHolder(),
+                            onClick = {
+                                currentSelectedServer = server
+                                openServerList = false
+                            },
+                            onLongPress = {
+
+                            }
+                        )
                     }
                 }
 

@@ -112,7 +112,7 @@ class ImportRemoteDialogStateHolder {
     }
 }
 
-private fun SftpServer.toHolder(): SftpServerStateHolder {
+fun SftpServer.toHolder(): SftpServerStateHolder {
     return SftpServerStateHolder(this)
 }
 
@@ -189,6 +189,7 @@ fun ImportRemoteDialogStateHolder.ImportRemoteDialog(album: Album, onDismiss: ()
         }
     ) { _, actionButtons ->
         val viewModel: AlbumViewModel = viewModel(factory = AlbumViewModel.viewModelFactory)
+        val authViewModel: AuthViewModel = authViewModel()
         LazyColumn(
             Modifier
                 .fillMaxWidth()
@@ -213,9 +214,16 @@ fun ImportRemoteDialogStateHolder.ImportRemoteDialog(album: Album, onDismiss: ()
             ) { index ->
                 val serverItem = sftpServerHolderList[index]
                 SftpServerDescView(serverItem, onClick = {
-                    viewModel.viewModelScope.launch {
-                        serverItem.import(viewModel, album)
+                    authViewModel.doAuth { authResult ->
+                        when (authResult) {
+                            is AuthSuccess -> {
+                                viewModel.viewModelScope.launch {
+                                    serverItem.import(viewModel, album)
+                                }
+                            }
+                        }
                     }
+
                     onDismiss()
                 }, onLongPress = {
                     sftpEditServerDialog = serverItem
@@ -456,12 +464,11 @@ fun ImportRemoteDialogStateHolder.SftpServerEditDialog(
 }
 
 @Composable
-fun ColumnScope.SftpServerDescView(
+fun SftpServerDescView(
     sftpServer: SftpServerStateHolder,
     onClick: () -> Unit,
     onLongPress: () -> Unit
 ) {
-    val viewModel: AuthViewModel = authViewModel()
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -469,13 +476,7 @@ fun ColumnScope.SftpServerDescView(
             .pointerInput(sftpServer) {
                 detectTapGestures(
                     onTap = {
-                        viewModel.doAuth { authResult ->
-                            when (authResult) {
-                                is AuthSuccess -> {
-                                    onClick()
-                                }
-                            }
-                        }
+                        onClick()
                     },
                     onLongPress = {
                         onLongPress()

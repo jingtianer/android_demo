@@ -100,12 +100,12 @@ private class InputStreamRawSource(
 }
 
 object RemoteUriUtils {
-    fun fromSftpEntry(server: SftpServer, root: String, entry: LsEntry): RemoteSftpFileImpl {
+    fun fromSftpEntry(server: SftpServer, root: String, filename: String): RemoteSftpFileImpl {
         val uri = Uri.Builder()
             .scheme("jingtianSftp")
             .authority(server.serverId)
             .path(root)
-            .appendPath(entry.filename)
+            .appendPath(filename)
             .build()
         // Log.d("jingtian", "fromSftpEntry: $uri")
         return RemoteSftpFileImpl(uri, server).apply {

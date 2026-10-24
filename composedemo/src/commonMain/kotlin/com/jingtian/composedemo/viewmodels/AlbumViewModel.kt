@@ -10,6 +10,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.jingtian.composedemo.BuildKonfig
 import com.jingtian.composedemo.dao.DataBase
 import com.jingtian.composedemo.dao.model.Album
 import com.jingtian.composedemo.dao.model.AlbumItem
@@ -18,7 +19,10 @@ import com.jingtian.composedemo.dao.model.FileType
 import com.jingtian.composedemo.dao.model.ItemRank
 import com.jingtian.composedemo.dao.model.LabelInfo
 import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
+import com.jingtian.composedemo.main.remote.SftpServer
 import com.jingtian.composedemo.multiplatform.MultiplatformFile
+import com.jingtian.composedemo.multiplatform.logD
+import com.jingtian.composedemo.multiplatform.logE
 import com.jingtian.composedemo.utils.BitMapCachePool
 import com.jingtian.composedemo.utils.CoroutineUtils
 import com.jingtian.composedemo.utils.FileStorageUtils
@@ -30,7 +34,12 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-expect suspend fun traverseUri(album: Album, uri: MultiplatformFile, fileInfoList: MutableList<Pair<FileInfo, AlbumItem>>, sendMessage: (String)->Unit)
+expect suspend fun traverseUri(
+    album: Album,
+    uri: MultiplatformFile,
+    fileInfoList: MutableList<Pair<FileInfo, AlbumItem>>,
+    sendMessage: (String) -> Unit
+)
 
 class AlbumViewModel : ViewModel() {
     companion object {
@@ -50,6 +59,7 @@ class AlbumViewModel : ViewModel() {
         fun MutableLongState.observeAsState() = remember { this }
 
     }
+
     val albumDao = DataBase.dbImpl.getAlbumDao()
     val albumItemDao = DataBase.dbImpl.getAlbumItemDao()
     suspend fun menuItems(): List<Album> = albumDao.getAllAlbum()
@@ -114,7 +124,9 @@ class AlbumViewModel : ViewModel() {
         val albumId = album.albumId ?: return
         CoroutineUtils.runIOTask({
             val itemInfoList = albumItemDao.getAllAlbumItemListWithExtra(albumId)
-            val files = itemInfoList.mapNotNull { it.albumItem.itemName to (it.fileInfo ?: return@mapNotNull null) }
+            val files = itemInfoList.mapNotNull {
+                it.albumItem.itemName to (it.fileInfo ?: return@mapNotNull null)
+            }
             files.forEach {
                 it.second.getFileUri()?.onDelete()
                 FileStorageUtils.getStorage(it.second.fileType)?.delete(it.second.storageId)
@@ -154,7 +166,8 @@ class AlbumViewModel : ViewModel() {
 
     fun moveItems(moveTo: Album, albumList: Collection<AlbumItemRelation>) {
         CoroutineUtils.runIOTask({
-            val moveList = albumList.map { it.albumItem.also { it.albumId = moveTo.albumId ?: it.albumId } }
+            val moveList =
+                albumList.map { it.albumItem.also { it.albumId = moveTo.albumId ?: it.albumId } }
             DataBase.dbImpl.getAlbumItemDao().updateAllAlbumItem(moveList)
         }) {
             albumItemListChange.notifyChange()
@@ -170,14 +183,47 @@ class AlbumViewModel : ViewModel() {
         itemDesc: String,
         itemScore: Float,
         itemLabel: Set<String>,
-        webSnapShot: ImageBitmap?
+        webSnapShot: ImageBitmap?,
+        currentSelectedServer: SftpServer?,
     ) {
         val albumId = album.albumId ?: return
         val uri = selectedUri
-        CoroutineUtils.runIOTask({
+        CoroutineUtils.runIOTask(block = block@{
+            if (BuildKonfig.isRemote && currentSelectedServer != null) {
+                val albumItem = AlbumItem(
+                    itemName = itemName,
+                    rank = itemRank,
+                    desc = itemDesc,
+                    score = itemScore,
+                    albumId = albumId,
+                    fileId = DataBase.INVALID_ID
+                )
+                val labelInfo =
+                    itemLabel.map { LabelInfo(label = it, albumItemId = DataBase.INVALID_ID) }
+                currentSelectedServer.uploadFileAndStore(
+                    album,
+                    this,
+                    albumItem,
+                    labelInfo,
+                    webSnapShot,
+                    uri,
+                ) { success, errMsg ->
+                    withContext(Dispatchers.Main) {
+                        if (success) {
+                            sendMessage("上传文件 ${album.albumName} 成功!")
+                            logD("addItem") { "addItem成功" }
+                        } else {
+                            sendMessage("addItem失败: $errMsg")
+                            logD("addItem") { "addItem失败: $errMsg" }
+                        }
+                        albumItemListChange.notifyChange()
+                    }
+                }
+                return@block false
+            }
             val mediaType = selectedUri.mediaType()
             val imageStorage =
-                FileStorageUtils.getStorage(mediaType) ?: return@runIOTask
+                FileStorageUtils.getStorage(mediaType) ?: return@block true
             val (nextId, _) = imageStorage.asyncStore(uri)
             val (width, height) = getFileIntrinsicSize(uri, mediaType)
             val file = FileInfo(
@@ -203,21 +249,45 @@ class AlbumViewModel : ViewModel() {
             if (webSnapShot != null) {
                 BitMapCachePool.loadImage(file) { webSnapShot }
             }
+            return@block true
+        }, onFailure = {
+            sendMessage("添加文件 ${album.albumName} 失败! ${it}")
+            logE("addItem", "添加文件 ${album.albumName} 失败!", it)
         }) {
-            albumItemListChange.notifyChange()
-            sendMessage("添加文件 ${album.albumName} 成功!")
+            if (it) {
+                albumItemListChange.notifyChange()
+                sendMessage("添加文件 ${album.albumName} 成功!")
+            }
         }
     }
 
     suspend fun importFiles(album: Album, fileInfoList: MutableList<Pair<FileInfo, AlbumItem>>) {
         withContext(Dispatchers.IO) {
-            val idList = DataBase.dbImpl.getFileInfoDao().insertAllFileInfo(fileInfoList.map { it.first })
-            val albumItemList = fileInfoList.mapIndexed { index: Int, pair: Pair<FileInfo, AlbumItem> ->
-                pair.second.also {
-                    it.fileId = idList[index]
+            val idList =
+                DataBase.dbImpl.getFileInfoDao().insertAllFileInfo(fileInfoList.map { it.first })
+            val albumItemList =
+                fileInfoList.mapIndexed { index: Int, pair: Pair<FileInfo, AlbumItem> ->
+                    pair.second.also {
+                        it.fileId = idList[index]
+                    }
                 }
-            }
             DataBase.dbImpl.getAlbumItemDao().insertAllAlbumItem(albumItemList)
+        }
+        withContext(Dispatchers.Main) {
+            albumItemListChange.notifyChange()
+            sendMessage("导入文件 ${album.albumName} 成功!")
+        }
+    }
+
+    suspend fun importFile(album: Album, fileInfo: FileInfo, albumItem: AlbumItem, labelList: List<LabelInfo>) {
+        withContext(Dispatchers.IO) {
+            val fileId = DataBase.dbImpl.getFileInfoDao().insertFileInfo(fileInfo)
+            albumItem.fileId = fileId
+            val albumId = DataBase.dbImpl.getAlbumItemDao().insertAlbumItem(albumItem)
+            labelList.forEach {
+                it.albumItemId = albumId
+            }
+            DataBase.dbImpl.getLabelInfoDao().insertAllLabel(labelList)
         }
         withContext(Dispatchers.Main) {
             albumItemListChange.notifyChange()
@@ -230,12 +300,14 @@ class AlbumViewModel : ViewModel() {
             val fileInfoList: MutableList<Pair<FileInfo, AlbumItem>> = mutableListOf()
             traverseUri(album, uri, fileInfoList, ::sendMessage)
             sendMessage("批量导入: 正在写入数据库")
-            val idList = DataBase.dbImpl.getFileInfoDao().insertAllFileInfo(fileInfoList.map { it.first })
-            val albumItemList = fileInfoList.mapIndexed { index: Int, pair: Pair<FileInfo, AlbumItem> ->
-                pair.second.also {
-                    it.fileId = idList[index]
+            val idList =
+                DataBase.dbImpl.getFileInfoDao().insertAllFileInfo(fileInfoList.map { it.first })
+            val albumItemList =
+                fileInfoList.mapIndexed { index: Int, pair: Pair<FileInfo, AlbumItem> ->
+                    pair.second.also {
+                        it.fileId = idList[index]
+                    }
                 }
-            }
             DataBase.dbImpl.getAlbumItemDao().insertAllAlbumItem(albumItemList)
         }) {
             albumItemListChange.notifyChange()
@@ -321,7 +393,8 @@ class AlbumViewModel : ViewModel() {
             )
             DataBase.dbImpl.getAlbumItemDao().updateAlbumItem(albumItem)
             DataBase.dbImpl.getLabelInfoDao().deleteAllLabel(albumItemId)
-            DataBase.dbImpl.getLabelInfoDao().insertAllLabel(itemLabel.map { LabelInfo(albumItemId = albumItemId, label = it) })
+            DataBase.dbImpl.getLabelInfoDao()
+                .insertAllLabel(itemLabel.map { LabelInfo(albumItemId = albumItemId, label = it) })
 
             if (selectedFileType == FileType.HTML) {
                 BitMapCachePool.loadImage(file) { webBitmap }

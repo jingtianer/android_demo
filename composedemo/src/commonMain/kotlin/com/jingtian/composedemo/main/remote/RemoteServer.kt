@@ -1,7 +1,10 @@
 package com.jingtian.composedemo.main.remote
 
 
+import androidx.compose.ui.graphics.ImageBitmap
 import com.jingtian.composedemo.dao.model.Album
+import com.jingtian.composedemo.dao.model.AlbumItem
+import com.jingtian.composedemo.dao.model.LabelInfo
 import com.jingtian.composedemo.multiplatform.MultiplatformFile
 
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
@@ -70,6 +73,36 @@ abstract class SftpServer : RemoteServer {
 
     abstract fun getDecryptCipher(server: SftpServer): AuthParams
 
+    abstract suspend fun uploadFileAndStore(album: Album, albumViewModel: AlbumViewModel, albumItem: AlbumItem, labelInfoList: List<LabelInfo>, webSnapshot: ImageBitmap?, uri: MultiplatformFile, onResult: suspend (success: Boolean, errMsg: String?) -> Unit)
+
     abstract override suspend fun deleteFiles(files: List<RemoteSftpFile>)
 }
 
+fun joinRemotePath(root: String, filename: String): String {
+    return when {
+        root.isEmpty() || root == "/" -> "/$filename"
+        root.endsWith("/") -> "$root$filename"
+        else -> "$root/$filename"
+    }
+}
+
+fun splitFileSuffix(fileName: String) : Pair<String, String> {
+    val dotIndex = fileName.indexOf(".", fileName.lastIndexOf("/"))
+    if (dotIndex <= 0 || dotIndex == fileName.lastIndex) { // ’.‘ 不存在 或 以 ‘.’ 开头的隐藏文件
+        return fileName to ""
+    }
+    return fileName.substring(0, dotIndex) to fileName.substring(dotIndex + 1)
+}
+
+fun fileNameAddSuffix(fileName: String, suffix: String): String {
+    val (namePart, ext) = splitFileSuffix(fileName)
+    return if (ext.isEmpty()) {
+        "$namePart$suffix"
+    } else {
+        "$namePart$suffix.$ext"
+    }
+}
+
+fun <T> T.wire(that: T, block: T.(that: T)->Unit) {
+    this.block(that)
+}
