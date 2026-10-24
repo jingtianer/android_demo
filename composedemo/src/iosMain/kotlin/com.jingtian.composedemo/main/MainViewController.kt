@@ -42,18 +42,26 @@ fun MainViewController() = ComposeUIViewController {
         }
         val lifecycleObserver by remember {
             mutableStateOf(object : DefaultLifecycleObserver {
-                override fun onPause(owner: LifecycleOwner) {
-                    isVisible = false
-                    logD("MainViewController") { "lifecycleObserver: onPause" }
+                override fun onStop(owner: LifecycleOwner) {
+                    isAuthed = false
                 }
 
                 override fun onResume(owner: LifecycleOwner) {
-                    if (!isVisible && !JumpOnPurposeMarkHolder.isJumpOnPurpose.getAndSet(false)) {
+                    if (!isAuthed && !JumpOnPurposeMarkHolder.isJumpOnPurpose.getAndSet(false)) {
                         doAuth.invoke()
                     } else {
+                        isAuthed = true
                         isVisible = true
                     }
-                    logD("MainViewController") { "lifecycleObserver: onResume" }
+                }
+
+                override fun onStart(owner: LifecycleOwner) {
+                    if (!isAuthed && !JumpOnPurposeMarkHolder.isJumpOnPurpose.getAndSet(false)) {
+                        doAuth.invoke()
+                    } else {
+                        isAuthed = true
+                        isVisible = true
+                    }
                 }
             })
         }
