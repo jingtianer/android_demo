@@ -19,7 +19,7 @@ const val PREFIX_WTF = "\uD83D\uDEBE WFT"
 const val PREFIX_INFO = "\uD83D\uDFE2 I"
 const val PREFIX_VERBOSE = "\uD83D\uDFE1 V"
 
-val LOG_LEVEL: LogLevel = LOG_LEVEL_VERBOSE // if (BuildKonfig.isDebug) LOG_LEVEL_DEBUG else LOG_LEVEL_WARN
+val LOG_LEVEL: LogLevel = if (BuildKonfig.isDebug) LOG_LEVEL_DEBUG else LOG_LEVEL_WARN
 
 expect fun printLog(level: LogLevel, tag: String, msg: String)
 expect fun printLog(level: LogLevel, tag: String, msg: String, t: Throwable?)
