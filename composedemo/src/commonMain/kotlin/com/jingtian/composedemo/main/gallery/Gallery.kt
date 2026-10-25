@@ -109,6 +109,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.jingtian.composedemo.base.resources.getPainter
+import com.jingtian.composedemo.main.dialog.ImportDocumentDialog
+import com.jingtian.composedemo.main.dialog.rememberDocumentDialogState
 import com.jingtian.composedemo.utils.AppTheme
 import kotlinx.coroutines.IO
 
@@ -464,7 +466,11 @@ fun GalleryStateHolder.Gallery() {
                                 }
                                 IMPORT -> {
                                     GalleryFunctionView(func) {
-                                        importDirLauncher.launch(null)
+                                        if (BuildKonfig.isRemote) {
+                                            importDocumentTreeDialog = true
+                                        } else {
+                                            importDirLauncher.launch(null)
+                                        }
                                     }
                                 }
                                 RENAME -> {
@@ -547,6 +553,12 @@ fun GalleryStateHolder.Gallery() {
     if (addImageDialogState) {
         AddItemDialog(album.value, totalLabelList, albumList) {
             addImageDialogState = false
+        }
+    }
+
+    if (importDocumentTreeDialog) {
+        ImportDocumentDialog(rememberDocumentDialogState(album.value)) {
+            importDocumentTreeDialog = false
         }
     }
 

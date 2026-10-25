@@ -18,11 +18,12 @@ import kotlinx.io.files.SystemFileSystem
 actual suspend fun traverseUri(
     album: Album,
     uri: MultiplatformFile,
-    fileInfoList: MutableList<Pair<FileInfo, AlbumItem>>,
+    fileInfoList: MutableList<Triple<MultiplatformFile, FileInfo, AlbumItem>>,
+    storeFile: Boolean,
     sendMessage: (String) -> Unit
 ) {
     val jobList = mutableListOf<Job>()
-    realTraverseUri(album, uri.file() ?: return, fileInfoList, jobList, sendMessage)
+    realTraverseUri(album, uri.file() ?: return, fileInfoList, jobList, storeFile, sendMessage)
     CoroutineUtils.runIOTask({
         for (job in jobList) {
             job.join()
@@ -34,14 +35,15 @@ actual suspend fun traverseUri(
 private suspend fun realTraverseUri(
     album: Album,
     file: Path,
-    fileInfoList: MutableList<Pair<FileInfo, AlbumItem>>,
+    fileInfoList: MutableList<Triple<MultiplatformFile, FileInfo, AlbumItem>>,
     jobList: MutableList<Job>,
+    storeFile: Boolean,
     sendMessage: (String) -> Unit
 ) {
     if (file.isDirectory) {
         sendMessage("导入目录: ${file.name}")
         SystemFileSystem.list(file).forEach { file->
-            realTraverseUri(album, file, fileInfoList, jobList, sendMessage)
+            realTraverseUri(album, file, fileInfoList, jobList, storeFile, sendMessage)
         }
     } else {
         val uri = MultiplatformFileImpl(file, file.extension)
@@ -50,8 +52,14 @@ private suspend fun realTraverseUri(
         }
         val type = uri.mediaType()
         val fileName = uri.fileName() ?: ""
-        val (fileStorageId, job) = FileStorageUtils.getStorage(type).asyncStore(uri)
-        jobList.add(job)
+        val (fileStorageId, job) = if (storeFile) {
+            FileStorageUtils.getStorage(type).asyncStore(uri)
+        } else {
+            -1L to null
+        }
+        if (job != null) {
+            jobList.add(job)
+        }
         val (width, height) = getFileIntrinsicSize(uri, type)
         val fileInfo = FileInfo(
             storageId = fileStorageId,
@@ -63,6 +71,6 @@ private suspend fun realTraverseUri(
         )
         val albumItem = AlbumItem(itemName = fileName, albumId = album.albumId ?: DataBase.INVALID_ID)
         sendMessage("正在导入: ${file.name}")
-        fileInfoList.add(fileInfo to albumItem)
+        fileInfoList.add(Triple(uri, fileInfo, albumItem))
     }
 }

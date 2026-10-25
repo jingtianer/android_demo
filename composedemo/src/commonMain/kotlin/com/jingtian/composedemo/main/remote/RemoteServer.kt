@@ -4,12 +4,17 @@ package com.jingtian.composedemo.main.remote
 import androidx.compose.ui.graphics.ImageBitmap
 import com.jingtian.composedemo.dao.model.Album
 import com.jingtian.composedemo.dao.model.AlbumItem
+import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.LabelInfo
+import com.jingtian.composedemo.main.remote.ByteStringFormatter.toString
 import com.jingtian.composedemo.multiplatform.MultiplatformFile
 
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
 import com.jingtian.composedemo.viewmodels.AuthParams
 import com.jingtian.composedemo.viewmodels.AuthSuccess
+import kotlinx.io.Buffer
+import kotlinx.io.RawSink
+import kotlinx.io.RawSource
 import kotlin.random.Random
 import kotlin.random.nextULong
 
@@ -75,6 +80,8 @@ abstract class SftpServer : RemoteServer {
 
     abstract suspend fun uploadFileAndStore(album: Album, albumViewModel: AlbumViewModel, albumItem: AlbumItem, labelInfoList: List<LabelInfo>, webSnapshot: ImageBitmap?, uri: MultiplatformFile, onResult: suspend (success: Boolean, errMsg: String?) -> Unit)
 
+    abstract suspend fun uploadFileListAndStore(album: Album, albumViewModel: AlbumViewModel, albumItem: MutableList<Triple<MultiplatformFile, FileInfo, AlbumItem>>, onResult: suspend (success: Boolean, errMsg: String?) -> Unit)
+
     abstract override suspend fun deleteFiles(files: List<RemoteSftpFile>)
 }
 
@@ -105,4 +112,66 @@ fun fileNameAddSuffix(fileName: String, suffix: String): String {
 
 fun <T> T.wire(that: T, block: T.(that: T)->Unit) {
     this.block(that)
+}
+
+object ByteStringFormatter {
+    private val unitList = listOf("B", "KB", "MB", "GB", "TB")
+    private fun format(result:Long, remain:Long, unitSuffix:String, unit: Long):String {
+        val remainInt = (remain.toDouble() / unit * 100).toInt()
+        val remainStr = if (remainInt < 10) {
+            "0${remainInt}"
+        } else if (remainInt <= 99) {
+            "$remainInt"
+        } else {
+            "99"
+        }
+        return "${result}.${remainStr} $unitSuffix"
+    }
+
+    fun Long.format(): String {
+        var result: Long = this
+        var remain: Long = 0
+        var unit: Long = 1
+        for (unitSuffix in unitList.subList(0, unitList.size - 1)) {
+            result = this / unit
+            remain = this % unit
+            if (result < 1024) {
+                return format(result, remain, unitSuffix, unit)
+            }
+            unit = unit shl 10
+        }
+        return format(result, remain, unitList.last(), unit)
+    }
+}
+
+inline fun copyWithProgress(
+    rawSource: RawSource,
+    sink: RawSink,
+    crossinline onProgress: (progressText: String) -> Unit
+) {
+    val buffer = Buffer()
+    val bufSize = 8 * 1024L
+    var totalWritten = 0L
+    var lastReport = 0L
+    val reportStep = 256 * 1024L
+
+    while (true) {
+        val read = rawSource.readAtMostTo(buffer, bufSize)
+        if (read == -1L) break
+
+        sink.write(buffer, read)
+        totalWritten += read
+
+        if (totalWritten - lastReport >= reportStep) {
+            lastReport = totalWritten
+            with(ByteStringFormatter) {
+                onProgress(totalWritten.format())
+            }
+        }
+    }
+
+    sink.flush()
+    with(ByteStringFormatter) {
+        onProgress(totalWritten.format())
+    }
 }

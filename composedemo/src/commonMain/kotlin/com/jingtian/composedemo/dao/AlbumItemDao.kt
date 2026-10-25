@@ -26,7 +26,7 @@ interface AlbumItemDao {
     suspend fun insertAlbumItem(albumItem: AlbumItem): Long
 
     @Insert
-    suspend fun insertAllAlbumItem(albumItem: List<AlbumItem>)
+    suspend fun insertAllAlbumItem(albumItem: List<AlbumItem>): List<Long>
 
     @Update
     suspend fun updateAlbumItem(albumItem: AlbumItem)

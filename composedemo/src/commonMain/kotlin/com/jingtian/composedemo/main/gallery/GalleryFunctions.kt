@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.jingtian.composedemo.BuildKonfig
 import com.jingtian.composedemo.base.AppThemeText
 import com.jingtian.composedemo.base.resources.*
 
@@ -33,9 +34,24 @@ enum class GalleryFunctions(val functionName: String, val iconProvider: @Composa
         // 0 -> 添加, 导入, 修改相册名称
         // 1 -> 编辑, 删除, 移动
         // >1 -> 删除, 移动
-        val albumFunctions = listOf(RENAME, ADD, IMPORT, IMPORT_CIFS)
-        val itemFunctions = listOf(EDIT, DELETE, MOVE, DELETE_CIFS_FILE)
-        val batchFunctions = listOf(DELETE, MOVE, DELETE_CIFS_FILE)
+        val albumFunctions = buildList {
+            addAll(arrayOf(RENAME, ADD, IMPORT))
+            if (BuildKonfig.isRemote) {
+                add(IMPORT_CIFS)
+            }
+        }
+        val itemFunctions = buildList {
+            addAll(arrayOf(EDIT, DELETE, MOVE))
+            if (BuildKonfig.isRemote) {
+                add(DELETE_CIFS_FILE)
+            }
+        }
+        val batchFunctions = buildList {
+            addAll(arrayOf(DELETE, MOVE))
+            if (BuildKonfig.isRemote) {
+                add(DELETE_CIFS_FILE)
+            }
+        }
     }
 }
 

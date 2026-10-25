@@ -269,18 +269,58 @@ class SftpServerImpl : SftpServer {
             return
         }
         connection.use { channel ->
+            uploadFileInner(channel, album, albumViewModel, listOf(FileUploadInfo(labelInfoList, webSnapshot, albumItem, uri)), onResult)
+        }
+    }
+
+    override suspend fun uploadFileListAndStore(
+        album: Album,
+        albumViewModel: AlbumViewModel,
+        albumItem: MutableList<Triple<MultiplatformFile, FileInfo, AlbumItem>>,
+        onResult: suspend (success: Boolean, errMsg: String?) -> Unit
+    ) {
+        val connection = connect { tag, msg ->
+            albumViewModel.sendMessage("uploadFileAndStore: $tag, $msg")
+        }
+        if (connection == null) {
+            onResult(false, "connection 创建失败")
+            return
+        }
+        connection.use { channel ->
+            uploadFileInner(channel, album, albumViewModel, albumItem.map {
+                FileUploadInfo(listOf(), null, it.third, it.first)
+            }) { _, _ ->  }
+        }
+        onResult(true, null)
+    }
+
+    data class FileUploadInfo(
+        val labelInfoList: List<LabelInfo>,
+        val webSnapshot: ImageBitmap?,
+        val albumItem: AlbumItem,
+        val uri: MultiplatformFile,
+    )
+
+    private suspend fun uploadFileInner(
+        channel: ChannelSftp,
+        album: Album,
+        albumViewModel: AlbumViewModel,
+        fileUploadInfoList: List<FileUploadInfo>,
+        onResult: suspend (success: Boolean, errMsg: String?) -> Unit
+    ) {
+        val insertSuccessFileInfo = fileUploadInfoList.mapNotNull { (labelInfoList, webSnapshot, albumItem, uri)->
             when(uri) {
                 is RemoteSftpFile -> {
                     onResult(false, "文件: ${uri.path()}已经是RemoteFile了")
-                    return
+                    return@mapNotNull null
                 }
                 else -> {
-                    runCatching {
+                    val fileInfo = runCatching {
                         val fileName = fileNameAddSuffix(albumItem.itemName, "_${System.currentTimeMillis()}_${albumItem.hashCode()}")
                         val fileNameConflict = channel.ls(this.path).mapNotNull { (it as? ChannelSftp.LsEntry)?.filename }.contains(fileName)
                         if (fileNameConflict) {
                             onResult(false, "文件名冲突")
-                            return
+                            return@runCatching null
                         }
                         val targetFile = joinRemotePath(this.path, fileName)
 
@@ -292,60 +332,37 @@ class SftpServerImpl : SftpServer {
                             }
                         } ?: run {
                             onResult(false, "源文件inputStream打开失败")
-                            return@runCatching
+                            return@runCatching null
                         }
                         val fileEntry = channel.ls(targetFile).firstNotNullOfOrNull { (it as? LsEntry) }
                         if (fileEntry == null) {
                             onResult(false, "文件上传失败")
-                            return
+                            return@runCatching null
                         }
                         val fileInfo = readFile(channel, albumViewModel, setOf(), path, fileName, album, null)
                         if (fileInfo == null) {
                             onResult(false, "文件创建失败: readFile")
-                            return
+                            return@runCatching null
                         }
                         albumItem.wire(fileInfo.second) { that->
                             this.itemName = that.itemName
                         }
-                        albumViewModel.importFile(album, fileInfo.first, albumItem, labelInfoList)
                         onResult(true,  null)
                         BitMapCachePool.loadImage(fileInfo.first) { webSnapshot }
-                    }.onFailure { e->
+                        return@runCatching fileInfo
+                    }.getOrElse {  e->
                         onResult(false, "文件拷贝发生错误: ${e.message}")
+                        return@getOrElse null
                     }
                     withContext(Dispatchers.Main) {
                         uri.onStoreFinish()
                     }
+                    return@mapNotNull fileInfo?.let {
+                        Triple(it.first, it.second, labelInfoList)
+                    }
                 }
             }
         }
+        albumViewModel.importFileList(album, insertSuccessFileInfo)
     }
-}
-
-inline fun copyWithProgress(
-    rawSource: RawSource,
-    sink: RawSink,
-    crossinline onProgress: (progressText: String) -> Unit
-) {
-    val buffer = Buffer()
-    val bufSize = 8 * 1024L
-    var totalWritten = 0L
-    var lastReport = 0L
-    val reportStep = 256 * 1024L
-
-    while (true) {
-        val read = rawSource.readAtMostTo(buffer, bufSize)
-        if (read == -1L) break
-
-        sink.write(buffer, read)
-        totalWritten += read
-
-        if (totalWritten - lastReport >= reportStep) {
-            lastReport = totalWritten
-            onProgress("${totalWritten / 1024}KB")
-        }
-    }
-
-    sink.flush()
-    onProgress("${totalWritten / 1024}KB")
 }

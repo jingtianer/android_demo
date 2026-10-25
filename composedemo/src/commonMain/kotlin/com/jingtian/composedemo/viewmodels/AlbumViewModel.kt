@@ -37,7 +37,8 @@ import kotlinx.coroutines.withContext
 expect suspend fun traverseUri(
     album: Album,
     uri: MultiplatformFile,
-    fileInfoList: MutableList<Pair<FileInfo, AlbumItem>>,
+    fileInfoList: MutableList<Triple<MultiplatformFile, FileInfo, AlbumItem>>,
+    storeFile: Boolean,
     sendMessage: (String) -> Unit
 )
 
@@ -291,20 +292,75 @@ class AlbumViewModel : ViewModel() {
         }
         withContext(Dispatchers.Main) {
             albumItemListChange.notifyChange()
+            sendMessage("导入 ${album.albumName} 成功!")
+        }
+    }
+
+    suspend fun importFileList(album: Album, fileList: List<Triple<FileInfo, AlbumItem, List<LabelInfo>>>) {
+        withContext(Dispatchers.IO) {
+            val fileIdList = DataBase.dbImpl.getFileInfoDao().insertFileInfoList(fileList.map { it.first })
+            val albumId = DataBase.dbImpl.getAlbumItemDao().insertAllAlbumItem(fileList.mapIndexed { idx, value->
+                value.second.apply {
+                    fileId = fileIdList[idx]
+                }
+            })
+            DataBase.dbImpl.getLabelInfoDao().insertAllLabel(fileList.flatMapIndexed { idx, value->
+                value.third.onEach {
+                    it.albumItemId = albumId[idx]
+                }
+            })
+        }
+        withContext(Dispatchers.Main) {
+            albumItemListChange.notifyChange()
             sendMessage("批量导入 ${album.albumName} 成功!")
+        }
+    }
+
+    fun uploadFiles(album: Album, server: SftpServer, uri: MultiplatformFile, onFinish: () -> Unit) {
+        CoroutineUtils.runIOTask({
+            val fileInfoList: MutableList<Triple<MultiplatformFile, FileInfo, AlbumItem>> = mutableListOf()
+            traverseUri(album, uri, fileInfoList, false, ::sendMessage)
+//            sendMessage("批量导入: 正在写入数据库")
+//            val idList =
+//                DataBase.dbImpl.getFileInfoDao().insertAllFileInfo(fileInfoList.map { it.first })
+//            val albumItemList =
+//                fileInfoList.mapIndexed { index: Int, pair: Pair<FileInfo, AlbumItem> ->
+//                    pair.second.also {
+//                        it.fileId = idList[index]
+//                    }
+//                }
+//            DataBase.dbImpl.getAlbumItemDao().insertAllAlbumItem(albumItemList)
+            sendMessage("批量导入: 开始上传服务器")
+            server.uploadFileListAndStore(album, this, fileInfoList) { success, errmsg->
+                onFinish()
+                albumItemListChange.notifyChange()
+                if (success) {
+                    sendMessage("批量导入 ${uri.fileName()} 成功!")
+                } else {
+                    sendMessage("批量导入 ${uri.fileName()} 失败!")
+                }
+            }
+        }, onFailure = {
+            onFinish()
+            albumItemListChange.notifyChange()
+            sendMessage("批量导入 ${uri.fileName()} 失败!")
+        }) {
+//            onFinish()
+//            albumItemListChange.notifyChange()
+//            sendMessage("批量导入 ${uri.fileName()} 成功!")
         }
     }
 
     fun importFiles(album: Album, uri: MultiplatformFile) {
         CoroutineUtils.runIOTask({
-            val fileInfoList: MutableList<Pair<FileInfo, AlbumItem>> = mutableListOf()
-            traverseUri(album, uri, fileInfoList, ::sendMessage)
+            val fileInfoList: MutableList<Triple<MultiplatformFile, FileInfo, AlbumItem>> = mutableListOf()
+            traverseUri(album, uri, fileInfoList, true, ::sendMessage)
             sendMessage("批量导入: 正在写入数据库")
             val idList =
-                DataBase.dbImpl.getFileInfoDao().insertAllFileInfo(fileInfoList.map { it.first })
+                DataBase.dbImpl.getFileInfoDao().insertAllFileInfo(fileInfoList.map { it.second })
             val albumItemList =
-                fileInfoList.mapIndexed { index: Int, pair: Pair<FileInfo, AlbumItem> ->
-                    pair.second.also {
+                fileInfoList.mapIndexed { index: Int, pair: Triple<MultiplatformFile, FileInfo, AlbumItem> ->
+                    pair.third.also {
                         it.fileId = idList[index]
                     }
                 }

@@ -29,5 +29,8 @@ interface FileInfoDao {
     suspend fun insertFileInfo(fileInfo: FileInfo): Long
 
     @Insert
+    suspend fun insertFileInfoList(fileInfo: List<FileInfo>): List<Long>
+
+    @Insert
     suspend fun insertAllFileInfo(fileInfo: List<FileInfo>): List<Long>
 }

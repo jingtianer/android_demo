@@ -13,22 +13,24 @@ import java.io.File
 actual suspend fun traverseUri(
     album: Album,
     uri: MultiplatformFile,
-    fileInfoList: MutableList<Pair<FileInfo, AlbumItem>>,
+    fileInfoList: MutableList<Triple<MultiplatformFile, FileInfo, AlbumItem>>,
+    storeFile: Boolean,
     sendMessage: (String) -> Unit
 ) {
-    realTraverseUri(album, (uri as? MultiplatformFileImpl)?.realFile ?: return, fileInfoList, sendMessage)
+    realTraverseUri(album, (uri as? MultiplatformFileImpl)?.realFile ?: return, fileInfoList, storeFile, sendMessage)
 }
 
 private suspend fun realTraverseUri(
     album: Album,
     file: File,
-    fileInfoList: MutableList<Pair<FileInfo, AlbumItem>>,
+    fileInfoList: MutableList<Triple<MultiplatformFile, FileInfo, AlbumItem>>,
+    storeFile: Boolean,
     sendMessage: (String) -> Unit
 ) {
     if (file.isDirectory) {
         sendMessage("导入目录: ${file.name}")
         file.listFiles()?.forEach { file->
-            realTraverseUri(album, file, fileInfoList, sendMessage)
+            realTraverseUri(album, file, fileInfoList, storeFile, sendMessage)
         }
     } else {
         val uri = MultiplatformFileImpl(file, file.extension)
@@ -37,7 +39,11 @@ private suspend fun realTraverseUri(
         }
         val type = uri.mediaType()
         val fileName = uri.fileName() ?: ""
-        val (fileStorageId, _) = FileStorageUtils.getStorage(type).asyncStore(uri)
+        val (fileStorageId, _) = if (storeFile) {
+            FileStorageUtils.getStorage(type).asyncStore(uri)
+        } else {
+            -1L to null
+        }
         val (width, height) = getFileIntrinsicSize(uri, type)
         val fileInfo = FileInfo(
             storageId = fileStorageId,
@@ -49,6 +55,6 @@ private suspend fun realTraverseUri(
         )
         val albumItem = AlbumItem(itemName = fileName, albumId = album.albumId ?: DataBase.INVALID_ID)
         sendMessage("正在导入: ${file.name}")
-        fileInfoList.add(fileInfo to albumItem)
+        fileInfoList.add(Triple(uri, fileInfo, albumItem))
     }
 }

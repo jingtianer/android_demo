@@ -8,6 +8,7 @@ import com.jingtian.composedemo.dao.model.Album
 import com.jingtian.composedemo.dao.model.AlbumItem
 import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.LabelInfo
+import com.jingtian.composedemo.main.remote.ByteStringFormatter.format
 import com.jingtian.composedemo.multiplatform.MultiplatformFile
 import com.jingtian.composedemo.utils.Base64Utils
 import com.jingtian.composedemo.utils.BitMapCachePool
@@ -268,7 +269,10 @@ class IosSftpServer : SftpServer {
                         val progress = progressNS.toLong()
                         if (progress - lastReportProgress >= reportGap || lastReportProgress == -1L) {
                             lastReportProgress = progress
-                            albumViewModel.sendMessage("上传中: ${progress / 1024}KB")
+                            val progressStr = with(ByteStringFormatter) {
+                                progress.format()
+                            }
+                            albumViewModel.sendMessage("上传中: $progressStr")
                         }
                         true
                     }

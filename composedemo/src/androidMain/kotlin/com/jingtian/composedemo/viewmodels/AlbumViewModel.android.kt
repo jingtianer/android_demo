@@ -12,17 +12,29 @@ import com.jingtian.composedemo.utils.FileStorageUtils
 import com.jingtian.composedemo.utils.FileStorageUtils.getFileIntrinsicSize
 
 
-actual suspend fun traverseUri(album: Album, uri: MultiplatformFile, fileInfoList: MutableList<Pair<FileInfo, AlbumItem>>, sendMessage: (String)->Unit) {
+actual suspend fun traverseUri(
+    album: Album,
+    uri: MultiplatformFile,
+    fileInfoList: MutableList<Triple<MultiplatformFile, FileInfo, AlbumItem>>,
+    storeFile: Boolean,
+    sendMessage: (String)->Unit
+) {
     val documentFile = DocumentFile.fromTreeUri(app, (uri as MultiplatformFileImpl).getUri()) ?: return
-    realTraverseUri(documentFile, album, fileInfoList, sendMessage)
+    realTraverseUri(documentFile, album, fileInfoList, storeFile, sendMessage)
 }
 
 
-private suspend fun realTraverseUri(documentFile: DocumentFile, album: Album, fileInfoList: MutableList<Pair<FileInfo, AlbumItem>>, sendMessage: (String)->Unit) {
+private suspend fun realTraverseUri(
+    documentFile: DocumentFile,
+    album: Album,
+    fileInfoList: MutableList<Triple<MultiplatformFile, FileInfo, AlbumItem>>,
+    storeFile: Boolean,
+    sendMessage: (String)->Unit
+) {
     if (documentFile.isDirectory) {
         sendMessage("导入目录: ${documentFile.name}")
         documentFile.listFiles().forEach {file->
-            realTraverseUri(file, album, fileInfoList, sendMessage)
+            realTraverseUri(file, album, fileInfoList, storeFile, sendMessage)
         }
     } else {
         val uri = MultiplatformFileImpl(documentFile.uri)
@@ -31,7 +43,11 @@ private suspend fun realTraverseUri(documentFile: DocumentFile, album: Album, fi
         }
         val type = uri.mediaType()
         val fileName = uri.fileName() ?: ""
-        val (fileStorageId, _) = FileStorageUtils.getStorage(type).asyncStore(uri)
+        val (fileStorageId, _) = if (storeFile) {
+            FileStorageUtils.getStorage(type).asyncStore(uri)
+        } else {
+            -1L to null
+        }
         val (width, height) = getFileIntrinsicSize(uri, type)
         val fileInfo = FileInfo(
             storageId = fileStorageId,
@@ -43,6 +59,6 @@ private suspend fun realTraverseUri(documentFile: DocumentFile, album: Album, fi
         )
         val albumItem = AlbumItem(itemName = fileName, albumId = album.albumId ?: DataBase.INVALID_ID)
         sendMessage("正在导入: ${documentFile.name}")
-        fileInfoList.add(fileInfo to albumItem)
+        fileInfoList.add(Triple(uri, fileInfo, albumItem))
     }
 }

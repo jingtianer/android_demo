@@ -58,6 +58,7 @@ class GalleryStateHolder(val album: IndexedValue<Album>, val albumList: List<Alb
     val enterEditModeState = mutableStateOf(false)
     var enterEditMode by enterEditModeState
     var editAlbumDialogState by mutableStateOf(false)
+    var importDocumentTreeDialog by mutableStateOf(false)
     var showEditDialogStateOnLongClickState = mutableStateOf<AlbumItemRelation?>(null)
     var showEditDialogOnLongClick by showEditDialogStateOnLongClickState
 
