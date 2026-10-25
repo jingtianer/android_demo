@@ -28,7 +28,9 @@ actual suspend fun traverseUri(
         for (job in jobList) {
             job.join()
         }
-        uri.onStoreFinish()
+        if (storeFile) {
+            uri.onStoreFinish()
+        }
     })
 }
 

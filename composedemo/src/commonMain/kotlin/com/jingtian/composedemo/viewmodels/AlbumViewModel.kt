@@ -333,6 +333,7 @@ class AlbumViewModel : ViewModel() {
             sendMessage("批量导入: 开始上传服务器")
             server.uploadFileListAndStore(album, this, fileInfoList) { success, errmsg->
                 onFinish()
+                uri.onStoreFinish()
                 albumItemListChange.notifyChange()
                 if (success) {
                     sendMessage("批量导入 ${uri.fileName()} 成功!")

@@ -248,64 +248,133 @@ class IosSftpServer : SftpServer {
             onResult(false, "connection 创建失败")
             return
         }
-        when(uri) {
-            is RemoteSftpFile -> {
+        try {
+            val uploadedFileList = uploadFileInner(
+                activeSession = activeSession,
+                album = album,
+                albumViewModel = albumViewModel,
+                fileUploadInfoList = listOf(FileUploadInfo(labelInfoList, webSnapshot, albumItem, uri)),
+                onResult = onResult,
+            )
+            val uploadedFile = uploadedFileList.firstOrNull() ?: return
+            try {
+                albumViewModel.importFile(album, uploadedFile.first, uploadedFile.second, uploadedFile.third)
+                onResult(true, null)
+            } catch (e: Exception) {
+                onResult(false, "写入数据库失败: $e")
+            }
+        } finally {
+            activeSession.disconnect()
+        }
+    }
+
+    @OptIn(ExperimentalForeignApi::class, ExperimentalTime::class)
+    override suspend fun uploadFileListAndStore(
+        album: Album,
+        albumViewModel: AlbumViewModel,
+        albumItem: MutableList<Triple<MultiplatformFile, FileInfo, AlbumItem>>,
+        onResult: suspend (success: Boolean, errMsg: String?) -> Unit
+    ) {
+        val activeSession = connect { tag, msg ->
+            albumViewModel.sendMessage("uploadFileAndStore: $tag, $msg")
+        }
+        if (activeSession == null) {
+            onResult(false, "connection 创建失败")
+            return
+        }
+        try {
+            val uploadedFileList = uploadFileInner(
+                activeSession = activeSession,
+                album = album,
+                albumViewModel = albumViewModel,
+                fileUploadInfoList = albumItem.map { (uri, _, albumItem) ->
+                    FileUploadInfo(listOf(), null, albumItem, uri)
+                },
+                onResult = { _, _ -> },
+            )
+            albumViewModel.importFileList(album, uploadedFileList)
+            if (uploadedFileList.size == albumItem.size) {
+                onResult(true, null)
+            } else {
+                onResult(false, "部分文件上传失败")
+            }
+        } catch (e: Exception) {
+            onResult(false, "写入数据库失败: $e")
+        } finally {
+            activeSession.disconnect()
+        }
+    }
+
+    data class FileUploadInfo(
+        val labelInfoList: List<LabelInfo>,
+        val webSnapshot: ImageBitmap?,
+        val albumItem: AlbumItem,
+        val uri: MultiplatformFile,
+    )
+
+    @OptIn(ExperimentalForeignApi::class, ExperimentalTime::class)
+    private suspend fun uploadFileInner(
+        activeSession: NMSSHSession,
+        album: Album,
+        albumViewModel: AlbumViewModel,
+        fileUploadInfoList: List<FileUploadInfo>,
+        onResult: suspend (success: Boolean, errMsg: String?) -> Unit,
+    ): List<Triple<FileInfo, AlbumItem, List<LabelInfo>>> {
+        ensureSftpDir(activeSession, path)
+        return fileUploadInfoList.mapIndexedNotNull { index, fileUploadInfo ->
+            val (labelInfoList, webSnapshot, albumItem, uri) = fileUploadInfo
+            if (uri is RemoteSftpFile) {
                 onResult(false, "文件: ${uri.path()}已经是RemoteFile了")
-                return
+                return@mapIndexedNotNull null
             }
-            else -> {
-                val fileName = fileNameAddSuffix(albumItem.itemName, "_${Clock.System.now().toEpochMilliseconds()}_${albumItem.hashCode()}")
-                val targetFile = joinRemotePath(this.path, fileName)
-                try {
-                    ensureSftpDir(activeSession, path)
-                    val fileNameConflict = activeSession.sftp.fileExistsAtPath(targetFile)
-                    if (fileNameConflict) {
-                        onResult(false, "文件名冲突")
-                        return
-                    }
-                    var lastReportProgress = -1L
-                    val reportGap = 256 * 1024L
-                    val writeSuccess = activeSession.sftp.writeFileAtPath(uri.path(), targetFile) { progressNS->
-                        val progress = progressNS.toLong()
-                        if (progress - lastReportProgress >= reportGap || lastReportProgress == -1L) {
-                            lastReportProgress = progress
-                            val progressStr = with(ByteStringFormatter) {
-                                progress.format()
-                            }
-                            albumViewModel.sendMessage("上传中: $progressStr")
+
+            val fileName = fileNameAddSuffix(albumItem.itemName, "_${Clock.System.now().toEpochMilliseconds()}_${albumItem.hashCode()}")
+            val targetFile = joinRemotePath(this.path, fileName)
+            val uploadSuccess = runCatching {
+                if (activeSession.sftp.fileExistsAtPath(targetFile)) {
+                    onResult(false, "文件名冲突")
+                    return@runCatching false
+                }
+                var lastReportProgress = -1L
+                val reportGap = 256 * 1024L
+                val writeSuccess = activeSession.sftp.writeFileAtPath(uri.path(), targetFile) { progressNS ->
+                    val progress = progressNS.toLong()
+                    if (progress - lastReportProgress >= reportGap || lastReportProgress == -1L) {
+                        lastReportProgress = progress
+                        val progressStr = with(ByteStringFormatter) {
+                            progress.format()
                         }
-                        true
+                        albumViewModel.sendMessage("上传中: $progressStr (${index + 1} / ${fileUploadInfoList.size})")
                     }
-                    if (!writeSuccess) {
-                        onResult(false, "文件上传失败1")
-                        return
-                    }
-                } catch (e: Exception) {
-                    onResult(false, "文件拷贝发生错误: ${e.message}")
-                    return
-                } finally {
-                    withContext(Dispatchers.Main) {
-                        uri.onStoreFinish()
-                    }
-                    activeSession.disconnect()
+                    true
                 }
-                try {
-                    val fileInfo = readFile(albumViewModel, setOf(), path, fileName, album, null)
-                    if (fileInfo == null) {
-                        onResult(false, "文件创建失败: readFile")
-                        return
-                    }
-                    albumItem.wire(fileInfo.second) { that->
-                        this.itemName = that.itemName
-                    }
-                    albumViewModel.importFile(album, fileInfo.first, albumItem, labelInfoList)
-                    BitMapCachePool.loadImage(fileInfo.first) { webSnapshot }
-                    onResult(true,  null)
-                } catch (e: Exception) {
-                    onResult(false, "写入数据库失败: $e")
-                    return
+                if (!writeSuccess) {
+                    onResult(false, "文件上传失败")
+                    return@runCatching false
                 }
+                true
+            }.getOrElse { e ->
+                onResult(false, "文件拷贝发生错误: ${e.message}")
+                false
             }
+
+            withContext(Dispatchers.Main) {
+                uri.onStoreFinish()
+            }
+            if (!uploadSuccess) {
+                return@mapIndexedNotNull null
+            }
+
+            val fileInfo = readFile(albumViewModel, setOf(), path, fileName, album, null)
+            if (fileInfo == null) {
+                onResult(false, "文件创建失败: readFile")
+                return@mapIndexedNotNull null
+            }
+            albumItem.wire(fileInfo.second) { that ->
+                this.itemName = that.itemName
+            }
+            BitMapCachePool.loadImage(fileInfo.first) { webSnapshot }
+            Triple(fileInfo.first, albumItem, labelInfoList)
         }
     }
 }
