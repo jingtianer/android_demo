@@ -150,7 +150,7 @@ class IosSftpServer : SftpServer {
         for (item in entries) {
             val entry = item as? NMSFTPFile ?: continue
             val filename = entry.filename
-            if (filename == "." || filename == "..") {
+            if (filename == "." || filename == ".." || isComposeDemoMetadata(root, entry.filename)) {
                 continue
             }
             viewModel.sendMessage("导入: $filename: $root")
