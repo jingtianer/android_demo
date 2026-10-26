@@ -45,6 +45,7 @@ import kotlin.io.path.Path
 import kotlin.random.Random
 import kotlin.random.nextULong
 import java.io.ByteArrayOutputStream
+import java.nio.file.Path
 
 @OptIn(ExperimentalContracts::class)
 inline fun <T> ChannelSftp.use(block: (ChannelSftp)->T): T {
@@ -468,7 +469,7 @@ class SftpServerImpl : SftpServer {
         return ""
     }
 
-    override suspend fun writeMetadata(viewModel: AlbumViewModel, metadataJson: String): Boolean {
+    override suspend fun writeMetadata(viewModel: AlbumViewModel, metadataJson: Path): Boolean {
         val connection = connect { tag, msg ->
             viewModel.sendMessage("uploadFileAndStore: $tag, $msg")
         } ?: return false

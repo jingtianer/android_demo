@@ -28,6 +28,8 @@ import kotlinx.io.RawSink
 import kotlinx.io.RawSource
 import kotlinx.io.asSink
 import kotlinx.io.buffered
+import kotlinx.io.files.Path
+import kotlinx.io.files.SystemFileSystem
 import kotlinx.serialization.KSerializer
 import java.io.FileOutputStream
 import java.nio.charset.Charset
@@ -439,13 +441,13 @@ class SftpServerImpl : SftpServer {
         val metadataPath = metadataStorePath()
         val metadataFileName = metadataFilename()
         val targetFile = joinRemotePath(metadataPath, metadataFileName)
-        val metadataExist = activeSession.ls(this.path).mapNotNull { (it as? ChannelSftp.LsEntry)?.filename }.contains(metadataFileName)
+        val metadataExist = activeSession.ls(metadataPath).mapNotNull { (it as? ChannelSftp.LsEntry)?.filename }.contains(metadataFileName)
         if (metadataExist) {
             val metadataFileContent = runCatching {
                 val progressUpdater = ProgressUpdater.createProgressUpdater(viewModel, 1) { progressStr-> "正在下载: $metadataFileName $progressStr" }
                 val bos = ByteArrayOutputStream()
                 bos.use {
-                    activeSession.get(path, bos, object : SftpProgressMonitor {
+                    activeSession.get(targetFile, bos, object : SftpProgressMonitor {
                         override fun init(op: Int, src: String?, dest: String?, max: Long) {
                         }
 
@@ -468,23 +470,21 @@ class SftpServerImpl : SftpServer {
         return ""
     }
 
-    override suspend fun writeMetadata(viewModel: AlbumViewModel, metadataJson: String): Boolean {
+    override suspend fun writeMetadata(viewModel: AlbumViewModel, metadataJson: Path): Boolean {
         val connection = connect { tag, msg ->
             viewModel.sendMessage("uploadFileAndStore: $tag, $msg")
         } ?: return false
         val metadataPath = metadataStorePath()
         val metadataFileName = metadataFilename()
         val targetFile = joinRemotePath(metadataPath, metadataFileName)
-//        if (!ensureSftpDir(activeSession, metadataPath)) {
-//            viewModel.sendMessage("上传$metadataFileName 失败，远程目录创建失败")
-//            return false
-//        }
+        if (!ensureSftpDir(connection, metadataPath)) {
+            viewModel.sendMessage("上传$metadataFileName 失败，远程目录创建失败")
+            return false
+        }
         val progressUpdater = ProgressUpdater.createProgressUpdater(viewModel, 1) { progressStr-> "正在上传: $metadataFileName $progressStr" }
         val success = connection.use {
             runCatching {
-                Buffer().apply {
-                    write(metadataJson.encodeToByteArray())
-                }.use { `is`->
+                SystemFileSystem.source(metadataJson).buffered().use { `is`->
                     connection.put(targetFile).asSink().use { os->
                         copyWithProgress(`is`, os) { progress->
                             progressUpdater(progress, 0)
@@ -498,4 +498,8 @@ class SftpServerImpl : SftpServer {
         }
         return success ?: false
     }
+}
+
+private fun ensureSftpDir(session: ChannelSftp, path: String) :Boolean{
+    return runCatching { session.mkdir(path); true }.getOrDefault(false)
 }

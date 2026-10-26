@@ -20,6 +20,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.io.Buffer
 import kotlinx.io.RawSink
 import kotlinx.io.RawSource
+import kotlinx.io.files.Path
 import kotlin.random.Random
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
@@ -95,7 +96,7 @@ abstract class SftpServer : RemoteServer {
     abstract suspend fun uploadFileListAndStore(album: Album, albumViewModel: AlbumViewModel, albumItem: MutableList<Triple<MultiplatformFile, FileInfo, AlbumItem>>, onResult: suspend (success: Boolean, errMsg: String?) -> Unit)
 
     protected abstract suspend fun readMetadata(viewModel: AlbumViewModel): String
-    protected abstract suspend fun writeMetadata(viewModel: AlbumViewModel, metadataStr: String): Boolean
+    protected abstract suspend fun writeMetadata(viewModel: AlbumViewModel, metadataStr: Path): Boolean
 
     suspend fun pullMetadata(viewModel: AlbumViewModel, onFinish: suspend (success: Boolean, errMsg: String?)->Unit = { _, _ -> }) {
         metadataSyncManager.enqueue(MetadataSyncManager.SyncType.PULL, onFinish) {

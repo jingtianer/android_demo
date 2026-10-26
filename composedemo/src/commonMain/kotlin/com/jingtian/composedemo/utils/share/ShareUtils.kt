@@ -40,14 +40,14 @@ object ShareUtils {
 
     private val json = Json { ignoreUnknownKeys = true }
 
-    suspend fun getMetadata(): String {
+    suspend fun getMetadata(): Path {
         val dataList = json.encodeToString(DataBase.dbImpl.getAlbumDao().getAllAlbumInfoWithExtra())
         val file = newShareFile()
         SystemFileSystem.sink(file).buffered().use {
             it.writeString(dataList)
             it.flush()
         }
-        return file.toString()
+        return file
     }
 
     private fun newShareFile(): Path {
@@ -76,7 +76,7 @@ object ShareUtils {
     private suspend fun getShareFile(): Path {
         return withContext(Dispatchers.IO) {
             val file = newShareFile()
-            val dataList = getMetadata()
+            val dataList = json.encodeToString(DataBase.dbImpl.getAlbumDao().getAllAlbumInfoWithExtra())
             SystemFileSystem.sink(file).buffered().use {
                 it.writeString(dataList)
                 it.flush()

@@ -26,6 +26,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.io.Buffer
 import kotlinx.io.asNSInputStream
 import kotlinx.io.buffered
+import kotlinx.io.files.Path
 import kotlinx.serialization.KSerializer
 import platform.Foundation.writeToFile
 import kotlin.random.Random
@@ -404,7 +405,7 @@ class IosSftpServer : SftpServer {
     }
 
     @OptIn(ExperimentalForeignApi::class)
-    override suspend fun writeMetadata(viewModel: AlbumViewModel, shareFilePath: String): Boolean {
+    override suspend fun writeMetadata(viewModel: AlbumViewModel, shareFilePath: Path): Boolean {
         val activeSession = connect { tag, msg ->
             viewModel.sendMessage("writeMetadata: $tag, $msg")
         } ?: return false
@@ -418,7 +419,7 @@ class IosSftpServer : SftpServer {
         ensureSftpDir(activeSession, metadataPath)
         val progressUpdater = ProgressUpdater.createProgressUpdater(viewModel, 1) { progressStr-> "正在上传: $metadataFileName $progressStr" }
         val success = runCatching {
-            val success = activeSession.sftp.writeFileAtPath(shareFilePath, targetFile) { progressNS->
+            val success = activeSession.sftp.writeFileAtPath(shareFilePath.toString(), targetFile) { progressNS->
                 val progress = progressNS.toLong()
                 progressUpdater.invoke(progress, 0)
                 true
