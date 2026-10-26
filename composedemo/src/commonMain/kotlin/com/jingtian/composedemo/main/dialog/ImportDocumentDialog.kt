@@ -23,6 +23,7 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -49,6 +50,7 @@ import com.jingtian.composedemo.main.remote.toHolder
 import com.jingtian.composedemo.main.widget.RankChooser
 import com.jingtian.composedemo.main.widget.ScoreChooser
 import com.jingtian.composedemo.multiplatform.MultiplatformFile
+import com.jingtian.composedemo.multiplatform.logD
 import com.jingtian.composedemo.navigation.IDocumentTreePicker
 import com.jingtian.composedemo.navigation.rememberDocumentTreePicker
 import com.jingtian.composedemo.ui.theme.LocalAppPalette
@@ -58,6 +60,7 @@ import com.jingtian.composedemo.viewmodels.AlbumViewModel
 import com.jingtian.composedemo.web.CommonWebView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 
@@ -124,8 +127,15 @@ fun ImportDocumentDialog(dialogState: ImportDocumentDialogState, onDismiss: () -
     var isUploadingFile by dialogState.isUploadingFile
     val viewModel: AlbumViewModel = viewModel(factory = AlbumViewModel.viewModelFactory)
 
+    val scope = rememberCoroutineScope()
     val importDirLauncher by rememberDocumentTreePicker { uri->
         dialogState.selectedUri.value = uri
+        scope.launch {
+            val path = uri?.path()
+            logD("ImportDocumentDialog") {
+                "import: $path"
+            }
+        }
     }
 
     AppThemeDialog(

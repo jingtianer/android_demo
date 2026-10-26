@@ -7,6 +7,7 @@ import androidx.compose.runtime.remember
 import com.jingtian.composedemo.base.JumpOnPurposeMarkHolder
 import com.jingtian.composedemo.multiplatform.MultiplatformFile
 import com.jingtian.composedemo.multiplatform.MultiplatformFileImpl
+import com.jingtian.composedemo.multiplatform.logD
 import com.jingtian.composedemo.utils.extension
 import kotlinx.io.files.Path
 import platform.Foundation.NSLog
@@ -84,12 +85,17 @@ class DocumentPicker(
     private val extensions: List<*> = utTypeAll,
     private val onResult: (MultiplatformFile?)->Unit,
 ) : IDocumentPicker {
+    private var delegate: DocumentPickerDelegate? = null
     override fun launch(mimes: Array<String>) {
         val rootVC = UIApplication.sharedApplication.keyWindow?.rootViewController
             ?: return
         JumpOnPurposeMarkHolder.isJumpOnPurpose.value = true
 
-        val delegate = DocumentPickerDelegate(onResult)
+        val delegate = DocumentPickerDelegate {
+            onResult(it)
+            this.delegate = null
+        }
+        this.delegate = delegate
         val picker = UIDocumentPickerViewController(forOpeningContentTypes = extensions, asCopy = false).apply {
             this.delegate = delegate
             allowsMultipleSelection = false
@@ -104,7 +110,6 @@ class DocumentPickerDelegate(private val callback: (MultiplatformFile)->Unit) : 
         controller: UIDocumentPickerViewController,
         didPickDocumentsAtURLs: List<*>
     ) {
-        controller.dismissViewControllerAnimated(true, completion = null)
         didPickDocumentsAtURLs
             .filterIsInstance<NSURL>()
             .mapNotNull { url ->
@@ -113,16 +118,17 @@ class DocumentPickerDelegate(private val callback: (MultiplatformFile)->Unit) : 
                 if (success) url.absoluteURL?.path?.also {
                     // 用完记得 stop（建议业务层管理）
                     val path = Path(it)
-//                    println("DocumentPickerDelegate: documentPicker: $path, ${path.extension}")
+                    logD("DocumentPickerDelegate", "documentPicker: $path, ${path.extension}")
                     callback(MultiplatformFileImpl(path, path.extension, nsurl = url))
                     url.toString()
                 } else null
             }
-//        println("file: ${didPickDocumentsAtURLs.toTypedArray().contentDeepToString()}")
+        controller.dismissViewControllerAnimated(true, null)
+        logD("DocumentPickerDelegate","file: ${didPickDocumentsAtURLs.toTypedArray().contentDeepToString()}")
     }
 
     override fun documentPickerWasCancelled(controller: UIDocumentPickerViewController) {
-        controller.dismissViewControllerAnimated(true, completion = null)
+        controller.dismissViewControllerAnimated(true, null)
     }
 }
 

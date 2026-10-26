@@ -11,12 +11,17 @@ import platform.UIKit.UIDocumentPickerMode
 import platform.UIKit.UIDocumentPickerViewController
 
 class DocumentTreePicker(val title: String, private val onResult: (MultiplatformFile?) -> Unit) : IDocumentTreePicker {
+    private var delegate: DocumentPickerDelegate? = null
     override fun launch(mimes: MultiplatformFile?) {
         val rootVC = UIApplication.sharedApplication.keyWindow?.rootViewController
             ?: return
         JumpOnPurposeMarkHolder.isJumpOnPurpose.value = true
 
-        val delegate = DocumentPickerDelegate(onResult)
+        val delegate = DocumentPickerDelegate {
+            onResult(it)
+            this.delegate = null
+        }
+        this.delegate = delegate
         val picker = UIDocumentPickerViewController(forOpeningContentTypes = utTypeDir, asCopy = false).apply {
             this.delegate = delegate
             allowsMultipleSelection = false
