@@ -7,6 +7,7 @@ import com.jcraft.jsch.ChannelSftp
 import com.jcraft.jsch.ChannelSftp.LsEntry
 import com.jcraft.jsch.JSch
 import com.jcraft.jsch.Session
+import com.jcraft.jsch.SftpProgressMonitor
 import com.jcraft.jsch.UserInfo
 import com.jingtian.composedemo.dao.DataBase
 import com.jingtian.composedemo.dao.model.Album
@@ -28,6 +29,7 @@ import kotlinx.io.RawSource
 import kotlinx.io.asSink
 import kotlinx.io.buffered
 import kotlinx.serialization.KSerializer
+import java.io.FileOutputStream
 import java.nio.charset.Charset
 import java.security.KeyStore
 import java.util.Properties
@@ -42,9 +44,10 @@ import kotlin.contracts.contract
 import kotlin.io.path.Path
 import kotlin.random.Random
 import kotlin.random.nextULong
+import java.io.ByteArrayOutputStream
 
 @OptIn(ExperimentalContracts::class)
-inline fun <T> ChannelSftp.use(block: (ChannelSftp)->T): T? {
+inline fun <T> ChannelSftp.use(block: (ChannelSftp)->T): T {
     contract {
         callsInPlace(block, InvocationKind.AT_MOST_ONCE)
     }
@@ -386,11 +389,11 @@ class SftpServerImpl : SftpServer {
                             return@runCatching null
                         }
                         val targetFile = joinRemotePath(this.path, fileName)
-
+                        val progressUpdater = ProgressUpdater.createProgressUpdater(albumViewModel, fileUploadInfoList.size) { progressStr-> "正在上传: $progressStr" }
                         uri.inputStream()?.use { `is` ->
                             channel.put(targetFile).asSink().use { os->
                                 copyWithProgress(`is`, os) { progress->
-                                    albumViewModel.sendMessage("正在上传: $progress (${index} / ${fileUploadInfoList.size})")
+                                    progressUpdater(progress, index)
                                 }
                             }
                         } ?: run {
@@ -427,5 +430,72 @@ class SftpServerImpl : SftpServer {
             }
         }
         albumViewModel.importFileList(album, insertSuccessFileInfo)
+    }
+
+    override suspend fun readMetadata(viewModel: AlbumViewModel): String {
+        val activeSession = connect { tag, msg ->
+            viewModel.sendMessage("readMetadata: $tag, $msg")
+        } ?: return ""
+        val metadataPath = metadataStorePath()
+        val metadataFileName = metadataFilename()
+        val targetFile = joinRemotePath(metadataPath, metadataFileName)
+        val metadataExist = activeSession.ls(this.path).mapNotNull { (it as? ChannelSftp.LsEntry)?.filename }.contains(metadataFileName)
+        if (metadataExist) {
+            val metadataFileContent = runCatching {
+                val progressUpdater = ProgressUpdater.createProgressUpdater(viewModel, 1) { progressStr-> "正在下载: $metadataFileName $progressStr" }
+                val bos = ByteArrayOutputStream()
+                bos.use {
+                    activeSession.get(path, bos, object : SftpProgressMonitor {
+                        override fun init(op: Int, src: String?, dest: String?, max: Long) {
+                        }
+
+                        override fun count(count: Long): Boolean {
+                            progressUpdater(count, 0)
+                            return true
+                        }
+
+                        override fun end() {
+                        }
+                    })
+                    bos.flush()
+                }
+                bos.toByteArray().decodeToString()
+            }.onFailure {
+                viewModel.sendMessage("下载$metadataFileName 失败: $it")
+            }.getOrDefault(null)
+            return metadataFileContent ?: ""
+        }
+        return ""
+    }
+
+    override suspend fun writeMetadata(viewModel: AlbumViewModel, metadataJson: String): Boolean {
+        val connection = connect { tag, msg ->
+            viewModel.sendMessage("uploadFileAndStore: $tag, $msg")
+        } ?: return false
+        val metadataPath = metadataStorePath()
+        val metadataFileName = metadataFilename()
+        val targetFile = joinRemotePath(metadataPath, metadataFileName)
+//        if (!ensureSftpDir(activeSession, metadataPath)) {
+//            viewModel.sendMessage("上传$metadataFileName 失败，远程目录创建失败")
+//            return false
+//        }
+        val progressUpdater = ProgressUpdater.createProgressUpdater(viewModel, 1) { progressStr-> "正在上传: $metadataFileName $progressStr" }
+        val success = connection.use {
+            runCatching {
+                Buffer().apply {
+                    write(metadataJson.encodeToByteArray())
+                }.use { `is`->
+                    connection.put(targetFile).asSink().use { os->
+                        copyWithProgress(`is`, os) { progress->
+                            progressUpdater(progress, 0)
+                        }
+                    }
+                }
+                true
+            }.onFailure {
+                viewModel.sendMessage("上传$metadataFileName 失败: $it")
+            }.getOrDefault(false)
+        }
+        return success ?: false
     }
 }

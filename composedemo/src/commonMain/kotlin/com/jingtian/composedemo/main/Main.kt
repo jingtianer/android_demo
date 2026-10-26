@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.ModalDrawerSheet
@@ -47,6 +48,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import com.jingtian.composedemo.multiplatform.WeakRef
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.jingtian.composedemo.BuildKonfig
 import com.jingtian.composedemo.base.AppThemeText
 import com.jingtian.composedemo.dao.model.Album
 import com.jingtian.composedemo.main.drawer.MainDrawer
@@ -103,7 +105,11 @@ fun Main(
             return list.withIndex().firstOrNull()
         }
     }
-
+    if (BuildKonfig.isRemote) {
+        LaunchedEffect(Unit) {
+            viewModel.refreshRemote()
+        }
+    }
     LaunchedEffect(albumListChange) {
         withContext(Dispatchers.IO) {
             val value = viewModel.menuItems()

@@ -25,6 +25,10 @@ class RemoteSftpFileImpl(
         }
     }
 
+    override fun getServerInstance(): SftpServer {
+        return server
+    }
+
     private suspend fun getContentFile(): File {
         return fileStore.loadFile(originUri, server)
     }

@@ -6,24 +6,32 @@ import com.jingtian.composedemo.dao.model.Album
 import com.jingtian.composedemo.dao.model.AlbumItem
 import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.LabelInfo
-import com.jingtian.composedemo.main.remote.ByteStringFormatter.toString
 import com.jingtian.composedemo.multiplatform.MultiplatformFile
+import com.jingtian.composedemo.multiplatform.logE
+import com.jingtian.composedemo.utils.CoroutineUtils
+import com.jingtian.composedemo.utils.share.ShareUtils
 
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
 import com.jingtian.composedemo.viewmodels.AuthParams
 import com.jingtian.composedemo.viewmodels.AuthSuccess
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.withContext
 import kotlinx.io.Buffer
 import kotlinx.io.RawSink
 import kotlinx.io.RawSource
 import kotlin.random.Random
-import kotlin.random.nextULong
+import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
 
 
 enum class ServerType(val type: Int) {
     SFTP(0)
 }
 
-interface RemoteSftpFile: MultiplatformFile
+interface RemoteSftpFile: MultiplatformFile {
+    fun getServerInstance(): SftpServer
+}
 
 @kotlinx.serialization.Serializable
 abstract class RemoteServer(
@@ -68,6 +76,10 @@ abstract class SftpServer : RemoteServer {
         this.passwordIv = passwordIv
         this.path = path
     }
+
+    @kotlinx.serialization.Transient
+    private val metadataSyncManager = MetadataSyncManager()
+
     abstract suspend fun importFiles(viewModel: AlbumViewModel, album: Album)
 
     abstract fun getInitializedCipher(): AuthParams
@@ -82,7 +94,118 @@ abstract class SftpServer : RemoteServer {
 
     abstract suspend fun uploadFileListAndStore(album: Album, albumViewModel: AlbumViewModel, albumItem: MutableList<Triple<MultiplatformFile, FileInfo, AlbumItem>>, onResult: suspend (success: Boolean, errMsg: String?) -> Unit)
 
+    protected abstract suspend fun readMetadata(viewModel: AlbumViewModel): String
+    protected abstract suspend fun writeMetadata(viewModel: AlbumViewModel, metadataStr: String): Boolean
+
+    suspend fun pullMetadata(viewModel: AlbumViewModel, onFinish: suspend (success: Boolean, errMsg: String?)->Unit = { _, _ -> }) {
+        metadataSyncManager.enqueue(MetadataSyncManager.SyncType.PULL, onFinish) {
+            val remoteMetadata = readMetadata(viewModel)
+            viewModel.sendMessage("正在将metadata写入数据库")
+            ShareUtils.importSharedDb(viewModel, remoteMetadata)
+        }
+    }
+
+    suspend fun pushMetadata(viewModel: AlbumViewModel, onFinish: suspend (success: Boolean, errMsg: String?)->Unit = { _, _ -> }) {
+        metadataSyncManager.enqueue(MetadataSyncManager.SyncType.PUSH, onFinish) {
+            viewModel.sendMessage("正在导出本地数据")
+            val localMetadata = ShareUtils.getMetadata()
+            writeMetadata(viewModel, localMetadata)
+        }
+    }
+
     abstract override suspend fun deleteFiles(files: List<RemoteSftpFile>)
+
+    fun metadataStorePath(): String {
+        return joinRemotePath(path, ".composeDemoMetadata")
+    }
+
+    fun metadataFilename(): String {
+        return ".metadata.json"
+    }
+
+    fun isComposeDemoMetadata(path: String, fileName: String): Boolean {
+        if (path.isEmpty()) {
+            return false
+        }
+        return path.substring(0, if (path.last() == '/') path.length - 1 else path.length) == metadataStorePath() && fileName == metadataFilename()
+    }
+
+    class MetadataSyncManager {
+        enum class SyncType {
+            PULL, PUSH;
+        }
+
+        private class StatefulJob(val job: suspend ()->Unit, val callback: ArrayDeque<suspend (success: Boolean, errMsg: String?)->Unit>)
+
+        private val syncJobQueue = ArrayDeque<Pair<SyncType, StatefulJob>>()
+
+        private var runningQueue: Job? = null
+
+        suspend fun enqueue(syncType: SyncType, onFinish: suspend (success: Boolean, errMsg: String?) -> Unit, job: suspend ()->Unit) {
+            withContext(Dispatchers.Main) {
+                if (syncJobQueue.isEmpty()) {
+                    syncJobQueue.addLast(Pair(syncType, StatefulJob(job, ArrayDeque(listOf(onFinish)))))
+                } else {
+                    val callbackQueue = ArrayDeque<suspend (success: Boolean, errMsg: String?) -> Unit>()
+                    callbackQueue.addLast(onFinish)
+                    while (syncJobQueue.isNotEmpty() && syncJobQueue.last().first == syncType) {
+                        val removedJob = syncJobQueue.removeLast()
+                        val removedCallbackQueue = removedJob.second.callback
+                        while (removedCallbackQueue.isNotEmpty()) {
+                            callbackQueue.addFirst(removedCallbackQueue.removeLast())
+                        }
+                    }
+                    syncJobQueue.addLast(Pair(syncType, StatefulJob(job, callbackQueue)))
+                }
+                awakeRunningQueue()
+            }
+        }
+
+        fun awakeRunningQueue() {
+            CoroutineUtils.runIOTask({
+                withContext(Dispatchers.Main) {
+                    if (runningQueue == null) {
+                        runningQueue = CoroutineUtils.runIOTask({
+                            while (true) {
+                                val job = withContext(Dispatchers.Main) {
+                                    if (syncJobQueue.isNotEmpty()) {
+                                        val (_, job) = syncJobQueue.removeFirst()
+                                        job
+                                    } else {
+                                        null
+                                    }
+                                }
+
+                                job ?: break
+
+                                runCatching {
+                                    job.job()
+                                }.onFailure { e->
+                                    withContext(Dispatchers.Main) {
+                                        job.callback.forEach {
+                                            it.invoke(false, e.message)
+                                        }
+                                    }
+                                }.onSuccess {
+                                    withContext(Dispatchers.Main) {
+                                        job.callback.forEach {
+                                            it.invoke(true, null)
+                                        }
+                                    }
+                                }
+                            }
+                        }, onFailure = {
+                            runningQueue = null
+                            logE("awakeRunningQueue", "onFailure", it)
+                        }) {
+                            runningQueue = null
+                            awakeRunningQueue()
+                        }
+                    }
+                }
+            })
+        }
+    }
 }
 
 fun joinRemotePath(root: String, filename: String): String {
@@ -147,7 +270,7 @@ object ByteStringFormatter {
 inline fun copyWithProgress(
     rawSource: RawSource,
     sink: RawSink,
-    crossinline onProgress: (progressText: String) -> Unit
+    crossinline onProgress: (progress: Long) -> Unit
 ) {
     val buffer = Buffer()
     val bufSize = 8 * 1024L
@@ -164,14 +287,34 @@ inline fun copyWithProgress(
 
         if (totalWritten - lastReport >= reportStep) {
             lastReport = totalWritten
-            with(ByteStringFormatter) {
-                onProgress(totalWritten.format())
-            }
+            onProgress(totalWritten)
+
         }
     }
 
     sink.flush()
-    with(ByteStringFormatter) {
-        onProgress(totalWritten.format())
+    onProgress(totalWritten)
+}
+
+object ProgressUpdater {
+    private const val REPORT_GAP = 256 * 1024
+    private const val REPORT_TIME_GAP = 200
+    @OptIn(ExperimentalTime::class)
+    fun createProgressUpdater(viewModel: AlbumViewModel, totalTaskCount: Int, outputFormater: (String)->String): (progress: Long, taskIndex: Int) -> Unit {
+        var lastReportProgress = -1L
+        var lastReportTime = 0L
+        var lastReportTaskIndex = -1
+        val progressUpdater: (progress: Long, taskIndex: Int) -> Unit = { progress, taskIndex->
+            if (progress - lastReportProgress >= REPORT_GAP || taskIndex != lastReportTaskIndex || lastReportProgress == -1L || Clock.System.now().toEpochMilliseconds() - lastReportTime >= REPORT_TIME_GAP) {
+                lastReportProgress = progress
+                lastReportTaskIndex = taskIndex
+                lastReportTime = Clock.System.now().toEpochMilliseconds()
+                val progressStr = with(ByteStringFormatter) {
+                    progress.format()
+                }
+                viewModel.sendMessage("${outputFormater(progressStr)} (${taskIndex + 1} / $totalTaskCount)")
+            }
+        }
+        return progressUpdater
     }
 }

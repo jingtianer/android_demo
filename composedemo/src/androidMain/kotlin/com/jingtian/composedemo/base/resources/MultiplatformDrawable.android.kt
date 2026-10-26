@@ -4,6 +4,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
 import com.jingtian.composedemo.R
+import demoapp.composedemo.generated.resources.Res
+
+@Composable
+actual fun getRefreshIcon(): Painter = painterResource(R.drawable.refresh)
 
 @Composable
 actual fun getAppThemeAutoIcon(): Painter = painterResource(R.drawable.app_theme_auto)

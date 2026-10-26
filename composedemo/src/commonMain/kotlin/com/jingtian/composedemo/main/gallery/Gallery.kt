@@ -112,6 +112,8 @@ import com.jingtian.composedemo.base.resources.getPainter
 import com.jingtian.composedemo.main.dialog.ImportDocumentDialog
 import com.jingtian.composedemo.main.dialog.rememberDocumentDialogState
 import com.jingtian.composedemo.utils.AppTheme
+import com.jingtian.composedemo.viewmodels.AuthSuccess
+import com.jingtian.composedemo.viewmodels.authViewModel
 import kotlinx.coroutines.IO
 
 @Composable
@@ -498,6 +500,18 @@ fun GalleryStateHolder.Gallery() {
                                 }
                                 GalleryFunctions.DELETE_CIFS_FILE -> {
                                     DeleteRemoteFileFunctionView(this@Gallery, func) {}
+                                }
+                                GalleryFunctions.REFRESH_CIFS_FILE -> {
+                                    val authViewModel = authViewModel()
+                                    GalleryFunctionView(func) {
+                                        authViewModel.doAuth { authResult->
+                                            when (authResult) {
+                                                is AuthSuccess -> {
+                                                    viewModel.refreshRemote()
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                                 else -> {}
                             }

@@ -29,6 +29,7 @@ enum class GalleryFunctions(val functionName: String, val iconProvider: @Composa
     MOVE("移动", { getPainter(DrawableIcon.DrawableMove) }),
     IMPORT_CIFS("远程", { getPainter(DrawableIcon.DrawableCIFS) }),
     DELETE_CIFS_FILE("删除远程", { getPainter(DrawableIcon.DrawableCIFS) }),
+    REFRESH_CIFS_FILE("更新远程", { getPainter(DrawableIcon.DrawableRefresh) }),
     ;
     companion object {
         // 0 -> 添加, 导入, 修改相册名称
@@ -38,18 +39,21 @@ enum class GalleryFunctions(val functionName: String, val iconProvider: @Composa
             addAll(arrayOf(RENAME, ADD, IMPORT))
             if (BuildKonfig.isRemote) {
                 add(IMPORT_CIFS)
+                add(REFRESH_CIFS_FILE)
             }
         }
         val itemFunctions = buildList {
             addAll(arrayOf(EDIT, DELETE, MOVE))
             if (BuildKonfig.isRemote) {
                 add(DELETE_CIFS_FILE)
+                add(REFRESH_CIFS_FILE)
             }
         }
         val batchFunctions = buildList {
             addAll(arrayOf(DELETE, MOVE))
             if (BuildKonfig.isRemote) {
                 add(DELETE_CIFS_FILE)
+                add(REFRESH_CIFS_FILE)
             }
         }
     }

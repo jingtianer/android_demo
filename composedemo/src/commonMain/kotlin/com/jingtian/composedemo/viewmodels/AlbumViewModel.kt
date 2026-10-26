@@ -19,6 +19,9 @@ import com.jingtian.composedemo.dao.model.FileType
 import com.jingtian.composedemo.dao.model.ItemRank
 import com.jingtian.composedemo.dao.model.LabelInfo
 import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
+import com.jingtian.composedemo.main.remote.RemoteSftpFile
+import com.jingtian.composedemo.main.remote.ServerStorage
+import com.jingtian.composedemo.main.remote.ServerType
 import com.jingtian.composedemo.main.remote.SftpServer
 import com.jingtian.composedemo.multiplatform.MultiplatformFile
 import com.jingtian.composedemo.multiplatform.logD
@@ -219,6 +222,7 @@ class AlbumViewModel : ViewModel() {
                         }
                         albumItemListChange.notifyChange()
                     }
+                    currentSelectedServer.pushMetadata(this)
                 }
                 return@block false
             }
@@ -459,6 +463,22 @@ class AlbumViewModel : ViewModel() {
         }) {
             albumItemListChange.notifyChange()
             sendMessage("更新文件 ${album.itemName} 成功!")
+            if (BuildKonfig.isRemote && uri is RemoteSftpFile) {
+                uri.getServerInstance().pushMetadata(this)
+            }
+        }
+    }
+
+    fun refreshRemote() {
+        if (!BuildKonfig.isRemote) {
+            return
+        }
+        CoroutineUtils.runIOTask({
+            for (sftpServer in ServerStorage.getStorage<SftpServer>(ServerType.SFTP).allServer()) {
+                sftpServer.pullMetadata(this)
+            }
+        }) {
+            sendMessage("更新完成")
         }
     }
 }

@@ -1,17 +1,12 @@
 package com.jingtian.composedemo.utils.share
 
 import com.jingtian.composedemo.dao.DataBase
-import com.jingtian.composedemo.dao.converter.FileTypeConverter
-import com.jingtian.composedemo.dao.converter.ItemRankConverter
 import com.jingtian.composedemo.dao.model.AlbumItem
-import com.jingtian.composedemo.dao.model.FileType
-import com.jingtian.composedemo.dao.model.ItemRank
 import com.jingtian.composedemo.dao.model.LabelInfo
 import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
 import com.jingtian.composedemo.dao.model.relation.AlbumRelation
 import com.jingtian.composedemo.multiplatform.MultiplatformFile
 import com.jingtian.composedemo.multiplatform.getMultiplatformFileFactory
-import com.jingtian.composedemo.multiplatform.readAllBytesOrNull
 import com.jingtian.composedemo.utils.createNewFile
 import com.jingtian.composedemo.utils.delete
 import com.jingtian.composedemo.utils.deleteRecursively
@@ -33,7 +28,6 @@ import kotlinx.io.writeString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlin.random.Random
-import kotlin.random.nextULong
 
 object ShareUtils {
     private val shareFileRootDir =  Path(Path(getFileCacheStorageRootDir()), "share")
@@ -46,30 +40,45 @@ object ShareUtils {
 
     private val json = Json { ignoreUnknownKeys = true }
 
-    private suspend fun getShareFile(): Path {
-        return withContext(Dispatchers.IO) {
-            val file = Path(shareFileRootDir, "share_${Random.nextLong(0, Long.MAX_VALUE)}.json")
-            if (SystemFileSystem.exists(file)) {
-                if (file.isFile) {
-                    file.delete()
-                } else if (file.isDirectory) {
-                    file.deleteRecursively()
-                }
+    suspend fun getMetadata(): String {
+        val dataList = json.encodeToString(DataBase.dbImpl.getAlbumDao().getAllAlbumInfoWithExtra())
+        val file = newShareFile()
+        SystemFileSystem.sink(file).buffered().use {
+            it.writeString(dataList)
+            it.flush()
+        }
+        return file.toString()
+    }
+
+    private fun newShareFile(): Path {
+        val file = Path(shareFileRootDir, "share_${Random.nextLong(0, Long.MAX_VALUE)}.json")
+        if (SystemFileSystem.exists(file)) {
+            if (file.isFile) {
+                file.delete()
+            } else if (file.isDirectory) {
+                file.deleteRecursively()
             }
-            file.parent?.let { parent->
-                if (parent.exists()) {
-                    if (parent.isFile) {
-                        parent.delete()
-                        parent.mkdirs()
-                    }
-                } else {
+        }
+        file.parent?.let { parent->
+            if (parent.exists()) {
+                if (parent.isFile) {
+                    parent.delete()
                     parent.mkdirs()
                 }
+            } else {
+                parent.mkdirs()
             }
-            file.createNewFile()
-            val dataList = DataBase.dbImpl.getAlbumDao().getAllAlbumInfoWithExtra()
+        }
+        file.createNewFile()
+        return file
+    }
+
+    private suspend fun getShareFile(): Path {
+        return withContext(Dispatchers.IO) {
+            val file = newShareFile()
+            val dataList = getMetadata()
             SystemFileSystem.sink(file).buffered().use {
-                it.writeString(json.encodeToString(dataList))
+                it.writeString(dataList)
                 it.flush()
             }
             file
@@ -80,9 +89,9 @@ object ShareUtils {
         return this.fileInfo.filePath
     }
 
-    suspend fun importSharedDb(albumViewModel: AlbumViewModel, file: MultiplatformFile) {
+    suspend fun importSharedDb(albumViewModel: AlbumViewModel, dbJson: String) {
         withContext(Dispatchers.IO) {
-            val importedAlbumList = file.inputStream()?.buffered()?.readString()?.let { bytes ->
+            val importedAlbumList = dbJson.let { bytes ->
                 json.decodeFromString<List<AlbumRelation>>(bytes).associate { albumRelation ->
                     val albumMap = mutableMapOf<String, AlbumItemRelation>()
                     for(albumItem in albumRelation.albumItemList) {
@@ -103,7 +112,6 @@ object ShareUtils {
                     albumRelation.albumItem.albumName to albumMap
                 }
             } ?: return@withContext
-            file.onStoreFinish()
             val albumList = DataBase.dbImpl.getAlbumDao().getAllAlbumInfoWithExtra()
             for (album in albumList) {
                 val importedAlbumItemMap = importedAlbumList[album.albumItem.albumName] ?: continue
@@ -133,6 +141,18 @@ object ShareUtils {
             }
         }
         withContext(Dispatchers.Main) {
+            albumViewModel.albumItemListChange.notifyChange()
+        }
+    }
+
+    suspend fun importSharedDb(albumViewModel: AlbumViewModel, file: MultiplatformFile) {
+        withContext(Dispatchers.IO) {
+            file.inputStream()?.buffered()?.readString()?.let { bytes ->
+                importSharedDb(albumViewModel, bytes)
+            }
+        }
+        withContext(Dispatchers.Main) {
+            file.onStoreFinish()
             albumViewModel.albumItemListChange.notifyChange()
         }
     }
