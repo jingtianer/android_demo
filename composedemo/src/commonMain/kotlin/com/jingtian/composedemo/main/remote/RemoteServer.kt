@@ -62,11 +62,15 @@ abstract class SftpServer : RemoteServer {
     var passwordIv: String?
     var path: String = "/"
         set(value) {
-            mMetadataStorePath = joinRemotePath(value, ".composeDemoMetadata")
+            mMetadataStorePath = initMetadataStorePath(value)
             field = value
         }
 
-    private var mMetadataStorePath = ""
+    companion object {
+        private fun initMetadataStorePath(path: String): String = joinRemotePath(path, ".composeDemoMetadata")
+    }
+
+    private var mMetadataStorePath: String? = null
     constructor(serverName: String = "新建: ${Random.nextLong(0, Long.MAX_VALUE)}",
                 serverId: String = "",
                 userName: String = "",
@@ -123,7 +127,9 @@ abstract class SftpServer : RemoteServer {
     abstract override suspend fun deleteFiles(files: List<RemoteSftpFile>)
 
     fun metadataStorePath(): String {
-        return mMetadataStorePath
+        return mMetadataStorePath ?: initMetadataStorePath(path).also {
+            mMetadataStorePath = it
+        }
     }
 
     fun metadataFilename(): String {

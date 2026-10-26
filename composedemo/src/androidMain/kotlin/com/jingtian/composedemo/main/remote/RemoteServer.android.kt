@@ -501,5 +501,5 @@ class SftpServerImpl : SftpServer {
 }
 
 private fun ensureSftpDir(session: ChannelSftp, path: String) :Boolean{
-    return runCatching { session.mkdir(path); true }.getOrDefault(false)
+    return runCatching { session.mkdir(path); return@runCatching true }.getOrDefault(false)
 }
