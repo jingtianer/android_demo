@@ -51,6 +51,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.jingtian.composedemo.BuildKonfig
 import com.jingtian.composedemo.base.AppThemeText
 import com.jingtian.composedemo.dao.model.Album
+import com.jingtian.composedemo.demonstration.DemonstrationMain
 import com.jingtian.composedemo.main.drawer.MainDrawer
 import com.jingtian.composedemo.main.gallery.Gallery
 import com.jingtian.composedemo.main.gallery.GalleryStateHolder
@@ -68,6 +69,10 @@ fun Main(
     visible: Boolean = true,
     onVisibleRequest: ()->Unit = {}
 ) {
+    if (BuildKonfig.isDemo) {
+        DemonstrationMain()
+        return
+    }
     val viewModel: AlbumViewModel = viewModel(factory = AlbumViewModel.viewModelFactory)
     var menuItemsEntity by remember { mutableStateOf(emptyList<Album>()) }
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed, confirmStateChange = { drawerValue: DrawerValue ->

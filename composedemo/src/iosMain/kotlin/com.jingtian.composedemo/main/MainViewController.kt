@@ -12,6 +12,7 @@ import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.jingtian.composedemo.BuildKonfig
 import com.jingtian.composedemo.base.JumpOnPurposeMarkHolder
 import com.jingtian.composedemo.launch.LaunchTasks
 import com.jingtian.composedemo.multiplatform.logD
@@ -23,6 +24,10 @@ import com.jingtian.composedemo.viewmodels.AuthViewModel
 import com.jingtian.composedemo.viewmodels.authViewModel
 
 fun MainViewController() = ComposeUIViewController {
+    if (BuildKonfig.isDemo) {
+        Main()
+        return@ComposeUIViewController
+    }
     LaunchTasks.onLaunch()
     DemoAppTheme {
         var isVisible by remember { mutableStateOf(false) }

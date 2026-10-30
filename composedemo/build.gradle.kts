@@ -31,7 +31,8 @@ val appName = configProps.getProperty("APP_NAME")
 val appVersion = configProps.getProperty("APP_VERSION")
 val appAid = configProps.getProperty("AID")
 val targetPlatform = configProps.getProperty("TARGET_PLATFORM")
-val isRemote = configProps.getProperty("IS_REMOTE").toBoolean()
+val isRemote = configProps.getProperty("IS_REMOTE", "true").toBoolean()
+val isDemo = configProps.getProperty("IS_DEMO", "false").toBoolean()
 
 val isDesktop = targetPlatform.lowercase() == "desktop"
 val isAndroid = targetPlatform.lowercase() == "android"
@@ -216,6 +217,7 @@ buildkonfig {
 
     defaultConfigs {
         buildConfigField(FieldSpec.Type.BOOLEAN, "isRemote", "$isRemote")
+        buildConfigField(FieldSpec.Type.BOOLEAN, "isDemo", "$isDemo")
         buildConfigField(FieldSpec.Type.BOOLEAN, "isDesktop", "$isDesktop")
         buildConfigField(FieldSpec.Type.BOOLEAN, "isAndroid", "$isAndroid")
         buildConfigField(FieldSpec.Type.BOOLEAN, "isIOS", "$isIOS")
