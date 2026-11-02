@@ -79,7 +79,7 @@ fun SettingsPage() {
             .windowInsetsPadding(WindowInsets.statusBars).padding(horizontal = 16.dp),
         contentPadding = PaddingValues(vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(
-            space = 8.dp,
+            space = 18.dp,
             alignment = Alignment.Top
         )
     ) {
@@ -111,7 +111,6 @@ private enum class AppBackgroundSlideBarSelectedType {
     Start, End, Middle;
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainColorSlideBar() {
     val isDark = LocalAppPalette.current.isDark
@@ -119,9 +118,6 @@ fun MainColorSlideBar() {
         UserStorage.darkMainColorState
     } else {
         UserStorage.liteMainColorState
-    }
-    val mainColor = remember(mainColorRaw) {
-        Color(mainColorRaw)
     }
 
     fun updateColor(color: Color) {
@@ -133,6 +129,16 @@ fun MainColorSlideBar() {
         mainColorStore = color.toArgb().toLong()
     }
 
+    val mainColor = remember(mainColorRaw) {
+        Color(mainColorRaw)
+    }
+
+    ColorSlideBar(mainColor, true, ::updateColor)
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ColorSlideBar(mainColor: Color, showDemo: Boolean = true, updateColor: (Color)->Unit) {
     val ahslColor = remember(mainColor) { mutableListOf(*mainColor.toHsl().toTypedArray()) }
     val hState = rememberSliderState(value = ahslColor[1] / 360f, valueRange = 0f..1f)
     val sState = rememberSliderState(value = ahslColor[2], valueRange = 0f..1f)
@@ -150,13 +156,15 @@ fun MainColorSlideBar() {
         )
     }
     Column(modifier = Modifier.fillMaxWidth().wrapContentHeight()) {
-        Row(modifier = Modifier.fillMaxWidth()) {
-            Button(onClick = {}, modifier = Modifier.weight(1f).height(38.dp)) {
-                Text("示例按钮", modifier = Modifier.align(Alignment.CenterVertically))
+        if (showDemo) {
+            Row(modifier = Modifier.fillMaxWidth()) {
+                Button(onClick = {}, modifier = Modifier.weight(1f).height(38.dp)) {
+                    Text("示例按钮", modifier = Modifier.align(Alignment.CenterVertically))
+                }
+                CheckableLabelView("示例标签", true) {}
             }
-            CheckableLabelView("示例标签", true) {}
+            Spacer(Modifier.height(12.dp))
         }
-        Spacer(Modifier.height(12.dp))
         Text("alpha")
         Slider(
             state = alphaState,
@@ -406,20 +414,7 @@ fun AppBackgroundSlideBar() {
             }
         }
         color?.let { color ->
-            Row(modifier = Modifier.fillMaxWidth().padding(top = 12.dp)) {
-                ColorEditText(color, ColorType.A) {
-                    updateColor(color.copy(alpha = it))
-                }
-                ColorEditText(color, ColorType.R) {
-                    updateColor(color.copy(red = it))
-                }
-                ColorEditText(color, ColorType.G) {
-                    updateColor(color.copy(green = it))
-                }
-                ColorEditText(color, ColorType.B) {
-                    updateColor(color.copy(blue = it))
-                }
-            }
+            ColorSlideBar(color, false, ::updateColor)
         }
     }
 }
