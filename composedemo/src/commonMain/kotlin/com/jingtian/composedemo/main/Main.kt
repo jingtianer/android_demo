@@ -33,6 +33,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
@@ -48,6 +49,9 @@ import androidx.compose.ui.input.pointer.pointerInput
 import com.jingtian.composedemo.multiplatform.WeakRef
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.jingtian.composedemo.BuildKonfig
 import com.jingtian.composedemo.base.AppThemeText
 import com.jingtian.composedemo.dao.model.Album
@@ -55,6 +59,10 @@ import com.jingtian.composedemo.demonstration.DemonstrationMain
 import com.jingtian.composedemo.main.drawer.MainDrawer
 import com.jingtian.composedemo.main.gallery.Gallery
 import com.jingtian.composedemo.main.gallery.GalleryStateHolder
+import com.jingtian.composedemo.main.route.LocalRouterController
+import com.jingtian.composedemo.main.route.MainRouter
+import com.jingtian.composedemo.main.route.MainRouterController
+import com.jingtian.composedemo.main.settings.SettingsPage
 import com.jingtian.composedemo.ui.theme.LocalAppPalette
 import com.jingtian.composedemo.utils.observeAsState
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
@@ -158,46 +166,57 @@ fun Main(
             }
         }
     }
-    Scaffold(
-        modifier = modifier,
-        snackbarHost = {
-            AnimatedVisibility(
-                visible = showSnackBar,
-                enter = if(showSnackBarAnim) fadeIn() + expandIn() else EnterTransition.None,
-                exit = if(showSnackBarAnim) shrinkOut() + fadeOut() else ExitTransition.None,
-            ) {
-                Snackbar(
-                    modifier = Modifier.padding(8.dp)
+    val naviController = rememberNavController()
+    val routerController = MainRouterController(naviController, drawerState)
+    CompositionLocalProvider(LocalRouterController provides routerController) {
+        Scaffold(
+            modifier = modifier,
+            snackbarHost = {
+                AnimatedVisibility(
+                    visible = showSnackBar,
+                    enter = if(showSnackBarAnim) fadeIn() + expandIn() else EnterTransition.None,
+                    exit = if(showSnackBarAnim) shrinkOut() + fadeOut() else ExitTransition.None,
                 ) {
-                    AppThemeText(snackBarMessage ?: "", style = LocalTextStyle.current.copy(color = LocalAppPalette.current.dialogBg), maxLines = 1)
-                }
-            }
-        }
-    ) { _->
-        ModalNavigationDrawer(
-            drawerContent = {
-                Box(Modifier
-                    .fillMaxHeight()
-                    .fillMaxWidth(0.92f)
-                    .clip(RoundedCornerShape(0.dp, 20.dp, 20.dp, 0.dp))
-                    .background(LocalAppPalette.current.drawerBg)
-                    .windowInsetsPadding(WindowInsets.navigationBars.only(
-                        WindowInsetsSides.Vertical + WindowInsetsSides.Start)
-                    )
-                ) {
-                    MainDrawer(menuItemsEntity) { index, album ->
-                        currentSelectedAlbum = IndexedValue(index, album)
-                        scope.launch {
-                            drawerState.close()
-                        }
+                    Snackbar(
+                        modifier = Modifier.padding(8.dp)
+                    ) {
+                        AppThemeText(snackBarMessage ?: "", style = LocalTextStyle.current.copy(color = LocalAppPalette.current.dialogBg), maxLines = 1)
                     }
                 }
-            },
-            Modifier.fillMaxSize(),
-            drawerState = drawerState,
-            gesturesEnabled = true
-        ) {
-            Gallery(galleryStateHolderMap, currentSelectedAlbum, menuItemsEntity, drawerState)
+            }
+        ) { _->
+            ModalNavigationDrawer(
+                drawerContent = {
+                    Box(Modifier
+                        .fillMaxHeight()
+                        .fillMaxWidth(0.92f)
+                        .clip(RoundedCornerShape(0.dp, 20.dp, 20.dp, 0.dp))
+                        .background(LocalAppPalette.current.drawerBg)
+                        .windowInsetsPadding(WindowInsets.navigationBars.only(
+                            WindowInsetsSides.Vertical + WindowInsetsSides.Start)
+                        )
+                    ) {
+                        MainDrawer(menuItemsEntity) { index, album ->
+                            currentSelectedAlbum = IndexedValue(index, album)
+                            scope.launch {
+                                routerController.toGallery()
+                            }
+                        }
+                    }
+                },
+                Modifier.fillMaxSize(),
+                drawerState = drawerState,
+                gesturesEnabled = true
+            ) {
+                NavHost(navController = naviController, startDestination = MainRouter.Gallery.name) {
+                    composable(MainRouter.Gallery.name) {
+                        Gallery(galleryStateHolderMap, currentSelectedAlbum, menuItemsEntity, drawerState)
+                    }
+                    composable(MainRouter.Settings.name) {
+                        SettingsPage()
+                    }
+                }
+            }
         }
     }
 }

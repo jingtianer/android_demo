@@ -9,6 +9,7 @@ compose-mpp = "1.9.3"
 lifecyclecompose-runtime = "1.12.0"
 kotlinx-datetime = "0.6.2"
 kotlinx-io-core = "0.7.0"
+navigation-compose = "2.9.2"
 room = "2.8.5"
 sqlite = "2.5.2"
 kotlin-inject = "0.9.0"
@@ -50,6 +51,7 @@ jzlib = { module = "com.jcraft:jzlib", version.ref = "jzlib" }
 kotlinx-io-core = { module = "org.jetbrains.kotlinx:kotlinx-io-core", version.ref = "kotlinx-io-core" }
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
+navigation-compose = { module = "org.jetbrains.androidx.navigation:navigation-compose", version.ref = "navigation-compose" }
 rxandroid = { group = "io.reactivex.rxjava2", name = "rxandroid", version.ref = "rxandroid" }
 rxkotlin = { group = "io.reactivex.rxjava2", name = "rxkotlin", version.ref = "rxkotlin" }
 restriction-bypass = { group = "com.github.ChickenHook", name = "RestrictionBypass", version.ref = "restriction-bypass" }

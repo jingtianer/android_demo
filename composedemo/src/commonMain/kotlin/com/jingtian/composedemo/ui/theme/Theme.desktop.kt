@@ -11,12 +11,20 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.structuralEqualityPolicy
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.jingtian.composedemo.utils.AppTheme
+import com.jingtian.composedemo.viewmodels.AppThemeViewModel
+import kotlin.math.min
 import kotlin.math.sqrt
 
 private val DarkColorScheme = darkColorScheme(
@@ -65,6 +73,7 @@ class AppPalette(
     val labelTextColor: Color,
     val deleteButtonColor: Color,
     val galleryHeaderColor: Color,
+    val gradientColors: List<Color>,
 )
 
 private val darkAppPalette = AppPalette(
@@ -81,6 +90,11 @@ private val darkAppPalette = AppPalette(
     labelTextColor = colorA8A8A8,
     deleteButtonColor = Color(0xffFF5959),
     galleryHeaderColor = colorF8f8f8,
+    gradientColors = listOf(
+        Color(alpha = 0x5f, red = 0xca, green = 0xef, blue = 0xd7),
+        Color(alpha = 0x5f, red = 0xf5, green = 0xbf, blue = 0xd7),
+        Color(alpha = 0x5f, red = 0xab, green = 0xc9, blue = 0xe9),
+    )
 )
 private val liteAppPalette = AppPalette(
     drawerBg = Color(red = 255, green = 251, blue = 254),
@@ -99,6 +113,11 @@ private val liteAppPalette = AppPalette(
     labelTextColor = color686868,
     deleteButtonColor = Color(0xffFF5959),
     galleryHeaderColor = Color(0xFF272727),
+    gradientColors = listOf(
+        Color(alpha = 0x7f, red = 0x95, green = 0xec, blue = 0xb0),
+//        Color(alpha = 0x5f, red = 0xf6, green = 0xd5, blue = 0xf7),
+        Color(alpha = 0x7f, red = 0xf3, green = 0xf9, blue = 0x8a),
+    )
 )
 
 
@@ -135,12 +154,38 @@ val LocalAppColorScheme = compositionLocalOf(structuralEqualityPolicy()) { Light
 val goldenRatio = 2f / (sqrt(5f) + 1)
 
 @Composable
-expect fun Modifier.appBackground(heightScale: Float = 1 - goldenRatio): Modifier
+expect fun Modifier.appBackgroundV1(heightScale: Float = 1 - goldenRatio): Modifier
 
 @Composable
-fun Modifier.drawerBackground() = appBackground(heightScale = 1f)
+fun Modifier.appBackgroundV2(heightScale: Float = 1 - goldenRatio): Modifier {
+    val backgroundColor = LocalAppColorScheme.current.background
+    val localHorizontalGradient = LocalAppPalette.current
+    return this.drawWithCache {
+        val height = min(size.width * heightScale, size.height)
+        val verticalBrush = Brush.verticalGradient(
+            colors = listOf(
+                backgroundColor.copy(alpha = 0f),
+                backgroundColor.copy(alpha = 1f),
+            ),
+            endY = height
+        )
+
+        val horizontalBrush = Brush.horizontalGradient(
+            colors = localHorizontalGradient.gradientColors
+        )
+        onDrawBehind {
+            drawRect(brush = horizontalBrush)
+            drawRect(brush = verticalBrush)
+        }
+    }
+}
+
 @Composable
-fun Modifier.dialogBackground() = appBackground(heightScale = goldenRatio)
+fun Modifier.appBackground() = appBackgroundV2(heightScale = goldenRatio)
+@Composable
+fun Modifier.drawerBackground() = appBackgroundV2(heightScale = 1f)
+@Composable
+fun Modifier.dialogBackground() = appBackgroundV2(heightScale = goldenRatio)
 
 interface AppThemeScope {
     fun setCurrentDark(isDark: Boolean)

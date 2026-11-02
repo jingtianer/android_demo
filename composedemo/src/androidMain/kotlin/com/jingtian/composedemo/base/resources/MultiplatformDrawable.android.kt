@@ -7,6 +7,9 @@ import com.jingtian.composedemo.R
 import demoapp.composedemo.generated.resources.Res
 
 @Composable
+actual fun getSettingsIcon(): Painter = painterResource(R.drawable.settings)
+
+@Composable
 actual fun getRefreshIcon(): Painter = painterResource(R.drawable.refresh)
 
 @Composable

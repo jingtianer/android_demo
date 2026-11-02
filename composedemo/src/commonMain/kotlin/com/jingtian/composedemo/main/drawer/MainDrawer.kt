@@ -15,14 +15,19 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.jingtian.composedemo.base.AppThemeHorizontalDivider
 import com.jingtian.composedemo.base.AppThemeSwitcher
+import com.jingtian.composedemo.base.resources.DrawableIcon
+import com.jingtian.composedemo.base.resources.getPainter
 import com.jingtian.composedemo.dao.DataBase
 import com.jingtian.composedemo.dao.model.Album
+import com.jingtian.composedemo.main.route.LocalRouterController
 import com.jingtian.composedemo.ui.theme.LocalAppPalette
+import kotlinx.coroutines.launch
 
 @Composable
 fun MainDrawer(
@@ -66,6 +71,17 @@ fun MainDrawer(
                 }
             }
         }
+        val routerController = LocalRouterController.current
+        val scope = rememberCoroutineScope()
+        DrawerFunctionView(
+            onClick = {
+                scope.launch {
+                    routerController.toSettings()
+                }
+            },
+            painter = getPainter(DrawableIcon.DrawableSettings),
+            text = "设置",
+        )
         AppThemeSwitcher()
     }
 }

@@ -113,6 +113,7 @@ kotlin {
                 implementation(libs.kotlinx.serialization.json)
                 implementation(libs.kotlinx.io.core)
                 implementation(libs.kotlinx.datetime)
+                implementation(libs.navigation.compose)
 
                 // 尝试了 precompose 并不是compose预加载
 //                api("moe.tlaster:precompose:1.6.2")

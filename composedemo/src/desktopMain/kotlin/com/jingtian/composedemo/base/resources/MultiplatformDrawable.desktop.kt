@@ -6,6 +6,9 @@ import org.jetbrains.compose.resources.painterResource
 import demoapp.composedemo.generated.resources.*
 
 @Composable
+actual fun getSettingsIcon(): Painter = painterResource(Res.drawable.settings)
+
+@Composable
 actual fun getRefreshIcon(): Painter = painterResource(Res.drawable.refresh)
 
 @Composable
