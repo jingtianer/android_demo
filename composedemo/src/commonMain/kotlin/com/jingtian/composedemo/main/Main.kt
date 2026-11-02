@@ -49,8 +49,10 @@ import androidx.compose.ui.input.pointer.pointerInput
 import com.jingtian.composedemo.multiplatform.WeakRef
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.jingtian.composedemo.BuildKonfig
 import com.jingtian.composedemo.base.AppThemeText
@@ -59,9 +61,11 @@ import com.jingtian.composedemo.demonstration.DemonstrationMain
 import com.jingtian.composedemo.main.drawer.MainDrawer
 import com.jingtian.composedemo.main.gallery.Gallery
 import com.jingtian.composedemo.main.gallery.GalleryStateHolder
+import com.jingtian.composedemo.main.route.Gallery
 import com.jingtian.composedemo.main.route.LocalRouterController
 import com.jingtian.composedemo.main.route.MainRouter
 import com.jingtian.composedemo.main.route.MainRouterController
+import com.jingtian.composedemo.main.route.Settings
 import com.jingtian.composedemo.main.settings.SettingsPage
 import com.jingtian.composedemo.ui.theme.LocalAppPalette
 import com.jingtian.composedemo.utils.observeAsState
@@ -81,12 +85,15 @@ fun Main(
         DemonstrationMain()
         return
     }
+    val naviController = rememberNavController()
+    val navBackStackEntry by naviController.currentBackStackEntryAsState()
     val viewModel: AlbumViewModel = viewModel(factory = AlbumViewModel.viewModelFactory)
     var menuItemsEntity by remember { mutableStateOf(emptyList<Album>()) }
+    var menuItemsEntityInitialized by remember { mutableStateOf(false) }
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed, confirmStateChange = { drawerValue: DrawerValue ->
         when(drawerValue) {
             DrawerValue.Closed -> {
-                val canClose = menuItemsEntity.isNotEmpty()
+                val canClose = menuItemsEntity.isNotEmpty() || (navBackStackEntry?.destination?.hasRoute(Gallery::class)?.not() ?: true)
                 if (!canClose) {
                     val noAlbumToast = "没有任何合集，先创建合集吧"
                     if (viewModel.currentBackgroundTask.value?.equals(noAlbumToast) != true) {
@@ -98,6 +105,7 @@ fun Main(
             DrawerValue.Open -> true
         }
     })
+    val routerController = MainRouterController(naviController, drawerState)
     var currentSelectedAlbum by remember { mutableStateOf<IndexedValue<Album>?>(null) }
     val albumListChange by viewModel.albumListChange.observeAsState()
 
@@ -130,6 +138,7 @@ fun Main(
             withContext(Dispatchers.Main) {
                 menuItemsEntity = value
                 currentSelectedAlbum = nextSelectedAlbum
+                menuItemsEntityInitialized = true
             }
             if (value.isEmpty()) {
                 drawerState.snapTo(DrawerValue.Open)
@@ -166,8 +175,6 @@ fun Main(
             }
         }
     }
-    val naviController = rememberNavController()
-    val routerController = MainRouterController(naviController, drawerState)
     CompositionLocalProvider(LocalRouterController provides routerController) {
         Scaffold(
             modifier = modifier,
@@ -208,15 +215,26 @@ fun Main(
                 drawerState = drawerState,
                 gesturesEnabled = true
             ) {
-                NavHost(navController = naviController, startDestination = MainRouter.Gallery.name) {
-                    composable(MainRouter.Gallery.name) {
+                NavHost(navController = naviController, startDestination = Gallery) {
+                    composable<Gallery> {
                         Gallery(galleryStateHolderMap, currentSelectedAlbum, menuItemsEntity, drawerState)
                     }
-                    composable(MainRouter.Settings.name) {
+                    composable<Settings> {
                         SettingsPage()
                     }
                 }
             }
+        }
+    }
+
+    LaunchedEffect(navBackStackEntry, menuItemsEntityInitialized) {
+        val canClose = menuItemsEntity.isNotEmpty() || (navBackStackEntry?.destination?.hasRoute(Gallery::class)?.not() ?: true)
+        if (!canClose && menuItemsEntityInitialized) {
+            val noAlbumToast = "没有任何合集，先创建合集吧"
+            if (viewModel.currentBackgroundTask.value?.equals(noAlbumToast) != true) {
+                viewModel.sendMessage(noAlbumToast)
+            }
+            drawerState.snapTo(DrawerValue.Open)
         }
     }
 }

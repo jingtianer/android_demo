@@ -23,6 +23,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.jingtian.composedemo.utils.AppTheme
+import com.jingtian.composedemo.utils.BackgroundConfig
+import com.jingtian.composedemo.utils.UserStorage
+import com.jingtian.composedemo.utils.mainColor
 import com.jingtian.composedemo.viewmodels.AppThemeViewModel
 import kotlin.math.min
 import kotlin.math.sqrt
@@ -60,7 +63,7 @@ data class AppUIConstants(
     val filterLabelPaddings: List<Dp> = listOf(8.dp, 0.dp, 4.dp, 4.dp)
 )
 
-class AppPalette(
+data class AppPalette(
     val drawerBg: Color,
     val dialogBg: Color,
     val labelChecked: Color,
@@ -73,7 +76,7 @@ class AppPalette(
     val labelTextColor: Color,
     val deleteButtonColor: Color,
     val galleryHeaderColor: Color,
-    val gradientColors: List<Color>,
+    val gradientColors: BackgroundConfig,
 )
 
 private val darkAppPalette = AppPalette(
@@ -90,11 +93,7 @@ private val darkAppPalette = AppPalette(
     labelTextColor = colorA8A8A8,
     deleteButtonColor = Color(0xffFF5959),
     galleryHeaderColor = colorF8f8f8,
-    gradientColors = listOf(
-        Color(alpha = 0x5f, red = 0xca, green = 0xef, blue = 0xd7),
-        Color(alpha = 0x5f, red = 0xf5, green = 0xbf, blue = 0xd7),
-        Color(alpha = 0x5f, red = 0xab, green = 0xc9, blue = 0xe9),
-    )
+    gradientColors = BackgroundConfig.defaultDarkBackgroundColor
 )
 private val liteAppPalette = AppPalette(
     drawerBg = Color(red = 255, green = 251, blue = 254),
@@ -113,11 +112,7 @@ private val liteAppPalette = AppPalette(
     labelTextColor = color686868,
     deleteButtonColor = Color(0xffFF5959),
     galleryHeaderColor = Color(0xFF272727),
-    gradientColors = listOf(
-        Color(alpha = 0x7f, red = 0x95, green = 0xec, blue = 0xb0),
-//        Color(alpha = 0x5f, red = 0xf6, green = 0xd5, blue = 0xf7),
-        Color(alpha = 0x7f, red = 0xf3, green = 0xf9, blue = 0x8a),
-    )
+    gradientColors = BackgroundConfig.defaultLiteBackgroundColor
 )
 
 
@@ -170,9 +165,8 @@ fun Modifier.appBackgroundV2(heightScale: Float = 1 - goldenRatio): Modifier {
             endY = height
         )
 
-        val horizontalBrush = Brush.horizontalGradient(
-            colors = localHorizontalGradient.gradientColors
-        )
+        val horizontalBrush = localHorizontalGradient.gradientColors.horizontalGradient()
+
         onDrawBehind {
             drawRect(brush = horizontalBrush)
             drawRect(brush = verticalBrush)
@@ -201,6 +195,14 @@ fun DemoAppTheme(
         override fun setCurrentDark(_isDark: Boolean) {
             isDark = _isDark
         }
+    }
+    val backgroundConfig by when {
+        isDark -> UserStorage.darkBackgroundConfigState
+        else -> UserStorage.liteBackgroundConfigState
+    }
+    val mainColor = when {
+        isDark -> UserStorage.darkBackgroundConfigState.value.mainColor()
+        else -> UserStorage.liteBackgroundConfigState.value.mainColor()
     }
     val colorScheme = when {
         isDark -> DarkColorScheme
@@ -236,7 +238,7 @@ fun DemoAppTheme(
             CompositionLocalProvider(
                 LocalAppColorScheme provides colorScheme,
                 LocalTextStyle provides customTextStyle,
-                LocalAppPalette provides appPalette,
+                LocalAppPalette provides appPalette.copy(gradientColors = backgroundConfig),
                 LocalAppUIConstants provides AppUIConstants(),
                 LocalContentColor provides contentColor,
                 LocalSecondaryTextStyle provides customSecondaryTextStyle,
@@ -245,4 +247,17 @@ fun DemoAppTheme(
             )
         }
     )
+}
+
+
+@Composable
+fun Modifier.appBackgroundSlide(): Modifier {
+    val localHorizontalGradient = LocalAppPalette.current
+    return this.drawWithCache {
+        val horizontalBrush = localHorizontalGradient.gradientColors.horizontalGradient()
+
+        onDrawBehind {
+            drawRect(brush = horizontalBrush)
+        }
+    }
 }
