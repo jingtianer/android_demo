@@ -132,9 +132,9 @@ fun ImportDocumentDialog(dialogState: ImportDocumentDialogState, onDismiss: () -
         dialogState.selectedUri.value = uri
         scope.launch {
             val path = uri?.path()
-            logD("ImportDocumentDialog") {
-                "import: $path"
-            }
+//            logD("ImportDocumentDialog") {
+//                "import: $path"
+//            }
         }
     }
 

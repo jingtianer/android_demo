@@ -58,9 +58,9 @@ class RemoteSftpFileImpl(
     }
 
     private fun getOrignFileName(): String {
-        logD("getOrignFileName") {
-            Exception().stackTraceToString()
-        }
+//        logD("getOrignFileName") {
+//            Exception().stackTraceToString()
+//        }
         return originUri.lastPathSegment ?: ""
     }
 
@@ -84,7 +84,7 @@ class RemoteSftpFileImpl(
     override suspend fun inputStream(): RawSource? = SystemFileSystem.source(getContentFile())
 
     override suspend fun fileStoreInputStream(): RawSource? {
-        logD("jingtian", "fileStoreInputStream: ${originUri.raw}")
+//        logD("jingtian", "fileStoreInputStream: ${originUri.raw}")
         return StringRawSource(originUri.raw)
     }
 

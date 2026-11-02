@@ -215,10 +215,10 @@ class AlbumViewModel : ViewModel() {
                     withContext(Dispatchers.Main) {
                         if (success) {
                             sendMessage("上传文件 ${album.albumName} 成功!")
-                            logD("addItem") { "addItem成功" }
+//                            logD("addItem") { "addItem成功" }
                         } else {
                             sendMessage("addItem失败: $errMsg")
-                            logD("addItem") { "addItem失败: $errMsg" }
+//                            logD("addItem") { "addItem失败: $errMsg" }
                         }
                         albumItemListChange.notifyChange()
                     }

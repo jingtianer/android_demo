@@ -38,10 +38,14 @@ data class BackgroundConfig(
     companion object {
         val defaultLiteBackgroundColor = BackgroundConfig(
             startColor = BackgroundColor(
-                rawColor = Color(alpha = 0x7f, red = 0x95, green = 0xec, blue = 0xb0).toRawColor()
+                rawColor = Color(0xCAEFD7ee).toRawColor()
+            ),
+            middleColor = BackgroundColor(
+                rawColor = Color(0xF5BFD7ee).toRawColor(),
+                startX = 0.5f,
             ),
             endColor = BackgroundColor(
-                rawColor = Color(alpha = 0x7f, red = 0xf3, green = 0xf9, blue = 0x8a).toRawColor(),
+                rawColor = Color(0xABC9E9ee).toRawColor(),
                 startX = 1f,
             ),
         )
@@ -116,6 +120,8 @@ private fun Color.add(other: Color): Color {
 
 
 object UserStorage {
+    const val DEFAULT_MAIN_COLOR_LITE = 0x6e6ebadcL
+    const val DEFAULT_MAIN_COLOR_DARK = 0x73bb95cbL
     var userInstance: User by SharedPreferenceUtils.StorageJson(
         getJsonStorage("user_info"),
         "user",
@@ -150,6 +156,35 @@ object UserStorage {
         serializer = BackgroundConfig.serializer(),
     )
 
+    val liteMainColor = SharedPreferenceUtils.StateFullStorageLong(
+        getLongStorage("user_config"),
+        "lite_main_color_config",
+        DEFAULT_MAIN_COLOR_LITE
+    )
+
+    val darkMainColor = SharedPreferenceUtils.StateFullStorageLong(
+        getLongStorage("user_config"),
+        "dark_main_color_config",
+        DEFAULT_MAIN_COLOR_DARK
+    )
+
     val liteBackgroundConfigState: State<BackgroundConfig> get() = liteBackgroundConfig.state
     val darkBackgroundConfigState: State<BackgroundConfig> get() = darkBackgroundConfig.state
+
+    val liteMainColorState: State<Long> get() = liteMainColor.state
+    val darkMainColorState: State<Long> get() = darkMainColor.state
+
+    fun resetColors(isDark: Boolean) {
+        if (isDark) {
+            var mainColor by darkMainColor
+            var backgroundConfig by darkBackgroundConfig
+            mainColor = DEFAULT_MAIN_COLOR_DARK
+            backgroundConfig = BackgroundConfig.defaultDarkBackgroundColor
+        } else {
+            var mainColor by liteMainColor
+            var backgroundConfig by liteBackgroundConfig
+            mainColor = DEFAULT_MAIN_COLOR_LITE
+            backgroundConfig = BackgroundConfig.defaultLiteBackgroundColor
+        }
+    }
 }

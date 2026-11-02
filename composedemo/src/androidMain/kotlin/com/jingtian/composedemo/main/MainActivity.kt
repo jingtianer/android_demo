@@ -155,9 +155,9 @@ class MainActivity : BaseActivity() {
     @Composable
     override fun Content() {
         val isPasswordChecked by remember { viewModel.isPasswordChecked }
-        logD("MainActivity") {
-            "Content: viewModel.isPasswordChecked=${isPasswordChecked}"
-        }
+//        logD("MainActivity") {
+//            "Content: viewModel.isPasswordChecked=${isPasswordChecked}"
+//        }
         Main(isPasswordChecked) {
             checkBioAuth()
         }
@@ -166,9 +166,9 @@ class MainActivity : BaseActivity() {
     override fun onResume() {
         super.onResume()
         if (!viewModel.isPasswordChecked.value) {
-            logD("MainActivity") {
-                "onResume: viewModel.isPasswordChecked=${viewModel.isPasswordChecked.value}"
-            }
+//            logD("MainActivity") {
+//                "onResume: viewModel.isPasswordChecked=${viewModel.isPasswordChecked.value}"
+//            }
             window?.decorView?.post {
                 checkBioAuth()
             } ?: checkBioAuth()

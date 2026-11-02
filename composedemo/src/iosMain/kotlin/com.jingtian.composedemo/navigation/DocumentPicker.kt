@@ -118,13 +118,13 @@ class DocumentPickerDelegate(private val callback: (MultiplatformFile)->Unit) : 
                 if (success) url.absoluteURL?.path?.also {
                     // 用完记得 stop（建议业务层管理）
                     val path = Path(it)
-                    logD("DocumentPickerDelegate", "documentPicker: $path, ${path.extension}")
+//                    logD("DocumentPickerDelegate", "documentPicker: $path, ${path.extension}")
                     callback(MultiplatformFileImpl(path, path.extension, nsurl = url))
                     url.toString()
                 } else null
             }
         controller.dismissViewControllerAnimated(true, null)
-        logD("DocumentPickerDelegate","file: ${didPickDocumentsAtURLs.toTypedArray().contentDeepToString()}")
+//        logD("DocumentPickerDelegate","file: ${didPickDocumentsAtURLs.toTypedArray().contentDeepToString()}")
     }
 
     override fun documentPickerWasCancelled(controller: UIDocumentPickerViewController) {

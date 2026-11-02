@@ -440,17 +440,17 @@ class IosSftpServer : SftpServer {
 fun ensureSftpDir(sftp: NMSSHSession, remoteDir: String): Boolean {
     if (remoteDir.isEmpty()) return true
     if (sftp.sftp.fileExistsAtPath(remoteDir)) {
-        logD("ensureSftpDir") {
-            "remoteDir=$remoteDir, fileExistsAtPath=true"
-        }
+//        logD("ensureSftpDir") {
+//            "remoteDir=$remoteDir, fileExistsAtPath=true"
+//        }
         return true
     }
     val lastSlashIndex = remoteDir.lastIndexOf('/')
     if (lastSlashIndex <= 0) {
         return sftp.sftp.createDirectoryAtPath(remoteDir).also {
-            logD("ensureSftpDir") {
-                "remoteDir=$remoteDir, createDir=$it"
-            }
+//            logD("ensureSftpDir") {
+//                "remoteDir=$remoteDir, createDir=$it"
+//            }
         }
     }
     val parentDir = remoteDir.substring(0, lastSlashIndex)
@@ -458,8 +458,8 @@ fun ensureSftpDir(sftp: NMSSHSession, remoteDir: String): Boolean {
         return false
     }
     return sftp.sftp.createDirectoryAtPath(remoteDir).also {
-        logD("ensureSftpDir") {
-            "remoteDir=$remoteDir, createDir=$it"
-        }
+//        logD("ensureSftpDir") {
+//            "remoteDir=$remoteDir, createDir=$it"
+//        }
     }
 }

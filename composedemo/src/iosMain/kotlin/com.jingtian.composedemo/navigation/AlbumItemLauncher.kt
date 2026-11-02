@@ -30,7 +30,7 @@ import platform.darwin.NSObject
 class AlbumItemLauncher(val scope: CoroutineScope) : IAlbumItemLauncher {
 
     private suspend fun openFile(filePath: Path, file: FileInfo) {
-        logD("AlbumItemLauncher") { "openFile: file:${filePath.name}, ${filePath.exists()}, ${filePath}" }
+//        logD("AlbumItemLauncher") { "openFile: file:${filePath.name}, ${filePath.exists()}, ${filePath}" }
 //        println("openFile: file: $filePath")
         JumpOnPurposeMarkHolder.isJumpOnPurpose.value = true
         // 1. 创建文档控制器

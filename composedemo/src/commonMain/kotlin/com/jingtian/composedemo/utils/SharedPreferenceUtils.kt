@@ -1,6 +1,7 @@
 package com.jingtian.composedemo.utils
 
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import com.jingtian.composedemo.multiplatform.IMultiplatformSharedPreferences
 import com.jingtian.composedemo.multiplatform.logD
@@ -85,15 +86,32 @@ class SharedPreferenceUtils {
         serializer: KSerializer<V>,
         jsonFormat: Json = Json { ignoreUnknownKeys = true },
     ): ReadWriteProperty<Any?, V> {
-        var value by StorageJson(sp, key, defaultValue, serializer, jsonFormat)
-        var state = mutableStateOf(value)
+        var innerValue by StorageJson(sp, key, defaultValue, serializer, jsonFormat)
+        var state = mutableStateOf(innerValue)
         override fun setValue(thisRef: Any?, property: KProperty<*>, value: V) {
-            this.value = value
             state.value = value
+            this.innerValue = value
         }
 
         override fun getValue(thisRef: Any?, property: KProperty<*>): V {
             return state.value
+        }
+    }
+
+    class StateFullStorageLong(
+        sp: IMultiplatformSharedPreferences<Long>,
+        key: String,
+        defaultValue: Long
+    ) : ReadWriteProperty<Any?, Long> {
+        var innerValue by StorageLong(sp, key, defaultValue)
+        var state = mutableLongStateOf(innerValue)
+        override fun getValue(thisRef: Any?, property: KProperty<*>): Long {
+            return state.value
+        }
+
+        override fun setValue(thisRef: Any?, property: KProperty<*>, value: Long) {
+            this.innerValue = value
+            state.value = value
         }
     }
 }

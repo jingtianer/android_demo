@@ -115,9 +115,9 @@ class GalleryStateHolder(val album: IndexedValue<Album>, val albumList: List<Alb
                     if (filterConfig.value.labelOr.value) {
                         it.intersect(labelFilterCheckedInfo.keys).isNotEmpty()
                     } else {
-                        logD("updateFilterList") {
-                            "checked: ${labelFilterCheckedInfo.keys.toTypedArray().contentDeepToString()}, it = ${it.toTypedArray().contentDeepToString()} minus=${labelFilterCheckedInfo.keys.minus(it)}"
-                        }
+//                        logD("updateFilterList") {
+//                            "checked: ${labelFilterCheckedInfo.keys.toTypedArray().contentDeepToString()}, it = ${it.toTypedArray().contentDeepToString()} minus=${labelFilterCheckedInfo.keys.minus(it)}"
+//                        }
                         labelFilterCheckedInfo.keys.minus(it).isEmpty()
                     }
                 }

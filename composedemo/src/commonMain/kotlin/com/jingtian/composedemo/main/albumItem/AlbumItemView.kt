@@ -95,7 +95,7 @@ class AlbumItemViewStateHolder(
     }
 
     suspend fun initImage(scope: CoroutineScope) {
-        logD("jingtian", "initImage: ${albumItemRelation.fileInfo.fileType.name}, ${albumItemRelation.fileInfo.storageId}")
+//        logD("jingtian", "initImage: ${albumItemRelation.fileInfo.fileType.name}, ${albumItemRelation.fileInfo.storageId}")
         if (imageBitmap == null) {
             fetchImage(scope)
         }

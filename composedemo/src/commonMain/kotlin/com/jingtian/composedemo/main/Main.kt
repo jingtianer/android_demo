@@ -234,7 +234,7 @@ fun Main(
             if (viewModel.currentBackgroundTask.value?.equals(noAlbumToast) != true) {
                 viewModel.sendMessage(noAlbumToast)
             }
-            drawerState.snapTo(DrawerValue.Open)
+            drawerState.open()
         }
     }
 }

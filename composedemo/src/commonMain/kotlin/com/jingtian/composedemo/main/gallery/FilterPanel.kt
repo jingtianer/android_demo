@@ -157,9 +157,9 @@ class FilterConfig(
         val searchWordList = withContext(Dispatchers.Default) {
             calcSearchSortedList(searchWord, labelList)
         }
-        logD("updateSearchWord") {
-            "searchWordList=${searchWordList.toTypedArray().contentDeepToString()}"
-        }
+//        logD("updateSearchWord") {
+//            "searchWordList=${searchWordList.toTypedArray().contentDeepToString()}"
+//        }
         this.searchWordList.clear()
         this.searchWordList.addAll(searchWordList)
     }

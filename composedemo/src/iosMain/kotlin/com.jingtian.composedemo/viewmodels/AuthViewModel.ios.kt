@@ -38,26 +38,26 @@ class AuthViewModelImpl : AuthViewModel() {
         val canAuth = memScoped {
             val errorPtr = alloc<ObjCObjectVar<NSError?>>()
             val canAuth = context.canEvaluatePolicy(LAPolicyDeviceOwnerAuthentication, errorPtr.ptr)
-            logD("doAuth") {
-                "canAuth=$canAuth, err=${errorPtr.value?.code()}"
-            }
+//            logD("doAuth") {
+//                "canAuth=$canAuth, err=${errorPtr.value?.code()}"
+//            }
             canAuth && errorPtr.value == null
         }
 
         if (!canAuth) {
             onAuthResult(AuthSuccess())
         } else {
-            logD("doAuth") {
-                "startAuth"
-            }
+//            logD("doAuth") {
+//                "startAuth"
+//            }
             context.evaluatePolicy(
                 policy = LAPolicyDeviceOwnerAuthentication,
                 localizedReason = "识别是你本人后继续",
                 reply = { success, err->
                     dispatch_async(dispatch_get_main_queue()) {
-                        logD("doAuth") {
-                            "authReply: success=$success, err=${err?.code()}"
-                        }
+//                        logD("doAuth") {
+//                            "authReply: success=$success, err=${err?.code()}"
+//                        }
                         if (success || err == null) {
                             onAuthResult(AuthSuccess())
                         } else {

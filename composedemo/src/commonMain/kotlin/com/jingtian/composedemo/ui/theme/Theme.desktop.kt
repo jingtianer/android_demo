@@ -31,7 +31,7 @@ import kotlin.math.min
 import kotlin.math.sqrt
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Color(0xff09476F),
+    primary = Color(UserStorage.DEFAULT_MAIN_COLOR_DARK),
     secondary = PurpleGrey80,
     tertiary = Pink80,
     background = Color(red = 28, green = 27, blue = 31),
@@ -39,7 +39,7 @@ private val DarkColorScheme = darkColorScheme(
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Color(0xaf32c4c0),
+    primary = Color(UserStorage.DEFAULT_MAIN_COLOR_LITE),
     secondary = PurpleGrey40,
     tertiary = Pink40,
     background = Color(red = 255, green = 251, blue = 254),
@@ -77,6 +77,7 @@ data class AppPalette(
     val deleteButtonColor: Color,
     val galleryHeaderColor: Color,
     val gradientColors: BackgroundConfig,
+    val isDark: Boolean,
 )
 
 private val darkAppPalette = AppPalette(
@@ -93,7 +94,8 @@ private val darkAppPalette = AppPalette(
     labelTextColor = colorA8A8A8,
     deleteButtonColor = Color(0xffFF5959),
     galleryHeaderColor = colorF8f8f8,
-    gradientColors = BackgroundConfig.defaultDarkBackgroundColor
+    gradientColors = BackgroundConfig.defaultDarkBackgroundColor,
+    isDark = true,
 )
 private val liteAppPalette = AppPalette(
     drawerBg = Color(red = 255, green = 251, blue = 254),
@@ -112,7 +114,8 @@ private val liteAppPalette = AppPalette(
     labelTextColor = color686868,
     deleteButtonColor = Color(0xffFF5959),
     galleryHeaderColor = Color(0xFF272727),
-    gradientColors = BackgroundConfig.defaultLiteBackgroundColor
+    gradientColors = BackgroundConfig.defaultLiteBackgroundColor,
+    isDark = false
 )
 
 
@@ -200,14 +203,14 @@ fun DemoAppTheme(
         isDark -> UserStorage.darkBackgroundConfigState
         else -> UserStorage.liteBackgroundConfigState
     }
-    val mainColor = when {
-        isDark -> UserStorage.darkBackgroundConfigState.value.mainColor()
-        else -> UserStorage.liteBackgroundConfigState.value.mainColor()
+    val mainColor by when {
+        isDark -> UserStorage.darkMainColorState
+        else -> UserStorage.liteMainColorState
     }
     val colorScheme = when {
         isDark -> DarkColorScheme
         else -> LightColorScheme
-    }
+    }.copy(primary = Color(mainColor))
     val customTextStyle = LocalTextStyle.current.copy(
         color = if (isDark) colorF8f8f8 else colorBlack
     )
@@ -238,7 +241,10 @@ fun DemoAppTheme(
             CompositionLocalProvider(
                 LocalAppColorScheme provides colorScheme,
                 LocalTextStyle provides customTextStyle,
-                LocalAppPalette provides appPalette.copy(gradientColors = backgroundConfig),
+                LocalAppPalette provides appPalette.copy(
+                    gradientColors = backgroundConfig,
+                    labelChecked = Color(mainColor).copy(alpha = 0x66 / 255f)
+                ),
                 LocalAppUIConstants provides AppUIConstants(),
                 LocalContentColor provides contentColor,
                 LocalSecondaryTextStyle provides customSecondaryTextStyle,
@@ -260,4 +266,34 @@ fun Modifier.appBackgroundSlide(): Modifier {
             drawRect(brush = horizontalBrush)
         }
     }
+}
+
+fun Color.toHsl(): FloatArray {
+    val r = red
+    val g = green
+    val b = blue
+    val a = alpha
+
+    val cMax = maxOf(r, g, b)
+    val cMin = minOf(r, g, b)
+    val delta = cMax - cMin
+
+    val l = (cMax + cMin) / 2f
+    val s = if (delta == 0f) {
+        0f
+    } else {
+        delta / (1f - kotlin.math.abs(2f * l - 1f))
+    }
+
+    val h = if (delta == 0f) {
+        0f
+    } else {
+        when (cMax) {
+            r -> (((g - b) / delta) % 6f).let { if (it < 0) it + 6f else it }
+            g -> ((b - r) / delta) + 2f
+            b -> ((r - g) / delta) + 4f
+            else -> 0f
+        } * 60f
+    }
+    return floatArrayOf(a, h, s, l)
 }
