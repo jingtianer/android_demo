@@ -15,6 +15,7 @@ import com.jingtian.composedemo.dao.model.AlbumItem
 import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.LabelInfo
 import com.jingtian.composedemo.multiplatform.MultiplatformFile
+import com.jingtian.composedemo.multiplatform.logD
 import com.jingtian.composedemo.utils.Base64Utils
 import com.jingtian.composedemo.utils.BitMapCachePool
 import com.jingtian.composedemo.utils.FileStorageUtils
@@ -477,10 +478,7 @@ class SftpServerImpl : SftpServer {
         val metadataPath = metadataStorePath()
         val metadataFileName = metadataFilename()
         val targetFile = joinRemotePath(metadataPath, metadataFileName)
-        if (!ensureSftpDir(connection, metadataPath)) {
-            viewModel.sendMessage("上传$metadataFileName 失败，远程目录创建失败")
-            return false
-        }
+        ensureSftpDir(connection, metadataPath)
         val progressUpdater = ProgressUpdater.createProgressUpdater(viewModel, 1) { progressStr-> "正在上传: $metadataFileName $progressStr" }
         val success = connection.use {
             runCatching {

@@ -37,6 +37,7 @@ import com.jingtian.composedemo.utils.traverseDirNio
 import com.jingtian.composedemo.viewmodels.AndroidMigrateViewModel
 import com.jingtian.composedemo.viewmodels.AuthSuccess
 import com.jingtian.composedemo.viewmodels.AuthViewModel
+import com.jingtian.composedemo.viewmodels.authViewModel
 import com.jingtian.composedemo.web.WebViewActivity
 import java.io.File
 import java.nio.file.Files
@@ -48,9 +49,7 @@ class MainActivity : BaseActivity() {
     companion object {
         private const val MEDIA_PERMISSION_REQUEST_CODE = 1001
     }
-    private val _viewModel: AuthViewModel by viewModels<AuthViewModel> {
-        AndroidMigrateViewModel.factory
-    }
+    private val _viewModel: AuthViewModel = AndroidMigrateViewModel.inst
 
     private val viewModel: AndroidMigrateViewModel get() = _viewModel as AndroidMigrateViewModel
 

@@ -22,13 +22,14 @@ actual class AuthError(val errorCode: Int, val errString: CharSequence): AuthRes
 
 @Composable
 actual fun authViewModel(): AuthViewModel {
-    return viewModel(factory = AndroidMigrateViewModel.factory)
+    return AndroidMigrateViewModel.inst
 }
 
 class AndroidMigrateViewModel : AuthViewModel() {
     companion object {
         val factory = viewModelFactory { initializer<AuthViewModel> { AndroidMigrateViewModel() } }
         private val sIsPasswordChecked = mutableStateOf(false)
+        val inst = AndroidMigrateViewModel()
     }
     val isPasswordChecked: MutableState<Boolean> get() = sIsPasswordChecked
     private val currentBiometricPrompt: MutableList<BiometricPrompt> = mutableListOf()
