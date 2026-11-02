@@ -178,42 +178,18 @@ fun MainColorSlideBar() {
             modifier = Modifier.fillMaxWidth()
         )
         Row(modifier = Modifier.fillMaxWidth().padding(top = 12.dp)) {
-            OutlinedTextField(value = (mainColor.alpha * 255).roundToInt().toString(),
-                modifier = Modifier.weight(1f),
-                maxLines = 1,
-                keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
-                label = { Text("alpha") },
-                onValueChange = { value ->
-                    val colorValue = value.toIntOrNull()?.let { it / 255f } ?: 0f
-                    updateColor(mainColor.copy(alpha = colorValue))
-                })
-            OutlinedTextField(value = (mainColor.red * 255).roundToInt().toString(),
-                modifier = Modifier.weight(1f),
-                maxLines = 1,
-                keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
-                label = { Text("red") },
-                onValueChange = { value ->
-                    val colorValue = value.toIntOrNull()?.let { it / 255f } ?: 0f
-                    updateColor(mainColor.copy(red = colorValue))
-                })
-            OutlinedTextField(value = (mainColor.green * 255).roundToInt().toString(),
-                modifier = Modifier.weight(1f),
-                maxLines = 1,
-                keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
-                label = { Text("green") },
-                onValueChange = { value ->
-                    val colorValue = value.toIntOrNull()?.let { it / 255f } ?: 0f
-                    updateColor(mainColor.copy(green = colorValue))
-                })
-            OutlinedTextField(value = (mainColor.blue * 255).roundToInt().toString(),
-                modifier = Modifier.weight(1f),
-                maxLines = 1,
-                keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
-                label = { Text("blue") },
-                onValueChange = { value ->
-                    val colorValue = value.toIntOrNull()?.let { it / 255f } ?: 0f
-                    updateColor(mainColor.copy(blue = colorValue))
-                })
+            ColorEditText(mainColor, ColorType.A) {
+                updateColor(mainColor.copy(alpha = it))
+            }
+            ColorEditText(mainColor, ColorType.R) {
+                updateColor(mainColor.copy(red = it))
+            }
+            ColorEditText(mainColor, ColorType.G) {
+                updateColor(mainColor.copy(green = it))
+            }
+            ColorEditText(mainColor, ColorType.B) {
+                updateColor(mainColor.copy(blue = it))
+            }
         }
     }
 }
