@@ -57,7 +57,7 @@ inline fun <T> ChannelSftp.use(block: (ChannelSftp)->T): T {
     return try {
         block(this)
     } finally {
-        this.disconnect()
+        runCatching { this.disconnect() }
     }
 }
 
