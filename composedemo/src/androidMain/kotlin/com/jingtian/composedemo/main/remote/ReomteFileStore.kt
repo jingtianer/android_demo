@@ -78,6 +78,9 @@ class RemoteFileStore(serverType: ServerType) {
                                 server.connect({ _, msg ->
 //                                    Log.d("jingtian", "读取文件 $path $msg")
                                 })?.use { channel ->
+                                    cancelable.invokeOnCancellation {
+                                        runCatching { channel.disconnect() }
+                                    }
 //                                    Log.d("jingtian", "读取文件 $path 开始")
                                     if (cancelable.isCancelled) {
 //                                        Log.d("jingtian", "canceled 1: ${originUri.path}")

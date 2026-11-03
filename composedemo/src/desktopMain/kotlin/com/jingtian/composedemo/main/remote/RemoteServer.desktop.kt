@@ -1,7 +1,5 @@
 package com.jingtian.composedemo.main.remote
 
-import android.security.keystore.KeyGenParameterSpec
-import android.security.keystore.KeyProperties
 import androidx.compose.ui.graphics.ImageBitmap
 import com.jcraft.jsch.ChannelSftp
 import com.jcraft.jsch.ChannelSftp.LsEntry
@@ -15,6 +13,7 @@ import com.jingtian.composedemo.dao.model.AlbumItem
 import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.LabelInfo
 import com.jingtian.composedemo.multiplatform.MultiplatformFile
+import com.jingtian.composedemo.multiplatform.logD
 import com.jingtian.composedemo.utils.Base64Utils
 import com.jingtian.composedemo.utils.BitMapCachePool
 import com.jingtian.composedemo.utils.FileStorageUtils
@@ -28,6 +27,8 @@ import kotlinx.io.RawSink
 import kotlinx.io.RawSource
 import kotlinx.io.asSink
 import kotlinx.io.buffered
+import kotlinx.io.files.Path
+import kotlinx.io.files.SystemFileSystem
 import kotlinx.serialization.KSerializer
 import java.io.FileOutputStream
 import java.nio.charset.Charset
@@ -45,7 +46,6 @@ import kotlin.io.path.Path
 import kotlin.random.Random
 import kotlin.random.nextULong
 import java.io.ByteArrayOutputStream
-import java.nio.file.Path
 
 @OptIn(ExperimentalContracts::class)
 inline fun <T> ChannelSftp.use(block: (ChannelSftp)->T): T {
@@ -116,8 +116,7 @@ class SftpServerImpl : SftpServer {
                 ip,
                 port
             )
-            val decryptCipher = getDecryptCipher(this).cipher
-            val password = decryptCipher?.doFinal(Base64Utils.decryptAsByteArray(password))?.toString(Charset.defaultCharset()) ?: password
+            val password = Base64Utils.decrypt(password)
             session.setPassword(password)
             val config = Properties()
 
@@ -185,7 +184,7 @@ class SftpServerImpl : SftpServer {
             val entry = (entry as? ChannelSftp.LsEntry) ?: continue
             viewModel.sendMessage("导入: ${entry.filename}: $root")
             if (entry.attrs.isDir) {
-                if (entry.filename == "." || entry.filename == "..") {
+                if (entry.filename == "." || entry.filename == ".." || isComposeDemoMetadata(root, entry.filename)) {
                     continue
                 }
                 traverseEntry(sftpChannel, viewModel, pathSet, "${root}/${entry.filename}", album, fileInfoList)
@@ -219,88 +218,24 @@ class SftpServerImpl : SftpServer {
         }
     }
 
-    private fun getSecretKey(encrypt: Boolean = true): SecretKey {
-        val server: RemoteServer = this
-        val keyStore = KeyStore.getInstance("AndroidKeyStore")
-        keyStore.load(null)
-        if (encrypt) {
-            keyStore.deleteEntry(server.serverId)
-        }
-        if (!keyStore.containsAlias(server.serverId)) {
-            val keyGenerator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore")
-            val keySpec = KeyGenParameterSpec.Builder(
-                server.serverId,
-                KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
-            )
-                .setBlockModes(KeyProperties.BLOCK_MODE_CBC)
-                .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_PKCS7)
-//                .setUserAuthenticationRequired(true)
-//                .setInvalidatedByBiometricEnrollment(true)
-//                .let {
-//                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-//                        it.setUserAuthenticationParameters(0 /* duration */,
-//                        KeyProperties.AUTH_BIOMETRIC_STRONG or
-//                                KeyProperties.AUTH_DEVICE_CREDENTIAL
-//                        )
-//                    } else {
-//                        it
-//                    }
-//                }
-                .build()
-            keyGenerator.init(keySpec)
-            keyGenerator.generateKey()
-        }
-        return keyStore.getKey(server.serverId, null) as SecretKey
-    }
-
-    private fun getCipher(): Cipher {
-        return Cipher.getInstance(
-            KeyProperties.KEY_ALGORITHM_AES + "/"
-                    + KeyProperties.BLOCK_MODE_CBC + "/"
-                    + KeyProperties.ENCRYPTION_PADDING_PKCS7)
-    }
-
     override fun getInitializedCipher(): AuthParams {
-        val cipher = getCipher()
-        val sk = this.getSecretKey()
-        cipher.init(Cipher.ENCRYPT_MODE, sk)
-        return AuthParams(cipher)
+        return AuthParams()
     }
 
     override fun onUpdateAuthSuccess(authResult: AuthSuccess){
-        authResult.result.cryptoObject?.cipher?.let { cipher->
-            cipher.doFinal(this.password.toByteArray(Charset.defaultCharset()))?.let { cipherResult->
-                val encodedPassword = Base64Utils.encrypt(cipherResult)
-                this.password = encodedPassword
-                this.passwordIv = Base64Utils.encrypt(cipher.iv)
-            }
-        }
+        val encodedPassword = Base64Utils.encrypt(this.password)
+        this.password = encodedPassword
+        this.passwordIv = ""
     }
 
     override fun onAddSftpServerAuthSuccess(authResult: AuthSuccess) {
-        authResult.result.cryptoObject?.cipher?.let { cipher ->
-            cipher.doFinal(this.password.toByteArray(Charset.defaultCharset()))?.let { cipherResult ->
-                val encodedPassword = Base64Utils.encrypt(cipherResult)
-                this.password = encodedPassword
-                this.passwordIv = Base64Utils.encrypt(cipher.iv)
-            }
-        }
+        val encodedPassword = Base64Utils.encrypt(this.password)
+        this.password = encodedPassword
+        this.passwordIv = ""
     }
 
     override fun getDecryptCipher(server: SftpServer): AuthParams {
-        val cipher = getCipher()
-        val sk = getSecretKey(false)
-        val iv = Base64Utils.decryptAsByteArray(server.passwordIv ?: return AuthParams(null))
-
-        // 兼容 AndroidKeyStore2：优先 GCMParameterSpec，失败则用 IvParameterSpec
-        try {
-            val gcmSpec = GCMParameterSpec(128, iv)
-            cipher.init(Cipher.DECRYPT_MODE, sk, gcmSpec)
-        } catch (e: Exception) {
-            val ivSpec = IvParameterSpec(iv)
-            cipher.init(Cipher.DECRYPT_MODE, sk, ivSpec)
-        }
-        return AuthParams(cipher)
+        return AuthParams()
     }
 
     override suspend fun deleteFiles(files: List<RemoteSftpFile>) {
@@ -440,13 +375,13 @@ class SftpServerImpl : SftpServer {
         val metadataPath = metadataStorePath()
         val metadataFileName = metadataFilename()
         val targetFile = joinRemotePath(metadataPath, metadataFileName)
-        val metadataExist = activeSession.ls(this.path).mapNotNull { (it as? ChannelSftp.LsEntry)?.filename }.contains(metadataFileName)
+        val metadataExist = activeSession.ls(metadataPath).mapNotNull { (it as? ChannelSftp.LsEntry)?.filename }.contains(metadataFileName)
         if (metadataExist) {
             val metadataFileContent = runCatching {
                 val progressUpdater = ProgressUpdater.createProgressUpdater(viewModel, 1) { progressStr-> "正在下载: $metadataFileName $progressStr" }
                 val bos = ByteArrayOutputStream()
                 bos.use {
-                    activeSession.get(path, bos, object : SftpProgressMonitor {
+                    activeSession.get(targetFile, bos, object : SftpProgressMonitor {
                         override fun init(op: Int, src: String?, dest: String?, max: Long) {
                         }
 
@@ -476,16 +411,11 @@ class SftpServerImpl : SftpServer {
         val metadataPath = metadataStorePath()
         val metadataFileName = metadataFilename()
         val targetFile = joinRemotePath(metadataPath, metadataFileName)
-//        if (!ensureSftpDir(activeSession, metadataPath)) {
-//            viewModel.sendMessage("上传$metadataFileName 失败，远程目录创建失败")
-//            return false
-//        }
+        ensureSftpDir(connection, metadataPath)
         val progressUpdater = ProgressUpdater.createProgressUpdater(viewModel, 1) { progressStr-> "正在上传: $metadataFileName $progressStr" }
         val success = connection.use {
             runCatching {
-                Buffer().apply {
-                    write(metadataJson.encodeToByteArray())
-                }.use { `is`->
+                SystemFileSystem.source(metadataJson).buffered().use { `is`->
                     connection.put(targetFile).asSink().use { os->
                         copyWithProgress(`is`, os) { progress->
                             progressUpdater(progress, 0)
@@ -499,4 +429,8 @@ class SftpServerImpl : SftpServer {
         }
         return success ?: false
     }
+}
+
+private fun ensureSftpDir(session: ChannelSftp, path: String) :Boolean{
+    return runCatching { session.mkdir(path); return@runCatching true }.getOrDefault(false)
 }
