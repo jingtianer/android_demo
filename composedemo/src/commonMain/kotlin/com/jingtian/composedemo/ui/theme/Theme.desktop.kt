@@ -159,7 +159,7 @@ fun Modifier.appBackgroundV2(heightScale: Float = 1 - goldenRatio): Modifier {
     val backgroundColor = LocalAppColorScheme.current.background
     val localHorizontalGradient = LocalAppPalette.current
     return this.drawWithCache {
-        val height = min(size.width * heightScale, size.height)
+        val height = min(size.height * heightScale, size.height)
         val verticalBrush = Brush.verticalGradient(
             colors = listOf(
                 backgroundColor.copy(alpha = 0f),

@@ -9,7 +9,7 @@ import demoapp.composedemo.generated.resources.*
 actual fun getSettingsIcon(): Painter = painterResource(Res.drawable.settings)
 
 @Composable
-actual fun getRefreshIcon(): Painter = painterResource(Res.drawable.app_theme_auto)
+actual fun getRefreshIcon(): Painter = painterResource(Res.drawable.refresh)
 
 @Composable
 actual fun getAppThemeAutoIcon(): Painter = painterResource(Res.drawable.app_theme_auto)
