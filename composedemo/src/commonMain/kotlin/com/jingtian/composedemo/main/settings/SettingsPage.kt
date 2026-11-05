@@ -62,6 +62,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
+import com.jingtian.composedemo.base.AppThemeConfirmDialog
 import com.jingtian.composedemo.base.AppThemeText
 import com.jingtian.composedemo.main.labels.CheckableLabelView
 import com.jingtian.composedemo.main.settings.SettingsViewModel.Companion.settingsViewModel
@@ -141,18 +143,47 @@ fun SettingsPage() {
 @Composable
 fun AppClearButtons() {
     val viewModel = settingsViewModel()
+    var showClearCacheConfirmDialog by remember { mutableStateOf(false) }
+    var showClearDataConfirmDialog by remember { mutableStateOf(false) }
     Row(Modifier.fillMaxWidth()) {
         Button(onClick = {
-            viewModel.clearCache()
+            showClearCacheConfirmDialog = true
         }, modifier = Modifier.weight(1f).height(38.dp)) {
             Text("清空缓存", modifier = Modifier.align(Alignment.CenterVertically))
         }
         Spacer(Modifier.width(16.dp))
         Button(onClick = {
-            viewModel.clearStorage()
+            showClearDataConfirmDialog = true
         }, modifier = Modifier.weight(1f).height(38.dp)) {
             Text("清空存储", modifier = Modifier.align(Alignment.CenterVertically))
         }
+    }
+    if (showClearDataConfirmDialog || showClearCacheConfirmDialog) {
+        AppThemeConfirmDialog(
+            "确认清空吗？",
+            properties = DialogProperties(
+                usePlatformDefaultWidth = false,
+                dismissOnClickOutside = false
+            ),
+            onNegative = {
+                showClearDataConfirmDialog = false
+                showClearCacheConfirmDialog = false
+            },
+            onPositive = {
+                if (showClearCacheConfirmDialog) {
+                    viewModel.clearCache()
+                } else if (showClearDataConfirmDialog) {
+                    viewModel.clearStorage()
+                }
+                showClearDataConfirmDialog = false
+                showClearCacheConfirmDialog = false
+            },
+            onDismissRequest = {
+                showClearDataConfirmDialog = false
+                showClearCacheConfirmDialog = false
+            },
+            content = {}
+        )
     }
 }
 
