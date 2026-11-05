@@ -266,7 +266,7 @@ class AlbumViewModel : ViewModel() {
         }
     }
 
-    suspend fun importFiles(album: Album, fileInfoList: MutableList<Pair<FileInfo, AlbumItem>>) {
+    suspend fun importFiles(album: Album, fileInfoList: MutableList<Pair<FileInfo, AlbumItem>>, sftpServer: SftpServer? = null) {
         withContext(Dispatchers.IO) {
             val idList =
                 DataBase.dbImpl.getFileInfoDao().insertAllFileInfo(fileInfoList.map { it.first })
@@ -277,10 +277,20 @@ class AlbumViewModel : ViewModel() {
                     }
                 }
             DataBase.dbImpl.getAlbumItemDao().insertAllAlbumItem(albumItemList)
+            if (sftpServer != null) {
+                sftpServer.pullMetadata(this@AlbumViewModel) { success, errMsg ->
+                    notifyAlbumItemListChange("远程批量导入 ${album.albumName} 成功!")
+                }
+            } else {
+                notifyAlbumItemListChange("远程批量导入 ${album.albumName} 成功!")
+            }
         }
+    }
+
+    private suspend fun notifyAlbumItemListChange(text: String) {
         withContext(Dispatchers.Main) {
             albumItemListChange.notifyChange()
-            sendMessage("导入文件 ${album.albumName} 成功!")
+            sendMessage(text)
         }
     }
 

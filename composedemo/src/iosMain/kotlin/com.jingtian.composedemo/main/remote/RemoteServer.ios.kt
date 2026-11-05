@@ -130,7 +130,7 @@ class IosSftpServer : SftpServer {
                 val fileInfoList = mutableListOf<Pair<FileInfo, AlbumItem>>()
                 traverseEntry(activeSession, viewModel, pathSet, path, album, fileInfoList)
                 viewModel.sendMessage("正在写入数据库")
-                viewModel.importFiles(album, fileInfoList)
+                viewModel.importFiles(album, fileInfoList, this@IosSftpServer)
             }.getOrElse {
                 viewModel.sendMessage("导入失败 $it")
             }
