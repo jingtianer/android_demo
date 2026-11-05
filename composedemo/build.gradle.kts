@@ -15,6 +15,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.buildkonfig.gradle.plugin)
     alias(libs.plugins.androidx.room)
+    id("org.jetbrains.kotlinx.atomicfu") version "0.25.0"
 }
 
 // ======================== 版本常量管理 ========================
@@ -155,6 +156,7 @@ kotlin {
                 implementation(libs.jzlib)
 
                 implementation(libs.androidx.biometric)
+                implementation("org.jetbrains.kotlinx:atomicfu:0.25.0")
             }
         }
 
