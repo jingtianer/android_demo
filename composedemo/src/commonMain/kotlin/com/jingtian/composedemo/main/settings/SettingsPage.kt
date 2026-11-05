@@ -3,7 +3,6 @@ package com.jingtian.composedemo.main.settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -24,7 +23,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -55,21 +53,16 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.jingtian.composedemo.main.labels.CheckableLabelView
-import com.jingtian.composedemo.multiplatform.logD
 import com.jingtian.composedemo.ui.theme.LocalAppColorScheme
 import com.jingtian.composedemo.ui.theme.LocalAppPalette
 import com.jingtian.composedemo.ui.theme.appBackgroundSlide
 import com.jingtian.composedemo.ui.theme.appBackgroundV2
-import com.jingtian.composedemo.ui.theme.toHsl
-import com.jingtian.composedemo.utils.AppTheme
 import com.jingtian.composedemo.utils.BackgroundColor
 import com.jingtian.composedemo.utils.BackgroundConfig
 import com.jingtian.composedemo.utils.UserStorage
 import com.jingtian.composedemo.utils.color
 import com.jingtian.composedemo.utils.colorOf
-import com.jingtian.composedemo.viewmodels.AppThemeViewModel
 import kotlin.math.roundToInt
 
 @Composable
@@ -139,20 +132,19 @@ fun MainColorSlideBar() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ColorSlideBar(mainColor: Color, showDemo: Boolean = true, updateColor: (Color)->Unit) {
-    val ahslColor = remember(mainColor) { mutableListOf(*mainColor.toHsl().toTypedArray()) }
-    val hState = rememberSliderState(value = ahslColor[1] / 360f, valueRange = 0f..1f)
-    val sState = rememberSliderState(value = ahslColor[2], valueRange = 0f..1f)
-    val lState = rememberSliderState(value = ahslColor[3], valueRange = 0f..1f)
-    val alphaState = rememberSliderState(value = ahslColor[0], valueRange = 0f..1f)
-    LaunchedEffect(ahslColor) {
-        hState.value = ahslColor[1] / 360f
-        sState.value = ahslColor[2]
-        lState.value = ahslColor[3]
-        alphaState.value = ahslColor[0]
+    val redState = rememberSliderState(value = mainColor.red, valueRange = 0f..1f)
+    val greenState = rememberSliderState(value = mainColor.green, valueRange = 0f..1f)
+    val blueState = rememberSliderState(value = mainColor.blue, valueRange = 0f..1f)
+    val alphaState = rememberSliderState(value = mainColor.alpha, valueRange = 0f..1f)
+    LaunchedEffect(mainColor) {
+        redState.value = mainColor.red
+        greenState.value = mainColor.green
+        blueState.value = mainColor.blue
+        alphaState.value = mainColor.alpha
     }
-    LaunchedEffect(hState.value, sState.value, lState.value, alphaState.value) {
+    LaunchedEffect(redState.value, greenState.value, blueState.value, alphaState.value) {
         updateColor(
-            Color.hsl(hState.value * 360, sState.value, lState.value).copy(alpha = alphaState.value)
+            Color(red = redState.value, green = greenState.value, blue = blueState.value, alpha = alphaState.value)
         )
     }
     Column(modifier = Modifier.fillMaxWidth().wrapContentHeight()) {
@@ -170,19 +162,19 @@ fun ColorSlideBar(mainColor: Color, showDemo: Boolean = true, updateColor: (Colo
             state = alphaState,
             modifier = Modifier.fillMaxWidth()
         )
-        Text("h")
+        Text("red")
         Slider(
-            state = hState,
+            state = redState,
             modifier = Modifier.fillMaxWidth()
         )
-        Text("s")
+        Text("green")
         Slider(
-            state = sState,
+            state = greenState,
             modifier = Modifier.fillMaxWidth()
         )
-        Text("l")
+        Text("blue")
         Slider(
-            state = lState,
+            state = blueState,
             modifier = Modifier.fillMaxWidth()
         )
         Row(modifier = Modifier.fillMaxWidth().padding(top = 12.dp)) {
