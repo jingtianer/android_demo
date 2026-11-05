@@ -72,16 +72,16 @@ class RemoteFileStore(serverType: ServerType) {
         val server = server as SftpServerImpl
         return withContext(Dispatchers.IO) {
             val realFile = get(originUri)
-            if (server.isLocalHost()) {
-                if (realFile.exists()) {
-                    return@withContext realFile
-                }
-                Files.createSymbolicLink(Path(realFile.absolutePath), File(originUri.path).toPath())
-                return@withContext realFile
-            }
             val tmpFile = getTmp(originUri)
             val lock = locks.computeIfAbsent(originUri.toString()) { Semaphore(1) }
             return@withContext lock.withPermit {
+                if (server.isLocalHost()) {
+                    if (Files.isSymbolicLink(realFile.toPath())) {
+                        return@withPermit realFile
+                    }
+                    Files.createSymbolicLink(realFile.toPath(), File(originUri.path).toPath())
+                    return@withPermit realFile
+                }
                 suspendCancellableCoroutine { cancelable->
 //                    logD("jingtian", "start: ${originUri.path}")
                     try {
