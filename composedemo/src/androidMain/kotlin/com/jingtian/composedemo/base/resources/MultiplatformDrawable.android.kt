@@ -6,6 +6,10 @@ import androidx.compose.ui.res.painterResource
 import com.jingtian.composedemo.R
 import demoapp.composedemo.generated.resources.Res
 
+
+@Composable
+actual fun getLockIcon(): Painter = painterResource(R.drawable.lock)
+
 @Composable
 actual fun getSettingsIcon(): Painter = painterResource(R.drawable.settings)
 

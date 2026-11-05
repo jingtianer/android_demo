@@ -91,10 +91,11 @@ fun PasswordGuardedMain(onPasswordChecked: () -> Unit = {}) {
         DemonstrationMain()
         return
     }
+    val authViewModel: AuthViewModel = authViewModel()
     var isVisible by remember { mutableStateOf(false) }
     var isAuthed by remember { mutableStateOf(false) }
+    var isLocked by authViewModel.isLocked
     var lastOnStopAuthTimeStamp by remember { mutableLongStateOf(-1) }
-    val authViewModel: AuthViewModel = authViewModel()
     val doAuth = remember {
         {
             authViewModel.doAuth { authResult ->
@@ -109,6 +110,18 @@ fun PasswordGuardedMain(onPasswordChecked: () -> Unit = {}) {
             }
         }
     }
+    fun checkShouldAuth() {
+        val isJumpOnPurpose = JumpOnPurposeMarkHolder.isJumpOnPurpose.getAndSet(false)
+        val isAppLockedSnapshot = isLocked
+        isLocked = false
+        val shouldDoAuth = isAppLockedSnapshot || !isAuthed && !isJumpOnPurpose && !(lastOnStopAuthTimeStamp != -1L && Clock.System.now().toEpochMilliseconds() - lastOnStopAuthTimeStamp <= MIN_ON_STOP_DO_AUTH_TIME_GAP)
+        if (shouldDoAuth) {
+            doAuth()
+        } else {
+            isAuthed = true
+            isVisible = true
+        }
+    }
     val lifecycleObserver by remember {
         mutableStateOf(object : DefaultLifecycleObserver {
             override fun onStop(owner: LifecycleOwner) {
@@ -121,26 +134,15 @@ fun PasswordGuardedMain(onPasswordChecked: () -> Unit = {}) {
 
             @OptIn(ExperimentalTime::class)
             override fun onResume(owner: LifecycleOwner) {
-                val isJumpOnPurpose = JumpOnPurposeMarkHolder.isJumpOnPurpose.getAndSet(false)
-                val isAppLocked = authViewModel.isAppLocked.getAndSet(false)
-                if (isAppLocked || !isAuthed && !isJumpOnPurpose && !(lastOnStopAuthTimeStamp != -1L && Clock.System.now().toEpochMilliseconds() - lastOnStopAuthTimeStamp <= MIN_ON_STOP_DO_AUTH_TIME_GAP)) {
-                    doAuth.invoke()
-                } else {
-                    isAuthed = true
-                    isVisible = true
-                }
+                checkShouldAuth()
             }
 
             override fun onStart(owner: LifecycleOwner) {
             }
         })
     }
-    Main(visible = isVisible && isAuthed) {
-        if (isAuthed) {
-            isVisible = true
-        } else {
-            doAuth()
-        }
+    Main(visible = isVisible && isAuthed && !isLocked) {
+        checkShouldAuth()
     }
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(Unit) {

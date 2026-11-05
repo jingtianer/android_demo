@@ -27,12 +27,19 @@ import com.jingtian.composedemo.utils.AppTheme
 import com.jingtian.composedemo.viewmodels.AppThemeViewModel
 import com.jingtian.composedemo.base.resources.getPainter
 import com.jingtian.composedemo.base.resources.DrawableIcon
+import com.jingtian.composedemo.viewmodels.authViewModel
 
 
 @Composable
-fun AppThemeSwitcher() {
+fun AppDrawerBottomFunctionLine() {
     val viewModel: AppThemeViewModel = viewModel(factory = AppThemeViewModel.viewModelFactory)
     var currentTheme by remember { viewModel.currentAppTheme }
+    val authViewModel = authViewModel()
+    fun Modifier.buttonModifier(onClick: ()->Unit): Modifier {
+        return this.clip(RoundedCornerShape(100))
+            .clickable(onClick = onClick)
+            .padding(8.dp)
+    }
     @Composable
     fun Modifier.modifier(appTheme: AppTheme): Modifier {
         val modifier = this
@@ -46,12 +53,9 @@ fun AppThemeSwitcher() {
                 color = LocalAppPalette.current.labelUnChecked,
                 shape = RoundedCornerShape(100)
             )
+        }.buttonModifier {
+            currentTheme = appTheme
         }
-            .clip(RoundedCornerShape(100))
-            .clickable {
-                currentTheme = appTheme
-            }
-            .padding(8.dp)
     }
 
     val size = 42.dp
@@ -69,6 +73,25 @@ fun AppThemeSwitcher() {
 //                .align(Alignment.CenterStart),
 //            style = LocalTextStyle.current.copy(fontSize = 16.sp)
 //        )
+        Row(
+            Modifier
+                .wrapContentSize()
+                .align(Alignment.CenterStart)
+        ) {
+            Image(
+                painter = getPainter(DrawableIcon.Lock),
+                contentDescription = "lock",
+                Modifier
+                    .background(
+                        color = LocalAppPalette.current.labelChecked,
+                        shape = RoundedCornerShape(100)
+                    )
+                    .size(size)
+                    .buttonModifier {
+                        authViewModel.isLocked.value = true
+                    }
+            )
+        }
         Row(
             Modifier
                 .wrapContentSize()

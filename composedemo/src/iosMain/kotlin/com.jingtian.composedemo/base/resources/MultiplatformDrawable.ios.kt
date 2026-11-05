@@ -6,6 +6,9 @@ import org.jetbrains.compose.resources.painterResource
 import demoapp.composedemo.generated.resources.*
 
 @Composable
+actual fun getLockIcon(): Painter = painterResource(Res.drawable.lock)
+
+@Composable
 actual fun getSettingsIcon(): Painter = painterResource(Res.drawable.settings)
 
 @Composable

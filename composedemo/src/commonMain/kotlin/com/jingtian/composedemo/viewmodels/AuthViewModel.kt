@@ -3,7 +3,6 @@ package com.jingtian.composedemo.viewmodels
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
-import kotlinx.atomicfu.atomic
 
 expect class AuthParams
 open class AuthResult
@@ -15,11 +14,12 @@ expect class AuthError: AuthResult
 @Composable
 expect fun authViewModel(): AuthViewModel
 
+private object AuthGlobalState {
+    val sIsAppLocked = mutableStateOf(false)
+}
 abstract class AuthViewModel : ViewModel() {
-    companion object {
-        private val sIsAppLocked = atomic(false)
-    }
-    val isAppLocked = sIsAppLocked
+    val isLocked get() = AuthGlobalState.sIsAppLocked
+
     abstract fun doAuth(authParams: AuthParams, onAuthResult: (AuthResult)->Unit)
     abstract fun doAuth(onAuthResult: (AuthResult)->Unit)
 }
