@@ -11,6 +11,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.FileProvider
+import com.jingtian.composedemo.base.JumpOnPurposeMarkHolder
 import com.jingtian.composedemo.base.app
 import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
@@ -37,6 +38,7 @@ class FileShareLauncher(val context: Context) : IFileShareLauncher {
     }
 
     override suspend fun launch(file: MultiplatformFile) {
+        JumpOnPurposeMarkHolder.isJumpOnPurpose.value = true
         val sharedFile = file.file()
         val uri = if (sharedFile != null) {
             FileProvider.getUriForFile(

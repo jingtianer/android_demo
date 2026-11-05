@@ -13,6 +13,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
+import com.jingtian.composedemo.base.JumpOnPurposeMarkHolder
 import com.jingtian.composedemo.base.app
 import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.FileType
@@ -33,6 +34,7 @@ class AlbumItemLauncher(
     val launcher: ManagedActivityResultLauncher<Intent, ActivityResult>
 ) : IAlbumItemLauncher{
     override suspend fun launch(fileName: String, fileInfo: FileInfo) {
+        JumpOnPurposeMarkHolder.isJumpOnPurpose.value = true
         scope.launch(Dispatchers.Main) {
             val timeoutJob = scope.launch(Dispatchers.Main) {
                 withContext(Dispatchers.IO) {

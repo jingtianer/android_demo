@@ -6,44 +6,22 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.util.Log
-import android.widget.Toast
-import androidx.activity.viewModels
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.core.net.toFile
-import androidx.lifecycle.viewmodel.initializer
-import androidx.lifecycle.viewmodel.viewModelFactory
 import com.jingtian.composedemo.base.BaseActivity
-import com.jingtian.composedemo.base.app
 import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.FileType.*
 import com.jingtian.composedemo.multiplatform.MultiplatformFileImpl
-import com.jingtian.composedemo.multiplatform.logD
-import com.jingtian.composedemo.utils.CoroutineUtils
 import com.jingtian.composedemo.utils.FileLinkProvider
-import com.jingtian.composedemo.utils.copyDir
-import com.jingtian.composedemo.utils.ensureFile
-import com.jingtian.composedemo.utils.getFileStorageRootDir
-import com.jingtian.composedemo.utils.traverseDirFiles
-import com.jingtian.composedemo.utils.traverseDirNio
 import com.jingtian.composedemo.viewmodels.AndroidMigrateViewModel
-import com.jingtian.composedemo.viewmodels.AuthSuccess
 import com.jingtian.composedemo.viewmodels.AuthViewModel
-import com.jingtian.composedemo.viewmodels.authViewModel
 import com.jingtian.composedemo.web.WebViewActivity
 import java.io.File
-import java.nio.file.Files
-import kotlin.io.path.inputStream
-import kotlin.io.path.outputStream
-import kotlin.io.path.pathString
 
 class MainActivity : BaseActivity() {
     companion object {
@@ -63,7 +41,6 @@ class MainActivity : BaseActivity() {
     )
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
         val executor = ContextCompat.getMainExecutor(this)
 
         val biometricPrompt = { callback: BiometricPrompt.AuthenticationCallback ->
@@ -74,24 +51,13 @@ class MainActivity : BaseActivity() {
             .setTitle("验证是你本人")
             .setAllowedAuthenticators(
                 BiometricManager.Authenticators.BIOMETRIC_STRONG or
-                BiometricManager.Authenticators.DEVICE_CREDENTIAL
+                        BiometricManager.Authenticators.DEVICE_CREDENTIAL
             )
             .build()
 
         viewModel.bioticAuth = viewModel.Authenticator(biometricPrompt, promptInfo)
+        super.onCreate(savedInstanceState)
 //        migrateData()
-//        viewModel.isPasswordChecked.value = true
-    }
-
-    private fun checkBioAuth() {
-        viewModel.bioticAuth.doAuth { authResult ->
-            when(authResult) {
-                is AuthSuccess -> {
-                    viewModel.isPasswordChecked.value = true
-                    checkAndRequestMediaPermissions()
-                }
-            }
-        }
     }
 
     override fun onRequestPermissionsResult(
@@ -153,24 +119,8 @@ class MainActivity : BaseActivity() {
 
     @Composable
     override fun Content() {
-        val isPasswordChecked by remember { viewModel.isPasswordChecked }
-//        logD("MainActivity") {
-//            "Content: viewModel.isPasswordChecked=${isPasswordChecked}"
-//        }
-        Main(isPasswordChecked) {
-            checkBioAuth()
-        }
-    }
-
-    override fun onResume() {
-        super.onResume()
-        if (!viewModel.isPasswordChecked.value) {
-//            logD("MainActivity") {
-//                "onResume: viewModel.isPasswordChecked=${viewModel.isPasswordChecked.value}"
-//            }
-            window?.decorView?.post {
-                checkBioAuth()
-            } ?: checkBioAuth()
+        PasswordGuardedMain {
+            checkAndRequestMediaPermissions()
         }
     }
 

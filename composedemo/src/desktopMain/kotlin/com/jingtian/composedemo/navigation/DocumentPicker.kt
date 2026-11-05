@@ -5,6 +5,7 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.awt.ComposeWindow
+import com.jingtian.composedemo.base.JumpOnPurposeMarkHolder
 import com.jingtian.composedemo.multiplatform.MultiplatformFile
 import com.jingtian.composedemo.multiplatform.MultiplatformFileImpl
 import java.awt.FileDialog
@@ -21,6 +22,7 @@ class DocumentPicker(
 ) : IDocumentPicker {
     override fun launch(mimes: Array<String>) {
         val window = getComposeWindow() ?: return
+        JumpOnPurposeMarkHolder.isJumpOnPurpose.value = true
         val dialog = FileDialog(window, "导入文件", FileDialog.LOAD).apply {
             if (extensions.isNotEmpty()) {
                 filenameFilter = FilenameFilter { dir, name ->

@@ -17,6 +17,7 @@ import androidx.compose.ui.window.rememberWindowState
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.jingtian.composedemo.launch.LaunchTasks
 import com.jingtian.composedemo.main.Main
+import com.jingtian.composedemo.main.PasswordGuardedMain
 import com.jingtian.composedemo.ui.theme.DemoAppTheme
 import com.jingtian.composedemo.ui.theme.LocalDesktopConst
 import com.jingtian.composedemo.utils.AppTheme
@@ -59,7 +60,7 @@ fun ApplicationScope.MainWindow() {
                     screenHeightDp = windowState.size.height,
                 )
             ) {
-                Main()
+                PasswordGuardedMain()
                 val viewModel: AppThemeViewModel = viewModel(factory = AppThemeViewModel.viewModelFactory)
                 val currentAppTheme by remember { viewModel.currentAppTheme }
                 val isSystemDark = isSystemInDarkTheme()

@@ -9,12 +9,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import com.jingtian.composedemo.base.JumpOnPurposeMarkHolder
 import com.jingtian.composedemo.base.app
 import com.jingtian.composedemo.multiplatform.MultiplatformFile
 import com.jingtian.composedemo.multiplatform.MultiplatformFileImpl
 
 class DocumentPicker(val launcher: ManagedActivityResultLauncher<Array<String>, Uri?>): IDocumentPicker {
     override fun launch(mimes : Array<String>) {
+        JumpOnPurposeMarkHolder.isJumpOnPurpose.value = true
         launcher.launch(mimes)
     }
 }

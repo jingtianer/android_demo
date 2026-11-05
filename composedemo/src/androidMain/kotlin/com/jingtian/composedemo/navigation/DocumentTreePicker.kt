@@ -10,6 +10,7 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import com.jingtian.composedemo.base.JumpOnPurposeMarkHolder
 import com.jingtian.composedemo.base.app
 import com.jingtian.composedemo.multiplatform.MultiplatformFile
 import com.jingtian.composedemo.multiplatform.MultiplatformFileImpl
@@ -22,6 +23,7 @@ import kotlinx.coroutines.withContext
 class DocumentTreePicker(val launcher: ManagedActivityResultLauncher<Uri?, Uri?>, val scope: CoroutineScope) :
     IDocumentTreePicker {
     override fun launch(mimes: MultiplatformFile?) {
+        JumpOnPurposeMarkHolder.isJumpOnPurpose.value = true
         scope.launch(Dispatchers.Main) {
             launcher.launch(withContext(Dispatchers.IO) {
                 (mimes as? MultiplatformFileImpl)?.getUri()

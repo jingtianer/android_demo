@@ -10,7 +10,6 @@ import androidx.compose.animation.shrinkOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
@@ -21,21 +20,20 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.LocalTextStyle
-import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -48,6 +46,9 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import com.jingtian.composedemo.multiplatform.WeakRef
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.compose.NavHost
@@ -56,6 +57,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.jingtian.composedemo.BuildKonfig
 import com.jingtian.composedemo.base.AppThemeText
+import com.jingtian.composedemo.base.JumpOnPurposeMarkHolder
 import com.jingtian.composedemo.dao.model.Album
 import com.jingtian.composedemo.demonstration.DemonstrationMain
 import com.jingtian.composedemo.main.drawer.MainDrawer
@@ -63,7 +65,6 @@ import com.jingtian.composedemo.main.gallery.Gallery
 import com.jingtian.composedemo.main.gallery.GalleryStateHolder
 import com.jingtian.composedemo.main.route.Gallery
 import com.jingtian.composedemo.main.route.LocalRouterController
-import com.jingtian.composedemo.main.route.MainRouter
 import com.jingtian.composedemo.main.route.MainRouterController
 import com.jingtian.composedemo.main.route.Settings
 import com.jingtian.composedemo.main.settings.SettingsPage
@@ -71,10 +72,82 @@ import com.jingtian.composedemo.ui.theme.LocalAppPalette
 import com.jingtian.composedemo.utils.observeAsState
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
 import com.jingtian.composedemo.viewmodels.AlbumViewModel.Companion.observeAsState
+import com.jingtian.composedemo.viewmodels.AuthSuccess
+import com.jingtian.composedemo.viewmodels.AuthViewModel
+import com.jingtian.composedemo.viewmodels.authViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
+
+private const val MIN_ON_STOP_DO_AUTH_TIME_GAP = 30 * 1000L
+
+@OptIn(ExperimentalTime::class)
+@Composable
+fun PasswordGuardedMain(onPasswordChecked: () -> Unit = {}) {
+    if (BuildKonfig.isDemo) {
+        DemonstrationMain()
+        return
+    }
+    var isVisible by remember { mutableStateOf(false) }
+    var isAuthed by remember { mutableStateOf(false) }
+    var lastOnStopAuthTimeStamp by remember { mutableLongStateOf(-1) }
+    val authViewModel: AuthViewModel = authViewModel()
+    val doAuth = remember {
+        {
+            authViewModel.doAuth { authResult ->
+                when(authResult) {
+                    is AuthSuccess -> {
+                        lastOnStopAuthTimeStamp = Clock.System.now().toEpochMilliseconds()
+                        isVisible = true
+                        isAuthed = true
+                        onPasswordChecked()
+                    }
+                }
+            }
+        }
+    }
+    val lifecycleObserver by remember {
+        mutableStateOf(object : DefaultLifecycleObserver {
+            override fun onStop(owner: LifecycleOwner) {
+                isAuthed = false
+            }
+
+            override fun onPause(owner: LifecycleOwner) {
+                isVisible = false
+            }
+
+            @OptIn(ExperimentalTime::class)
+            override fun onResume(owner: LifecycleOwner) {
+                if (!isAuthed && !JumpOnPurposeMarkHolder.isJumpOnPurpose.getAndSet(false) && !(lastOnStopAuthTimeStamp != -1L && Clock.System.now().toEpochMilliseconds() - lastOnStopAuthTimeStamp <= MIN_ON_STOP_DO_AUTH_TIME_GAP)) {
+                    doAuth.invoke()
+                } else {
+                    isAuthed = true
+                    isVisible = true
+                }
+            }
+
+            override fun onStart(owner: LifecycleOwner) {
+            }
+        })
+    }
+    Main(visible = isVisible && isAuthed) {
+        if (isAuthed) {
+            isVisible = true
+        } else {
+            doAuth()
+        }
+    }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(Unit) {
+        lifecycleOwner.lifecycle.addObserver(observer = lifecycleObserver)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer = lifecycleObserver)
+        }
+    }
+}
 
 @Composable
 fun Main(

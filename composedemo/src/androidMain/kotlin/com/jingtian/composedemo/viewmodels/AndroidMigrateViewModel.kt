@@ -28,10 +28,8 @@ actual fun authViewModel(): AuthViewModel {
 class AndroidMigrateViewModel : AuthViewModel() {
     companion object {
         val factory = viewModelFactory { initializer<AuthViewModel> { AndroidMigrateViewModel() } }
-        private val sIsPasswordChecked = mutableStateOf(false)
         val inst = AndroidMigrateViewModel()
     }
-    val isPasswordChecked: MutableState<Boolean> get() = sIsPasswordChecked
     private val currentBiometricPrompt: MutableList<BiometricPrompt> = mutableListOf()
 
     class AuthenticationCallbackWrapper(val callback: (AuthResult)->Unit, var onAuthFinished: ()->Unit = {}) : BiometricPrompt.AuthenticationCallback() {

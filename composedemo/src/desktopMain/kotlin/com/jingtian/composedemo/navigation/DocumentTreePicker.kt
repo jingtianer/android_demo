@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import com.jingtian.composedemo.base.JumpOnPurposeMarkHolder
 import com.jingtian.composedemo.multiplatform.MultiplatformFile
 import com.jingtian.composedemo.multiplatform.MultiplatformFileImpl
 import java.io.File
@@ -12,6 +13,7 @@ import javax.swing.UIManager
 
 class DocumentTreePicker(val title: String, private val onResult: (MultiplatformFile?) -> Unit) : IDocumentTreePicker {
     override fun launch(mimes: MultiplatformFile?) {
+        JumpOnPurposeMarkHolder.isJumpOnPurpose.value = true
         runCatching {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName())
         }

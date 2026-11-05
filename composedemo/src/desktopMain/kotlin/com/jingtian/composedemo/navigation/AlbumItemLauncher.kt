@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import com.jingtian.composedemo.base.JumpOnPurposeMarkHolder
 import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.FileType
 import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
@@ -71,6 +72,7 @@ class AlbumItemLauncher : IAlbumItemLauncher {
     }
 
     override suspend fun launch(fileName: String, fileInfo: FileInfo) {
+        JumpOnPurposeMarkHolder.isJumpOnPurpose.value = true
         when(fileInfo.fileType) {
             FileType.HTML -> openUrl(fileName, fileInfo)
             else -> openFile(fileName, fileInfo)
