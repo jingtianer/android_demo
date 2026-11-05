@@ -121,7 +121,9 @@ fun PasswordGuardedMain(onPasswordChecked: () -> Unit = {}) {
 
             @OptIn(ExperimentalTime::class)
             override fun onResume(owner: LifecycleOwner) {
-                if (!isAuthed && !JumpOnPurposeMarkHolder.isJumpOnPurpose.getAndSet(false) && !(lastOnStopAuthTimeStamp != -1L && Clock.System.now().toEpochMilliseconds() - lastOnStopAuthTimeStamp <= MIN_ON_STOP_DO_AUTH_TIME_GAP)) {
+                val isJumpOnPurpose = JumpOnPurposeMarkHolder.isJumpOnPurpose.getAndSet(false)
+                val isAppLocked = authViewModel.isAppLocked.getAndSet(false)
+                if (isAppLocked || !isAuthed && !isJumpOnPurpose && !(lastOnStopAuthTimeStamp != -1L && Clock.System.now().toEpochMilliseconds() - lastOnStopAuthTimeStamp <= MIN_ON_STOP_DO_AUTH_TIME_GAP)) {
                     doAuth.invoke()
                 } else {
                     isAuthed = true

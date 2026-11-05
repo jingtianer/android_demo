@@ -15,16 +15,14 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.jingtian.composedemo.main.gallery.GalleryStateHolder
 import com.jingtian.composedemo.viewmodels.AndroidMigrateViewModel
+import com.jingtian.composedemo.viewmodels.AuthViewModel
+import com.jingtian.composedemo.viewmodels.authViewModel
 import kotlinx.coroutines.launch
 
 @Composable
 actual fun GalleryStateHolder.BackPressHandler() {
 
-    val androidViewModel: AndroidMigrateViewModel = viewModel(factory = viewModelFactory {
-        initializer {
-            AndroidMigrateViewModel()
-        }
-    })
+    val androidViewModel: AuthViewModel = authViewModel()
     val scope = rememberCoroutineScope()
     val dispatcher = LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
 
@@ -34,7 +32,7 @@ actual fun GalleryStateHolder.BackPressHandler() {
                 val isEnabled = this@BackPressHandler.onBackPressed()
                 this@GalleryOnBackPressCallBack.isEnabled = isEnabled
                 if (!isEnabled) {
-//                    androidViewModel.isPasswordChecked.value = false
+                    androidViewModel.isAppLocked.value = true
                     dispatcher?.onBackPressed()
                     this@GalleryOnBackPressCallBack.isEnabled = true
                 }
