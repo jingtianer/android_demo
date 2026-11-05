@@ -26,6 +26,7 @@ import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
 
 expect fun getFileStorageRootDir(): Path
+expect fun getDBStorageRootDir(): Path
 expect fun getFileCacheStorageRootDir(): Path
 
 object FileStorageUtils {

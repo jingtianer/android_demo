@@ -34,7 +34,7 @@ actual fun GalleryStateHolder.BackPressHandler() {
                 val isEnabled = this@BackPressHandler.onBackPressed()
                 this@GalleryOnBackPressCallBack.isEnabled = isEnabled
                 if (!isEnabled) {
-                    androidViewModel.isPasswordChecked.value = false
+//                    androidViewModel.isPasswordChecked.value = false
                     dispatcher?.onBackPressed()
                     this@GalleryOnBackPressCallBack.isEnabled = true
                 }

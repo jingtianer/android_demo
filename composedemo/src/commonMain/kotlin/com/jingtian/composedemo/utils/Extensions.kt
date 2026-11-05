@@ -52,13 +52,15 @@ fun Path.delete() = SystemFileSystem.delete(this, false)
 fun Path.exists() = SystemFileSystem.exists(this)
 fun Path.mkdir() = SystemFileSystem.createDirectories(this, true)
 fun Path.deleteRecursively() {
-    if (isFile) {
+    if (runCatching { isFile }.getOrDefault(false)) {
         SystemFileSystem.delete(this)
-    } else if (isDirectory) {
-        SystemFileSystem.list(this).forEach { child->
-            child.deleteRecursively()
+    } else if (kotlin.runCatching { isDirectory }.getOrDefault(false)) {
+        kotlin.runCatching {
+            SystemFileSystem.list(this).forEach { child->
+                child.deleteRecursively()
+            }
         }
-        SystemFileSystem.delete(this)
+        SystemFileSystem.delete(this, mustExist = false)
     }
 }
 

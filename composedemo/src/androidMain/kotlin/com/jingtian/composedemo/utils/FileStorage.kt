@@ -17,7 +17,7 @@ import kotlin.io.path.isDirectory
 
 actual fun getFileStorageRootDir(): Path = Path(app.getExternalFilesDir(null)!!.absolutePath)
 actual fun getFileCacheStorageRootDir(): Path = Path(app.externalCacheDir!!.absolutePath)
-
+actual fun getDBStorageRootDir(): Path = Path(getFileStorageRootDir().toString(), "database")
 actual fun compressImageBitmap(bitmap: ImageBitmap, width: Int, height: Int, scale: Float): ImageBitmap {
     // 2. 创建缩放矩阵
     val matrix = Matrix().apply {

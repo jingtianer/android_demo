@@ -22,6 +22,8 @@ val globalWorkDir = if (File(".").canWrite()) {
 
 actual fun getFileStorageRootDir(): Path = Path(File(globalWorkDir, "filestore").absolutePath)
 actual fun getFileCacheStorageRootDir(): Path = Path(File(globalWorkDir, "cache").absolutePath)
+actual fun getDBStorageRootDir(): Path = Path(File(globalWorkDir, "database").absolutePath)
+
 actual fun compressImageBitmap(bitmap: ImageBitmap, width: Int, height: Int, scale: Float): ImageBitmap {
     val image = bitmap.toAwtImage().toImage()
     val originWidth = image.width

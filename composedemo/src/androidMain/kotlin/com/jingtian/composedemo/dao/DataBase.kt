@@ -8,11 +8,12 @@ import androidx.sqlite.db.SupportSQLiteOpenHelper
 import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
 import com.jingtian.composedemo.base.app
 import com.jingtian.composedemo.utils.copyDir
+import com.jingtian.composedemo.utils.getDBStorageRootDir
 import com.jingtian.composedemo.utils.getFileStorageRootDir
 import java.io.File
 
 actual fun dbImplCreator() : RoomDatabase.Builder<DataBase>  {
-    val dbDir = File(getFileStorageRootDir().toString(), "database")
+    val dbDir = File(getDBStorageRootDir().toString())
     val dbFile = File(dbDir, "app_db")
     dbFile.parentFile?.let { parent->
         if (parent.exists()) {

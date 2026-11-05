@@ -22,7 +22,7 @@ val globalWorkDir = NSSearchPathForDirectoriesInDomains(
 ).first() as String
 
 actual fun getFileStorageRootDir(): Path = Path(globalWorkDir, "filestore")
-
+actual fun getDBStorageRootDir():Path = Path(globalWorkDir, "db.db")
 actual fun getFileCacheStorageRootDir(): Path = Path(NSSearchPathForDirectoriesInDomains(
     NSCachesDirectory, NSUserDomainMask, true
 ).first() as String, "cache")

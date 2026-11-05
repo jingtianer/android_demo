@@ -1,5 +1,12 @@
 package com.jingtian.composedemo.main.settings
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.expandIn
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -30,7 +37,9 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Snackbar
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberSliderState
 import androidx.compose.runtime.Composable
@@ -53,7 +62,9 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.jingtian.composedemo.base.AppThemeText
 import com.jingtian.composedemo.main.labels.CheckableLabelView
+import com.jingtian.composedemo.main.settings.SettingsViewModel.Companion.settingsViewModel
 import com.jingtian.composedemo.ui.theme.LocalAppColorScheme
 import com.jingtian.composedemo.ui.theme.LocalAppPalette
 import com.jingtian.composedemo.ui.theme.appBackgroundSlide
@@ -67,23 +78,80 @@ import kotlin.math.roundToInt
 
 @Composable
 fun SettingsPage() {
-    LazyColumn(
+    val viewModel = settingsViewModel()
+
+    val snackBarMessage by viewModel.snackBarMessage
+    var showSnackBar by remember { mutableStateOf(snackBarMessage != null) }
+    var showSnackBarAnim by remember { mutableStateOf(true) }
+
+    LaunchedEffect(snackBarMessage) {
+        if (showSnackBar && snackBarMessage.isNullOrBlank()) {
+            showSnackBarAnim = true
+        } else if (!showSnackBar && !snackBarMessage.isNullOrBlank()) {
+            showSnackBarAnim = true
+        } else {
+            showSnackBarAnim = false
+        }
+        showSnackBar = !snackBarMessage.isNullOrBlank()
+    }
+    Scaffold(
         modifier = Modifier.fillMaxSize().appBackgroundV2()
-            .windowInsetsPadding(WindowInsets.statusBars).padding(horizontal = 16.dp),
-        contentPadding = PaddingValues(vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(
-            space = 18.dp,
-            alignment = Alignment.Top
-        )
-    ) {
-        item {
-            AppBackgroundSlideBar()
+            .windowInsetsPadding(WindowInsets.statusBars),
+        contentColor = Color.Transparent,
+        containerColor = Color.Transparent,
+        snackbarHost = {
+            AnimatedVisibility(
+                visible = showSnackBar,
+                enter = if(showSnackBarAnim) fadeIn() + expandIn() else EnterTransition.None,
+                exit = if(showSnackBarAnim) shrinkOut() + fadeOut() else ExitTransition.None,
+            ) {
+                Snackbar(
+                    modifier = Modifier.padding(8.dp)
+                ) {
+                    AppThemeText(snackBarMessage ?: "", style = LocalTextStyle.current.copy(color = LocalAppPalette.current.dialogBg), maxLines = 1)
+                }
+            }
         }
-        item {
-            MainColorSlideBar()
+    ) { padding ->
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp).padding(padding),
+            contentPadding = PaddingValues(vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(
+                space = 18.dp,
+                alignment = Alignment.Top
+            )
+        ) {
+            item {
+                AppClearButtons()
+            }
+            item {
+                AppBackgroundSlideBar()
+            }
+            item {
+                MainColorSlideBar()
+            }
+            item {
+                ResetAllColor()
+            }
         }
-        item {
-            ResetAllColor()
+    }
+
+}
+
+@Composable
+fun AppClearButtons() {
+    val viewModel = settingsViewModel()
+    Row(Modifier.fillMaxWidth()) {
+        Button(onClick = {
+            viewModel.clearCache()
+        }, modifier = Modifier.weight(1f).height(38.dp)) {
+            Text("清空缓存", modifier = Modifier.align(Alignment.CenterVertically))
+        }
+        Spacer(Modifier.width(16.dp))
+        Button(onClick = {
+            viewModel.clearStorage()
+        }, modifier = Modifier.weight(1f).height(38.dp)) {
+            Text("清空存储", modifier = Modifier.align(Alignment.CenterVertically))
         }
     }
 }
