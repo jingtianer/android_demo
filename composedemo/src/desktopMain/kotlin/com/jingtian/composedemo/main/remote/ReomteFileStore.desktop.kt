@@ -10,12 +10,15 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
+import kotlinx.io.files.SystemFileSystem
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
+import java.nio.file.Files
 import java.util.Objects
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.io.path.Path
 
 class Uri(val lastPathSegment: String, val path: String, val authority: String, val scheme: String) {
     constructor(path: String, authority: String, scheme: String): this(path.split("/").lastOrNull() ?: "", path, authority, scheme)
@@ -69,6 +72,13 @@ class RemoteFileStore(serverType: ServerType) {
         val server = server as SftpServerImpl
         return withContext(Dispatchers.IO) {
             val realFile = get(originUri)
+            if (server.isLocalHost()) {
+                if (realFile.exists()) {
+                    return@withContext realFile
+                }
+                Files.createSymbolicLink(Path(realFile.absolutePath), File(originUri.path).toPath())
+                return@withContext realFile
+            }
             val tmpFile = getTmp(originUri)
             val lock = locks.computeIfAbsent(originUri.toString()) { Semaphore(1) }
             return@withContext lock.withPermit {

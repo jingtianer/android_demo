@@ -429,6 +429,12 @@ class SftpServerImpl : SftpServer {
         }
         return success ?: false
     }
+
+    fun isLocalHost(): Boolean {
+        return ip.substringBefore(":").lowercase().let {
+            it.equals("localhost") || it.startsWith("127.") || it.equals("::1")
+        }
+    }
 }
 
 private fun ensureSftpDir(session: ChannelSftp, path: String) :Boolean{
