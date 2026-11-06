@@ -124,9 +124,6 @@ fun SettingsPage() {
             )
         ) {
             item {
-                AppClearButtons()
-            }
-            item {
                 AppBackgroundSlideBar()
             }
             item {
@@ -134,6 +131,9 @@ fun SettingsPage() {
             }
             item {
                 ResetAllColor()
+            }
+            item {
+                AppClearButtons()
             }
         }
     }

@@ -432,8 +432,8 @@ class SftpServerImpl : SftpServer {
 
     fun isLocalHost(): Boolean {
         return ip.substringBefore(":").lowercase().let {
-            it.equals("localhost") || it.startsWith("127.") || it.equals("::1")
-        }
+            it.equals("localhost") || it.startsWith("127.")
+        } || ip.startsWith("::1")
     }
 }
 
