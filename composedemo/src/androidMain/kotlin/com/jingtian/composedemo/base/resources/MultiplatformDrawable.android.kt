@@ -10,7 +10,7 @@ import demoapp.composedemo.generated.resources.Res
 actual fun getPaletteIcon(): Painter = painterResource(R.drawable.palette)
 
 @Composable
-actual fun getBackgroundPaintIcon(): Painter = painterResource(R.drawable.palette)
+actual fun getBackgroundPaintIcon(): Painter = painterResource(R.drawable.background_paint)
 
 @Composable
 actual fun getClearIcon(): Painter = painterResource(R.drawable.clear)
