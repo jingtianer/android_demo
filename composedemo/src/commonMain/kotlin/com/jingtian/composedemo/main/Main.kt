@@ -68,6 +68,7 @@ import com.jingtian.composedemo.main.route.LocalRouterController
 import com.jingtian.composedemo.main.route.MainRouterController
 import com.jingtian.composedemo.main.route.Settings
 import com.jingtian.composedemo.main.settings.SettingsPage
+import com.jingtian.composedemo.multiplatform.LowMemorySideEffect
 import com.jingtian.composedemo.multiplatform.SoftRef
 import com.jingtian.composedemo.ui.theme.LocalAppPalette
 import com.jingtian.composedemo.utils.observeAsState
@@ -228,6 +229,11 @@ fun Main(
     val galleryStateHolderMap = remember(menuItemsEntity) {
         mutableStateMapOf<Long, SoftRef<GalleryStateHolder>>()
     }
+
+    LowMemorySideEffect(galleryStateHolderMap) {
+        galleryStateHolderMap.clear()
+    }
+
     var showSnackBar by remember { mutableStateOf(snackBarMessage != null) }
     var showSnackBarAnim by remember { mutableStateOf(true) }
 
