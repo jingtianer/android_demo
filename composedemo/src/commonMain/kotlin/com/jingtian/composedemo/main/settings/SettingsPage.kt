@@ -41,6 +41,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -49,6 +50,7 @@ import androidx.compose.material3.Snackbar
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberSliderState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
@@ -136,29 +138,30 @@ fun SettingsPage() {
             }
         }
     ) { padding ->
-        LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp).padding(padding),
-            contentPadding = PaddingValues(vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(
-                space = 18.dp,
-                alignment = Alignment.Top
-            )
-        ) {
-            item {
-                AppBackgroundSlideBar()
-            }
-            item {
-                MainColorSlideBar()
-            }
-            item {
-                ResetAllColor()
-            }
-            item {
-                CollapsableClearButtons()
+        CompositionLocalProvider(LocalContentColor provides LocalAppPalette.current.galleryHeaderColor) {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp).padding(padding),
+                contentPadding = PaddingValues(vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(
+                    space = 18.dp,
+                    alignment = Alignment.Top
+                )
+            ) {
+                item {
+                    AppBackgroundSlideBar()
+                }
+                item {
+                    MainColorSlideBar()
+                }
+                item {
+                    ResetAllColor()
+                }
+                item {
+                    CollapsableClearButtons()
+                }
             }
         }
     }
-
 }
 
 class CollapseDrawerState(
@@ -211,7 +214,7 @@ fun CollapseDrawer(
 fun SettingsTitle(icon: DrawableIcon?, text: String) {
     Row {
         if (icon != null) {
-            Image(
+            Icon(
                 painter = getPainter(icon),
                 contentDescription = text,
                 modifier = Modifier.size(24.dp).align(Alignment.CenterVertically)
@@ -239,7 +242,7 @@ fun CollapsableClearButtons() {
             }.padding(vertical = 10.dp)) {
                 SettingsTitle(DrawableIcon.DrawableClear, "清理功能")
                 Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
-                    Image(
+                    Icon(
                         painter = getPainter(DrawableIcon.DrawableArrowDown),
                         contentDescription = "expand icon",
                         modifier = Modifier.size(24.dp).graphicsLayer {
