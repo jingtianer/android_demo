@@ -12,6 +12,7 @@ import demoapp.composedemo.generated.resources.Res
 
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.jingtian.composedemo.BuildKonfig
 import com.jingtian.composedemo.main.gallery.GalleryFunctionView
 import com.jingtian.composedemo.main.gallery.GalleryFunctions
 import com.jingtian.composedemo.navigation.rememberDocumentPicker
@@ -35,13 +36,15 @@ fun DrawerFunctionArea() {
 
     ShareDrawerFunctions()
 
-    val authViewModel = authViewModel()
-    val viewModel: AlbumViewModel = viewModel(factory = AlbumViewModel.viewModelFactory)
-    DrawerFunctionView(GalleryFunctions.REFRESH_CIFS_FILE) {
-        authViewModel.doAuth { authResult->
-            when (authResult) {
-                is AuthSuccess -> {
-                    viewModel.refreshRemote()
+    if (BuildKonfig.isRemote) {
+        val authViewModel = authViewModel()
+        val viewModel: AlbumViewModel = viewModel(factory = AlbumViewModel.viewModelFactory)
+        DrawerFunctionView(GalleryFunctions.REFRESH_CIFS_FILE) {
+            authViewModel.doAuth { authResult->
+                when (authResult) {
+                    is AuthSuccess -> {
+                        viewModel.refreshRemote()
+                    }
                 }
             }
         }
