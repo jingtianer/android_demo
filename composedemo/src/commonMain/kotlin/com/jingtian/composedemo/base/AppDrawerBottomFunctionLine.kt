@@ -79,7 +79,7 @@ fun AppDrawerBottomFunctionLine() {
                 .align(Alignment.CenterStart)
         ) {
             Image(
-                painter = getPainter(DrawableIcon.Lock),
+                painter = getPainter(DrawableIcon.DrawableLock),
                 contentDescription = "lock",
                 Modifier
                     .background(

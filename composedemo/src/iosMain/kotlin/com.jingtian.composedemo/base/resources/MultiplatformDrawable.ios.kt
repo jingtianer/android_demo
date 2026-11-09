@@ -5,6 +5,13 @@ import androidx.compose.ui.graphics.painter.Painter
 import org.jetbrains.compose.resources.painterResource
 import demoapp.composedemo.generated.resources.*
 
+
+@Composable
+actual fun getClearIcon(): Painter = painterResource(Res.drawable.clear)
+
+@Composable
+actual fun getArrowDownIcon(): Painter = painterResource(Res.drawable.arrow_down)
+
 @Composable
 actual fun getLockIcon(): Painter = painterResource(Res.drawable.lock)
 

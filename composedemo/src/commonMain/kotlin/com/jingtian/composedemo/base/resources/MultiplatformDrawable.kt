@@ -37,7 +37,9 @@ enum class DrawableIcon {
     DrawableSearch,
     DrawableRefresh,
     DrawableSettings,
-    Lock,
+    DrawableLock,
+    DrawableClear,
+    DrawableArrowDown,
 }
 
 @Composable
@@ -76,9 +78,17 @@ fun getPainter(icon: DrawableIcon): Painter {
         DrawableIcon.DrawableSearch -> getSearchIcon()
         DrawableIcon.DrawableRefresh -> getRefreshIcon()
         DrawableIcon.DrawableSettings -> getSettingsIcon()
-        DrawableIcon.Lock -> getLockIcon()
+        DrawableIcon.DrawableLock -> getLockIcon()
+        DrawableIcon.DrawableClear -> getClearIcon()
+        DrawableIcon.DrawableArrowDown -> getArrowDownIcon()
     }
 }
+
+@Composable
+expect fun getClearIcon(): Painter
+
+@Composable
+expect fun getArrowDownIcon(): Painter
 
 @Composable
 expect fun getLockIcon(): Painter

@@ -3,11 +3,16 @@ package com.jingtian.composedemo.main.settings
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.AnimationState
+import androidx.compose.animation.core.AnimationVector1D
+import androidx.compose.animation.core.animateTo
 import androidx.compose.animation.expandIn
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkOut
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -35,6 +40,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -44,9 +50,12 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberSliderState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -54,17 +63,25 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
 import com.jingtian.composedemo.base.AppThemeConfirmDialog
 import com.jingtian.composedemo.base.AppThemeText
+import com.jingtian.composedemo.base.resources.DrawableIcon
+import com.jingtian.composedemo.base.resources.getPainter
 import com.jingtian.composedemo.main.labels.CheckableLabelView
 import com.jingtian.composedemo.main.settings.SettingsViewModel.Companion.settingsViewModel
 import com.jingtian.composedemo.ui.theme.LocalAppColorScheme
@@ -104,13 +121,17 @@ fun SettingsPage() {
         snackbarHost = {
             AnimatedVisibility(
                 visible = showSnackBar,
-                enter = if(showSnackBarAnim) fadeIn() + expandIn() else EnterTransition.None,
-                exit = if(showSnackBarAnim) shrinkOut() + fadeOut() else ExitTransition.None,
+                enter = if (showSnackBarAnim) fadeIn() + expandIn() else EnterTransition.None,
+                exit = if (showSnackBarAnim) shrinkOut() + fadeOut() else ExitTransition.None,
             ) {
                 Snackbar(
                     modifier = Modifier.padding(8.dp)
                 ) {
-                    AppThemeText(snackBarMessage ?: "", style = LocalTextStyle.current.copy(color = LocalAppPalette.current.dialogBg), maxLines = 1)
+                    AppThemeText(
+                        snackBarMessage ?: "",
+                        style = LocalTextStyle.current.copy(color = LocalAppPalette.current.dialogBg),
+                        maxLines = 1
+                    )
                 }
             }
         }
@@ -133,11 +154,103 @@ fun SettingsPage() {
                 ResetAllColor()
             }
             item {
-                AppClearButtons()
+                CollapsableClearButtons()
             }
         }
     }
 
+}
+
+class CollapseDrawerState(
+    val anim: AnimationState<Float, AnimationVector1D>,
+    val expand: MutableState<Boolean>
+)
+
+@Composable
+fun rememberCollapseDrawerState(initialExpand: Boolean): CollapseDrawerState {
+    return remember {
+        CollapseDrawerState(
+            anim = AnimationState(if (initialExpand) 0f else 1f),
+            expand = mutableStateOf(initialExpand),
+        )
+    }
+}
+
+@Composable
+fun CollapseDrawer(
+    modifier: Modifier = Modifier,
+    collapseDrawerState: CollapseDrawerState = rememberCollapseDrawerState(false),
+    header: @Composable () -> Unit,
+    content: @Composable () -> Unit
+) {
+    val expand by collapseDrawerState.expand
+    LaunchedEffect(expand) {
+        if (expand) {
+            collapseDrawerState.anim.animateTo(0f)
+        } else {
+            collapseDrawerState.anim.animateTo(1f)
+        }
+    }
+    Column(modifier = modifier) {
+        var contentHeight by remember { mutableIntStateOf(0) }
+        Box {
+            header()
+        }
+        Box(modifier = Modifier.clipToBounds()) {
+            Box(modifier = Modifier.onSizeChanged {
+                contentHeight = it.height
+            }
+                .offset { IntOffset.Zero.copy(y = -(contentHeight * collapseDrawerState.anim.value).roundToInt()) }) {
+                content()
+            }
+        }
+    }
+}
+
+@Composable
+fun SettingsTitle(icon: DrawableIcon?, text: String) {
+    Row {
+        if (icon != null) {
+            Image(
+                painter = getPainter(icon),
+                contentDescription = text,
+                modifier = Modifier.size(24.dp).align(Alignment.CenterVertically)
+            )
+            Spacer(modifier = Modifier.width(8.dp).align(Alignment.CenterVertically))
+        }
+        Text(
+            text,
+            style = LocalTextStyle.current.copy(fontSize = 18.sp, fontWeight = FontWeight.Bold),
+            modifier = Modifier.align(Alignment.CenterVertically)
+        )
+    }
+}
+
+@Composable
+fun CollapsableClearButtons() {
+    val collapseDrawerState = rememberCollapseDrawerState(false)
+    val anim by collapseDrawerState.anim
+    CollapseDrawer(
+        modifier = Modifier.fillMaxWidth(),
+        collapseDrawerState = collapseDrawerState,
+        header = {
+            Row(modifier = Modifier.fillMaxWidth().clickable {
+                collapseDrawerState.expand.value = !collapseDrawerState.expand.value
+            }.padding(vertical = 10.dp)) {
+                SettingsTitle(DrawableIcon.DrawableClear, "清理功能")
+                Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
+                    Image(
+                        painter = getPainter(DrawableIcon.DrawableArrowDown),
+                        contentDescription = "expand icon",
+                        modifier = Modifier.size(24.dp).graphicsLayer {
+                            rotationZ = (1 - anim) * 180
+                        })
+                }
+            }
+        },
+        content = {
+            AppClearButtons()
+        })
 }
 
 @Composable
@@ -145,7 +258,7 @@ fun AppClearButtons() {
     val viewModel = settingsViewModel()
     var showClearCacheConfirmDialog by remember { mutableStateOf(false) }
     var showClearDataConfirmDialog by remember { mutableStateOf(false) }
-    Row(Modifier.fillMaxWidth()) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 10.dp)) {
         Button(onClick = {
             showClearCacheConfirmDialog = true
         }, modifier = Modifier.weight(1f).height(38.dp)) {
@@ -230,7 +343,7 @@ fun MainColorSlideBar() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ColorSlideBar(mainColor: Color, showDemo: Boolean = true, updateColor: (Color)->Unit) {
+fun ColorSlideBar(mainColor: Color, showDemo: Boolean = true, updateColor: (Color) -> Unit) {
     val redState = rememberSliderState(value = mainColor.red, valueRange = 0f..1f)
     val greenState = rememberSliderState(value = mainColor.green, valueRange = 0f..1f)
     val blueState = rememberSliderState(value = mainColor.blue, valueRange = 0f..1f)
@@ -243,7 +356,12 @@ fun ColorSlideBar(mainColor: Color, showDemo: Boolean = true, updateColor: (Colo
     }
     LaunchedEffect(redState.value, greenState.value, blueState.value, alphaState.value) {
         updateColor(
-            Color(red = redState.value, green = greenState.value, blue = blueState.value, alpha = alphaState.value)
+            Color(
+                red = redState.value,
+                green = greenState.value,
+                blue = blueState.value,
+                alpha = alphaState.value
+            )
         )
     }
     Column(modifier = Modifier.fillMaxWidth().wrapContentHeight()) {
@@ -329,17 +447,29 @@ fun AppBackgroundSlideBar() {
 
     Column(modifier = Modifier.fillMaxWidth()) {
         Box(modifier = Modifier.fillMaxWidth()) {
-            val startDotPosition by remember(backgroundConfigState, backgroundConfigState.startColor.startX, slideBarWidth) {
+            val startDotPosition by remember(
+                backgroundConfigState,
+                backgroundConfigState.startColor.startX,
+                slideBarWidth
+            ) {
                 derivedStateOf {
                     dotPosition(backgroundConfigState.startColor.startX).dp
                 }
             }
-            val endDotPosition by remember(backgroundConfigState, backgroundConfigState.endColor.startX, slideBarWidth) {
+            val endDotPosition by remember(
+                backgroundConfigState,
+                backgroundConfigState.endColor.startX,
+                slideBarWidth
+            ) {
                 derivedStateOf {
                     dotPosition(backgroundConfigState.endColor.startX).dp
                 }
             }
-            val middleDotPosition by remember(backgroundConfigState, backgroundConfigState.middleColor?.startX, slideBarWidth) {
+            val middleDotPosition by remember(
+                backgroundConfigState,
+                backgroundConfigState.middleColor?.startX,
+                slideBarWidth
+            ) {
                 derivedStateOf {
                     backgroundConfigState.middleColor?.let { middleColor ->
                         dotPosition(middleColor.startX).dp
@@ -501,6 +631,7 @@ fun AppBackgroundSlideBar() {
                         )
                     }
                 }
+
                 else -> {}
             }
         }

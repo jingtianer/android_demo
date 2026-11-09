@@ -8,6 +8,12 @@ import demoapp.composedemo.generated.resources.Res
 
 
 @Composable
+actual fun getClearIcon(): Painter = painterResource(R.drawable.clear)
+
+@Composable
+actual fun getArrowDownIcon(): Painter = painterResource(R.drawable.arrow_down)
+
+@Composable
 actual fun getLockIcon(): Painter = painterResource(R.drawable.lock)
 
 @Composable
