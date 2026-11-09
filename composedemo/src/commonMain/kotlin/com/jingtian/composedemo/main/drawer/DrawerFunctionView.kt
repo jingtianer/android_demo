@@ -14,6 +14,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jingtian.composedemo.base.AppThemeText
 import androidx.compose.ui.graphics.painter.Painter
+import com.jingtian.composedemo.main.gallery.GalleryFunctions
+
+@Composable
+fun DrawerFunctionView(galleryFunctions: GalleryFunctions, onClick: () -> Unit) {
+    DrawerFunctionView(onClick = onClick, painter = galleryFunctions.iconProvider(), text = galleryFunctions.functionName)
+}
 
 @Composable
 fun DrawerFunctionView(onClick: () -> Unit, painter: Painter, text: String) {

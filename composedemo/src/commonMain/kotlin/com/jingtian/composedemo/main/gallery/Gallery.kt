@@ -501,18 +501,6 @@ fun GalleryStateHolder.Gallery() {
                                 GalleryFunctions.DELETE_CIFS_FILE -> {
                                     DeleteRemoteFileFunctionView(this@Gallery, func) {}
                                 }
-                                GalleryFunctions.REFRESH_CIFS_FILE -> {
-                                    val authViewModel = authViewModel()
-                                    GalleryFunctionView(func) {
-                                        authViewModel.doAuth { authResult->
-                                            when (authResult) {
-                                                is AuthSuccess -> {
-                                                    viewModel.refreshRemote()
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
                                 else -> {}
                             }
                         }

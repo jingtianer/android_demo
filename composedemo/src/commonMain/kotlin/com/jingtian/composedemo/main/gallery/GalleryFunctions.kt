@@ -39,21 +39,18 @@ enum class GalleryFunctions(val functionName: String, val iconProvider: @Composa
             addAll(arrayOf(RENAME, ADD, IMPORT))
             if (BuildKonfig.isRemote) {
                 add(IMPORT_CIFS)
-                add(REFRESH_CIFS_FILE)
             }
         }
         val itemFunctions = buildList {
             addAll(arrayOf(EDIT, DELETE, MOVE))
             if (BuildKonfig.isRemote) {
                 add(DELETE_CIFS_FILE)
-                add(REFRESH_CIFS_FILE)
             }
         }
         val batchFunctions = buildList {
             addAll(arrayOf(DELETE, MOVE))
             if (BuildKonfig.isRemote) {
                 add(DELETE_CIFS_FILE)
-                add(REFRESH_CIFS_FILE)
             }
         }
     }
