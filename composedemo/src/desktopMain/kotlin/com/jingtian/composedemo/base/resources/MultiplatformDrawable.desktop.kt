@@ -5,6 +5,12 @@ import androidx.compose.ui.graphics.painter.Painter
 import org.jetbrains.compose.resources.painterResource
 import demoapp.composedemo.generated.resources.*
 
+@Composable
+actual fun getPaletteIcon(): Painter = painterResource(Res.drawable.palette)
+
+@Composable
+actual fun getBackgroundPaintIcon(): Painter = painterResource(Res.drawable.background_paint)
+
 
 @Composable
 actual fun getClearIcon(): Painter = painterResource(Res.drawable.clear)

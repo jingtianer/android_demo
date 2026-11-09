@@ -40,6 +40,8 @@ enum class DrawableIcon {
     DrawableLock,
     DrawableClear,
     DrawableArrowDown,
+    DrawablePalette,
+    DrawableBackgroundPaint,
 }
 
 @Composable
@@ -81,8 +83,16 @@ fun getPainter(icon: DrawableIcon): Painter {
         DrawableIcon.DrawableLock -> getLockIcon()
         DrawableIcon.DrawableClear -> getClearIcon()
         DrawableIcon.DrawableArrowDown -> getArrowDownIcon()
+        DrawableIcon.DrawablePalette -> getPaletteIcon()
+        DrawableIcon.DrawableBackgroundPaint -> getBackgroundPaintIcon()
     }
 }
+
+@Composable
+expect fun getPaletteIcon(): Painter
+
+@Composable
+expect fun getBackgroundPaintIcon(): Painter
 
 @Composable
 expect fun getClearIcon(): Painter

@@ -6,6 +6,11 @@ import androidx.compose.ui.res.painterResource
 import com.jingtian.composedemo.R
 import demoapp.composedemo.generated.resources.Res
 
+@Composable
+actual fun getPaletteIcon(): Painter = painterResource(R.drawable.palette)
+
+@Composable
+actual fun getBackgroundPaintIcon(): Painter = painterResource(R.drawable.palette)
 
 @Composable
 actual fun getClearIcon(): Painter = painterResource(R.drawable.clear)

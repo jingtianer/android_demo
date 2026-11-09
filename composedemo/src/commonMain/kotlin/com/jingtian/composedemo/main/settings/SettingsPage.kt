@@ -3,6 +3,7 @@ package com.jingtian.composedemo.main.settings
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.AnimationState
 import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.animateTo
@@ -70,11 +71,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.SubcomposeLayout
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -148,16 +152,23 @@ fun SettingsPage() {
                 )
             ) {
                 item {
-                    AppBackgroundSlideBar()
+                    SettingsCollapsableWrapper(DrawableIcon.DrawableBackgroundPaint, "背景调色盘") {
+                        AppBackgroundSlideBar()
+                    }
                 }
                 item {
-                    MainColorSlideBar()
+                    SettingsCollapsableWrapper(DrawableIcon.DrawablePalette, "调色盘") {
+                        Column {
+                            MainColorSlideBar()
+                            Spacer(modifier = Modifier.height(18.dp))
+                            ResetAllColor()
+                        }
+                    }
                 }
                 item {
-                    ResetAllColor()
-                }
-                item {
-                    CollapsableClearButtons()
+                    SettingsCollapsableWrapper(DrawableIcon.DrawableClear, "清理功能", initialExpand = false) {
+                        AppClearButtons()
+                    }
                 }
             }
         }
@@ -194,25 +205,44 @@ fun CollapseDrawer(
             collapseDrawerState.anim.animateTo(1f)
         }
     }
+    val progress = collapseDrawerState.anim.value
+
     Column(modifier = modifier) {
-        var contentHeight by remember { mutableIntStateOf(0) }
         Box {
             header()
         }
-        Box(modifier = Modifier.clipToBounds()) {
-            Box(modifier = Modifier.onSizeChanged {
-                contentHeight = it.height
-            }
-                .offset { IntOffset.Zero.copy(y = -(contentHeight * collapseDrawerState.anim.value).roundToInt()) }) {
-                content()
-            }
+
+        // ✅ clipToBounds 放在最外层Box，外部裁剪
+        Box(
+            modifier = Modifier
+                .clipToBounds()
+                .layout { measurable, constraints ->
+                    // 强制无限高度测量content，拿到完整原生高度
+                    val placeable = measurable.measure(constraints.copy(maxHeight = Constraints.Infinity))
+                    val fullHeight = placeable.height
+                    val visibleHeight = (fullHeight * (1 - progress)).roundToInt()
+
+                    // 当前容器自身高度随动画收缩，折叠时0，不占布局空间
+                    layout(placeable.width, visibleHeight) {
+                        if (visibleHeight > 0) {
+                            val offsetY = -(fullHeight * progress).roundToInt()
+                            placeable.place(0, offsetY)
+                        }
+                    }
+                }
+        ) {
+            // content 原样，内部不加任何clip、offset、onSizeChanged
+            content()
         }
     }
 }
 
 @Composable
-fun SettingsTitle(icon: DrawableIcon?, text: String) {
-    Row {
+fun SettingsTitle(icon: DrawableIcon?, text: String, collapseDrawerState: CollapseDrawerState) {
+    val anim by collapseDrawerState.anim
+    Row(modifier = Modifier.fillMaxWidth().clickable {
+        collapseDrawerState.expand.value = !collapseDrawerState.expand.value
+    }.padding(vertical = 10.dp)) {
         if (icon != null) {
             Icon(
                 painter = getPainter(icon),
@@ -226,34 +256,15 @@ fun SettingsTitle(icon: DrawableIcon?, text: String) {
             style = LocalTextStyle.current.copy(fontSize = 18.sp, fontWeight = FontWeight.Bold),
             modifier = Modifier.align(Alignment.CenterVertically)
         )
+        Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
+            Icon(
+                painter = getPainter(DrawableIcon.DrawableArrowDown),
+                contentDescription = "expand icon",
+                modifier = Modifier.size(24.dp).graphicsLayer {
+                    rotationZ = (1 - anim) * 180
+                })
+        }
     }
-}
-
-@Composable
-fun CollapsableClearButtons() {
-    val collapseDrawerState = rememberCollapseDrawerState(false)
-    val anim by collapseDrawerState.anim
-    CollapseDrawer(
-        modifier = Modifier.fillMaxWidth(),
-        collapseDrawerState = collapseDrawerState,
-        header = {
-            Row(modifier = Modifier.fillMaxWidth().clickable {
-                collapseDrawerState.expand.value = !collapseDrawerState.expand.value
-            }.padding(vertical = 10.dp)) {
-                SettingsTitle(DrawableIcon.DrawableClear, "清理功能")
-                Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
-                    Icon(
-                        painter = getPainter(DrawableIcon.DrawableArrowDown),
-                        contentDescription = "expand icon",
-                        modifier = Modifier.size(24.dp).graphicsLayer {
-                            rotationZ = (1 - anim) * 180
-                        })
-                }
-            }
-        },
-        content = {
-            AppClearButtons()
-        })
 }
 
 @Composable
@@ -412,6 +423,18 @@ fun ColorSlideBar(mainColor: Color, showDemo: Boolean = true, updateColor: (Colo
             }
         }
     }
+}
+
+@Composable
+fun SettingsCollapsableWrapper(icon: DrawableIcon?, title: String, initialExpand: Boolean = true, content: @Composable () -> Unit) {
+    val collapseDrawerState = rememberCollapseDrawerState(initialExpand = initialExpand)
+    CollapseDrawer(modifier = Modifier.fillMaxWidth(), collapseDrawerState = collapseDrawerState, header = {
+        SettingsTitle(icon, title, collapseDrawerState)
+    }, content = {
+        Box(modifier = Modifier.padding(vertical = 10.dp)) {
+            content()
+        }
+    })
 }
 
 @Composable
