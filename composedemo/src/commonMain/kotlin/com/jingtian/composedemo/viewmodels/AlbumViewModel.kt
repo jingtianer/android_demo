@@ -53,9 +53,13 @@ class AlbumViewModel : ViewModel() {
             this.value += 1
         }
 
+        private var inst: AlbumViewModel? = null
+
         val viewModelFactory = viewModelFactory {
             initializer {
-                AlbumViewModel()
+                inst ?: AlbumViewModel().also {
+                    inst = it
+                }
             }
         }
 
