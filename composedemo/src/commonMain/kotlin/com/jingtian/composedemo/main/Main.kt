@@ -68,6 +68,7 @@ import com.jingtian.composedemo.main.route.LocalRouterController
 import com.jingtian.composedemo.main.route.MainRouterController
 import com.jingtian.composedemo.main.route.Settings
 import com.jingtian.composedemo.main.settings.SettingsPage
+import com.jingtian.composedemo.multiplatform.SoftRef
 import com.jingtian.composedemo.ui.theme.LocalAppPalette
 import com.jingtian.composedemo.utils.observeAsState
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
@@ -225,7 +226,7 @@ fun Main(
     val snackBarMessage by viewModel.currentBackgroundTask.observeAsState()
 
     val galleryStateHolderMap = remember(menuItemsEntity) {
-        mutableStateMapOf<Long, WeakRef<GalleryStateHolder>>()
+        mutableStateMapOf<Long, SoftRef<GalleryStateHolder>>()
     }
     var showSnackBar by remember { mutableStateOf(snackBarMessage != null) }
     var showSnackBarAnim by remember { mutableStateOf(true) }

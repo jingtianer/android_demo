@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshots.SnapshotStateMap
+import com.jingtian.composedemo.multiplatform.SoftRef
 import com.jingtian.composedemo.multiplatform.WeakRef
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.withLock
@@ -40,6 +41,12 @@ fun CharSequence.splitByWhiteSpace() = splitBy(Char::isWhitespace)
 fun <K, V : Any> MutableMap<K, WeakRef<V>>.getOrPutRef(key: K, default: ()->V): V {
     return get(key)?.get() ?: default().also {
         put(key, WeakRef(it))
+    }
+}
+
+fun <K, V : Any> MutableMap<K, SoftRef<V>>.getOrPutSoftRef(key: K, default: ()->V): V {
+    return get(key)?.get() ?: default().also {
+        put(key, SoftRef(it))
     }
 }
 

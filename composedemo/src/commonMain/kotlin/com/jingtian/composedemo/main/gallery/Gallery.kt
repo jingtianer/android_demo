@@ -111,13 +111,15 @@ import kotlinx.coroutines.withContext
 import com.jingtian.composedemo.base.resources.getPainter
 import com.jingtian.composedemo.main.dialog.ImportDocumentDialog
 import com.jingtian.composedemo.main.dialog.rememberDocumentDialogState
+import com.jingtian.composedemo.multiplatform.SoftRef
 import com.jingtian.composedemo.utils.AppTheme
+import com.jingtian.composedemo.utils.getOrPutSoftRef
 import com.jingtian.composedemo.viewmodels.AuthSuccess
 import com.jingtian.composedemo.viewmodels.authViewModel
 import kotlinx.coroutines.IO
 
 @Composable
-fun Gallery(galleryStateHolderMap: SnapshotStateMap<Long, WeakRef<GalleryStateHolder>>, album: IndexedValue<Album>?, albumList: List<Album>, drawerState: DrawerState) {
+fun Gallery(galleryStateHolderMap: SnapshotStateMap<Long, SoftRef<GalleryStateHolder>>, album: IndexedValue<Album>?, albumList: List<Album>, drawerState: DrawerState) {
     if (album == null) {
         return
     }
@@ -130,7 +132,7 @@ fun Gallery(galleryStateHolderMap: SnapshotStateMap<Long, WeakRef<GalleryStateHo
     )
     val viewModel: AlbumViewModel = viewModel(factory = AlbumViewModel.viewModelFactory)
     val galleryStateHolder = remember(album, albumList) {
-        galleryStateHolderMap.getOrPutRef(albumId) {
+        galleryStateHolderMap.getOrPutSoftRef(albumId) {
             GalleryStateHolder(album, albumList, drawerState, viewModel, galleryDpConstants)
         }
     }

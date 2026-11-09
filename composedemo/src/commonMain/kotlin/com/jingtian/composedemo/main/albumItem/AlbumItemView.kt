@@ -64,7 +64,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.jingtian.composedemo.base.resources.getPainter
 import com.jingtian.composedemo.base.resources.DrawableIcon
+import com.jingtian.composedemo.multiplatform.SoftRef
 import com.jingtian.composedemo.multiplatform.logD
+import com.jingtian.composedemo.utils.getOrPutSoftRef
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
 import kotlinx.coroutines.IO
 
@@ -190,7 +192,7 @@ class AlbumItemViewStateHolder(
 
 @Composable
 fun AlbumItemView(
-    albumViewMap: SnapshotStateMap<Triple<Long, Long, Long>, WeakRef<AlbumItemViewStateHolder>>,
+    albumViewMap: SnapshotStateMap<Triple<Long, Long, Long>, SoftRef<AlbumItemViewStateHolder>>,
     albumItemRelation: AlbumItemRelation,
     size: Dp,
     padding: Dp,
@@ -203,7 +205,7 @@ fun AlbumItemView(
     val dpSize = size.dpValue()
     val viewModel: AlbumViewModel = viewModel(factory = AlbumViewModel.viewModelFactory)
     val stateHolder = remember(itemId) {
-        albumViewMap.getOrPutRef(itemId) {
+        albumViewMap.getOrPutSoftRef(itemId) {
 //                Log.d("jingtian", "AlbumItemView: getOrPut ${itemId}, ${albumViewMap.hashCode()}")
             AlbumItemViewStateHolder(
                 viewModel,

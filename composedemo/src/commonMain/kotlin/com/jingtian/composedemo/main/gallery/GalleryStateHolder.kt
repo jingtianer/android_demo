@@ -18,6 +18,7 @@ import com.jingtian.composedemo.dao.model.ItemRank
 import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
 import com.jingtian.composedemo.main.albumItem.AlbumItemViewStateHolder
 import com.jingtian.composedemo.main.remote.ImportRemoteDialogStateHolder
+import com.jingtian.composedemo.multiplatform.SoftRef
 import com.jingtian.composedemo.multiplatform.logD
 import com.jingtian.composedemo.utils.dpValue
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
@@ -85,7 +86,7 @@ class GalleryStateHolder(val album: IndexedValue<Album>, val albumList: List<Alb
     var showDeleteRemoteFileConfirmDialog = mutableStateOf(false)
     var showImportRemoteDialogStateHolder = mutableStateOf(ImportRemoteDialogStateHolder())
 
-    val albumViewMap = mutableStateMapOf<Triple<Long, Long, Long>, WeakRef<AlbumItemViewStateHolder>>()
+    val albumViewMap = mutableStateMapOf<Triple<Long, Long, Long>, SoftRef<AlbumItemViewStateHolder>>()
 
     val filterConfig = mutableStateOf(FilterConfig())
     var gallerySearchWord by mutableStateOf("")

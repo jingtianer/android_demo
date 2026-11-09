@@ -10,3 +10,9 @@ actual class WeakRef<T : Any> actual constructor(value: T) {
         return ref.get()
     }
 }
+
+actual class SoftRef<T : Any> actual constructor(val value: T) {
+    actual fun get(): T? {
+        return value
+    }
+}
