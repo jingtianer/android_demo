@@ -128,15 +128,8 @@ fun ImportDocumentDialog(dialogState: ImportDocumentDialogState, onDismiss: () -
     var isUploadingFile by dialogState.isUploadingFile
     val viewModel: AlbumViewModel = albumViewModel()
 
-    val scope = rememberCoroutineScope()
     val importDirLauncher by rememberDocumentTreePicker { uri->
         dialogState.selectedUri.value = uri
-        scope.launch {
-            val path = uri?.path()
-//            logD("ImportDocumentDialog") {
-//                "import: $path"
-//            }
-        }
     }
 
     AppThemeDialog(
