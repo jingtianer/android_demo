@@ -56,9 +56,15 @@ object SettingsViewModel : SingletonViewModel() {
 
     fun clearStorage() {
         CoroutineUtils.runIOTask({
-            getFileStorageRootDir().deleteRecursively()
-            getFileCacheStorageRootDir().deleteRecursively()
-            getDBStorageRootDir().deleteRecursively()
+            getFileStorageRootDir().deleteRecursively {
+                sendMessage("正在删除: $it")
+            }
+            getFileCacheStorageRootDir().deleteRecursively {
+                sendMessage("正在删除: $it")
+            }
+            getDBStorageRootDir().deleteRecursively {
+                sendMessage("正在删除: $it")
+            }
         }, onFailure = {
             sendMessage("清空失败")
         }) {
@@ -68,7 +74,9 @@ object SettingsViewModel : SingletonViewModel() {
 
     fun clearCache() {
         CoroutineUtils.runIOTask({
-            getFileCacheStorageRootDir().deleteRecursively()
+            getFileCacheStorageRootDir().deleteRecursively {
+                sendMessage("正在删除: $it")
+            }
         }, onFailure = {
             sendMessage("清空失败")
         }) {

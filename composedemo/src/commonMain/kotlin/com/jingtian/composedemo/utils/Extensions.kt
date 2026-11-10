@@ -71,6 +71,21 @@ fun Path.deleteRecursively() {
     }
 }
 
+fun Path.deleteRecursively(onDelete: (String) -> Unit) {
+    if (runCatching { isFile }.getOrDefault(false)) {
+        SystemFileSystem.delete(this)
+        onDelete("$this")
+    } else if (kotlin.runCatching { isDirectory }.getOrDefault(false)) {
+        kotlin.runCatching {
+            SystemFileSystem.list(this).forEach { child->
+                child.deleteRecursively()
+            }
+        }
+        SystemFileSystem.delete(this, mustExist = false)
+        onDelete("$this")
+    }
+}
+
 fun Path.mkdirs() = SystemFileSystem.createDirectories(this, true)
 
 fun Path.createNewFile() {
