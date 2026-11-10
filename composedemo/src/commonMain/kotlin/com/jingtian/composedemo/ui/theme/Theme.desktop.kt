@@ -153,9 +153,6 @@ val LocalAppColorScheme = compositionLocalOf(structuralEqualityPolicy()) { Light
 val goldenRatio = 2f / (sqrt(5f) + 1)
 
 @Composable
-expect fun Modifier.appBackgroundV1(heightScale: Float = 1 - goldenRatio): Modifier
-
-@Composable
 fun Modifier.appBackgroundV2(heightScale: Float = 1 - goldenRatio): Modifier {
     val backgroundColor = LocalAppColorScheme.current.background
     val localHorizontalGradient = LocalAppPalette.current

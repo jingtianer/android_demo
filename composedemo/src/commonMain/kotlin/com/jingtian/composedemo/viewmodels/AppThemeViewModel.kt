@@ -36,7 +36,7 @@ object AppThemeViewModel : SingletonViewModel() {
 
     fun setCurrentTheme(appTheme: AppTheme) {
         currentAppThemeState.value = appTheme
-        launch {
+        viewModelScope.launch {
             AppTheme.setAppTheme(appTheme)
         }
     }

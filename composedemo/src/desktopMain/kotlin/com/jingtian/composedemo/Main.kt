@@ -62,14 +62,6 @@ fun ApplicationScope.MainWindow() {
                 )
             ) {
                 PasswordGuardedMain()
-                val viewModel: AppThemeViewModel = appThemeViewModel()
-                val currentAppTheme by remember { viewModel.currentAppTheme }
-                val isSystemDark = isSystemInDarkTheme()
-                LaunchedEffect(currentAppTheme) {
-                    AppTheme.setAppTheme(currentAppTheme)
-                    val isDark = AppTheme.isDark(currentAppTheme, isSystemDark)
-                    this@DemoAppTheme.setCurrentDark(isDark)
-                }
             }
         }
 

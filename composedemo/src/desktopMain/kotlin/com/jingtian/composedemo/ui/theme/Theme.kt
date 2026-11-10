@@ -14,11 +14,6 @@ import com.jingtian.composedemo.viewmodels.AppThemeViewModel
 import com.jingtian.composedemo.viewmodels.appThemeViewModel
 
 
-@Composable
-actual fun Modifier.appBackgroundV1(heightScale: Float): Modifier {
-    return this
-}
-
 data class DesktopConst(
     val screenWidthDp: Dp = 0.dp,
     val screenHeightDp: Dp = 0.dp,

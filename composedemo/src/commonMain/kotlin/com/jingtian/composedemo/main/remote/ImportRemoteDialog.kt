@@ -49,6 +49,7 @@ import com.jingtian.composedemo.main.drawer.DrawerFunctionView
 import com.jingtian.composedemo.ui.theme.LocalAppPalette
 import com.jingtian.composedemo.ui.theme.LocalAppUIConstants
 import com.jingtian.composedemo.ui.theme.LocalMiddleButtonConfig
+import com.jingtian.composedemo.utils.CoroutineUtils
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
 import com.jingtian.composedemo.viewmodels.AuthParams
 import com.jingtian.composedemo.viewmodels.AuthSuccess
@@ -218,9 +219,9 @@ fun ImportRemoteDialogStateHolder.ImportRemoteDialog(album: Album, onDismiss: ()
                     authViewModel.doAuth { authResult ->
                         when (authResult) {
                             is AuthSuccess -> {
-                                viewModel.viewModelScope.launch {
+                                CoroutineUtils.runIOTask({
                                     serverItem.import(viewModel, album)
-                                }
+                                })
                             }
                         }
                     }
