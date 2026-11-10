@@ -53,6 +53,7 @@ import com.jingtian.composedemo.viewmodels.AlbumViewModel
 import com.jingtian.composedemo.viewmodels.AuthParams
 import com.jingtian.composedemo.viewmodels.AuthSuccess
 import com.jingtian.composedemo.viewmodels.AuthViewModel
+import com.jingtian.composedemo.viewmodels.albumViewModel
 import com.jingtian.composedemo.viewmodels.authViewModel
 import kotlinx.coroutines.launch
 
@@ -188,7 +189,7 @@ fun ImportRemoteDialogStateHolder.ImportRemoteDialog(album: Album, onDismiss: ()
             onDismiss()
         }
     ) { _, actionButtons ->
-        val viewModel: AlbumViewModel = viewModel(factory = AlbumViewModel.viewModelFactory)
+        val viewModel: AlbumViewModel = albumViewModel()
         val authViewModel: AuthViewModel = authViewModel()
         LazyColumn(
             Modifier

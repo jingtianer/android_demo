@@ -23,6 +23,7 @@ import com.jingtian.composedemo.ui.widget.StarRateView
 import com.jingtian.composedemo.utils.AppTheme
 import com.jingtian.composedemo.utils.ViewUtils.commonConfig
 import com.jingtian.composedemo.viewmodels.AppThemeViewModel
+import com.jingtian.composedemo.viewmodels.appThemeViewModel
 
 @Composable
 actual fun ColumnScope.ScoreStar(itemScore: Float, padding: Dp) {
@@ -33,7 +34,7 @@ actual fun ColumnScope.ScoreStar(itemScore: Float, padding: Dp) {
             .wrapContentHeight()
             .align(Alignment.CenterHorizontally)
     ) {
-        val viewModel: AppThemeViewModel = viewModel(factory = AppThemeViewModel.viewModelFactory)
+        val viewModel: AppThemeViewModel = appThemeViewModel()
         val appTheme by remember { viewModel.currentAppTheme }
         val isSystemDark = isSystemInDarkTheme()
         val isDark = AppTheme.isDark(appTheme, isSystemDark)

@@ -23,6 +23,7 @@ import com.jingtian.composedemo.ui.theme.LocalDesktopConst
 import com.jingtian.composedemo.utils.AppTheme
 import com.jingtian.composedemo.utils.DesktopStorage
 import com.jingtian.composedemo.viewmodels.AppThemeViewModel
+import com.jingtian.composedemo.viewmodels.appThemeViewModel
 
 fun main(args: Array<String>) {
     LaunchTasks.onLaunch()
@@ -61,7 +62,7 @@ fun ApplicationScope.MainWindow() {
                 )
             ) {
                 PasswordGuardedMain()
-                val viewModel: AppThemeViewModel = viewModel(factory = AppThemeViewModel.viewModelFactory)
+                val viewModel: AppThemeViewModel = appThemeViewModel()
                 val currentAppTheme by remember { viewModel.currentAppTheme }
                 val isSystemDark = isSystemInDarkTheme()
                 LaunchedEffect(currentAppTheme) {

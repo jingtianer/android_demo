@@ -1,7 +1,6 @@
 package com.jingtian.composedemo.base
 
 import androidx.compose.runtime.Composable
-import com.jingtian.composedemo.ui.theme.LocalDesktopConst
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.useContents
 import platform.UIKit.UIScreen

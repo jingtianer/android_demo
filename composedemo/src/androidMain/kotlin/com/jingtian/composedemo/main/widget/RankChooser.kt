@@ -17,10 +17,11 @@ import com.jingtian.composedemo.dao.model.ItemRank
 import com.jingtian.composedemo.ui.widget.RankTypeChooser
 import com.jingtian.composedemo.utils.AppTheme
 import com.jingtian.composedemo.viewmodels.AppThemeViewModel
+import com.jingtian.composedemo.viewmodels.appThemeViewModel
 
 @Composable
 actual fun ColumnScope.RankChooser(itemRank: ItemRank, onRankUpdate: (ItemRank)->Unit) {
-    val viewModel: AppThemeViewModel = viewModel(factory = AppThemeViewModel.viewModelFactory)
+    val viewModel: AppThemeViewModel = appThemeViewModel()
     val appTheme by remember { viewModel.currentAppTheme }
     val isSystemDark = isSystemInDarkTheme()
     val isDark = AppTheme.isDark(appTheme, isSystemDark)

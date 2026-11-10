@@ -27,10 +27,11 @@ import com.jingtian.composedemo.dao.model.Album
 import com.jingtian.composedemo.ui.theme.LocalAppPalette
 import com.jingtian.composedemo.ui.theme.LocalAppUIConstants
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
+import com.jingtian.composedemo.viewmodels.albumViewModel
 
 @Composable
 fun AddOrEditAlbumDialog(album: Album? = null, onDismiss: () -> Unit) {
-    val viewModel: AlbumViewModel = viewModel(factory = AlbumViewModel.viewModelFactory)
+    val viewModel: AlbumViewModel = albumViewModel()
     var albumName by remember { mutableStateOf(album?.albumName ?: "") }
     val focusRequester = remember { FocusRequester() }
     AppThemeDialog(

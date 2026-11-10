@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.jingtian.composedemo.utils.AppTheme
 import com.jingtian.composedemo.viewmodels.AppThemeViewModel
+import com.jingtian.composedemo.viewmodels.appThemeViewModel
 import demoapp.composedemo.generated.resources.*
 import org.jetbrains.compose.resources.painterResource
 import kotlin.math.max
@@ -26,7 +27,7 @@ fun DesktopStarRateView(
     initialScore: Float = 0f,
     onScoreChange: (Float) -> Unit = {}
 ) {
-    val appThemeViewModel: AppThemeViewModel = viewModel(factory = AppThemeViewModel.viewModelFactory)
+    val appThemeViewModel: AppThemeViewModel = appThemeViewModel()
     val appTheme by remember { appThemeViewModel.currentAppTheme }
     val isSystemDark = isSystemInDarkTheme()
     val isNight = AppTheme.isDark(appTheme, isSystemDark)

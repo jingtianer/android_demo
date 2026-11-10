@@ -12,6 +12,8 @@ import com.jingtian.composedemo.utils.deleteRecursively
 import com.jingtian.composedemo.utils.getDBStorageRootDir
 import com.jingtian.composedemo.utils.getFileCacheStorageRootDir
 import com.jingtian.composedemo.utils.getFileStorageRootDir
+import com.jingtian.composedemo.viewmodels.SingletonViewModel
+import com.jingtian.composedemo.viewmodels.singletonViewModelFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.Job
@@ -19,14 +21,11 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class SettingsViewModel : ViewModel() {
+fun settingsViewModel() = SettingsViewModel
 
-    companion object {
-        val factory = viewModelFactory { initializer { SettingsViewModel() } }
-        @Composable
-        fun settingsViewModel() = viewModel<SettingsViewModel>(factory = factory)
-        private const val COUNTDOWN_COUNT = 3
-    }
+object SettingsViewModel : SingletonViewModel() {
+
+    private const val COUNTDOWN_COUNT = 3
 
     var snackBarMessage = mutableStateOf<String?>(null)
 

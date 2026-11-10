@@ -45,28 +45,18 @@ expect suspend fun traverseUri(
     sendMessage: (String) -> Unit
 )
 
-class AlbumViewModel : ViewModel() {
-    companion object {
-        private const val TAG = "AlbumViewModel"
+fun albumViewModel() = AlbumViewModel
 
-        fun MutableLongState.notifyChange() {
-            this.value += 1
-        }
 
-        private var inst: AlbumViewModel? = null
+fun MutableLongState.notifyChange() {
+    this.value += 1
+}
 
-        val viewModelFactory = viewModelFactory {
-            initializer {
-                inst ?: AlbumViewModel().also {
-                    inst = it
-                }
-            }
-        }
+@Composable
+fun MutableLongState.observeAsState() = remember { this }
 
-        @Composable
-        fun MutableLongState.observeAsState() = remember { this }
-
-    }
+object AlbumViewModel : SingletonViewModel() {
+    private const val TAG = "AlbumViewModel"
 
     val albumDao = DataBase.dbImpl.getAlbumDao()
     val albumItemDao = DataBase.dbImpl.getAlbumItemDao()

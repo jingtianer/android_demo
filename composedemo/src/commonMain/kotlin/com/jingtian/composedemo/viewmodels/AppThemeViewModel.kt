@@ -6,14 +6,8 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.jingtian.composedemo.utils.AppTheme
 
-class AppThemeViewModel : ViewModel() {
-    val currentAppTheme = mutableStateOf(AppTheme.currentAppTheme())
+fun appThemeViewModel() = AppThemeViewModel
 
-    companion object {
-        val viewModelFactory = viewModelFactory {
-            initializer {
-                AppThemeViewModel()
-            }
-        }
-    }
+object AppThemeViewModel : SingletonViewModel() {
+    val currentAppTheme = mutableStateOf(AppTheme.currentAppTheme())
 }

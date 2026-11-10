@@ -19,6 +19,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.jingtian.composedemo.R
 import com.jingtian.composedemo.utils.AppTheme
 import com.jingtian.composedemo.viewmodels.AppThemeViewModel
+import com.jingtian.composedemo.viewmodels.appThemeViewModel
 import kotlin.math.roundToInt
 
 private fun Modifier.appBackground(context: Context, @DrawableRes resource: Int, widthScale: Float = 1f, heightScale : Float = 1-goldenRatio): Modifier {
@@ -36,7 +37,7 @@ private fun Modifier.appBackground(context: Context, @DrawableRes resource: Int,
 
 @Composable
 actual fun Modifier.appBackgroundV1(heightScale: Float): Modifier {
-    val viewModel: AppThemeViewModel = viewModel(factory = AppThemeViewModel.viewModelFactory)
+    val viewModel: AppThemeViewModel = appThemeViewModel()
     val currentTheme by remember { viewModel.currentAppTheme }
     val isSystemDark = isSystemInDarkTheme()
     return appBackground(LocalContext.current, if (AppTheme.isDark(currentTheme, isSystemDark)) R.drawable.rectangle_16_night else R.drawable.rectangle_16, heightScale = heightScale)

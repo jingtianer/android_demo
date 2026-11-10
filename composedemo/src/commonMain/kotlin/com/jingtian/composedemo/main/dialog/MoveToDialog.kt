@@ -29,11 +29,12 @@ import com.jingtian.composedemo.main.drawer.ImmutableDrawerMenuItem
 import com.jingtian.composedemo.ui.theme.LocalAppPalette
 import com.jingtian.composedemo.ui.theme.LocalAppUIConstants
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
+import com.jingtian.composedemo.viewmodels.albumViewModel
 
 @Composable
 fun MoveToDialog(albumItemRelation: Collection<AlbumItemRelation>, album: Album, albumList: List<Album>, onDismiss: () -> Unit) {
     var currentSelectedAlbum by remember { mutableStateOf(album) }
-    val viewModel: AlbumViewModel = viewModel(factory = AlbumViewModel.viewModelFactory)
+    val viewModel: AlbumViewModel = albumViewModel()
     AppThemeDialog(
         Modifier
             .fillMaxWidth(LocalAppUIConstants.current.dialogPercent)

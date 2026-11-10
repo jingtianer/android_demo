@@ -104,7 +104,6 @@ import com.jingtian.composedemo.ui.theme.appBackground
 import com.jingtian.composedemo.utils.dpValue
 import com.jingtian.composedemo.utils.getOrPutRef
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
-import com.jingtian.composedemo.viewmodels.AlbumViewModel.Companion.observeAsState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -116,7 +115,9 @@ import com.jingtian.composedemo.multiplatform.SoftRef
 import com.jingtian.composedemo.utils.AppTheme
 import com.jingtian.composedemo.utils.getOrPutSoftRef
 import com.jingtian.composedemo.viewmodels.AuthSuccess
+import com.jingtian.composedemo.viewmodels.albumViewModel
 import com.jingtian.composedemo.viewmodels.authViewModel
+import com.jingtian.composedemo.viewmodels.observeAsState
 import kotlinx.coroutines.IO
 
 @Composable
@@ -131,7 +132,7 @@ fun Gallery(galleryStateHolderMap: SnapshotStateMap<Long, SoftRef<GalleryStateHo
         scrollBarHeightDp = 64.dp.dpValue(),
         scrollAreaWidthDp = scrollAreaWidth.dpValue()
     )
-    val viewModel: AlbumViewModel = viewModel(factory = AlbumViewModel.viewModelFactory)
+    val viewModel: AlbumViewModel = albumViewModel()
     val galleryStateHolder = remember(album, albumList) {
         galleryStateHolderMap.getOrPutSoftRef(albumId) {
             GalleryStateHolder(album, albumList, drawerState, viewModel, galleryDpConstants)

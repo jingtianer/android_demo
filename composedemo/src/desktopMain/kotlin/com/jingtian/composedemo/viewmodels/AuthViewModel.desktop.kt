@@ -11,10 +11,9 @@ actual class AuthSuccess: AuthResult()
 actual class AuthFailed: AuthResult()
 actual class AuthError: AuthResult()
 
-@Composable
-actual fun authViewModel(): AuthViewModel = viewModel { AuthViewModelImpl() }
+actual fun authViewModel(): AuthViewModel = AuthViewModelImpl
 
-class AuthViewModelImpl : AuthViewModel() {
+object AuthViewModelImpl : AuthViewModel() {
     override fun doAuth(authParams: AuthParams, onAuthResult: (AuthResult)->Unit) {
         onAuthResult(AuthSuccess())
     }

@@ -37,6 +37,7 @@ import com.jingtian.composedemo.ui.theme.LocalAppPalette
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
 import kotlinx.coroutines.Job
 import com.jingtian.composedemo.base.resources.getPainter
+import com.jingtian.composedemo.viewmodels.albumViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -46,7 +47,7 @@ fun DrawerMenuItem(
 ) {
     var deleteConfirmDialogState by remember { mutableStateOf(false) }
     var albumName by remember { mutableStateOf(item.albumName) }
-    val viewModel: AlbumViewModel = viewModel(factory = AlbumViewModel.viewModelFactory)
+    val viewModel: AlbumViewModel = albumViewModel()
     val size = 36.dp
     val modifier = Modifier
         .fillMaxWidth()

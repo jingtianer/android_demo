@@ -66,12 +66,13 @@ import kotlinx.coroutines.withContext
 import kotlin.math.min
 import com.jingtian.composedemo.base.resources.getPainter
 import com.jingtian.composedemo.base.resources.DrawableIcon
+import com.jingtian.composedemo.viewmodels.albumViewModel
 import kotlinx.coroutines.IO
 
 @Composable
 fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumData: List<Album>, totalLabelList: List<String>, onDismiss: ()->Unit) {
     val album = albumItemRelation.albumItem
-    val viewModel : AlbumViewModel = viewModel(factory = AlbumViewModel.viewModelFactory)
+    val viewModel : AlbumViewModel = albumViewModel()
 
     var pickedImage by remember { mutableStateOf<ImageBitmap?>(null) }
     var itemName by remember { mutableStateOf(album.itemName) }

@@ -20,6 +20,7 @@ import com.jingtian.composedemo.navigation.rememberFileShare
 import com.jingtian.composedemo.utils.share.ShareUtils
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
 import com.jingtian.composedemo.viewmodels.AuthSuccess
+import com.jingtian.composedemo.viewmodels.albumViewModel
 import com.jingtian.composedemo.viewmodels.authViewModel
 import kotlinx.coroutines.launch
 
@@ -38,7 +39,7 @@ fun DrawerFunctionArea() {
 
     if (BuildKonfig.isRemote) {
         val authViewModel = authViewModel()
-        val viewModel: AlbumViewModel = viewModel(factory = AlbumViewModel.viewModelFactory)
+        val viewModel: AlbumViewModel = albumViewModel()
         DrawerFunctionView(GalleryFunctions.REFRESH_CIFS_FILE) {
             authViewModel.doAuth { authResult->
                 when (authResult) {
@@ -61,7 +62,7 @@ fun DrawerFunctionArea() {
 
 @Composable
 fun ShareDrawerFunctions() {
-    val viewModel: AlbumViewModel = viewModel(factory = AlbumViewModel.viewModelFactory)
+    val viewModel: AlbumViewModel = albumViewModel()
     val scope = rememberCoroutineScope()
     val documentPicker by rememberDocumentPicker { uri->
         uri ?: return@rememberDocumentPicker

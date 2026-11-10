@@ -21,12 +21,13 @@ import com.jingtian.composedemo.ui.widget.RankTypeChooser
 import com.jingtian.composedemo.utils.AppTheme
 import com.jingtian.composedemo.utils.ViewUtils.dpValue
 import com.jingtian.composedemo.viewmodels.AppThemeViewModel
+import com.jingtian.composedemo.viewmodels.appThemeViewModel
 import kotlin.math.max
 import kotlin.math.roundToInt
 
 @Composable
 actual fun BoxScope.RankLabel(itemRank: ItemRank, padding: Dp) {
-    val appThemeViewModel: AppThemeViewModel = viewModel(factory = AppThemeViewModel.viewModelFactory)
+    val appThemeViewModel: AppThemeViewModel = appThemeViewModel()
     val appTheme by remember { appThemeViewModel.currentAppTheme }
     val isSystemDark = isSystemInDarkTheme()
     val isNight = AppTheme.isDark(appTheme, isSystemDark)

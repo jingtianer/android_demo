@@ -63,7 +63,8 @@ import com.jingtian.composedemo.ui.theme.LocalAppUIConstants
 import com.jingtian.composedemo.ui.theme.goldenRatio
 import com.jingtian.composedemo.utils.splitBy
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
-import com.jingtian.composedemo.viewmodels.AlbumViewModel.Companion.notifyChange
+import com.jingtian.composedemo.viewmodels.albumViewModel
+import com.jingtian.composedemo.viewmodels.notifyChange
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -181,7 +182,7 @@ fun FilterPanel(
     val horizontalPadding = 6.dp
     val verticalPadding = 6.dp
     val horizontalInnerPadding = LocalAppUIConstants.current.filterLabelPaddings[2]
-    val viewModel: AlbumViewModel = viewModel(factory = AlbumViewModel.viewModelFactory)
+    val viewModel: AlbumViewModel = albumViewModel()
     LaunchedEffect(labelList) {
         filterConfig.value.updateSearchWord(filterConfig.value.searchWord.value, labelList)
     }

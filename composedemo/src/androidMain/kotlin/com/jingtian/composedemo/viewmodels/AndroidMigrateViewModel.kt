@@ -20,16 +20,11 @@ actual class AuthSuccess(val result: BiometricPrompt.AuthenticationResult): Auth
 actual class AuthFailed: AuthResult()
 actual class AuthError(val errorCode: Int, val errString: CharSequence): AuthResult()
 
-@Composable
 actual fun authViewModel(): AuthViewModel {
-    return AndroidMigrateViewModel.inst
+    return AndroidMigrateViewModel
 }
 
-class AndroidMigrateViewModel : AuthViewModel() {
-    companion object {
-        val factory = viewModelFactory { initializer<AuthViewModel> { AndroidMigrateViewModel() } }
-        val inst = AndroidMigrateViewModel()
-    }
+object AndroidMigrateViewModel : AuthViewModel() {
     private val currentBiometricPrompt: MutableList<BiometricPrompt> = mutableListOf()
 
     class AuthenticationCallbackWrapper(val callback: (AuthResult)->Unit, var onAuthFinished: ()->Unit = {}) : BiometricPrompt.AuthenticationCallback() {
@@ -52,7 +47,7 @@ class AndroidMigrateViewModel : AuthViewModel() {
         }
     }
 
-    inner class Authenticator(
+    class Authenticator(
         val promptCreator: (BiometricPrompt.AuthenticationCallback)->BiometricPrompt,
         private val promptInfo: BiometricPrompt.PromptInfo
     ) {

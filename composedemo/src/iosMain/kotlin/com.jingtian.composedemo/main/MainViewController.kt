@@ -11,6 +11,7 @@ import com.jingtian.composedemo.launch.LaunchTasks
 import com.jingtian.composedemo.ui.theme.DemoAppTheme
 import com.jingtian.composedemo.utils.AppTheme
 import com.jingtian.composedemo.viewmodels.AppThemeViewModel
+import com.jingtian.composedemo.viewmodels.appThemeViewModel
 
 fun MainViewController() = ComposeUIViewController {
     if (BuildKonfig.isDemo) {
@@ -20,7 +21,7 @@ fun MainViewController() = ComposeUIViewController {
     LaunchTasks.onLaunch()
     DemoAppTheme {
         PasswordGuardedMain()
-        val viewModel: AppThemeViewModel = viewModel(factory = AppThemeViewModel.viewModelFactory)
+        val viewModel: AppThemeViewModel = appThemeViewModel()
         val currentAppTheme by remember { viewModel.currentAppTheme }
         val isSystemDark = isSystemInDarkTheme()
         LaunchedEffect(currentAppTheme, isSystemDark) {

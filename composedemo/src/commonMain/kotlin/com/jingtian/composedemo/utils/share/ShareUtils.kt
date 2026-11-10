@@ -16,7 +16,7 @@ import com.jingtian.composedemo.utils.isDirectory
 import com.jingtian.composedemo.utils.isFile
 import com.jingtian.composedemo.utils.mkdirs
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
-import com.jingtian.composedemo.viewmodels.AlbumViewModel.Companion.notifyChange
+import com.jingtian.composedemo.viewmodels.notifyChange
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext

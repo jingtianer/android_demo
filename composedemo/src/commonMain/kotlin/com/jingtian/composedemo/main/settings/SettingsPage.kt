@@ -89,7 +89,6 @@ import com.jingtian.composedemo.base.AppThemeText
 import com.jingtian.composedemo.base.resources.DrawableIcon
 import com.jingtian.composedemo.base.resources.getPainter
 import com.jingtian.composedemo.main.labels.CheckableLabelView
-import com.jingtian.composedemo.main.settings.SettingsViewModel.Companion.settingsViewModel
 import com.jingtian.composedemo.ui.theme.LocalAppColorScheme
 import com.jingtian.composedemo.ui.theme.LocalAppPalette
 import com.jingtian.composedemo.ui.theme.appBackgroundSlide

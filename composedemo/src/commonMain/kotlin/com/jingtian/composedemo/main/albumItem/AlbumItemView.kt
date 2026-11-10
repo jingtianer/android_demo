@@ -68,6 +68,7 @@ import com.jingtian.composedemo.multiplatform.SoftRef
 import com.jingtian.composedemo.multiplatform.logD
 import com.jingtian.composedemo.utils.getOrPutSoftRef
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
+import com.jingtian.composedemo.viewmodels.albumViewModel
 import kotlinx.coroutines.IO
 
 class AlbumItemViewStateHolder(
@@ -203,7 +204,7 @@ fun AlbumItemView(
 ) {
     val itemId = Triple(albumItemRelation.albumItem.itemId ?: DataBase.INVALID_ID, albumItemRelation.albumItem.fileId, albumItemRelation.fileInfo.storageId) ?: return
     val dpSize = size.dpValue()
-    val viewModel: AlbumViewModel = viewModel(factory = AlbumViewModel.viewModelFactory)
+    val viewModel: AlbumViewModel = albumViewModel()
     val stateHolder = remember(itemId) {
         albumViewMap.getOrPutSoftRef(itemId) {
 //                Log.d("jingtian", "AlbumItemView: getOrPut ${itemId}, ${albumViewMap.hashCode()}")

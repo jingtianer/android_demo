@@ -20,6 +20,7 @@ import com.jingtian.composedemo.multiplatform.MultiplatformFileImpl
 import com.jingtian.composedemo.utils.FileLinkProvider
 import com.jingtian.composedemo.viewmodels.AndroidMigrateViewModel
 import com.jingtian.composedemo.viewmodels.AuthViewModel
+import com.jingtian.composedemo.viewmodels.authViewModel
 import com.jingtian.composedemo.web.WebViewActivity
 import java.io.File
 
@@ -27,7 +28,7 @@ class MainActivity : BaseActivity() {
     companion object {
         private const val MEDIA_PERMISSION_REQUEST_CODE = 1001
     }
-    private val _viewModel: AuthViewModel = AndroidMigrateViewModel.inst
+    private val _viewModel: AuthViewModel = authViewModel()
 
     private val viewModel: AndroidMigrateViewModel get() = _viewModel as AndroidMigrateViewModel
 
@@ -55,7 +56,7 @@ class MainActivity : BaseActivity() {
             )
             .build()
 
-        viewModel.bioticAuth = viewModel.Authenticator(biometricPrompt, promptInfo)
+        viewModel.bioticAuth = AndroidMigrateViewModel.Authenticator(biometricPrompt, promptInfo)
         super.onCreate(savedInstanceState)
 //        migrateData()
     }

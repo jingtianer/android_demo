@@ -57,6 +57,7 @@ import com.jingtian.composedemo.ui.theme.LocalAppPalette
 import com.jingtian.composedemo.ui.theme.LocalAppUIConstants
 import com.jingtian.composedemo.utils.splitByWhiteSpace
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
+import com.jingtian.composedemo.viewmodels.albumViewModel
 import com.jingtian.composedemo.web.CommonWebView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -125,7 +126,7 @@ fun ImportDocumentDialog(dialogState: ImportDocumentDialogState, onDismiss: () -
     val selectedFileName by dialogState.selectedFileName
     val selectedFilePath by dialogState.selectedFilePath
     var isUploadingFile by dialogState.isUploadingFile
-    val viewModel: AlbumViewModel = viewModel(factory = AlbumViewModel.viewModelFactory)
+    val viewModel: AlbumViewModel = albumViewModel()
 
     val scope = rememberCoroutineScope()
     val importDirLauncher by rememberDocumentTreePicker { uri->

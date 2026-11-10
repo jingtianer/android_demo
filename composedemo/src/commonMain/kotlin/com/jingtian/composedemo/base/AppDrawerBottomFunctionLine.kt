@@ -27,12 +27,13 @@ import com.jingtian.composedemo.utils.AppTheme
 import com.jingtian.composedemo.viewmodels.AppThemeViewModel
 import com.jingtian.composedemo.base.resources.getPainter
 import com.jingtian.composedemo.base.resources.DrawableIcon
+import com.jingtian.composedemo.viewmodels.appThemeViewModel
 import com.jingtian.composedemo.viewmodels.authViewModel
 
 
 @Composable
 fun AppDrawerBottomFunctionLine() {
-    val viewModel: AppThemeViewModel = viewModel(factory = AppThemeViewModel.viewModelFactory)
+    val viewModel: AppThemeViewModel = appThemeViewModel()
     var currentTheme by remember { viewModel.currentAppTheme }
     val authViewModel = authViewModel()
     fun Modifier.buttonModifier(onClick: ()->Unit): Modifier {

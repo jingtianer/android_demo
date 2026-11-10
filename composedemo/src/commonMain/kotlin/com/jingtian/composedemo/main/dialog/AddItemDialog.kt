@@ -69,6 +69,7 @@ import com.jingtian.composedemo.main.remote.ServerType
 import com.jingtian.composedemo.main.remote.SftpServer
 import com.jingtian.composedemo.main.remote.SftpServerDescView
 import com.jingtian.composedemo.main.remote.toHolder
+import com.jingtian.composedemo.viewmodels.albumViewModel
 
 @Composable
 fun AddItemDialog(album: Album, totalLabelList: List<String>, albumData: List<Album>, onDismiss: () -> Unit) {
@@ -98,7 +99,7 @@ fun AddItemDialog(album: Album, totalLabelList: List<String>, albumData: List<Al
     var selectedUri by remember { mutableStateOf<MultiplatformFile?>(null) }
     val scope = rememberCoroutineScope()
     var imageResource by remember { mutableStateOf(DrawableIcon.DrawableUploadToCloud) }
-    val viewModel: AlbumViewModel = viewModel(factory = AlbumViewModel.viewModelFactory)
+    val viewModel: AlbumViewModel = albumViewModel()
     val imageWidth = min(
         min(
             screenWidth(),
