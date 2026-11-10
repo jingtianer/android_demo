@@ -22,9 +22,9 @@ fun DrawerFunctionView(galleryFunctions: GalleryFunctions, onClick: () -> Unit) 
 }
 
 @Composable
-fun DrawerFunctionView(onClick: () -> Unit, painter: Painter, text: String) {
+fun DrawerFunctionView(modifier: Modifier = Modifier, onClick: () -> Unit = {}, painter: Painter, text: String) {
     Row(
-        Modifier
+        modifier
             .clickable(onClick = onClick)
             .padding(vertical = 8.dp, horizontal = 8.dp)
     ) {

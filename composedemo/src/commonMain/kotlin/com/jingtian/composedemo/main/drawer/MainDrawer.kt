@@ -68,6 +68,7 @@ fun MainDrawer(
         val routerController = LocalRouterController.current
         val scope = rememberCoroutineScope()
         DrawerFunctionView(
+            modifier = Modifier.fillMaxWidth(),
             onClick = {
                 scope.launch {
                     routerController.toSettings()

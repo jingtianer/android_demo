@@ -27,12 +27,17 @@ class ImagePicker(
     private val extensions: List<UTType> = utTypeImages,
     private val onResult: (MultiplatformFile?)->Unit,
 ): IImagePicker {
+    private var currentDelegate: ImagePickDelegate? = null
     override fun launch() {
         val rootVC = UIApplication.sharedApplication.keyWindow?.rootViewController
             ?: return
         JumpOnPurposeMarkHolder.isJumpOnPurpose.value = true
 
-        val delegate = ImagePickDelegate(onResult)
+        val delegate = ImagePickDelegate {
+            onResult(it)
+            currentDelegate = null
+        }
+        currentDelegate = delegate
         val picker = UIImagePickerController()
         picker.delegate = delegate
         picker.sourceType = UIImagePickerControllerSourceType.UIImagePickerControllerSourceTypePhotoLibrary

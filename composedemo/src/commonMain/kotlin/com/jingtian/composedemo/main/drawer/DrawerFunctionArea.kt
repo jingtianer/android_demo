@@ -36,7 +36,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun DrawerFunctionArea() {
     var dialogState by remember { mutableStateOf(false) }
-    FlowRow(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+    FlowRow(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
         DrawerFunctionView(
             onClick = {
                 dialogState = true
@@ -80,14 +80,14 @@ fun ShareDrawerFunctions() {
         }
     }
     val rememberShareLauncher by rememberFileShare({})
-    DrawerFunctionView({
+    DrawerFunctionView(onClick = {
         scope.launch {
             rememberShareLauncher.launch(ShareUtils.shareDataBase())
         }
-    }, getPainter(DrawableIcon.DrawableUploadToCloud), "导出数据")
-    DrawerFunctionView({
+    }, painter = getPainter(DrawableIcon.DrawableUploadToCloud), text = "导出数据")
+    DrawerFunctionView(onClick = {
         scope.launch {
             documentPicker.launch(arrayOf("application/json"))
         }
-    }, getPainter(DrawableIcon.DrawableImportIcon), "导入数据")
+    }, painter = getPainter(DrawableIcon.DrawableImportIcon), text = "导入数据")
 }
