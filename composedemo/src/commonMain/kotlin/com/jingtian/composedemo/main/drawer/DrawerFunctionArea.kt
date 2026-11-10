@@ -28,6 +28,7 @@ import com.jingtian.composedemo.navigation.rememberDocumentPicker
 import com.jingtian.composedemo.navigation.rememberFileShare
 import com.jingtian.composedemo.utils.share.ShareUtils
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
+import com.jingtian.composedemo.viewmodels.AuthSkip
 import com.jingtian.composedemo.viewmodels.AuthSuccess
 import com.jingtian.composedemo.viewmodels.albumViewModel
 import com.jingtian.composedemo.viewmodels.authViewModel
@@ -53,7 +54,7 @@ fun DrawerFunctionArea() {
             DrawerFunctionView(GalleryFunctions.REFRESH_CIFS_FILE) {
                 authViewModel.doAuth { authResult ->
                     when (authResult) {
-                        is AuthSuccess -> {
+                        is AuthSuccess, is AuthSkip -> {
                             viewModel.refreshRemote()
                         }
                     }

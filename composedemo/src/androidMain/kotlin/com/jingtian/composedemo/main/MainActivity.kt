@@ -14,6 +14,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.core.net.toFile
 import com.jingtian.composedemo.base.BaseActivity
+import com.jingtian.composedemo.base.JumpOnPurposeMarkHolder
 import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.FileType.*
 import com.jingtian.composedemo.multiplatform.MultiplatformFileImpl
@@ -73,6 +74,7 @@ class MainActivity : BaseActivity() {
 
     private fun checkAndRequestMediaPermissions() {
         // 判断是否已有所有需要的权限
+        JumpOnPurposeMarkHolder.isJumpOnPurpose.value = true
         val allPermissionsGranted = requiredPermissions.all {
             ContextCompat.checkSelfPermission(this, it) == android.content.pm.PackageManager.PERMISSION_GRANTED
         }
@@ -123,16 +125,6 @@ class MainActivity : BaseActivity() {
         PasswordGuardedMain {
             checkAndRequestMediaPermissions()
         }
-    }
-
-    override fun onPause() {
-        super.onPause()
-        viewModel.onPause()
-    }
-
-    override fun onStop() {
-        super.onStop()
-        viewModel.onStop()
     }
 
     override fun shouldFitSystemBars(): Boolean = false

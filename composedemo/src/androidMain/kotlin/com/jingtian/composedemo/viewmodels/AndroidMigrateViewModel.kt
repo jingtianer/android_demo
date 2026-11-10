@@ -1,17 +1,6 @@
 package com.jingtian.composedemo.viewmodels
 
-import android.os.SystemClock
 import androidx.biometric.BiometricPrompt
-import androidx.biometric.BiometricPrompt.AuthenticationCallback
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateMapOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.lifecycle.viewmodel.initializer
-import androidx.lifecycle.viewmodel.viewModelFactory
 import javax.crypto.Cipher
 
 actual class AuthParams(val cipher: Cipher? = null)
@@ -76,32 +65,24 @@ object AndroidMigrateViewModel : AuthViewModel() {
         }
     }
 
-    private fun cancelAllBioPrompt() {
+    override fun cancelAllBioPrompt() {
         currentBiometricPrompt.forEach {
             it.cancelAuthentication()
         }
         currentBiometricPrompt.clear()
     }
 
-    fun onPause() {
-        cancelAllBioPrompt()
-    }
-
-    fun onStop() {
-        cancelAllBioPrompt()
-    }
-
     lateinit var bioticAuth: Authenticator
-    override fun doAuth(authParams: AuthParams, onAuthResult: (AuthResult)->Unit) {
+    override fun doAuthImpl(authParams: AuthParams, onAuthResult: (AuthResult)->Unit) {
         val cipher = authParams.cipher
         if (cipher != null) {
             bioticAuth.doAuth(cipher, onAuthResult)
         } else {
-            doAuth(onAuthResult)
+            doAuthImpl(onAuthResult)
         }
     }
 
-    override fun doAuth(onAuthResult: (AuthResult) -> Unit) {
+    override fun doAuthImpl(onAuthResult: (AuthResult) -> Unit) {
         bioticAuth.doAuth(onAuthResult)
     }
 }

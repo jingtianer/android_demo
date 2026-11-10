@@ -52,6 +52,7 @@ import com.jingtian.composedemo.ui.theme.LocalMiddleButtonConfig
 import com.jingtian.composedemo.utils.CoroutineUtils
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
 import com.jingtian.composedemo.viewmodels.AuthParams
+import com.jingtian.composedemo.viewmodels.AuthSkip
 import com.jingtian.composedemo.viewmodels.AuthSuccess
 import com.jingtian.composedemo.viewmodels.AuthViewModel
 import com.jingtian.composedemo.viewmodels.albumViewModel
@@ -219,7 +220,7 @@ fun ImportRemoteDialogStateHolder.ImportRemoteDialog(album: Album, onDismiss: ()
                 SftpServerDescView(serverItem, onClick = {
                     authViewModel.doAuth { authResult ->
                         when (authResult) {
-                            is AuthSuccess -> {
+                            is AuthSuccess, is AuthSkip -> {
                                 CoroutineUtils.runIOTask({
                                     serverItem.import(viewModel, album)
                                 })

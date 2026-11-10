@@ -1,16 +1,8 @@
 package com.jingtian.composedemo.main
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.EnterTransition
-import androidx.compose.animation.ExitTransition
-import androidx.compose.animation.expandIn
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
@@ -19,21 +11,18 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.only
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.systemGestures
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DrawerValue
-import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Snackbar
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -73,6 +62,7 @@ import com.jingtian.composedemo.multiplatform.SoftRef
 import com.jingtian.composedemo.ui.theme.LocalAppPalette
 import com.jingtian.composedemo.utils.observeAsState
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
+import com.jingtian.composedemo.viewmodels.AuthSkip
 import com.jingtian.composedemo.viewmodels.AuthSuccess
 import com.jingtian.composedemo.viewmodels.AuthViewModel
 import com.jingtian.composedemo.viewmodels.GlobalSnapBar
@@ -85,8 +75,6 @@ import kotlinx.coroutines.withContext
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 
-private const val MIN_ON_STOP_DO_AUTH_TIME_GAP = 30 * 1000L
-
 @OptIn(ExperimentalTime::class)
 @Composable
 fun PasswordGuardedMain(onPasswordChecked: () -> Unit = {}) {
@@ -95,57 +83,50 @@ fun PasswordGuardedMain(onPasswordChecked: () -> Unit = {}) {
         return
     }
     val authViewModel: AuthViewModel = authViewModel()
-    var isVisible by remember { mutableStateOf(false) }
-    var isAuthed by remember { mutableStateOf(false) }
-    var isLocked by authViewModel.isLocked
-    var lastOnStopAuthTimeStamp by remember { mutableLongStateOf(-1) }
+    var isVisible by authViewModel.isVisible
+    var isAuthed by authViewModel.isAuthed
+    val isLocked by authViewModel.isLocked
     val doAuth = remember {
         {
-            authViewModel.doAuth { authResult ->
+            authViewModel.login { authResult ->
                 when(authResult) {
                     is AuthSuccess -> {
-                        lastOnStopAuthTimeStamp = Clock.System.now().toEpochMilliseconds()
-                        isVisible = true
-                        isAuthed = true
                         onPasswordChecked()
                     }
                 }
             }
         }
     }
-    fun checkShouldAuth() {
-        val isJumpOnPurpose = JumpOnPurposeMarkHolder.isJumpOnPurpose.getAndSet(false)
-        val isAppLockedSnapshot = isLocked
-        isLocked = false
-        val shouldDoAuth = isAppLockedSnapshot || !isAuthed && !isJumpOnPurpose && !(lastOnStopAuthTimeStamp != -1L && Clock.System.now().toEpochMilliseconds() - lastOnStopAuthTimeStamp <= MIN_ON_STOP_DO_AUTH_TIME_GAP)
-        if (shouldDoAuth) {
-            doAuth()
-        } else {
-            isAuthed = true
-            isVisible = true
-        }
-    }
     val lifecycleObserver by remember {
         mutableStateOf(object : DefaultLifecycleObserver {
             override fun onStop(owner: LifecycleOwner) {
-                isAuthed = false
+                authViewModel.onStop(owner)
+                if (!JumpOnPurposeMarkHolder.isJumpOnPurpose.value) {
+                    authViewModel.cancelAllBioPrompt()
+                    isAuthed = false
+                }
             }
 
             override fun onPause(owner: LifecycleOwner) {
-                isVisible = false
+                authViewModel.onPause(owner)
+                if (!JumpOnPurposeMarkHolder.isJumpOnPurpose.value) {
+                    authViewModel.cancelAllBioPrompt()
+                    isVisible = false
+                }
             }
 
-            @OptIn(ExperimentalTime::class)
             override fun onResume(owner: LifecycleOwner) {
-                checkShouldAuth()
+                authViewModel.onResume(owner)
+                doAuth()
             }
 
             override fun onStart(owner: LifecycleOwner) {
+                authViewModel.onStart(owner)
             }
         })
     }
     Main(visible = isVisible && isAuthed && !isLocked) {
-        checkShouldAuth()
+        doAuth()
     }
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(Unit) {
@@ -238,50 +219,59 @@ fun Main(
     } else {
         Modifier.fillMaxSize().blur(40.dp).pointerInput(Unit) {
             awaitEachGesture {
-                awaitFirstDown(pass = PointerEventPass.Initial).consume()
-                waitForUpOrCancellation(pass = PointerEventPass.Initial)?.consume()
-                onVisibleRequest()
+                while (true) {
+                    awaitPointerEvent().changes.forEach { it.consume() }
+                }
             }
         }
     }
     CompositionLocalProvider(LocalRouterController provides routerController) {
-        Scaffold(
-            modifier = modifier,
-            snackbarHost = {
-                GlobalSnapBar()
-            }
-        ) { _->
-            ModalNavigationDrawer(
-                drawerContent = {
-                    Box(Modifier
-                        .fillMaxHeight()
-                        .fillMaxWidth(0.92f)
-                        .clip(RoundedCornerShape(0.dp, 20.dp, 20.dp, 0.dp))
-                        .background(LocalAppPalette.current.drawerBg)
-                        .windowInsetsPadding(WindowInsets.navigationBars.only(
-                            WindowInsetsSides.Vertical + WindowInsetsSides.Start)
-                        )
-                    ) {
-                        MainDrawer(menuItemsEntity) { index, album ->
-                            currentSelectedAlbum = IndexedValue(index, album)
-                            scope.launch {
-                                routerController.toGallery()
+        Box(modifier = Modifier.fillMaxSize()) {
+            Scaffold(
+                modifier = modifier,
+                snackbarHost = {
+                    GlobalSnapBar()
+                }
+            ) { _->
+                ModalNavigationDrawer(
+                    drawerContent = {
+                        Box(Modifier
+                            .fillMaxHeight()
+                            .fillMaxWidth(0.92f)
+                            .clip(RoundedCornerShape(0.dp, 20.dp, 20.dp, 0.dp))
+                            .background(LocalAppPalette.current.drawerBg)
+                            .windowInsetsPadding(WindowInsets.navigationBars.only(
+                                WindowInsetsSides.Vertical + WindowInsetsSides.Start)
+                            )
+                        ) {
+                            MainDrawer(menuItemsEntity) { index, album ->
+                                currentSelectedAlbum = IndexedValue(index, album)
+                                scope.launch {
+                                    routerController.toGallery()
+                                }
                             }
                         }
-                    }
-                },
-                Modifier.fillMaxSize(),
-                drawerState = drawerState,
-                gesturesEnabled = true
-            ) {
-                NavHost(navController = naviController, startDestination = Gallery) {
-                    composable<Gallery> {
-                        Gallery(galleryStateHolderMap, currentSelectedAlbum, menuItemsEntity, drawerState)
-                    }
-                    composable<Settings> {
-                        SettingsPage()
+                    },
+                    Modifier.fillMaxSize(),
+                    drawerState = drawerState,
+                    gesturesEnabled = true
+                ) {
+                    NavHost(navController = naviController, startDestination = Gallery) {
+                        composable<Gallery> {
+                            Gallery(galleryStateHolderMap, currentSelectedAlbum, menuItemsEntity, drawerState)
+                        }
+                        composable<Settings> {
+                            SettingsPage()
+                        }
                     }
                 }
+            }
+            if (!visible) {
+                Box(modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.systemGestures).pointerInput(Unit) {
+                    detectTapGestures(onTap = {
+                        onVisibleRequest()
+                    })
+                })
             }
         }
     }

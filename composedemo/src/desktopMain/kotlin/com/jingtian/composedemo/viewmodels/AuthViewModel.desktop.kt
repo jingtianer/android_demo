@@ -14,11 +14,15 @@ actual class AuthError: AuthResult()
 actual fun authViewModel(): AuthViewModel = AuthViewModelImpl
 
 object AuthViewModelImpl : AuthViewModel() {
-    override fun doAuth(authParams: AuthParams, onAuthResult: (AuthResult)->Unit) {
+    override fun doAuthImpl(authParams: AuthParams, onAuthResult: (AuthResult)->Unit) {
         onAuthResult(AuthSuccess())
     }
 
-    override fun doAuth(onAuthResult: (AuthResult)->Unit) {
+    override fun doAuthImpl(onAuthResult: (AuthResult)->Unit) {
         onAuthResult(AuthSuccess())
+    }
+
+    override fun cancelAllBioPrompt() {
+
     }
 }

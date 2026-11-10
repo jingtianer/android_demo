@@ -89,7 +89,7 @@ fun AppDrawerBottomFunctionLine() {
                     )
                     .size(size)
                     .buttonModifier {
-                        authViewModel.isLocked.value = true
+                        authViewModel.lock()
                     }
             )
         }
