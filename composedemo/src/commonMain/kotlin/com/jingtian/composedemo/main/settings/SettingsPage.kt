@@ -98,47 +98,19 @@ import com.jingtian.composedemo.utils.BackgroundConfig
 import com.jingtian.composedemo.utils.UserStorage
 import com.jingtian.composedemo.utils.color
 import com.jingtian.composedemo.utils.colorOf
+import com.jingtian.composedemo.viewmodels.GlobalSnapBar
+import com.jingtian.composedemo.viewmodels.albumViewModel
 import kotlin.math.roundToInt
 
 @Composable
 fun SettingsPage() {
-    val viewModel = settingsViewModel()
-
-    val snackBarMessage by viewModel.snackBarMessage
-    var showSnackBar by remember { mutableStateOf(snackBarMessage != null) }
-    var showSnackBarAnim by remember { mutableStateOf(true) }
-
-    LaunchedEffect(snackBarMessage) {
-        if (showSnackBar && snackBarMessage.isNullOrBlank()) {
-            showSnackBarAnim = true
-        } else if (!showSnackBar && !snackBarMessage.isNullOrBlank()) {
-            showSnackBarAnim = true
-        } else {
-            showSnackBarAnim = false
-        }
-        showSnackBar = !snackBarMessage.isNullOrBlank()
-    }
     Scaffold(
         modifier = Modifier.fillMaxSize().appBackgroundV2()
             .windowInsetsPadding(WindowInsets.statusBars),
         contentColor = Color.Transparent,
         containerColor = Color.Transparent,
         snackbarHost = {
-            AnimatedVisibility(
-                visible = showSnackBar,
-                enter = if (showSnackBarAnim) fadeIn() + expandIn() else EnterTransition.None,
-                exit = if (showSnackBarAnim) shrinkOut() + fadeOut() else ExitTransition.None,
-            ) {
-                Snackbar(
-                    modifier = Modifier.padding(8.dp)
-                ) {
-                    AppThemeText(
-                        snackBarMessage ?: "",
-                        style = LocalTextStyle.current.copy(color = LocalAppPalette.current.dialogBg),
-                        maxLines = 1
-                    )
-                }
-            }
+            GlobalSnapBar()
         }
     ) { padding ->
         CompositionLocalProvider(LocalContentColor provides LocalAppPalette.current.galleryHeaderColor) {

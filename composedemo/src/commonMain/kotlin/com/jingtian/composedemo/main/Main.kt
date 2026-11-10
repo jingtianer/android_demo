@@ -75,6 +75,7 @@ import com.jingtian.composedemo.utils.observeAsState
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
 import com.jingtian.composedemo.viewmodels.AuthSuccess
 import com.jingtian.composedemo.viewmodels.AuthViewModel
+import com.jingtian.composedemo.viewmodels.GlobalSnapBar
 import com.jingtian.composedemo.viewmodels.albumViewModel
 import com.jingtian.composedemo.viewmodels.authViewModel
 import kotlinx.coroutines.Dispatchers
@@ -224,28 +225,12 @@ fun Main(
             }
         }
     }
-    val snackBarMessage by viewModel.currentBackgroundTask.observeAsState()
-
     val galleryStateHolderMap = remember(menuItemsEntity) {
         mutableStateMapOf<Long, SoftRef<GalleryStateHolder>>()
     }
 
     LowMemorySideEffect(galleryStateHolderMap) {
         galleryStateHolderMap.clear()
-    }
-
-    var showSnackBar by remember { mutableStateOf(snackBarMessage != null) }
-    var showSnackBarAnim by remember { mutableStateOf(true) }
-
-    LaunchedEffect(snackBarMessage) {
-        if (showSnackBar && snackBarMessage.isNullOrBlank()) {
-            showSnackBarAnim = true
-        } else if (!showSnackBar && !snackBarMessage.isNullOrBlank()) {
-            showSnackBarAnim = true
-        } else {
-            showSnackBarAnim = false
-        }
-        showSnackBar = !snackBarMessage.isNullOrBlank()
     }
     val scope = rememberCoroutineScope()
     val modifier = if (visible) {
@@ -263,17 +248,7 @@ fun Main(
         Scaffold(
             modifier = modifier,
             snackbarHost = {
-                AnimatedVisibility(
-                    visible = showSnackBar,
-                    enter = if(showSnackBarAnim) fadeIn() + expandIn() else EnterTransition.None,
-                    exit = if(showSnackBarAnim) shrinkOut() + fadeOut() else ExitTransition.None,
-                ) {
-                    Snackbar(
-                        modifier = Modifier.padding(8.dp)
-                    ) {
-                        AppThemeText(snackBarMessage ?: "", style = LocalTextStyle.current.copy(color = LocalAppPalette.current.dialogBg), maxLines = 1)
-                    }
-                }
+                GlobalSnapBar()
             }
         ) { _->
             ModalNavigationDrawer(

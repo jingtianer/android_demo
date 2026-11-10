@@ -1,16 +1,32 @@
 package com.jingtian.composedemo.viewmodels
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.expandIn
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkOut
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.Snackbar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableLongState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.jingtian.composedemo.BuildKonfig
+import com.jingtian.composedemo.base.AppThemeText
 import com.jingtian.composedemo.dao.DataBase
 import com.jingtian.composedemo.dao.model.Album
 import com.jingtian.composedemo.dao.model.AlbumItem
@@ -26,6 +42,7 @@ import com.jingtian.composedemo.main.remote.SftpServer
 import com.jingtian.composedemo.multiplatform.MultiplatformFile
 import com.jingtian.composedemo.multiplatform.logD
 import com.jingtian.composedemo.multiplatform.logE
+import com.jingtian.composedemo.ui.theme.LocalAppPalette
 import com.jingtian.composedemo.utils.BitMapCachePool
 import com.jingtian.composedemo.utils.CoroutineUtils
 import com.jingtian.composedemo.utils.FileStorageUtils
@@ -483,6 +500,39 @@ object AlbumViewModel : SingletonViewModel() {
             }
         }) {
             sendMessage("更新完成")
+        }
+    }
+}
+
+@Composable
+fun GlobalSnapBar() {
+    val snackBarMessage by albumViewModel().currentBackgroundTask
+    var showSnackBar by remember { mutableStateOf(snackBarMessage != null) }
+    var showSnackBarAnim by remember { mutableStateOf(true) }
+
+    LaunchedEffect(snackBarMessage) {
+        if (showSnackBar && snackBarMessage.isNullOrBlank()) {
+            showSnackBarAnim = true
+        } else if (!showSnackBar && !snackBarMessage.isNullOrBlank()) {
+            showSnackBarAnim = true
+        } else {
+            showSnackBarAnim = false
+        }
+        showSnackBar = !snackBarMessage.isNullOrBlank()
+    }
+    AnimatedVisibility(
+        visible = showSnackBar,
+        enter = if (showSnackBarAnim) fadeIn() + expandIn() else EnterTransition.None,
+        exit = if (showSnackBarAnim) shrinkOut() + fadeOut() else ExitTransition.None,
+    ) {
+        Snackbar(
+            modifier = Modifier.padding(8.dp)
+        ) {
+            AppThemeText(
+                snackBarMessage ?: "",
+                style = LocalTextStyle.current.copy(color = LocalAppPalette.current.dialogBg),
+                maxLines = 1
+            )
         }
     }
 }

@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -49,6 +51,7 @@ import com.jingtian.composedemo.ui.theme.LocalMiddleButtonConfig
 import com.jingtian.composedemo.ui.theme.appBackground
 import com.jingtian.composedemo.ui.theme.dialogBackground
 import com.jingtian.composedemo.ui.theme.drawerBackground
+import com.jingtian.composedemo.viewmodels.GlobalSnapBar
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
 
@@ -69,13 +72,22 @@ fun AppThemeText(
 ) {
     if (text.isNullOrBlank() && hint != null) {
         BasicText(
-            hint, modifier, style.copy(hintColor), onTextLayout, overflow, softWrap, maxLines, minLines, color
+            hint,
+            modifier,
+            style.copy(hintColor),
+            onTextLayout,
+            overflow,
+            softWrap,
+            maxLines,
+            minLines,
+            color
         )
     } else {
         BasicText(
             text, modifier, style, onTextLayout, overflow, softWrap, maxLines, minLines, color
         )
-    }}
+    }
+}
 
 @Composable
 fun AppThemeTextField(
@@ -264,65 +276,79 @@ fun AppThemeDialog(
     ) -> Unit
 ) {
     Dialog(onDismissRequest = onDismissRequest, properties = properties) {
-        Column(modifier) {
-            content(
-                {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    if (!title.isNullOrBlank()) {
-                        AppThemeText(title, style = titleTextStyle)
-                        Spacer(modifier = Modifier.height(2.dp))
-                        AppThemeHorizontalDivider(
-                            modifier = Modifier
-                                .height(1.dp)
-                                .align(Alignment.CenterHorizontally)
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                    }
-                },
-                {
-                    @Composable
-                    fun PositiveButton() {
-                        if (onPositive != null) {
-                            Button(onClick = onPositive) {
-                                AppThemeText("确认")
+        Scaffold(modifier = Modifier.fillMaxWidth().fillMaxSize(), snackbarHost = {
+            GlobalSnapBar()
+        }, containerColor = Color.Transparent) { _ ->
+            Box(Modifier.fillMaxWidth().fillMaxHeight()) {
+                Column(Modifier.align(Alignment.Center).then(modifier)) {
+                    content(
+                        {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            if (!title.isNullOrBlank()) {
+                                AppThemeText(title, style = titleTextStyle)
+                                Spacer(modifier = Modifier.height(2.dp))
+                                AppThemeHorizontalDivider(
+                                    modifier = Modifier
+                                        .height(1.dp)
+                                        .align(Alignment.CenterHorizontally)
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
                             }
-                        }
-                    }
-                    @Composable
-                    fun MiddleButton() {
-                        if (onMiddleClick != null) {
-                            Button(onClick = onMiddleClick, colors = LocalMiddleButtonConfig.current.colors) {
-                                Text(LocalMiddleButtonConfig.current.text, style = LocalTextStyle.current.copy(color = LocalMiddleButtonConfig.current.colors.contentColor))
+                        },
+                        {
+                            @Composable
+                            fun PositiveButton() {
+                                if (onPositive != null) {
+                                    Button(onClick = onPositive) {
+                                        AppThemeText("确认")
+                                    }
+                                }
                             }
-                        }
-                    }
-                    @Composable
-                    fun NegativeButton() {
-                        if (onNegative != null) {
-                            Button(onClick = onNegative) {
-                                AppThemeText("取消")
+
+                            @Composable
+                            fun MiddleButton() {
+                                if (onMiddleClick != null) {
+                                    Button(
+                                        onClick = onMiddleClick,
+                                        colors = LocalMiddleButtonConfig.current.colors
+                                    ) {
+                                        Text(
+                                            LocalMiddleButtonConfig.current.text,
+                                            style = LocalTextStyle.current.copy(color = LocalMiddleButtonConfig.current.colors.contentColor)
+                                        )
+                                    }
+                                }
                             }
+
+                            @Composable
+                            fun NegativeButton() {
+                                if (onNegative != null) {
+                                    Button(onClick = onNegative) {
+                                        AppThemeText("取消")
+                                    }
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(Modifier.align(Alignment.End)) {
+                                if (reversed) {
+                                    PositiveButton()
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    MiddleButton()
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    NegativeButton()
+                                } else {
+                                    NegativeButton()
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    MiddleButton()
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    PositiveButton()
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
                         }
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(Modifier.align(Alignment.End)) {
-                        if (reversed) {
-                            PositiveButton()
-                            Spacer(modifier = Modifier.width(8.dp))
-                            MiddleButton()
-                            Spacer(modifier = Modifier.width(8.dp))
-                            NegativeButton()
-                        } else {
-                            NegativeButton()
-                            Spacer(modifier = Modifier.width(8.dp))
-                            MiddleButton()
-                            Spacer(modifier = Modifier.width(8.dp))
-                            PositiveButton()
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
+                    )
                 }
-            )
+            }
         }
     }
 }

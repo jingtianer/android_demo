@@ -13,12 +13,8 @@ import com.jingtian.composedemo.utils.getDBStorageRootDir
 import com.jingtian.composedemo.utils.getFileCacheStorageRootDir
 import com.jingtian.composedemo.utils.getFileStorageRootDir
 import com.jingtian.composedemo.viewmodels.SingletonViewModel
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.IO
-import kotlinx.coroutines.Job
+import com.jingtian.composedemo.viewmodels.albumViewModel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 fun settingsViewModel() = SettingsViewModel
 
@@ -26,22 +22,10 @@ object SettingsViewModel : SingletonViewModel() {
 
     private const val COUNTDOWN_COUNT = 3
 
-    var snackBarMessage = mutableStateOf<String?>(null)
-
-    private var currentMessageDelayJob: Job? = null
+    private val albumViewModel = albumViewModel()
 
     fun sendMessage(message: String) {
-        viewModelScope.launch(Dispatchers.Main) {
-            currentMessageDelayJob?.cancel()
-            currentMessageDelayJob = viewModelScope.launch(Dispatchers.Main) {
-                snackBarMessage.value = message
-                withContext(Dispatchers.IO) {
-                    delay(2000)
-                }
-                snackBarMessage.value = null
-                currentMessageDelayJob = null
-            }
-        }
+        albumViewModel.sendMessage(message)
     }
 
     private suspend fun kill() {

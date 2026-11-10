@@ -202,6 +202,7 @@ fun ImportRemoteDialogStateHolder.ImportRemoteDialog(album: Album, onDismiss: ()
 
             item {
                 DrawerFunctionView(
+                    modifier = Modifier.fillMaxWidth(),
                     onClick = {
                         addServerDialog = true
                     },

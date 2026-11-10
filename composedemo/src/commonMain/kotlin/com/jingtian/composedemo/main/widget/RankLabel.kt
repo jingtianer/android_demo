@@ -79,11 +79,11 @@ fun RankLabel(
         Text(
             text = itemRank.name,
             modifier = Modifier.textStroke(
-                strokeColor = if (isNight) Color.White else Color.Black,
+                strokeColor = if (isNight) Color.Black else Color.White,
                 strokeWidth = padding,
                 textLayoutResult = textLayoutResult
             ).height(textHeight),
-            color = if (isNight) Color.Black else Color.White,
+            color = if (isNight) Color.White else Color.Black,
             style = textStyle,
             autoSize = TextAutoSize.StepBased(),
             onTextLayout = {
