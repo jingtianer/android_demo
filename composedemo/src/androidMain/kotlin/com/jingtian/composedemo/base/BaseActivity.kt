@@ -15,23 +15,23 @@ import androidx.compose.runtime.remember
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.jingtian.composedemo.ui.theme.AppThemeScope
 import com.jingtian.composedemo.ui.theme.DemoAppTheme
 import com.jingtian.composedemo.utils.AppTheme
 import com.jingtian.composedemo.viewmodels.AppThemeViewModel
 import com.jingtian.composedemo.viewmodels.appThemeViewModel
 
 abstract class BaseActivity : AppCompatActivity() {
-    private var onConfigurationChangeCallback = { newConfig: Configuration->
-
-    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
             DemoAppTheme {
-                AppThemeSwitcher()
                 Content()
+            }
+            val appThemeViewModel = appThemeViewModel()
+            val isNight by appThemeViewModel.rememberIsDark()
+            LaunchedEffect(isNight) {
+                updateStateBar(isNight)
             }
         }
         val isDark = AppTheme.isDark(AppTheme.currentAppTheme(), isSystemInDarkTheme())
@@ -68,36 +68,24 @@ abstract class BaseActivity : AppCompatActivity() {
         }
     }
 
-    @Composable
-    fun AppThemeScope.AppThemeSwitcher() {
-        val viewModel: AppThemeViewModel = appThemeViewModel()
-        val currentAppTheme by remember { viewModel.currentAppTheme }
+    fun AppThemeSwitcher(newConfig: Configuration) {
         val isSystemDark = isSystemInDarkTheme()
-        onConfigurationChangeCallback = { newConfig->
-            val uiMode = newConfig.uiMode and Configuration.UI_MODE_NIGHT_MASK
-            val isDark = when (uiMode) {
-                Configuration.UI_MODE_NIGHT_YES -> {
-                    AppTheme.isDark(AppTheme.currentAppTheme(), true)
-                }
-                Configuration.UI_MODE_NIGHT_NO -> {
-                    AppTheme.isDark(AppTheme.currentAppTheme(), false)
-                }
-                Configuration.UI_MODE_NIGHT_UNDEFINED -> {
-                    AppTheme.isDark(AppTheme.currentAppTheme(), isSystemDark)
-                }
-                else -> {
-                    AppTheme.isDark(AppTheme.currentAppTheme(), isSystemDark)
-                }
+        val uiMode = newConfig.uiMode and Configuration.UI_MODE_NIGHT_MASK
+        val isDark = when (uiMode) {
+            Configuration.UI_MODE_NIGHT_YES -> {
+                AppTheme.isDark(AppTheme.currentAppTheme(), true)
             }
-            this@AppThemeSwitcher.setCurrentDark(isDark)
-            updateStateBar(isDark)
+            Configuration.UI_MODE_NIGHT_NO -> {
+                AppTheme.isDark(AppTheme.currentAppTheme(), false)
+            }
+            Configuration.UI_MODE_NIGHT_UNDEFINED -> {
+                AppTheme.isDark(AppTheme.currentAppTheme(), isSystemDark)
+            }
+            else -> {
+                AppTheme.isDark(AppTheme.currentAppTheme(), isSystemDark)
+            }
         }
-        LaunchedEffect(currentAppTheme) {
-            AppTheme.setAppTheme(currentAppTheme)
-            val isDark = AppTheme.isDark(currentAppTheme, isSystemDark)
-            this@AppThemeSwitcher.setCurrentDark(isDark)
-            updateStateBar(isDark)
-        }
+        updateStateBar(isDark)
     }
 
     @Composable
@@ -117,7 +105,7 @@ abstract class BaseActivity : AppCompatActivity() {
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
-        onConfigurationChangeCallback.invoke(newConfig)
+        AppThemeSwitcher(newConfig)
     }
 
     private fun isSystemInDarkTheme(): Boolean {

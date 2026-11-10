@@ -28,9 +28,7 @@ import kotlin.math.roundToInt
 @Composable
 actual fun BoxScope.RankLabel(itemRank: ItemRank, padding: Dp) {
     val appThemeViewModel: AppThemeViewModel = appThemeViewModel()
-    val appTheme by remember { appThemeViewModel.currentAppTheme }
-    val isSystemDark = isSystemInDarkTheme()
-    val isNight = AppTheme.isDark(appTheme, isSystemDark)
+    val isNight by appThemeViewModel.rememberIsDark()
     if (itemRank != ItemRank.NONE) {
         fun View.initRankView(isNight: Boolean): View {
             val bg = RankTypeChooser.createBg(itemRank, context, isNight)

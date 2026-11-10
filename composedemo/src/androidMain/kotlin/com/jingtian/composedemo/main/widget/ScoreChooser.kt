@@ -22,9 +22,7 @@ import com.jingtian.composedemo.viewmodels.appThemeViewModel
 @Composable
 actual fun ColumnScope.ScoreChooser(itemScore: Float, onScoreUpdate: (Float)->Unit) {
     val viewModel: AppThemeViewModel = appThemeViewModel()
-    val appTheme by remember { viewModel.currentAppTheme }
-    val isSystemDark = isSystemInDarkTheme()
-    val isDark = AppTheme.isDark(appTheme, isSystemDark)
+    val isDark by viewModel.rememberIsDark()
     AndroidView({ context ->
         StarRateView(context).commonEditableConfig(isDark).apply {
             onScoreChange = StarRateView.Companion.OnScoreChange { score: Float ->

@@ -27,6 +27,7 @@ import com.jingtian.composedemo.utils.BackgroundConfig
 import com.jingtian.composedemo.utils.UserStorage
 import com.jingtian.composedemo.utils.mainColor
 import com.jingtian.composedemo.viewmodels.AppThemeViewModel
+import com.jingtian.composedemo.viewmodels.appThemeViewModel
 import kotlin.math.min
 import kotlin.math.sqrt
 
@@ -184,21 +185,12 @@ fun Modifier.drawerBackground() = appBackgroundV2(heightScale = 1f)
 @Composable
 fun Modifier.dialogBackground() = appBackgroundV2(heightScale = goldenRatio)
 
-interface AppThemeScope {
-    fun setCurrentDark(isDark: Boolean)
-}
-
 @Composable
 fun DemoAppTheme(
-    systemDarkTheme: Boolean = isSystemInDarkTheme(),
-    content: @Composable AppThemeScope.() -> Unit
+    content: @Composable () -> Unit
 ) {
-    var isDark by remember { mutableStateOf(AppTheme.isDark(AppTheme.currentAppTheme(), systemDarkTheme)) }
-    val appThemeScope = object : AppThemeScope {
-        override fun setCurrentDark(_isDark: Boolean) {
-            isDark = _isDark
-        }
-    }
+    val appThemeViewModel = appThemeViewModel()
+    val isDark by appThemeViewModel.rememberIsDark()
     val backgroundConfig by when {
         isDark -> UserStorage.darkBackgroundConfigState
         else -> UserStorage.liteBackgroundConfigState
@@ -249,7 +241,7 @@ fun DemoAppTheme(
                 LocalContentColor provides contentColor,
                 LocalSecondaryTextStyle provides customSecondaryTextStyle,
                 LocalMiddleButtonConfig provides middleButtonConfig,
-                content = { appThemeScope.content() }
+                content = content
             )
         }
     )

@@ -34,7 +34,7 @@ import com.jingtian.composedemo.viewmodels.authViewModel
 @Composable
 fun AppDrawerBottomFunctionLine() {
     val viewModel: AppThemeViewModel = appThemeViewModel()
-    var currentTheme by remember { viewModel.currentAppTheme }
+    val currentTheme by remember { viewModel.currentAppTheme }
     val authViewModel = authViewModel()
     fun Modifier.buttonModifier(onClick: ()->Unit): Modifier {
         return this.clip(RoundedCornerShape(100))
@@ -55,7 +55,7 @@ fun AppDrawerBottomFunctionLine() {
                 shape = RoundedCornerShape(100)
             )
         }.buttonModifier {
-            currentTheme = appTheme
+            viewModel.setCurrentTheme(appTheme)
         }
     }
 

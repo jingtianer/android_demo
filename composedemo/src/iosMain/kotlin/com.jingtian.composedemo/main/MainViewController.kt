@@ -21,13 +21,5 @@ fun MainViewController() = ComposeUIViewController {
     LaunchTasks.onLaunch()
     DemoAppTheme {
         PasswordGuardedMain()
-        val viewModel: AppThemeViewModel = appThemeViewModel()
-        val currentAppTheme by remember { viewModel.currentAppTheme }
-        val isSystemDark = isSystemInDarkTheme()
-        LaunchedEffect(currentAppTheme, isSystemDark) {
-            AppTheme.setAppTheme(currentAppTheme)
-            val isDark = AppTheme.isDark(currentAppTheme, isSystemDark)
-            this@DemoAppTheme.setCurrentDark(isDark)
-        }
     }
 }

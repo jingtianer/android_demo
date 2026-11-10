@@ -13,7 +13,6 @@ import com.jingtian.composedemo.utils.getDBStorageRootDir
 import com.jingtian.composedemo.utils.getFileCacheStorageRootDir
 import com.jingtian.composedemo.utils.getFileStorageRootDir
 import com.jingtian.composedemo.viewmodels.SingletonViewModel
-import com.jingtian.composedemo.viewmodels.singletonViewModelFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.Job
