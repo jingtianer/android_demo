@@ -10,6 +10,7 @@ import com.jingtian.composedemo.utils.CoroutineUtils
 import com.jingtian.composedemo.utils.ensureDirExist
 import com.jingtian.composedemo.utils.ensureFile
 import com.jingtian.composedemo.utils.ensureFileExist
+import com.jingtian.composedemo.utils.ensureIsFile
 import com.jingtian.composedemo.utils.getFileCacheStorageRootDir
 import com.jingtian.composedemo.utils.getFileStorageRootDir
 import kotlinx.coroutines.Dispatchers
@@ -19,6 +20,8 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
+import kotlinx.io.files.Path
+import kotlinx.io.files.SystemFileSystem
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -74,7 +77,8 @@ class RemoteFileStore(serverType: ServerType) {
 //                            Log.d("jingtian", "start download: ${originUri.path}")
                         }
                         runCatching {
-                            tmpFile.ensureFileExist { file->
+                            val isSuccess = arrayOf(false)
+                            tmpFile.ensureIsFile { file->
                                 server.connect({ _, msg ->
 //                                    Log.d("jingtian", "读取文件 $path $msg")
                                 })?.use { channel ->
@@ -103,6 +107,7 @@ class RemoteFileStore(serverType: ServerType) {
                                             }
 
                                             override fun end() {
+                                                isSuccess[0] = true
                                             }
                                         })
                                         bos.flush()
@@ -111,22 +116,21 @@ class RemoteFileStore(serverType: ServerType) {
                                 if (cancelable.isCancelled) {
                                     throw InterruptedException()
                                 }
-                            }
+                            }.takeIf { isSuccess[0] }
                         }.fold(onSuccess = { file->
+                            if (file == null) {
+                                cancelable.resume(tmpFile)
+                                return@suspendCancellableCoroutine
+                            }
                             file.renameTo(realFile)
-//                    Log.d("jingtian", "读取文件 $path 完成")
                         }, onFailure = {
-//                    Log.d("jingtian", "读取文件 ${originUri.path} 失败 $it")
-//                            Log.d("jingtian", "end3: ${originUri.path}, ${it.message}")
                             cancelable.resume(tmpFile)
                             return@suspendCancellableCoroutine
                         })
                     } catch (e : Exception) {
-//                        Log.d("jingtian", "end2: ${originUri.path}")
                         cancelable.resume(tmpFile.ensureFileExist {  })
                         return@suspendCancellableCoroutine
                     }
-//                    Log.d("jingtian", "end1: ${originUri.path}")
                     cancelable.resume(realFile)
                     return@suspendCancellableCoroutine
                 }

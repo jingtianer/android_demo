@@ -95,6 +95,21 @@ fun File.ensureFileExist(onAbsent: (File)->Unit):File {
     return this
 }
 
+fun File.ensureIsFile(onAbsent: (File)->Unit):File {
+    if (exists()) {
+        if (isDirectory) {
+            deleteRecursively()
+        } else {
+            onAbsent(this)
+            return this
+        }
+    }
+    this.parentFile?.takeIf { !it.exists() }?.mkdirs()
+    this.createNewFile()
+    onAbsent(this)
+    return this
+}
+
 fun File.ensureDirExist():File {
     if (exists()) {
         if (isDirectory) {
