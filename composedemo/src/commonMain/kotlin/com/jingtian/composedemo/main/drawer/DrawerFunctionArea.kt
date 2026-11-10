@@ -1,5 +1,13 @@
 package com.jingtian.composedemo.main.drawer
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.FlowColumn
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyGridScope
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -11,6 +19,7 @@ import com.jingtian.composedemo.base.resources.getPainter
 import demoapp.composedemo.generated.resources.Res
 
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.jingtian.composedemo.BuildKonfig
 import com.jingtian.composedemo.main.gallery.GalleryFunctionView
@@ -27,24 +36,26 @@ import kotlinx.coroutines.launch
 @Composable
 fun DrawerFunctionArea() {
     var dialogState by remember { mutableStateOf(false) }
-    DrawerFunctionView(
-        onClick = {
-            dialogState = true
-        },
-        painter = getPainter(DrawableIcon.DrawableAdd),
-        text = "添加合集",
-    )
+    FlowRow(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+        DrawerFunctionView(
+            onClick = {
+                dialogState = true
+            },
+            painter = getPainter(DrawableIcon.DrawableAdd),
+            text = "添加合集",
+        )
 
-    ShareDrawerFunctions()
+        ShareDrawerFunctions()
 
-    if (BuildKonfig.isRemote) {
-        val authViewModel = authViewModel()
-        val viewModel: AlbumViewModel = albumViewModel()
-        DrawerFunctionView(GalleryFunctions.REFRESH_CIFS_FILE) {
-            authViewModel.doAuth { authResult->
-                when (authResult) {
-                    is AuthSuccess -> {
-                        viewModel.refreshRemote()
+        if (BuildKonfig.isRemote) {
+            val authViewModel = authViewModel()
+            val viewModel: AlbumViewModel = albumViewModel()
+            DrawerFunctionView(GalleryFunctions.REFRESH_CIFS_FILE) {
+                authViewModel.doAuth { authResult ->
+                    when (authResult) {
+                        is AuthSuccess -> {
+                            viewModel.refreshRemote()
+                        }
                     }
                 }
             }
@@ -57,8 +68,6 @@ fun DrawerFunctionArea() {
         }
     }
 }
-
-
 
 @Composable
 fun ShareDrawerFunctions() {

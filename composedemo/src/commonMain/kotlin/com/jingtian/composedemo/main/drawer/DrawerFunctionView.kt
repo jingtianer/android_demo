@@ -25,7 +25,6 @@ fun DrawerFunctionView(galleryFunctions: GalleryFunctions, onClick: () -> Unit) 
 fun DrawerFunctionView(onClick: () -> Unit, painter: Painter, text: String) {
     Row(
         Modifier
-            .fillMaxWidth()
             .clickable(onClick = onClick)
             .padding(vertical = 8.dp, horizontal = 8.dp)
     ) {
