@@ -26,11 +26,11 @@ private object AuthGlobalState {
 
 }
 abstract class AuthViewModel : SingletonViewModel(), DefaultLifecycleObserver {
-    private val lockedState = mutableStateOf(false)
+    private val lockedState = mutableStateOf(true)
     val isLocked: State<Boolean> = lockedState
     val isVisible = mutableStateOf(false)
     val isAuthed = mutableStateOf(false)
-    val lastOnStopAuthTimeStamp = mutableLongStateOf(-1)
+    private val lastOnStopAuthTimeStamp = mutableLongStateOf(-1)
     private var isAppEnterBackground = false
     private var isDoingAuth = false
     fun lock() {
