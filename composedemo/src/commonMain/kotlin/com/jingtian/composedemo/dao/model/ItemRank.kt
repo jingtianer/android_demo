@@ -1,8 +1,15 @@
 package com.jingtian.composedemo.dao.model
 
+import androidx.compose.ui.graphics.Color
 import kotlinx.serialization.Serializable
 
 @Serializable
 enum class ItemRank(val index: Int = -1, val r: Int, val g: Int, val b: Int, val a: Int = 255) {
     夯(0, 0xef, 0x2b, 0x03), 顶尖(1, 0xff, 0xb6, 0x18), 人上人(2, 0x39, 0x8d, 0xff), NPC(3, 0xf9, 0xf5, 0xf2), 史(4, 0xa1, 0xbd, 0xb1), NONE(-1, 0, 0, 0);
+
+    fun color(): Color = Color(alpha = a, red = r, blue = b, green = g)
+
+    companion object {
+        val visibleRanks by lazy { ItemRank.values().filter { it !== NONE }.sortedBy { it.ordinal } }
+    }
 }

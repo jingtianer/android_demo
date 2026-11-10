@@ -361,7 +361,7 @@ fun AlbumItemViewStateHolder.AlbumItemView() {
 //                    enabled = false,
 //                )
             }
-            RankLabel(itemRank, padding)
+            RankLabel(modifier = Modifier.align(Alignment.TopEnd), itemRank = itemRank)
         }
 
         AppThemeText(
