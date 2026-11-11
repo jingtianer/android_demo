@@ -62,6 +62,7 @@ object BitMapCachePool {
 
         private suspend fun getQueue(id: Long): ListWithLock<Pair<Int, ImageBitmap>> {
             return lock.use {
+                ensureCacheDir(fileType.value, id)
                 imagePool.getOrPutRef(id) {
                     ListWithLock()
                 }
@@ -151,7 +152,7 @@ object BitMapCachePool {
     }
 
     private fun getCacheFile(fileType: Int, storageId: Long, scaleFactor: Int): Path {
-        return Path(ensureCacheDir((fileType), storageId), "$scaleFactor").ensureFile()
+        return Path(getCacheDir(fileType, storageId), "$scaleFactor").ensureFile()
     }
 
     private fun Path.ensureFile(): Path {
