@@ -3,6 +3,8 @@ package com.jingtian.composedemo.multiplatform
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import com.jingtian.composedemo.dao.model.FileType
+import com.jingtian.composedemo.utils.BitMapCachePool
+import com.jingtian.composedemo.utils.uriToImageBitmap
 import kotlinx.io.RawSource
 import kotlinx.io.asSource
 import kotlinx.io.files.Path
@@ -109,7 +111,12 @@ open class MultiplatformFileImpl(val realFile: File, val realExtension: String) 
             in htmlExtensions -> FileType.HTML
             else -> FileType.RegularFile
         }
-    override suspend fun inputStream(): RawSource? = FileInputStream(realFile).asSource()
+    override suspend fun inputStream(): RawSource = FileInputStream(realFile).asSource()
+    override suspend fun imageThumbnail(scaleFactor: Int): ImageBitmap? {
+        return inputStream().use {
+            uriToImageBitmap(it, scaleFactor)
+        }
+    }
     override suspend fun videoThumbnail(): ImageBitmap? = extractVideoFirstFrame(realFile)
     override suspend fun audioThumbnail(): ImageBitmap? = extractAudioCover(realFile)
     override suspend fun imageRatio(): Pair<Int, Int> = getImageSize(realFile) ?: (1 to 1)

@@ -4,6 +4,9 @@ import com.jingtian.composedemo.utils.CoroutineUtils
 import com.jingtian.composedemo.utils.createNewFile
 import com.jingtian.composedemo.utils.delete
 import com.jingtian.composedemo.utils.deleteRecursively
+import com.jingtian.composedemo.utils.ensureDir
+import com.jingtian.composedemo.utils.ensureFileExists
+import com.jingtian.composedemo.utils.ensureNewFileExists
 import com.jingtian.composedemo.utils.exists
 import com.jingtian.composedemo.utils.getFileStorageRootDir
 import com.jingtian.composedemo.utils.isDirectory
@@ -32,15 +35,7 @@ class MultiplatformSharedPreferences<V>(
 ) {
     private val outfile = Path(spDir, name)
     init {
-        if (!outfile.exists()) {
-            outfile.createNewFile()
-//            println("MultiplatformSharedPreferences: $name !exists")
-        } else if (outfile.isDirectory) {
-            outfile.deleteRecursively()
-            outfile.createNewFile()
-//            println("MultiplatformSharedPreferences: $name isDirectory")
-        }
-//        println("MultiplatformSharedPreferences: $name ${outfile}")
+        outfile.ensureFileExists()
     }
     private val storage: SharedPreferenceStorage<V> =
         try {
@@ -124,12 +119,7 @@ class MultiplatformSharedPreferences<V>(
     companion object {
         private val spDir = Path(getFileStorageRootDir(), "properties")
         init {
-            if (!spDir.exists()) {
-                spDir.mkdirs()
-            } else if (!spDir.isDirectory) {
-                spDir.delete()
-                spDir.mkdirs()
-            }
+            spDir.ensureDir()
         }
     }
 }

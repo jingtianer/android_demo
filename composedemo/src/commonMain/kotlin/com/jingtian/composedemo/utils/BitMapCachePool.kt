@@ -7,6 +7,9 @@ import com.jingtian.composedemo.dao.DataBase
 import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.FileType
 import com.jingtian.composedemo.multiplatform.MultiplatformFile
+import com.jingtian.composedemo.multiplatform.getMultiplatformFileFactory
+import com.jingtian.composedemo.multiplatform.logD
+import com.jingtian.composedemo.multiplatform.logE
 import com.jingtian.composedemo.multiplatform.newReentrantLock
 import com.jingtian.composedemo.multiplatform.use
 import kotlinx.coroutines.CoroutineScope
@@ -106,9 +109,7 @@ object BitMapCachePool {
                 val cacheFile = getCacheFile(fileType.value, id, scaleFactor)
                 if (cacheFile.exists()) {
                     val bitmap = runCatching {
-                        SystemFileSystem.source(cacheFile).use {
-                            uriToImageBitmap(it, scaleFactor)
-                        }
+                        uriToImageBitmap(cacheFile, scaleFactor)
                     }.getOrNull()
                     if (bitmap != null) {
                         list.add(finalInsertPos, scaleFactor to bitmap)
@@ -120,7 +121,6 @@ object BitMapCachePool {
                 if (bitmap != null) {
                     list.add(finalInsertPos, scaleFactor to bitmap)
                     if (scaleFactor > 1) {
-                        cacheFile.createNewFile()
                         CoroutineUtils.runIOTask({
                             SystemFileSystem.sink(cacheFile).use {
                                 writeImage(bitmap, it)
@@ -141,7 +141,7 @@ object BitMapCachePool {
             val queue = getQueue(id)
             queue.write {
                 it.clear()
-                getCacheDir(fileType.value, id).takeIf { it.exists() }?.deleteRecursively()
+                getCacheDir(fileType.value, id).deleteRecursively()
             }
         }
     }
@@ -151,39 +151,20 @@ object BitMapCachePool {
     }
 
     private fun getCacheFile(fileType: Int, storageId: Long, scaleFactor: Int): Path {
-        ensureCacheDir((fileType), storageId)
-        return Path(getCacheStoreRoot(fileType), "bitmap_cache/bitmap_${fileType}/${storageId}/${scaleFactor}").ensureFile()
-    }
-
-    private fun Path.ensureDir(): Path {
-        runCatching {
-            if (exists()) {
-                if (isFile) {
-                    delete()
-                    mkdirs()
-                }
-            } else {
-                mkdir()
-            }
-        }
-        return this
+        return Path(ensureCacheDir((fileType), storageId), "$scaleFactor").ensureFile()
     }
 
     private fun Path.ensureFile(): Path {
-        if (exists()) {
-            if (isDirectory) {
-                deleteRecursively()
-            }
-        }
+        deleteIfNotFile()
         return this
     }
 
-    private fun ensureCacheDir(fileType: Int, storageId: Long) {
-        getCacheDir(fileType, storageId).ensureDir()
+    private fun ensureCacheDir(fileType: Int, storageId: Long): Path {
+        return getCacheDir(fileType, storageId).apply { ensureDir() }
     }
 
     private fun getCacheDir(fileType: Int, storageId: Long): Path {
-        return Path(getCacheStoreRoot(fileType), "bitmap_cache/bitmap_${fileType}/${storageId}")
+        return Path(getCacheStoreRoot(fileType), "bitmap_cache/bitmap_${fileType}", "$storageId")
     }
 
     suspend fun invalid(id: Long, fileType: FileType) {
@@ -208,7 +189,11 @@ object BitMapCachePool {
                 heightScaleFactor *= 2 // 每次翻倍缩放
             }
         }
-        return max(1,  max(widthScaleFactor,heightScaleFactor) / 2)
+        return max(1,  max(widthScaleFactor,heightScaleFactor) / 2).also {
+            logD("calculateScaleFactor") {
+                "originalWidth=$originalWidth, originalHeight=$originalHeight, maxWidth=$maxWidth, maxHeight=$maxHeight, scaleFactor=$it"
+            }
+        }
     }
 
     fun toBitMap(scope: CoroutineScope, uri: MultiplatformFile, maxWidth: Int = -1, maxHeight: Int = -1, onImageResult: (Int, ImageBitmap?)->Unit) {
@@ -221,18 +206,14 @@ object BitMapCachePool {
     }
 
     suspend fun toBitMap(image: MultiplatformFile, maxWidth: Int = -1, maxHeight: Int = -1): Pair<Int, ImageBitmap?> {
-        val scaleFactor = image.inputStream()?.use { `is`->
+        val scaleFactor = run {
             // 第一步：仅解码边界，获取图片原始宽高
-            val (outWidth, outHeight) = uriToImageSize(`is`)
+            val (outWidth, outHeight) = image.imageRatio()
             // 第二步：计算缩放比例（避免图片过大导致 OOM）
             calculateScaleFactor(outWidth, outHeight, maxWidth, maxHeight)
-        } ?: 1
-//        println("scale factor: $scaleFactor")
-        val bitmap = image.inputStream()?.use { `is`->
-//            Log.d("TAG", "loadImage failed: $image, $scaleFactor, $image")
-            // 第三步：按缩放比例解码图片
-            uriToImageBitmap(`is`, scaleFactor)
         }
+//        println("scale factor: $scaleFactor")
+        val bitmap = image.imageThumbnail(scaleFactor)
         return scaleFactor to bitmap
     }
 
@@ -262,25 +243,17 @@ object BitMapCachePool {
         val scaleFactor =  if (fileInfo.intrinsicWidth > 0 && fileInfo.intrinsicHeight > 0) {
             calculateScaleFactor(fileInfo.intrinsicWidth, fileInfo.intrinsicHeight, maxWidth, maxHeight)
         } else {
-            image.inputStream()?.use { `is`->
-                // 第一步：仅解码边界，获取图片原始宽高
-                val (outWidth, outHeight) = uriToImageSize(`is`)
-                // 第二步：计算缩放比例（避免图片过大导致 OOM）
-                calculateScaleFactor(outWidth, outHeight, maxWidth, maxHeight)
-            } ?: -1
+            // 第一步：仅解码边界，获取图片原始宽高
+            val (outWidth, outHeight) = image.imageRatio()
+            // 第二步：计算缩放比例（避免图片过大导致 OOM）
+            calculateScaleFactor(outWidth, outHeight, maxWidth, maxHeight)
         }
 //        println("scale factor: $scaleFactor")
         val bitmap = getBitMapCachePool(fileInfo.fileType).put(id, scaleFactor) {
-            val `is` = fileInfo.getFileUri()?.inputStream() ?: return@put null
-            `is`.use { `is`->
-                uriToImageBitmap(`is`, scaleFactor)
-            }
+            fileInfo.getFileUri()?.imageThumbnail(scaleFactor)
         }
         return scaleFactor to bitmap
     }
 }
-
-expect fun uriToImageBitmap(`is`: RawSource, scaleFactor: Int): ImageBitmap?
-expect fun uriToImageBitmap(`is`: RawSource): ImageBitmap?
-expect fun uriToImageSize(`is`: RawSource): Pair<Int, Int>
+expect fun uriToImageBitmap(path: Path, scaleFactor: Int): ImageBitmap?
 expect fun writeImage(bitmap: ImageBitmap, os: RawSink)

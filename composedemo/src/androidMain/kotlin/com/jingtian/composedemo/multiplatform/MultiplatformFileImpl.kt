@@ -16,10 +16,14 @@ import androidx.compose.ui.graphics.asImageBitmap
 import com.jingtian.composedemo.BuildKonfig
 import com.jingtian.composedemo.base.app
 import com.jingtian.composedemo.dao.model.FileType
+import com.jingtian.composedemo.utils.BitMapCachePool
 import com.jingtian.composedemo.utils.SerializationUtils.toInputStream
+import com.jingtian.composedemo.utils.uriToImageBitmap
 import kotlinx.io.Buffer
 import kotlinx.io.RawSource
+import kotlinx.io.asInputStream
 import kotlinx.io.asSource
+import kotlinx.io.buffered
 import kotlinx.io.files.Path
 import java.io.File
 import java.io.FileNotFoundException
@@ -256,6 +260,12 @@ open class MultiplatformFileImpl(private val uri: Uri) : MultiplatformFile {
 
     private val videoThumbnail: ImageBitmap?
         get() = getVideoThumbnail(uri)?.asImageBitmap()
+
+    override suspend fun imageThumbnail(scaleFactor: Int): ImageBitmap? {
+        return inputStream()?.let {
+            uriToImageBitmap(it, scaleFactor)
+        }
+    }
 
     override suspend fun videoThumbnail(): ImageBitmap? {
         return videoThumbnail

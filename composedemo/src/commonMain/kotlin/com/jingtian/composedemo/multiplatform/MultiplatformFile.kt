@@ -21,6 +21,8 @@ interface MultiplatformFile {
 
     suspend fun fileStoreInputStream(): RawSource?
 
+    suspend fun imageThumbnail(scaleFactor: Int): ImageBitmap?
+
     suspend fun videoThumbnail(): ImageBitmap?
 
     suspend fun audioThumbnail(): ImageBitmap?

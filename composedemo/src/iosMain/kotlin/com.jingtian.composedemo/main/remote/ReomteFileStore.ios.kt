@@ -4,6 +4,9 @@ import com.jingtian.composedemo.utils.CoroutineUtils
 import com.jingtian.composedemo.utils.createNewFile
 import com.jingtian.composedemo.utils.delete
 import com.jingtian.composedemo.utils.deleteRecursively
+import com.jingtian.composedemo.utils.ensureDir
+import com.jingtian.composedemo.utils.ensureFileAndParentExists
+import com.jingtian.composedemo.utils.ensureNotExist
 import com.jingtian.composedemo.utils.exists
 import com.jingtian.composedemo.utils.getFileCacheStorageRootDir
 import com.jingtian.composedemo.utils.isDirectory
@@ -25,11 +28,11 @@ class RemoteFileStore(serverType: ServerType) {
     private val locksMutex = Mutex()
 
     init {
-        storageRoot.ensureDirExist()
+        storageRoot.ensureDir()
     }
 
     suspend fun loadFile(originUri: Uri, server: SftpServer): Path {
-        val iosServer = server as? IosSftpServer ?: return get(originUri).ensureFileExist()
+        val iosServer = server as? IosSftpServer ?: return get(originUri).apply { ensureFileAndParentExists() }
         return withContext(Dispatchers.IO) {
             val realFile = get(originUri)
             val tmpFile = getTmp(originUri)
@@ -38,24 +41,12 @@ class RemoteFileStore(serverType: ServerType) {
                 if (realFile.exists() && realFile.isFile && fileSize(realFile) > 0L && !tmpFile.exists()) {
                     return@withPermit realFile
                 }
-
-                if (realFile.exists()) {
-                    if (realFile.isDirectory) {
-                        realFile.deleteRecursively()
-                    } else {
-                        realFile.delete()
-                    }
-                }
-
-                tmpFile.ensureFileExist()
+                tmpFile.ensureFileAndParentExists()
                 val downloadSuccess = iosServer.downloadFile(originUri.path, tmpFile.toString())
                 if (!downloadSuccess) {
                     return@withPermit tmpFile
                 }
-
-                if (realFile.exists()) {
-                    realFile.delete()
-                }
+                realFile.ensureNotExist()
                 SystemFileSystem.atomicMove(tmpFile, realFile)
                 realFile
             }
@@ -66,8 +57,8 @@ class RemoteFileStore(serverType: ServerType) {
         CoroutineUtils.runIOTask({
             val lock = lockFor(originUri.raw)
             lock.withPermit {
-                get(originUri).deleteIfExists()
-                getTmp(originUri).deleteIfExists()
+                get(originUri).ensureNotExist()
+                getTmp(originUri).ensureNotExist()
             }
         })
     }
@@ -99,43 +90,5 @@ class RemoteFileStore(serverType: ServerType) {
         result = 31L * result + path.hashCode()
         result = 31L * result + fileName.hashCode()
         return result
-    }
-}
-
-private fun Path.ensureDirExist(): Path {
-    if (exists()) {
-        if (isDirectory) {
-            return this
-        }
-        delete()
-    }
-    mkdirs()
-    return this
-}
-
-private fun Path.ensureFileExist(): Path {
-    val parent = parent
-    if (parent != null && !parent.exists()) {
-        parent.mkdirs()
-    }
-    if (exists()) {
-        if (isDirectory) {
-            deleteRecursively()
-        } else {
-            return this
-        }
-    }
-    createNewFile()
-    return this
-}
-
-private fun Path.deleteIfExists() {
-    if (!exists()) {
-        return
-    }
-    if (isDirectory) {
-        deleteRecursively()
-    } else {
-        delete()
     }
 }

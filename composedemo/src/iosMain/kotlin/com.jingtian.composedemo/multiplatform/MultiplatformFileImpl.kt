@@ -2,21 +2,29 @@ package com.jingtian.composedemo.multiplatform
 
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toComposeImageBitmap
+import cnames.structs.__CFNumber
 import com.jingtian.composedemo.dao.model.FileType
+import com.jingtian.composedemo.utils.BitMapCachePool
 import com.jingtian.composedemo.utils.delete
+import com.jingtian.composedemo.utils.ensureNotExist
 import com.jingtian.composedemo.utils.exists
 import com.jingtian.composedemo.utils.extension
-import com.jingtian.composedemo.utils.uriToImageSize
+import com.jingtian.composedemo.utils.uriToImageBitmap
 import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.IntVar
 import kotlinx.cinterop.addressOf
+import kotlinx.cinterop.alloc
 import kotlinx.cinterop.autoreleasepool
+import kotlinx.cinterop.convert
+import kotlinx.cinterop.memScoped
+import kotlinx.cinterop.ptr
+import kotlinx.cinterop.reinterpret
 import kotlinx.cinterop.usePinned
-import kotlinx.io.Buffer
+import kotlinx.cinterop.value
 import kotlinx.io.RawSource
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
-import kotlinx.io.writeString
 import org.jetbrains.skia.Image
 import platform.AVFoundation.AVAsset
 import platform.AVFoundation.AVAssetImageGenerator
@@ -25,9 +33,34 @@ import platform.AVFoundation.AVMetadataItem
 import platform.AVFoundation.AVURLAsset
 import platform.AVFoundation.commonKey
 import platform.AVFoundation.commonMetadata
+import platform.CoreFoundation.CFDictionaryCreateMutable
+import platform.CoreFoundation.CFDictionaryGetValue
+import platform.CoreFoundation.CFDictionarySetValue
+import platform.CoreFoundation.CFNumberCreate
+import platform.CoreFoundation.CFNumberGetValue
+import platform.CoreFoundation.CFNumberRef
+import platform.CoreFoundation.CFRelease
+import platform.CoreFoundation.CFURLCreateFromFileSystemRepresentation
+import platform.CoreFoundation.CFURLRef
+import platform.CoreFoundation.kCFAllocatorDefault
+import platform.CoreFoundation.kCFBooleanFalse
+import platform.CoreFoundation.kCFBooleanTrue
+import platform.CoreFoundation.kCFNumberIntType
+import platform.CoreFoundation.kCFNumberSInt32Type
+import platform.CoreGraphics.CGImageRef
 import platform.CoreMedia.CMTimeMake
 import platform.Foundation.NSData
 import platform.Foundation.NSURL
+import platform.ImageIO.CGImageSourceCopyPropertiesAtIndex
+import platform.ImageIO.CGImageSourceCreateThumbnailAtIndex
+import platform.ImageIO.CGImageSourceCreateWithURL
+import platform.ImageIO.kCGImagePropertyPixelHeight
+import platform.ImageIO.kCGImagePropertyPixelWidth
+import platform.ImageIO.kCGImageSourceCreateThumbnailFromImageAlways
+import platform.ImageIO.kCGImageSourceCreateThumbnailWithTransform
+import platform.ImageIO.kCGImageSourceShouldCache
+import platform.ImageIO.kCGImageSourceShouldCacheImmediately
+import platform.ImageIO.kCGImageSourceThumbnailMaxPixelSize
 import platform.UIKit.UIImage
 import platform.UIKit.UIImagePNGRepresentation
 import platform.posix.memcpy
@@ -104,14 +137,68 @@ open class MultiplatformFileImpl(val realFile: Path, val realExtension: String, 
         }
     override suspend fun inputStream(): RawSource? = SystemFileSystem.source(realFile)
 
+    @OptIn(ExperimentalForeignApi::class)
+    private fun Path.toCFURLRef(isDirectory: Boolean = false): CFURLRef? = memScoped {
+        val pathBytes = this@toCFURLRef.toString().encodeToByteArray()
+        pathBytes.usePinned { pinned ->
+            CFURLCreateFromFileSystemRepresentation(
+                kCFAllocatorDefault,
+                pinned.addressOf(0).reinterpret(),
+                pathBytes.size.convert(),
+                isDirectory
+            )
+        }
+    }
+
+    @OptIn(ExperimentalForeignApi::class)
+    protected suspend fun imageBoundsOnly(): Pair<Int, Int>? = memScoped {
+        val filePath = file()
+        val fileUrl = filePath.toCFURLRef() ?: return null
+        val securityScopedUrl = NSURL.fileURLWithPath(filePath.toString(), false)
+        val needStopAccess = securityScopedUrl.startAccessingSecurityScopedResource()
+        val imageSource = CGImageSourceCreateWithURL(fileUrl, null)
+        if (imageSource == null) {
+            if (needStopAccess) {
+                securityScopedUrl.stopAccessingSecurityScopedResource()
+            }
+            CFRelease(fileUrl)
+        }
+        try {
+            val properties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0u, null) ?: return@memScoped null
+            try {
+                val widthRef = CFDictionaryGetValue(properties, kCGImagePropertyPixelWidth) ?: return@memScoped null
+                val heightRef = CFDictionaryGetValue(properties, kCGImagePropertyPixelHeight) ?: return@memScoped null
+                val width = alloc<IntVar>()
+                val height = alloc<IntVar>()
+                CFNumberGetValue(widthRef.reinterpret<__CFNumber>(), kCFNumberSInt32Type, width.ptr)
+                CFNumberGetValue(heightRef.reinterpret<__CFNumber>(), kCFNumberSInt32Type, height.ptr)
+                if (width.value <= 0 || height.value <= 0) {
+                    null
+                } else {
+                    width.value to height.value
+                }
+            } finally {
+                CFRelease(properties)
+            }
+        } finally {
+            if (needStopAccess) {
+                securityScopedUrl.stopAccessingSecurityScopedResource()
+            }
+            CFRelease(fileUrl)
+            CFRelease(imageSource)
+        }
+    }
+
+    override suspend fun imageThumbnail(scaleFactor: Int): ImageBitmap? {
+        return uriToImageBitmap(file(), scaleFactor)
+    }
+
     override suspend fun videoThumbnail(): ImageBitmap? = getVideoThumbnail(realFile)
 
     override suspend fun audioThumbnail(): ImageBitmap? = getAudioCoverImage(realFile)
 
     override suspend fun imageRatio(): Pair<Int, Int> = runCatching {
-        SystemFileSystem.source(realFile).use { src ->
-            uriToImageSize(src)
-        }
+        imageBoundsOnly() ?: (1 to 1)
     }.getOrElse { 1 to 1 }
 
     override suspend fun fileStoreInputStream(): RawSource? = SystemFileSystem.source(realFile)
@@ -125,9 +212,7 @@ open class MultiplatformFileImpl(val realFile: Path, val realExtension: String, 
 
     override fun onDelete() {
         if (nsurl != null) {
-            if (realFile.exists()) {
-                realFile.delete()
-            }
+            realFile.ensureNotExist()
         }
     }
 }

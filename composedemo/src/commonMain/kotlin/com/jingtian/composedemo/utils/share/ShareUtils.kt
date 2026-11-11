@@ -10,6 +10,9 @@ import com.jingtian.composedemo.multiplatform.getMultiplatformFileFactory
 import com.jingtian.composedemo.utils.createNewFile
 import com.jingtian.composedemo.utils.delete
 import com.jingtian.composedemo.utils.deleteRecursively
+import com.jingtian.composedemo.utils.ensureDir
+import com.jingtian.composedemo.utils.ensureFileAndParentExists
+import com.jingtian.composedemo.utils.ensureNotExist
 import com.jingtian.composedemo.utils.exists
 import com.jingtian.composedemo.utils.getFileCacheStorageRootDir
 import com.jingtian.composedemo.utils.isDirectory
@@ -52,24 +55,7 @@ object ShareUtils {
 
     private fun newShareFile(): Path {
         val file = Path(shareFileRootDir, "share_${Random.nextLong(0, Long.MAX_VALUE)}.json")
-        if (SystemFileSystem.exists(file)) {
-            if (file.isFile) {
-                file.delete()
-            } else if (file.isDirectory) {
-                file.deleteRecursively()
-            }
-        }
-        file.parent?.let { parent->
-            if (parent.exists()) {
-                if (parent.isFile) {
-                    parent.delete()
-                    parent.mkdirs()
-                }
-            } else {
-                parent.mkdirs()
-            }
-        }
-        file.createNewFile()
+        file.ensureFileAndParentExists()
         return file
     }
 

@@ -15,57 +15,134 @@ import org.jetbrains.skia.ImageInfo
 import org.jetbrains.skia.Paint
 import org.jetbrains.skia.Rect
 import androidx.compose.ui.graphics.ImageBitmap
+import cnames.structs.__CFNumber
+import com.jingtian.composedemo.multiplatform.toImageBitmap
+import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.IntVar
+import kotlinx.cinterop.addressOf
+import kotlinx.cinterop.alloc
+import kotlinx.cinterop.convert
+import kotlinx.cinterop.memScoped
+import kotlinx.cinterop.ptr
+import kotlinx.cinterop.reinterpret
+import kotlinx.cinterop.usePinned
+import kotlinx.cinterop.value
+import kotlinx.io.files.Path
 import kotlinx.io.readByteArray
+import platform.CoreFoundation.CFDictionaryCreateMutable
+import platform.CoreFoundation.CFDictionaryGetValue
+import platform.CoreFoundation.CFDictionarySetValue
+import platform.CoreFoundation.CFNumberCreate
+import platform.CoreFoundation.CFNumberGetValue
+import platform.CoreFoundation.CFRelease
+import platform.CoreFoundation.CFURLCreateFromFileSystemRepresentation
+import platform.CoreFoundation.CFURLRef
+import platform.CoreFoundation.kCFAllocatorDefault
+import platform.CoreFoundation.kCFBooleanFalse
+import platform.CoreFoundation.kCFBooleanTrue
+import platform.CoreFoundation.kCFNumberIntType
+import platform.CoreFoundation.kCFNumberSInt32Type
+import platform.CoreGraphics.CGImageRef
+import platform.Foundation.NSURL
+import platform.ImageIO.CGImageSourceCopyPropertiesAtIndex
+import platform.ImageIO.CGImageSourceCreateThumbnailAtIndex
+import platform.ImageIO.CGImageSourceCreateWithURL
+import platform.ImageIO.kCGImagePropertyPixelHeight
+import platform.ImageIO.kCGImagePropertyPixelWidth
+import platform.ImageIO.kCGImageSourceCreateThumbnailFromImageAlways
+import platform.ImageIO.kCGImageSourceCreateThumbnailWithTransform
+import platform.ImageIO.kCGImageSourceShouldCache
+import platform.ImageIO.kCGImageSourceShouldCacheImmediately
+import platform.ImageIO.kCGImageSourceThumbnailMaxPixelSize
+import platform.UIKit.UIImage
 
-actual fun uriToImageBitmap(`is`: RawSource, scaleFactor: Int): ImageBitmap? {
-//    println("uriToImageBitmap scaleFactor: $scaleFactor")
-    val bytes = `is`.buffered().readByteArray()
-//    println("uriToImageBitmap: bytes")
-    val image = runCatching { Image.makeFromEncoded(bytes) }.getOrNull() ?: return null
-    if (scaleFactor == 1 || scaleFactor <= 0) {
-        return image.toComposeImageBitmap()
-    }
-    val width = image.width
-    val height = image.height
-    val targetWidth = (width.toFloat() / scaleFactor).toInt()
-    val targetHeight = (height.toFloat() / scaleFactor).toInt()
-    val scaledBitmap = Bitmap().apply {
-        allocPixels(
-            ImageInfo.makeS32(
-                targetWidth,
-                targetHeight,
-                ColorAlphaType.PREMUL
-            )
+@OptIn(ExperimentalForeignApi::class)
+private fun Path.toCFURLRef(isDirectory: Boolean = false): CFURLRef? = memScoped {
+    val pathBytes = this@toCFURLRef.toString().encodeToByteArray()
+    pathBytes.usePinned { pinned ->
+        CFURLCreateFromFileSystemRepresentation(
+            kCFAllocatorDefault,
+            pinned.addressOf(0).reinterpret(),
+            pathBytes.size.convert(),
+            isDirectory
         )
     }
-
-    // 创建 Canvas 用于绘制缩放后的图片
-    val canvas = Canvas(scaledBitmap)
-
-    // 定义源矩形（原始图片尺寸）和目标矩形（缩放后尺寸）
-    val sourceRect = Rect.makeWH(width.toFloat(), height.toFloat())
-    val destRect = Rect.makeWH(targetWidth.toFloat(), targetHeight.toFloat())
-
-    // 绘制并缩放图片
-    canvas.drawImageRect(
-        image = image,
-        src = sourceRect,
-        dst = destRect,
-        paint = Paint().apply {
-            // 设置缩放过滤，保证缩放质量
-//            isFilterQuality = filterQuality
-            isAntiAlias = true // 抗锯齿
-        }
-    )
-    return Image.makeFromBitmap(scaledBitmap).also {
-        scaledBitmap.close()
-    }.toComposeImageBitmap()
 }
-actual fun uriToImageBitmap(`is`: RawSource): ImageBitmap? = uriToImageBitmap(`is`, 1)
-actual fun uriToImageSize(`is`: RawSource): Pair<Int, Int> {
-    val bytes = `is`.buffered().readByteArray()
-    val image = runCatching { Image.makeFromEncoded(bytes) }.getOrNull() ?: return 1 to 1
-    return image.width to image.height
+
+@OptIn(ExperimentalForeignApi::class)
+private fun readImageBoundsOnly(fileUrl: CFURLRef): Pair<Int, Int>? = memScoped {
+    val imageSource = CGImageSourceCreateWithURL(fileUrl, null) ?: return@memScoped null
+    try {
+        val properties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0u, null) ?: return@memScoped null
+        try {
+            val widthRef = CFDictionaryGetValue(properties, kCGImagePropertyPixelWidth) ?: return@memScoped null
+            val heightRef = CFDictionaryGetValue(properties, kCGImagePropertyPixelHeight) ?: return@memScoped null
+            val width = alloc<IntVar>()
+            val height = alloc<IntVar>()
+            CFNumberGetValue(widthRef.reinterpret<__CFNumber>(), kCFNumberSInt32Type, width.ptr)
+            CFNumberGetValue(heightRef.reinterpret<__CFNumber>(), kCFNumberSInt32Type, height.ptr)
+            if (width.value <= 0 || height.value <= 0) {
+                null
+            } else {
+                width.value to height.value
+            }
+        } finally {
+            CFRelease(properties)
+        }
+    } finally {
+        CFRelease(imageSource)
+    }
+}
+
+@OptIn(ExperimentalForeignApi::class)
+private fun decodeSampledImage(fileUrl: CFURLRef, maxPixelSize: Int): CGImageRef? = memScoped {
+    val imageSource = CGImageSourceCreateWithURL(fileUrl, null) ?: return@memScoped null
+    val maxPixelSizeValue = alloc<IntVar>().apply { value = maxPixelSize }
+    val maxPixelSizeNumber = CFNumberCreate(kCFAllocatorDefault, kCFNumberIntType, maxPixelSizeValue.ptr)
+    return@memScoped try {
+        val options = CFDictionaryCreateMutable(kCFAllocatorDefault, 0, null, null)
+        try {
+            CFDictionarySetValue(options, kCGImageSourceShouldCache, kCFBooleanFalse)
+            CFDictionarySetValue(options, kCGImageSourceShouldCacheImmediately, kCFBooleanFalse)
+            CFDictionarySetValue(options, kCGImageSourceCreateThumbnailFromImageAlways, kCFBooleanTrue)
+            CFDictionarySetValue(options, kCGImageSourceCreateThumbnailWithTransform, kCFBooleanTrue)
+            CFDictionarySetValue(options, kCGImageSourceThumbnailMaxPixelSize, maxPixelSizeNumber)
+            CGImageSourceCreateThumbnailAtIndex(imageSource, 0u, options)
+        } finally {
+            if (options != null) {
+                CFRelease(options)
+            }
+        }
+    } finally {
+        if (maxPixelSizeNumber != null) {
+            CFRelease(maxPixelSizeNumber)
+        }
+        CFRelease(imageSource)
+    }
+}
+
+@OptIn(ExperimentalForeignApi::class)
+actual fun uriToImageBitmap(path: Path, scaleFactor: Int): ImageBitmap? {
+    val fileUrl = path.toCFURLRef() ?: return null
+    val securityScopedUrl = NSURL.fileURLWithPath(path.toString(), false)
+
+    val needStopAccess = securityScopedUrl.startAccessingSecurityScopedResource()
+    return try {
+        val (intrinsicWidth, intrinsicHeight) = readImageBoundsOnly(fileUrl) ?: return null
+        val safeScaleFactor = maxOf(1, scaleFactor)
+        val targetLongSide = maxOf(intrinsicWidth, intrinsicHeight) / safeScaleFactor
+        val cgImage = decodeSampledImage(fileUrl, targetLongSide) ?: return null
+        try {
+            UIImage.imageWithCGImage(cgImage).toImageBitmap()
+        } finally {
+            CFRelease(cgImage)
+        }
+    } finally {
+        if (needStopAccess) {
+            securityScopedUrl.stopAccessingSecurityScopedResource()
+        }
+        CFRelease(fileUrl)
+    }
 }
 actual fun writeImage(bitmap: ImageBitmap, os: RawSink) {
     // 1. Convert ImageBitmap to Skia Image and encode

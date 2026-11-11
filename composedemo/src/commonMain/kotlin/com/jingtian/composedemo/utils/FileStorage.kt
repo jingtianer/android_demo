@@ -38,14 +38,7 @@ object FileStorageUtils {
 
     fun checkRootDir() {
         val storeDir = Path(getFileStorageRootDir(), RANK_IMAGE_STORE_ROOT_DIR)
-        if (storeDir.exists()) {
-            if (storeDir.isFile) {
-                storeDir.delete()
-                storeDir.mkdir()
-            }
-        } else {
-            storeDir.mkdir()
-        }
+        storeDir.ensureDir()
     }
 
     private val lock = newReentrantLock()
@@ -100,9 +93,7 @@ object FileStorageUtils {
         fun delete(id: Long) {
             val storeDir = Path(getFileStorageRootDir(), rankImageStoreDir)
             val storageFile = Path(storeDir, rankImagePrefix(id))
-            if (storageFile.exists()) {
-                storageFile.delete()
-            }
+            storageFile.ensureNotExist()
         }
 
         suspend fun asyncStore(oldId: Long, uri: MultiplatformFile): Pair<Long, Job> {
@@ -174,25 +165,13 @@ object FileStorageUtils {
         }
 
         private fun ensureFile(storageFile: Path) {
-            if (storageFile.exists()) {
-                if (storageFile.isDirectory) {
-                    storageFile.deleteRecursively()
-                } else {
-                    storageFile.delete()
-                }
-            }
-            storageFile.createNewFile()
+            storageFile.ensureNewFileExists()
         }
 
         private suspend fun getStoreFile(id: Long): Path {
             val storeDir = Path(getFileStorageRootDir(), rankImageStoreDir)
             lock.use {
-                if (!storeDir.exists()) {
-                    storeDir.mkdirs()
-                } else if (storeDir.isFile) {
-                    storeDir.delete()
-                    storeDir.mkdir()
-                }
+                storeDir.ensureDir()
             }
             return Path(storeDir, rankImagePrefix(id))
         }
@@ -200,12 +179,7 @@ object FileStorageUtils {
         private suspend fun getIosRealFileStoreFile(id: Long, fileName: String): Path {
             val storeDir = Path(getFileStorageRootDir(), rankImageStoreDir)
             lock.use {
-                if (!storeDir.exists()) {
-                    storeDir.mkdirs()
-                } else if (storeDir.isFile) {
-                    storeDir.delete()
-                    storeDir.mkdir()
-                }
+                storeDir.ensureDir()
             }
             return Path(storeDir, rankImagePrefix(id) + "_${fileName}")
         }

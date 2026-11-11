@@ -53,29 +53,95 @@ fun <K, V : Any> MutableMap<K, SoftRef<V>>.getOrPutSoftRef(key: K, default: ()->
 @Composable
 fun <T> MutableState<T>.observeAsState() = remember { this }
 
-val Path.isFile get() = SystemFileSystem.metadataOrNull(this)?.isRegularFile ?: throw Exception("attr is null exists=${exists()}, $this")
-val Path.isDirectory get() = SystemFileSystem.metadataOrNull(this)?.isDirectory ?: throw Exception("attr is null exists=${exists()}, $this")
+val Path.isFile get() = SystemFileSystem.metadataOrNull(this)?.isRegularFile ?: false
+val Path.isDirectory get() = SystemFileSystem.metadataOrNull(this)?.isDirectory ?: false
 fun Path.delete() = SystemFileSystem.delete(this, false)
 fun Path.exists() = SystemFileSystem.exists(this)
 fun Path.mkdir() = SystemFileSystem.createDirectories(this, true)
+fun Path.mkdirs(mustCreate: Boolean = true) = SystemFileSystem.createDirectories(this, mustCreate = mustCreate)
 fun Path.deleteRecursively() {
-    if (runCatching { isFile }.getOrDefault(false)) {
+    val metadata = SystemFileSystem.metadataOrNull(this) ?: return
+    if (metadata.isRegularFile) {
         SystemFileSystem.delete(this)
-    } else if (kotlin.runCatching { isDirectory }.getOrDefault(false)) {
-        kotlin.runCatching {
+    } else if (metadata.isDirectory) {
+        runCatching {
             SystemFileSystem.list(this).forEach { child->
                 child.deleteRecursively()
             }
         }
         SystemFileSystem.delete(this, mustExist = false)
+    }
+}
+fun Path.ensureNotExist() {
+    val metadata = SystemFileSystem.metadataOrNull(this)
+    if (metadata != null) {
+        if (metadata.isDirectory) {
+            deleteRecursively()
+        } else {
+            SystemFileSystem.delete(this, mustExist = false)
+        }
+    }
+}
+
+fun Path.ensureDir() {
+    val metadata = SystemFileSystem.metadataOrNull(this)
+    if (metadata != null && !metadata.isDirectory) {
+        SystemFileSystem.delete(this, mustExist = false)
+    }
+    SystemFileSystem.createDirectories(this, mustCreate = false)
+}
+
+fun Path.ensureFileAndParentExists() {
+    parent?.ensureDir()
+    ensureFileExists()
+    createNewFile()
+}
+
+fun Path.ensureFileExists() {
+    val metadata = SystemFileSystem.metadataOrNull(this)
+    if (metadata == null) {
+        createNewFile()
+    } else {
+        if (metadata.isDirectory) {
+            deleteRecursively()
+            createNewFile()
+        } else if (!metadata.isRegularFile) {
+            SystemFileSystem.delete(this, mustExist = false)
+            createNewFile()
+        }
+    }
+}
+
+fun Path.ensureNewFileExists() {
+    val metadata = SystemFileSystem.metadataOrNull(this)
+    if (metadata != null) {
+        if (metadata.isDirectory) {
+            deleteRecursively()
+        } else {
+            SystemFileSystem.delete(this, mustExist = false)
+        }
+    }
+    createNewFile()
+}
+
+
+fun Path.deleteIfNotFile() {
+    val metadata = SystemFileSystem.metadataOrNull(this)
+    if (metadata != null && !metadata.isRegularFile) {
+        if (metadata.isDirectory) {
+            deleteRecursively()
+        } else {
+            SystemFileSystem.delete(this, mustExist = false)
+        }
     }
 }
 
 fun Path.deleteRecursively(onDelete: (String) -> Unit) {
-    if (runCatching { isFile }.getOrDefault(false)) {
+    val metadata = SystemFileSystem.metadataOrNull(this) ?: return
+    if (metadata.isRegularFile) {
         SystemFileSystem.delete(this)
         onDelete("$this")
-    } else if (kotlin.runCatching { isDirectory }.getOrDefault(false)) {
+    } else if (metadata.isDirectory) {
         kotlin.runCatching {
             SystemFileSystem.list(this).forEach { child->
                 child.deleteRecursively()
@@ -85,9 +151,6 @@ fun Path.deleteRecursively(onDelete: (String) -> Unit) {
         onDelete("$this")
     }
 }
-
-fun Path.mkdirs() = SystemFileSystem.createDirectories(this, true)
-
 fun Path.createNewFile() {
     if (SystemFileSystem.exists(this)) {
         return

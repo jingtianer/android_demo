@@ -8,7 +8,6 @@ import com.jingtian.composedemo.multiplatform.logD
 import com.jingtian.composedemo.multiplatform.logE
 import com.jingtian.composedemo.multiplatform.use
 import com.jingtian.composedemo.utils.extension
-import com.jingtian.composedemo.utils.uriToImageSize
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.usePinned
 import kotlinx.io.Buffer
@@ -96,14 +95,14 @@ class RemoteSftpFileImpl(
         return getAudioCoverImage(getContentFile())
     }
 
-    @OptIn(ExperimentalForeignApi::class)
-    override suspend fun imageRatio(): Pair<Int, Int> {
-        return runCatching {
-            SystemFileSystem.source(getContentFile()).usePinned {
-                uriToImageSize(it.get())
-            }
-        }.getOrElse { 1 to 1 }
-    }
+//    @OptIn(ExperimentalForeignApi::class)
+//    override suspend fun imageRatio(): Pair<Int, Int> {
+//        return runCatching {
+//            SystemFileSystem.source(getContentFile()).usePinned {
+//                uriToImageSize(it.get())
+//            }
+//        }.getOrElse { 1 to 1 }
+//    }
 
     override suspend fun file(): Path = getContentFile()
 
