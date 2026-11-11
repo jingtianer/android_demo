@@ -48,7 +48,9 @@ import platform.CoreFoundation.kCFBooleanTrue
 import platform.CoreFoundation.kCFNumberIntType
 import platform.CoreFoundation.kCFNumberSInt32Type
 import platform.CoreGraphics.CGImageRef
+import platform.CoreMedia.CMTimeGetSeconds
 import platform.CoreMedia.CMTimeMake
+import platform.CoreMedia.CMTimeMakeWithSeconds
 import platform.Foundation.NSData
 import platform.Foundation.NSURL
 import platform.ImageIO.CGImageSourceCopyPropertiesAtIndex
@@ -97,11 +99,20 @@ open class MultiplatformFileImpl(val realFile: Path, val realExtension: String, 
                 val asset = AVAsset.assetWithURL(url)
                 val generator = AVAssetImageGenerator(asset)
                 generator.appliesPreferredTrackTransform = true
-
-                val time = CMTimeMake(1, 60)
+                val durationSeconds = CMTimeGetSeconds(asset.duration)
+                val targetSeconds = when {
+                    !durationSeconds.isFinite() || durationSeconds <= 0.0 -> 0.0
+                    durationSeconds < 1.0 -> durationSeconds / 2.0
+                    else -> 1.0
+                }
+                val time = CMTimeMakeWithSeconds(targetSeconds, 600)
                 val cgImage = generator.copyCGImageAtTime(time, null, null)
-                val uiImage = UIImage.imageWithCGImage(cgImage)
-                uiImage.toImageBitmap()
+                try {
+                    val uiImage = UIImage.imageWithCGImage(cgImage)
+                    uiImage.toImageBitmap()
+                } finally {
+                    CFRelease(cgImage)
+                }
             }
         } catch (e: Exception) {
             logE("getVideoThumbnail", "error", e)
@@ -162,6 +173,7 @@ open class MultiplatformFileImpl(val realFile: Path, val realExtension: String, 
                 securityScopedUrl.stopAccessingSecurityScopedResource()
             }
             CFRelease(fileUrl)
+            return@memScoped null
         }
         try {
             val properties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0u, null) ?: return@memScoped null
