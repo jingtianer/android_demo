@@ -156,7 +156,7 @@ kotlin {
                 implementation(libs.jzlib)
 
                 implementation(libs.androidx.biometric)
-                implementation("org.jetbrains.kotlinx:atomicfu:0.23.2")
+                implementation(libs.atomicfu)
             }
         }
 
@@ -201,7 +201,7 @@ kotlin {
 
                 implementation(libs.jsch)
                 implementation(libs.jzlib)
-                implementation("org.jetbrains.kotlinx:atomicfu:0.23.2")
+                implementation(libs.atomicfu)
 
             }
         }
