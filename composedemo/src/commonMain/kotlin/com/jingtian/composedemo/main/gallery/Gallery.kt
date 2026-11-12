@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.wrapContentHeight
@@ -47,21 +46,23 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableFloatState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -72,11 +73,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import com.jingtian.composedemo.BuildKonfig
 import com.jingtian.composedemo.base.AppThemeConfirmDialog
 import com.jingtian.composedemo.base.AppThemeText
-import com.jingtian.composedemo.base.BackPressHandler
 import com.jingtian.composedemo.base.resources.DrawableIcon
 import com.jingtian.composedemo.dao.DataBase
 import com.jingtian.composedemo.dao.model.Album
@@ -95,7 +95,6 @@ import com.jingtian.composedemo.main.gallery.GalleryFunctions.RENAME
 import com.jingtian.composedemo.main.gallery.GalleryFunctions.SELECT_ALL
 import com.jingtian.composedemo.main.gallery.GalleryFunctions.SELECT_NONE
 import com.jingtian.composedemo.main.dialog.MoveToDialog
-import com.jingtian.composedemo.main.albumItem.AlbumItemViewStateHolder
 import com.jingtian.composedemo.navigation.rememberDocumentTreePicker
 import com.jingtian.composedemo.ui.theme.LocalAppColorScheme
 import com.jingtian.composedemo.ui.theme.LocalAppPalette
@@ -103,7 +102,6 @@ import com.jingtian.composedemo.ui.theme.LocalAppUIConstants
 import com.jingtian.composedemo.ui.theme.LocalMiddleButtonConfig
 import com.jingtian.composedemo.ui.theme.appBackground
 import com.jingtian.composedemo.utils.dpValue
-import com.jingtian.composedemo.utils.getOrPutRef
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -113,34 +111,63 @@ import com.jingtian.composedemo.main.dialog.ImportDocumentDialog
 import com.jingtian.composedemo.main.dialog.rememberDocumentDialogState
 import com.jingtian.composedemo.multiplatform.LowMemorySideEffect
 import com.jingtian.composedemo.multiplatform.SoftRef
-import com.jingtian.composedemo.utils.AppTheme
 import com.jingtian.composedemo.utils.getOrPutSoftRef
-import com.jingtian.composedemo.viewmodels.AuthSuccess
 import com.jingtian.composedemo.viewmodels.albumViewModel
-import com.jingtian.composedemo.viewmodels.authViewModel
 import com.jingtian.composedemo.viewmodels.observeAsState
 import kotlinx.coroutines.IO
 
 @Composable
-fun Gallery(galleryStateHolderMap: SnapshotStateMap<Long, SoftRef<GalleryStateHolder>>, album: IndexedValue<Album>?, albumList: List<Album>, drawerState: DrawerState) {
+fun Gallery(
+    galleryStateHolderMap: SnapshotStateMap<Long, SoftRef<GalleryStateHolder>>,
+    album: IndexedValue<Album>?,
+    albumList: List<Album>,
+    drawerState: DrawerState,
+    naviController: NavController
+) {
     if (album == null) {
         return
     }
+    val currentSelectedAlbumState = remember(album.value) { mutableStateOf(album.value) }
     val albumId: Long = album.value.albumId ?: return
     val scrollAreaWidth = 28.dp
-    val galleryDpConstants =  GalleryDpConstants(
+    val galleryDpConstants = GalleryDpConstants(
         scrollBarWidthDp = 6.dp.dpValue(),
         scrollBarHeightDp = 64.dp.dpValue(),
         scrollAreaWidthDp = scrollAreaWidth.dpValue()
     )
     val viewModel: AlbumViewModel = albumViewModel()
+
     val galleryStateHolder = remember(album, albumList) {
         galleryStateHolderMap.getOrPutSoftRef(albumId) {
-            GalleryStateHolder(album, albumList, drawerState, viewModel, galleryDpConstants)
+            GalleryStateHolder(
+                album,
+                currentSelectedAlbumState,
+                albumList,
+                drawerState,
+                viewModel,
+                galleryDpConstants,
+                naviController
+            )
         }
     }
     galleryStateHolder.Gallery()
 }
+
+fun Modifier.predictiveBackVisual(
+    backProgress: MutableFloatState,
+    visible: Boolean
+): Modifier = this
+    .blur(((if (visible) backProgress.value else 1f) * 40).dp)
+    .graphicsLayer {
+        val progress = backProgress.value
+        val scale = if (visible && progress <= 0.1f) {
+            1f
+        } else {
+            1f - progress * 0.2f
+        }
+        scaleX = scale
+        scaleY = scale
+    }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -164,13 +191,19 @@ fun GalleryStateHolder.Gallery() {
         onAlbumNameChanged()
     }
 
-    val importDirLauncher by rememberDocumentTreePicker { uri->
+    val importDirLauncher by rememberDocumentTreePicker { uri ->
         uri ?: return@rememberDocumentTreePicker
         viewModel.importFiles(album.value, uri)
     }
 
     val filterChanged by viewModel.filterCheckChanged.observeAsState()
-    LaunchedEffect(filterChanged, itemList, gallerySearchWord, gallerySearchEnabled, filterConfig.value.labelOr.value) {
+    LaunchedEffect(
+        filterChanged,
+        itemList,
+        gallerySearchWord,
+        gallerySearchEnabled,
+        filterConfig.value.labelOr.value
+    ) {
         updateFilterList()
         withFrameMillis {
         }
@@ -186,7 +219,10 @@ fun GalleryStateHolder.Gallery() {
             .appBackground()
             .windowInsetsPadding(WindowInsets.statusBars)
     ) {
-        CompositionLocalProvider(LocalContentColor provides LocalAppPalette.current.galleryHeaderColor, LocalTextStyle provides LocalTextStyle.current.copy(color = LocalAppPalette.current.galleryHeaderColor)) {
+        CompositionLocalProvider(
+            LocalContentColor provides LocalAppPalette.current.galleryHeaderColor,
+            LocalTextStyle provides LocalTextStyle.current.copy(color = LocalAppPalette.current.galleryHeaderColor)
+        ) {
             Row(
                 Modifier
                     .fillMaxWidth()
@@ -213,10 +249,15 @@ fun GalleryStateHolder.Gallery() {
                             .padding(4.dp)
                     )
                     Spacer(Modifier.width(12.dp))
-                    AppThemeText(albumName.trim(),
+                    AppThemeText(
+                        albumName.trim(),
                         Modifier
                             .align(Alignment.CenterVertically)
-                            .weight(1f), style = LocalTextStyle.current.copy(fontSize = 24.sp, fontWeight = FontWeight(600)),
+                            .weight(1f),
+                        style = LocalTextStyle.current.copy(
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight(600)
+                        ),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -229,7 +270,8 @@ fun GalleryStateHolder.Gallery() {
                             scope.launch {
                                 updateScrollOffset()
                                 updateGallerySearchWord(it)
-                            } },
+                            }
+                        },
                         modifier = Modifier
                             .align(Alignment.CenterVertically)
                             .fillMaxWidth()
@@ -241,7 +283,11 @@ fun GalleryStateHolder.Gallery() {
                             .padding(start = 12.dp, end = 6.dp, top = 8.dp, bottom = 8.dp)
                             .weight(1f),
                         singleLine = true,
-                        textStyle = LocalTextStyle.current.copy(fontSize = 16.sp, fontWeight = FontWeight(400), color = LocalTextStyle.current.color),
+                        textStyle = LocalTextStyle.current.copy(
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight(400),
+                            color = LocalTextStyle.current.color
+                        ),
                         cursorBrush = SolidColor(LocalTextStyle.current.color)
                     )
                     Spacer(Modifier.width(6.dp))
@@ -282,17 +328,22 @@ fun GalleryStateHolder.Gallery() {
             }
 
         }
-        CompositionLocalProvider(LocalContentColor provides LocalAppPalette.current.galleryHeaderColor, LocalTextStyle provides LocalTextStyle.current.copy(color = LocalAppPalette.current.galleryHeaderColor)) {
+        CompositionLocalProvider(
+            LocalContentColor provides LocalAppPalette.current.galleryHeaderColor,
+            LocalTextStyle provides LocalTextStyle.current.copy(color = LocalAppPalette.current.galleryHeaderColor)
+        ) {
             if (enterEditMode) {
                 Row(
                     Modifier
                         .padding(start = 4.dp, end = 8.dp)
-                        .fillMaxWidth()) {
+                        .fillMaxWidth()
+                ) {
                     LazyRow(
                         Modifier
                             .fillMaxWidth()
                             .wrapContentHeight()
-                            .weight(1f)) {
+                            .weight(1f)
+                    ) {
                         roundRectTabFilter(labelFilterCheckedInfo, totalLabelList)
                         roundRectTabFilter(fileTypeCheckState, totalFileTypeList)
                         roundRectTabFilter(itemRankTypeCheckState, totalItemRankList)
@@ -312,13 +363,15 @@ fun GalleryStateHolder.Gallery() {
             }
         }
         fun getScrollOffset(): Float {
-            return galleryScrollState.layoutInfo.visibleItemsInfo.map { it.index - it.offset.y.toFloat() / it.size.height }.average().toFloat()
+            return galleryScrollState.layoutInfo.visibleItemsInfo.map { it.index - it.offset.y.toFloat() / it.size.height }
+                .average().toFloat()
         }
 
         Box(
             Modifier
                 .fillMaxSize()
-                .weight(1f)) {
+                .weight(1f)
+        ) {
             val naviBarInsets = WindowInsets.navigationBars.asPaddingValues()
             val bottomBarHeight = 52.dp
             val shadesHeight = 0.dp
@@ -337,7 +390,8 @@ fun GalleryStateHolder.Gallery() {
 //                                galleryScrollState.layoutInfo.visibleItemsInfo
 //                                    .map { "{${it.index}, ${it.offset.y}, ${it.size.height}}" }
 //                                    .fastJoinToString { it }
-                            scrollOffsetY = getScrollOffset() / galleryScrollState.layoutInfo.totalItemsCount * galleryScrollState.layoutInfo.viewportSize.height.toFloat()
+                            scrollOffsetY =
+                                getScrollOffset() / galleryScrollState.layoutInfo.totalItemsCount * galleryScrollState.layoutInfo.viewportSize.height.toFloat()
                             updateScrollOffset()
 //                            Log.d("jingtian", "onPostScroll: $info")
                             return super.onPostScroll(consumed, available, source)
@@ -351,10 +405,28 @@ fun GalleryStateHolder.Gallery() {
                 ),
                 state = galleryScrollState,
             ) {
-                items(filteredItemList.size, key = { index-> filteredItemList[index].let {
-                    Triple(it.albumItem.itemId ?: DataBase.INVALID_ID, it.albumItem.fileId, it.fileInfo.storageId) to it.hashCode()
-                } }, contentType = { index-> filteredItemList[index].fileInfo.fileType.value }) { index: Int ->
-                    AlbumItemView(albumViewMap, filteredItemList[index], size, galleryItemPadding, currentSelectedItem, enterEditModeState, itemSelectStateChangeState, showEditDialogStateOnLongClickState)
+                items(
+                    filteredItemList.size,
+                    key = { index ->
+                        filteredItemList[index].let {
+                            Triple(
+                                it.albumItem.itemId ?: DataBase.INVALID_ID,
+                                it.albumItem.fileId,
+                                it.fileInfo.storageId
+                            ) to it.hashCode()
+                        }
+                    },
+                    contentType = { index -> filteredItemList[index].fileInfo.fileType.value }) { index: Int ->
+                    AlbumItemView(
+                        albumViewMap,
+                        filteredItemList[index],
+                        size,
+                        galleryItemPadding,
+                        currentSelectedItem,
+                        enterEditModeState,
+                        itemSelectStateChangeState,
+                        showEditDialogStateOnLongClickState
+                    )
                 }
             }
             val scrollBarColor = LocalAppPalette.current.labelTextColor.copy(alpha = 0.85f)
@@ -445,14 +517,18 @@ fun GalleryStateHolder.Gallery() {
                         .height(bottomBarHeight)
                         .align(Alignment.BottomCenter)
                 ) {
-                    Row(Modifier
-                        .wrapContentSize()
-                        .align(Alignment.CenterStart)) {
+                    Row(
+                        Modifier
+                            .wrapContentSize()
+                            .align(Alignment.CenterStart)
+                    ) {
                         if (selectAll) {
                             GalleryFunctionView(SELECT_ALL) {
                                 scope.launch(Dispatchers.Default) {
                                     val map = HashMap<Long, AlbumItemRelation>().apply {
-                                        putAll(filteredItemList.map { (it.albumItem.itemId?: DataBase.INVALID_ID) to it })
+                                        putAll(filteredItemList.map {
+                                            (it.albumItem.itemId ?: DataBase.INVALID_ID) to it
+                                        })
                                     }
                                     withContext(Dispatchers.IO) {
                                         currentSelectedItem.putAll(map)
@@ -479,6 +555,7 @@ fun GalleryStateHolder.Gallery() {
                                         addImageDialogState = true
                                     }
                                 }
+
                                 IMPORT -> {
                                     GalleryFunctionView(func) {
                                         if (BuildKonfig.isRemote) {
@@ -488,42 +565,50 @@ fun GalleryStateHolder.Gallery() {
                                         }
                                     }
                                 }
+
                                 RENAME -> {
                                     GalleryFunctionView(func) {
                                         editAlbumDialogState = true
                                     }
                                 }
+
                                 EDIT -> {
                                     GalleryFunctionView(func) {
                                         showEditDialog = true
                                     }
                                 }
+
                                 DELETE -> {
                                     GalleryFunctionView(func) {
                                         showConfirmDeleteDialog = true
                                     }
                                 }
+
                                 MOVE -> {
                                     GalleryFunctionView(func) {
                                         showMoveToDialog = true
                                     }
                                 }
+
                                 GalleryFunctions.IMPORT_CIFS -> {
                                     ImportRemoteFunctionView(this@Gallery, func) {}
                                 }
+
                                 GalleryFunctions.DELETE_CIFS_FILE -> {
                                     DeleteRemoteFileFunctionView(this@Gallery, func) {}
                                 }
+
                                 else -> {}
                             }
                         }
                         for (func in platformFunctions) {
-                            PlatformGalleryFunctionView(this@Gallery, func) {  }
+                            PlatformGalleryFunctionView(this@Gallery, func) { }
                         }
                     }
-                    Row(Modifier
-                        .wrapContentSize()
-                        .align(Alignment.CenterEnd)
+                    Row(
+                        Modifier
+                            .wrapContentSize()
+                            .align(Alignment.CenterEnd)
                     ) {
                         GalleryFunctionView(EXIT) {
                             enterEditMode = false
@@ -546,15 +631,17 @@ fun GalleryStateHolder.Gallery() {
         }
         if (enterEditMode) {
             val selectedCount = currentSelectedItem.size
-            when(selectedCount) {
+            when (selectedCount) {
                 0 -> {
                     currentFunctions.addAll(GalleryFunctions.albumFunctions)
                     platformFunctions.addAll(platformExtraAlbumFunctions(selectedCount))
                 }
+
                 1 -> {
                     currentFunctions.addAll(GalleryFunctions.itemFunctions)
                     platformFunctions.addAll(platformExtraAlbumFunctions(selectedCount))
                 }
+
                 else -> {
                     currentFunctions.addAll(GalleryFunctions.batchFunctions)
                     platformFunctions.addAll(platformExtraAlbumFunctions(selectedCount))
@@ -590,17 +677,26 @@ fun GalleryStateHolder.Gallery() {
         CompositionLocalProvider(
             LocalMiddleButtonConfig provides LocalMiddleButtonConfig.current.copy(
                 text = "删除",
-                colors = LocalMiddleButtonConfig.current.colors.copy(containerColor = LocalAppPalette.current.deleteButtonColor, contentColor = Color.White),
+                colors = LocalMiddleButtonConfig.current.colors.copy(
+                    containerColor = LocalAppPalette.current.deleteButtonColor,
+                    contentColor = Color.White
+                ),
             )
         ) {
-            AppThemeConfirmDialog("确认删除$title", reversed = true, onPositive = null, onMiddleClick = {
-                viewModel.deleteItems(currentSelectedItem.values)
-                showConfirmDeleteDialog = false
-            }, onNegative = {
-                showConfirmDeleteDialog = false
-            }, onDismissRequest = {
-                showConfirmDeleteDialog = false
-            })
+            AppThemeConfirmDialog(
+                "确认删除$title",
+                reversed = true,
+                onPositive = null,
+                onMiddleClick = {
+                    viewModel.deleteItems(currentSelectedItem.values)
+                    showConfirmDeleteDialog = false
+                },
+                onNegative = {
+                    showConfirmDeleteDialog = false
+                },
+                onDismissRequest = {
+                    showConfirmDeleteDialog = false
+                })
         }
     }
 
@@ -616,8 +712,8 @@ fun GalleryStateHolder.Gallery() {
 
 
     if (showEditDialog) {
-        currentSelectedItem.keys.firstOrNull()?.let { firstKey->
-            (currentSelectedItem[firstKey])?.let { albumItemRelation->
+        currentSelectedItem.keys.firstOrNull()?.let { firstKey ->
+            (currentSelectedItem[firstKey])?.let { albumItemRelation ->
                 EditDialog(albumItemRelation, album.value, albumList, totalLabelList) {
                     showEditDialog = false
                 }
@@ -661,6 +757,4 @@ fun GalleryStateHolder.Gallery() {
             showLabelFilter = false
         }
     }
-
-    BackPressHandler()
 }

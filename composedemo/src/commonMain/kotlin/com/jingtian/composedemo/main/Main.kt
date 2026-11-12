@@ -23,6 +23,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableFloatState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateMapOf
@@ -50,12 +51,14 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.jingtian.composedemo.BuildKonfig
 import com.jingtian.composedemo.base.AppThemeText
+import com.jingtian.composedemo.base.BackPressHandler
 import com.jingtian.composedemo.base.JumpOnPurposeMarkHolder
 import com.jingtian.composedemo.dao.model.Album
 import com.jingtian.composedemo.demonstration.DemonstrationMain
 import com.jingtian.composedemo.main.drawer.MainDrawer
 import com.jingtian.composedemo.main.gallery.Gallery
 import com.jingtian.composedemo.main.gallery.GalleryStateHolder
+import com.jingtian.composedemo.main.gallery.predictiveBackVisual
 import com.jingtian.composedemo.main.route.Gallery
 import com.jingtian.composedemo.main.route.LocalRouterController
 import com.jingtian.composedemo.main.route.MainRouterController
@@ -81,7 +84,7 @@ import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 
 @Composable
-expect fun rememberBackProgress(): MutableFloatState
+expect fun rememberBackProgress(isEnable: Boolean): MutableFloatState
 
 @OptIn(ExperimentalTime::class, ExperimentalComposeUiApi::class)
 @Composable
@@ -133,8 +136,7 @@ fun PasswordGuardedMain(onPasswordChecked: () -> Unit = {}) {
             }
         })
     }
-    val backProgress by rememberBackProgress()
-    Main(visible = isVisible && isAuthed && !isLocked, backProgress = backProgress) {
+    Main(visible = isVisible && isAuthed && !isLocked) {
         doAuth()
     }
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -149,7 +151,6 @@ fun PasswordGuardedMain(onPasswordChecked: () -> Unit = {}) {
 @Composable
 fun Main(
     visible: Boolean = true,
-    backProgress: Float = 0f,
     onVisibleRequest: ()->Unit = {}
 ) {
     if (BuildKonfig.isDemo) {
@@ -224,10 +225,20 @@ fun Main(
         galleryStateHolderMap.clear()
     }
     val scope = rememberCoroutineScope()
-    val modifier = if (visible && backProgress <= 0.1) {
+
+    val galleryStateHolder by remember(currentSelectedAlbum) {
+        derivedStateOf {
+            currentSelectedAlbum?.value?.albumId?.let {
+                galleryStateHolderMap[it]?.get()
+            }
+        }
+    }
+    galleryStateHolder?.BackPressHandler()
+    val backProgress = rememberBackProgress(galleryStateHolder?.let { !it.backEnable && it.isOnTop } ?: true)
+    val modifier = if (visible) {
         Modifier.fillMaxSize()
     } else {
-        Modifier.fillMaxSize().blur(((if (visible) backProgress else 1f) * 40).dp).pointerInput(Unit) {
+        Modifier.fillMaxSize().pointerInput(Unit) {
             awaitEachGesture {
                 while (true) {
                     awaitPointerEvent().changes.forEach { it.consume() }
@@ -236,9 +247,9 @@ fun Main(
         }
     }
     CompositionLocalProvider(LocalRouterController provides routerController) {
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(modifier = modifier.fillMaxSize().predictiveBackVisual(backProgress = backProgress, visible = visible)) {
             Scaffold(
-                modifier = modifier,
+                modifier = Modifier.fillMaxSize(),
                 snackbarHost = {
                     GlobalSnapBar()
                 }
@@ -268,7 +279,7 @@ fun Main(
                 ) {
                     NavHost(navController = naviController, startDestination = Gallery) {
                         composable<Gallery> {
-                            Gallery(galleryStateHolderMap, currentSelectedAlbum, menuItemsEntity, drawerState)
+                            Gallery(galleryStateHolderMap, currentSelectedAlbum, menuItemsEntity, drawerState, naviController)
                         }
                         composable<Settings> {
                             SettingsPage()

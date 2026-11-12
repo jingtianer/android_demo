@@ -21,16 +21,16 @@ import kotlinx.coroutines.launch
 import java.util.concurrent.CancellationException
 
 @Composable
-actual fun rememberBackProgress(): MutableFloatState {
+actual fun rememberBackProgress(isEnable: Boolean): MutableFloatState {
     val backProgress = remember { mutableFloatStateOf(0f) }
-    var enable by remember { mutableStateOf(true) }
+    var enable by remember(isEnable) { mutableStateOf(isEnable) }
     val backDispatcher = LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
     val externalScope = rememberCoroutineScope()
     val lifecycleOwner = LocalLifecycleOwner.current
     val lifecycleObserver = remember {
         object : DefaultLifecycleObserver {
             private fun resetState() {
-                enable = true
+                enable = isEnable
                 backProgress.value = 0f
             }
             override fun onStart(owner: LifecycleOwner) {

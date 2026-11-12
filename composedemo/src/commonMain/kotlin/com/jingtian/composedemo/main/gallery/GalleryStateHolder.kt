@@ -2,6 +2,8 @@ package com.jingtian.composedemo.main.gallery
 
 import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
 import androidx.compose.material3.DrawerState
+import androidx.compose.runtime.State
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
@@ -13,6 +15,9 @@ import androidx.compose.runtime.withFrameMillis
 import com.jingtian.composedemo.multiplatform.WeakRef
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewModelScope
+import androidx.navigation.NavBackStackEntry
+import androidx.navigation.NavController
+import androidx.navigation.NavDestination.Companion.hasRoute
 import com.jingtian.composedemo.dao.model.Album
 import com.jingtian.composedemo.dao.model.FileType
 import com.jingtian.composedemo.dao.model.ItemRank
@@ -40,7 +45,7 @@ interface IPlatformExtra
 
 expect fun getPlatformExtra(): IPlatformExtra
 
-class GalleryStateHolder(val album: IndexedValue<Album>, val albumList: List<Album>, val drawerState: DrawerState, val viewModel: AlbumViewModel, val galleryDpConstants: GalleryDpConstants) {
+class GalleryStateHolder(val album: IndexedValue<Album>, val currentSelectedAlbum: State<Album>, val albumList: List<Album>, val drawerState: DrawerState, val viewModel: AlbumViewModel, val galleryDpConstants: GalleryDpConstants, val navController : NavController) {
     var addImageDialogState by mutableStateOf(false)
     var itemList by mutableStateOf(emptyList<AlbumItemRelation>())
     val filteredItemList = mutableStateListOf<AlbumItemRelation>()
@@ -216,7 +221,30 @@ class GalleryStateHolder(val album: IndexedValue<Album>, val albumList: List<Alb
         }
     }
 
+    val isOnTop by derivedStateOf {
+        val isGalleryOnTop = navController.currentBackStackEntry?.destination?.hasRoute(com.jingtian.composedemo.main.route.Gallery::class) ?: false
+        isGalleryOnTop && album.value === currentSelectedAlbum.value
+    }
+
+    val backEnable by derivedStateOf {
+        if (!isOnTop) {
+            return@derivedStateOf false
+        }
+        return@derivedStateOf if (drawerState.isOpen) {
+            true
+        } else if (enterEditMode) {
+            true
+        } else if (gallerySearchEnabled) {
+            true
+        } else {
+            false
+        }
+    }
+
     suspend fun onBackPressed(): Boolean {
+        if (!isOnTop) {
+            return false
+        }
         return if (drawerState.isOpen) {
             drawerState.close()
             true

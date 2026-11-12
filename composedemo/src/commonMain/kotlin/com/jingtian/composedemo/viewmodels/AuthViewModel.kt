@@ -103,6 +103,7 @@ abstract class AuthViewModel : SingletonViewModel(), DefaultLifecycleObserver {
         if (!shouldDoAuth) {
             isAuthed.value = true
             isVisible.value = true
+            lockedState.value = false
             onAuthResult(AuthSkip)
             return
         }

@@ -6,6 +6,6 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 
 @Composable
-actual fun rememberBackProgress(): MutableFloatState {
+actual fun rememberBackProgress(isEnable: Boolean): MutableFloatState {
     return remember { mutableFloatStateOf(0f) }
 }

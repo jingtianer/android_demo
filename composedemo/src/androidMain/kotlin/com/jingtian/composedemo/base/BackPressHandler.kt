@@ -9,6 +9,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import com.jingtian.composedemo.main.gallery.GalleryStateHolder
 import com.jingtian.composedemo.viewmodels.AuthViewModel
 import com.jingtian.composedemo.viewmodels.authViewModel
@@ -16,14 +17,14 @@ import kotlinx.coroutines.launch
 
 @Composable
 actual fun GalleryStateHolder.BackPressHandler() {
-
     val androidViewModel: AuthViewModel = authViewModel()
     val scope = rememberCoroutineScope()
     val dispatcher = LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
 
-    class GalleryOnBackPressCallBack : OnBackPressedCallback(true) {
+    class GalleryOnBackPressCallBack(isEnable : Boolean) : OnBackPressedCallback(isEnable) {
         override fun handleOnBackPressed() {
             scope.launch {
+                withFrameNanos { }
                 val isEnabled = this@BackPressHandler.onBackPressed()
                 this@GalleryOnBackPressCallBack.isEnabled = isEnabled
                 if (!isEnabled) {
@@ -37,14 +38,13 @@ actual fun GalleryStateHolder.BackPressHandler() {
 
     var backPressedCallback by remember { mutableStateOf<GalleryOnBackPressCallBack?>(null) }
 
-    DisposableEffect(dispatcher, this) {
+    DisposableEffect(dispatcher, this@BackPressHandler, backEnable) {
         backPressedCallback?.apply {
             isEnabled = false
             remove()
         }
-        val innerBackPressedCallback = GalleryOnBackPressCallBack()
+        val innerBackPressedCallback = GalleryOnBackPressCallBack(isEnable = backEnable)
         backPressedCallback = innerBackPressedCallback
-        innerBackPressedCallback.isEnabled = true
         dispatcher?.addCallback(innerBackPressedCallback)
         onDispose {
             innerBackPressedCallback.remove()
