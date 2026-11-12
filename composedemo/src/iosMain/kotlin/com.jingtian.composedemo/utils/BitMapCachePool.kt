@@ -155,9 +155,9 @@ private fun innerUriToImageBitmap(path: Path, scaleFactor: Int): ImageBitmap? {
         val cgImage = decodeSampledImage(fileUrl, targetLongSide) ?: return null
         try {
             cgImage.toSkiaImageBitmap()?.also {
-                logD("uriToImageBitmap") {
-                    "path=$path\nsize=${it.width},${it.height}\noriginalSize=${intrinsicWidth},${intrinsicHeight}"
-                }
+//                logD("uriToImageBitmap") {
+//                    "path=$path\nsize=${it.width},${it.height}\noriginalSize=${intrinsicWidth},${intrinsicHeight}"
+//                }
             }
         } finally {
             CFRelease(cgImage)
