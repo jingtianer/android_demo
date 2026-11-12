@@ -156,18 +156,7 @@ fun Gallery(
 fun Modifier.predictiveBackVisual(
     backProgress: MutableFloatState,
     visible: Boolean
-): Modifier = this
-    .blur(((if (visible) backProgress.value else 1f) * 40).dp)
-    .graphicsLayer {
-        val progress = backProgress.value
-        val scale = if (visible && progress <= 0.1f) {
-            1f
-        } else {
-            1f - progress * 0.2f
-        }
-        scaleX = scale
-        scaleY = scale
-    }
+): Modifier = this.blur(((if (visible) backProgress.value else 1f) * 40).dp)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

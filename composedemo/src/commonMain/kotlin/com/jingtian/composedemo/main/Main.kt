@@ -1,5 +1,11 @@
 package com.jingtian.composedemo.main
 
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideIn
+import androidx.compose.animation.slideOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -36,8 +42,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.backhandler.PredictiveBackHandler
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.unit.IntOffset
 import com.jingtian.composedemo.multiplatform.WeakRef
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.DefaultLifecycleObserver
@@ -80,6 +88,7 @@ import kotlinx.coroutines.IO
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.cancellation.CancellationException
+import kotlin.math.roundToInt
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 
@@ -177,6 +186,7 @@ fun Main(
             DrawerValue.Open -> true
         }
     })
+    rememberCoroutineScope()
     val routerController = MainRouterController(naviController, drawerState)
     var currentSelectedAlbum by remember { mutableStateOf<IndexedValue<Album>?>(null) }
     val albumListChange by viewModel.albumListChange.observeAsState()
@@ -233,8 +243,14 @@ fun Main(
             }
         }
     }
-    galleryStateHolder?.BackPressHandler()
-    val backProgress = rememberBackProgress(galleryStateHolder?.let { !it.backEnable && it.isOnTop } ?: true)
+
+    val isOnTop by remember {
+        derivedStateOf {
+            navBackStackEntry?.destination?.hasRoute(Gallery::class) ?: false
+        }
+    }
+    galleryStateHolder?.BackPressHandler(isOnTop)
+    val backProgress = rememberBackProgress(isOnTop && (galleryStateHolder?.let { !it.backEnable } ?: true))
     val modifier = if (visible) {
         Modifier.fillMaxSize()
     } else {
@@ -247,9 +263,9 @@ fun Main(
         }
     }
     CompositionLocalProvider(LocalRouterController provides routerController) {
-        Box(modifier = modifier.fillMaxSize().predictiveBackVisual(backProgress = backProgress, visible = visible)) {
+        Box(modifier = Modifier.fillMaxSize().predictiveBackVisual(backProgress = backProgress, visible = visible)) {
             Scaffold(
-                modifier = Modifier.fillMaxSize(),
+                modifier = modifier.fillMaxSize(),
                 snackbarHost = {
                     GlobalSnapBar()
                 }
@@ -277,7 +293,22 @@ fun Main(
                     drawerState = drawerState,
                     gesturesEnabled = true
                 ) {
-                    NavHost(navController = naviController, startDestination = Gallery) {
+                    NavHost(
+                        navController = naviController,
+                        startDestination = Gallery,
+                        enterTransition = {
+                            slideIn { IntOffset(it.width, 0) }
+                        },
+                        exitTransition = {
+                            slideOut { IntOffset(-it.width, 0) }
+                        },
+                        popEnterTransition = {
+                            slideIn { IntOffset(-it.width, 0) }
+                        },
+                        popExitTransition = {
+                            slideOut { IntOffset(it.width, 0) }
+                        },
+                    ) {
                         composable<Gallery> {
                             Gallery(galleryStateHolderMap, currentSelectedAlbum, menuItemsEntity, drawerState, naviController)
                         }

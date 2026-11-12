@@ -27,6 +27,7 @@ val LocalRouterController = compositionLocalOf<IRouterController>(structuralEqua
 
 class MainRouterController(private val naviHost: NavHostController, private val drawerState: DrawerState): IRouterController {
     override suspend fun toGallery() {
+        drawerState.close()
         if (naviHost.currentBackStackEntry?.destination?.hasRoute(Gallery::class) == true) {
             // NOP
         } else if (naviHost.popBackStack<Gallery>(inclusive = false)) {
@@ -36,10 +37,10 @@ class MainRouterController(private val naviHost: NavHostController, private val 
                 launchSingleTop = true
             }
         }
-        drawerState.close()
     }
 
     override suspend fun toSettings() {
+        drawerState.close()
         if (naviHost.currentBackStackEntry?.destination?.hasRoute(Settings::class) == true) {
             // NOP
         } else if (naviHost.popBackStack<Settings>(inclusive = false)) {
@@ -49,6 +50,5 @@ class MainRouterController(private val naviHost: NavHostController, private val 
                 launchSingleTop = true
             }
         }
-        drawerState.close()
     }
 }

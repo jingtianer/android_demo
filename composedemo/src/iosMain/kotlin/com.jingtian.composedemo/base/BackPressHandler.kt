@@ -5,6 +5,6 @@ import androidx.compose.runtime.Composable
 import com.jingtian.composedemo.main.gallery.GalleryStateHolder
 
 @Composable
-actual fun GalleryStateHolder.BackPressHandler() {
+actual fun GalleryStateHolder.BackPressHandler(isOnTop: Boolean) {
 
 }

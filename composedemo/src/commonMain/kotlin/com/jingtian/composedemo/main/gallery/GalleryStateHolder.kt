@@ -221,15 +221,7 @@ class GalleryStateHolder(val album: IndexedValue<Album>, val currentSelectedAlbu
         }
     }
 
-    val isOnTop by derivedStateOf {
-        val isGalleryOnTop = navController.currentBackStackEntry?.destination?.hasRoute(com.jingtian.composedemo.main.route.Gallery::class) ?: false
-        isGalleryOnTop && album.value === currentSelectedAlbum.value
-    }
-
     val backEnable by derivedStateOf {
-        if (!isOnTop) {
-            return@derivedStateOf false
-        }
         return@derivedStateOf if (drawerState.isOpen) {
             true
         } else if (enterEditMode) {
@@ -242,9 +234,6 @@ class GalleryStateHolder(val album: IndexedValue<Album>, val currentSelectedAlbu
     }
 
     suspend fun onBackPressed(): Boolean {
-        if (!isOnTop) {
-            return false
-        }
         return if (drawerState.isOpen) {
             drawerState.close()
             true
