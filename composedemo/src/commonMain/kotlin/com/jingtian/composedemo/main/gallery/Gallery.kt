@@ -53,6 +53,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateMap
+import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
@@ -171,6 +172,12 @@ fun GalleryStateHolder.Gallery() {
     val filterChanged by viewModel.filterCheckChanged.observeAsState()
     LaunchedEffect(filterChanged, itemList, gallerySearchWord, gallerySearchEnabled, filterConfig.value.labelOr.value) {
         updateFilterList()
+        withFrameMillis {
+        }
+        if (gallerySearchEnabled) {
+            scrollOffsetY = 0f
+            searchGalleryScrollState.scrollToItem(0, 0)
+        }
     }
 
     Column(
@@ -220,8 +227,6 @@ fun GalleryStateHolder.Gallery() {
                         value = gallerySearchWord,
                         onValueChange = {
                             scope.launch {
-                                scrollOffsetY = 0f
-                                searchGalleryScrollState.scrollToItem(0, 0)
                                 updateScrollOffset()
                                 updateGallerySearchWord(it)
                             } },
