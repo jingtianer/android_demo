@@ -5,12 +5,6 @@ import com.jingtian.composedemo.BuildKonfig
 
 typealias LogLevel = Int
 
-const val LOG_LEVEL_ERROR = 0
-const val LOG_LEVEL_WARN = 1
-const val LOG_LEVEL_DEBUG = 2
-const val LOG_LEVEL_WTF = 3
-const val LOG_LEVEL_INFO = 4
-const val LOG_LEVEL_VERBOSE = 5
 
 const val PREFIX_ERROR = "\uD83D\uDD34 E"
 const val PREFIX_WARN = "\uD83D\uDFE0 W"
@@ -18,6 +12,13 @@ const val PREFIX_DEBUG = "\uD83D\uDD35 D"
 const val PREFIX_WTF = "\uD83D\uDEBE WFT"
 const val PREFIX_INFO = "\uD83D\uDFE2 I"
 const val PREFIX_VERBOSE = "\uD83D\uDFE1 V"
+
+const val LOG_LEVEL_ERROR = 0
+const val LOG_LEVEL_WARN = 1
+const val LOG_LEVEL_DEBUG = 2
+const val LOG_LEVEL_WTF = 3
+const val LOG_LEVEL_INFO = 4
+const val LOG_LEVEL_VERBOSE = 5
 
 const val LOG_LEVEL: LogLevel = -1 // if (BuildKonfig.isDebug) LOG_LEVEL_DEBUG else LOG_LEVEL_WARN
 

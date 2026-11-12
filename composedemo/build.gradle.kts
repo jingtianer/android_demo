@@ -157,6 +157,7 @@ kotlin {
 
                 implementation(libs.androidx.biometric)
                 implementation(libs.atomicfu)
+                implementation(libs.ui.backhandler)
             }
         }
 

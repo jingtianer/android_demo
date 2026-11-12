@@ -22,13 +22,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableFloatState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.backhandler.PredictiveBackHandler
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.PointerEventPass
@@ -72,10 +76,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 
-@OptIn(ExperimentalTime::class)
+@Composable
+expect fun rememberBackProgress(): MutableFloatState
+
+@OptIn(ExperimentalTime::class, ExperimentalComposeUiApi::class)
 @Composable
 fun PasswordGuardedMain(onPasswordChecked: () -> Unit = {}) {
     if (BuildKonfig.isDemo) {
@@ -125,7 +133,8 @@ fun PasswordGuardedMain(onPasswordChecked: () -> Unit = {}) {
             }
         })
     }
-    Main(visible = isVisible && isAuthed && !isLocked) {
+    val backProgress by rememberBackProgress()
+    Main(visible = isVisible && isAuthed && !isLocked, backProgress = backProgress) {
         doAuth()
     }
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -140,6 +149,7 @@ fun PasswordGuardedMain(onPasswordChecked: () -> Unit = {}) {
 @Composable
 fun Main(
     visible: Boolean = true,
+    backProgress: Float = 0f,
     onVisibleRequest: ()->Unit = {}
 ) {
     if (BuildKonfig.isDemo) {
@@ -214,10 +224,10 @@ fun Main(
         galleryStateHolderMap.clear()
     }
     val scope = rememberCoroutineScope()
-    val modifier = if (visible) {
+    val modifier = if (visible && backProgress <= 0.1) {
         Modifier.fillMaxSize()
     } else {
-        Modifier.fillMaxSize().blur(40.dp).pointerInput(Unit) {
+        Modifier.fillMaxSize().blur(((if (visible) backProgress else 1f) * 40).dp).pointerInput(Unit) {
             awaitEachGesture {
                 while (true) {
                     awaitPointerEvent().changes.forEach { it.consume() }

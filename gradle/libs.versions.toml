@@ -107,6 +107,7 @@ asm-analysis = { group = "org.ow2.asm", name = "asm-analysis", version.ref = "as
 asm-util = { group = "org.ow2.asm", name = "asm-util", version.ref = "asm" }
 asm-tree = { group = "org.ow2.asm", name = "asm-tree", version.ref = "asm" }
 gradle-tools = { group = "com.android.tools.build", name = "gradle", version.ref = "gradle-plugin" }
+ui-backhandler = { module = "org.jetbrains.compose.ui:ui-backhandler" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
