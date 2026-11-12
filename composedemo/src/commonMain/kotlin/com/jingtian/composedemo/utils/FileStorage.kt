@@ -62,6 +62,7 @@ object FileStorageUtils {
         private val rankImageStoreDir: String = RANK_IMAGE_STORE_DIR + fileType.value
 
         private val uriCache = mutableMapOf<Long, WeakRef<MultiplatformFile>>()
+        private val storeJobs = mutableMapOf<Long, WeakRef<Job>>()
 
         private val lock = newReentrantLock()
 
@@ -69,11 +70,12 @@ object FileStorageUtils {
             return "${RANK_IMAGE_STORE_PREFIX}_${id}"
         }
 
-        fun get(id: Long, fileInfo: FileInfo): MultiplatformFile? {
+        suspend fun get(id: Long, fileInfo: FileInfo): MultiplatformFile? {
 //            println("FileStorage: fileType:${fileType.name}, id=$id, fileInfo=${fileInfo.extension}")
             if (id == -1L) {
                 return null
             }
+            storeJobs[id]?.get()?.join()
             val cachedUri = uriCache[id]?.get()
             if (cachedUri != null) {
                 return cachedUri
@@ -101,6 +103,7 @@ object FileStorageUtils {
             val job = CoroutineUtils.runIOTask({
                 doStore(uri, id)
             })
+            storeJobs[id] = WeakRef(job)
             return id to job
         }
 
@@ -131,19 +134,12 @@ object FileStorageUtils {
             }
         }
 
-        suspend fun store(uri: MultiplatformFile, oldId: Long = -1): Long {
-            val id = allocateId(uri, oldId)
-            runCatching {
-                doStore(uri, id)
-            }
-            return id
-        }
-
         suspend fun asyncStore(uri: MultiplatformFile): Pair<Long, Job> {
             val id = allocateId(uri)
             val job = CoroutineUtils.runIOTask({
                 doStore(uri, id)
             })
+            storeJobs[id] = WeakRef(job)
             return id to job
         }
 
