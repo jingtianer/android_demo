@@ -2,22 +2,18 @@ package com.jingtian.composedemo.utils
 
 import androidx.compose.ui.graphics.asSkiaBitmap
 import androidx.compose.ui.graphics.toComposeImageBitmap
-import com.jingtian.composedemo.multiplatform.readAllBytesOrNull
 import kotlinx.io.RawSink
-import kotlinx.io.RawSource
 import kotlinx.io.buffered
 import org.jetbrains.skia.Bitmap
-import org.jetbrains.skia.Canvas
 import org.jetbrains.skia.ColorAlphaType
 import org.jetbrains.skia.EncodedImageFormat
 import org.jetbrains.skia.Image
 import org.jetbrains.skia.ImageInfo
 import androidx.compose.ui.graphics.ImageBitmap
 import cnames.structs.__CFNumber
-import com.jingtian.composedemo.multiplatform.logD
 import com.jingtian.composedemo.multiplatform.logE
 import com.jingtian.composedemo.multiplatform.toImageBitmap
-import com.jingtian.composedemo.utils.BitMapCachePool.scale
+import com.jingtian.composedemo.utils.BitMapCacheDecodeControl.taskLimit
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.IntVar
 import kotlinx.cinterop.addressOf
@@ -57,6 +53,8 @@ import platform.ImageIO.kCGImageSourceShouldCacheImmediately
 import platform.ImageIO.kCGImageSourceThumbnailMaxPixelSize
 
 import kotlinx.cinterop.*
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import org.jetbrains.skia.ColorType
 import platform.AVFoundation.AVAsset
 import platform.AVFoundation.AVAssetImageGenerator
@@ -71,6 +69,10 @@ import platform.CoreMedia.CMTimeMakeWithSeconds
 import platform.Foundation.NSData
 import platform.UIKit.UIImage
 import platform.posix.memcpy
+
+private object BitMapCacheDecodeControl {
+    val taskLimit = Semaphore(4)
+}
 
 @OptIn(ExperimentalForeignApi::class)
 fun Path.toCFURLRef(isDirectory: Boolean = false): CFURLRef? = memScoped {
@@ -140,11 +142,11 @@ private fun decodeSampledImage(fileUrl: CFURLRef, maxPixelSize: Int): CGImageRef
 
 @OptIn(ExperimentalForeignApi::class)
 actual suspend fun uriToImageBitmap(path: Path, scaleFactor: Int): ImageBitmap? {
-    return innerUriToImageBitmap(path, scaleFactor)
+    return taskLimit.withPermit { innerUriToImageBitmap(path, scaleFactor) }
 }
 
 @OptIn(ExperimentalForeignApi::class)
-private fun innerUriToImageBitmap(path: Path, scaleFactor: Int): ImageBitmap? {
+private suspend fun innerUriToImageBitmap(path: Path, scaleFactor: Int): ImageBitmap? {
     val fileUrl = path.toCFURLRef() ?: return null
     val securityScopedUrl = interpretObjCPointerOrNull<NSURL>(fileUrl.rawValue)
     val needStopAccess = securityScopedUrl?.startAccessingSecurityScopedResource() ?: false
@@ -154,7 +156,7 @@ private fun innerUriToImageBitmap(path: Path, scaleFactor: Int): ImageBitmap? {
         val targetLongSide = maxOf(intrinsicWidth, intrinsicHeight) / safeScaleFactor
         val cgImage = decodeSampledImage(fileUrl, targetLongSide) ?: return null
         try {
-            cgImage.toSkiaImageBitmap()?.also {
+            cgImage.toSkiaImageBitmapNoLock()?.also {
 //                logD("uriToImageBitmap") {
 //                    "path=$path\nsize=${it.width},${it.height}\noriginalSize=${intrinsicWidth},${intrinsicHeight}"
 //                }
@@ -171,7 +173,7 @@ private fun innerUriToImageBitmap(path: Path, scaleFactor: Int): ImageBitmap? {
 }
 
 @OptIn(ExperimentalForeignApi::class)
-fun CGImageRef.toSkiaImageBitmap(): ImageBitmap? {
+private fun CGImageRef.toSkiaImageBitmapNoLock(): ImageBitmap? {
     val width = CGImageGetWidth(this).toInt()
     val height = CGImageGetHeight(this).toInt()
     if (width <= 0 || height <= 0) return null
@@ -224,77 +226,88 @@ fun CGImageRef.toSkiaImageBitmap(): ImageBitmap? {
     }
 }
 
+@OptIn(ExperimentalForeignApi::class)
+suspend fun CGImageRef.toSkiaImageBitmap(): ImageBitmap? {
+    return taskLimit.withPermit {
+        toSkiaImageBitmapNoLock()
+    }
+}
 
+actual suspend fun writeImage(bitmap: ImageBitmap, os: RawSink) {
+    taskLimit.withPermit {
+        // 1. Convert ImageBitmap to Skia Image and encode
+        val skiaBitmap = bitmap.asSkiaBitmap()
+        val data = Image.makeFromBitmap(skiaBitmap).encodeToData(EncodedImageFormat.PNG)
+            ?: throw Exception("Failed to encode bitmap")
 
-actual fun writeImage(bitmap: ImageBitmap, os: RawSink) {
-    // 1. Convert ImageBitmap to Skia Image and encode
-    val skiaBitmap = bitmap.asSkiaBitmap()
-    val data = Image.makeFromBitmap(skiaBitmap).encodeToData(EncodedImageFormat.PNG)
-        ?: throw Exception("Failed to encode bitmap")
+        // 2. Convert Data to ByteArray (skia bytes)
+        val byteArray = data.bytes
 
-    // 2. Convert Data to ByteArray (skia bytes)
-    val byteArray = data.bytes
-
-    // 3. Write to RawSink
-    os.buffered().use { bufferedSink ->
-        bufferedSink.write(byteArray)
-        bufferedSink.flush()
+        // 3. Write to RawSink
+        os.buffered().use { bufferedSink ->
+            bufferedSink.write(byteArray)
+            bufferedSink.flush()
+        }
     }
 }
 
 @OptIn(ExperimentalForeignApi::class, BetaInteropApi::class)
-fun getVideoThumbnail(filePath: Path): ImageBitmap? {
-    return try {
-        autoreleasepool {
-            val url = NSURL.fileURLWithPath(filePath.toString())
-            val asset = AVAsset.assetWithURL(url)
-            val generator = AVAssetImageGenerator(asset).apply {
-                // 1. 自动处理视频旋转方向（竖屏/横屏矫正）
-                appliesPreferredTrackTransform = true
-                // 2. 关键优化：限制最大输出尺寸（保持宽高比），避免 4K 视频吐出巨型位图
+suspend fun getVideoThumbnail(filePath: Path): ImageBitmap? {
+    return taskLimit.withPermit {
+        try {
+            autoreleasepool {
+                val url = NSURL.fileURLWithPath(filePath.toString())
+                val asset = AVAsset.assetWithURL(url)
+                val generator = AVAssetImageGenerator(asset).apply {
+                    // 1. 自动处理视频旋转方向（竖屏/横屏矫正）
+                    appliesPreferredTrackTransform = true
+                    // 2. 关键优化：限制最大输出尺寸（保持宽高比），避免 4K 视频吐出巨型位图
 //                    maximumSize = CGSizeMake(maxWidth.toCGFloat(), maxHeight.toCGFloat())
+                }
+
+                // 注意：如果只是作为列表缩略图且不要求精确到某一帧，
+                // 可开启容差以大幅提升关键帧（I-Frame）提取速度（默认是精确解码，速度较慢）：
+                // generator.requestedTimeToleranceBefore = CMTimeMakeWithSeconds(0.5, 600)
+                // generator.requestedTimeToleranceAfter = CMTimeMakeWithSeconds(0.5, 600)
+
+                val durationSeconds = CMTimeGetSeconds(asset.duration)
+                val targetSeconds = when {
+                    !durationSeconds.isFinite() || durationSeconds <= 0.0 -> 0.0
+                    durationSeconds < 1.0 -> durationSeconds / 2.0
+                    else -> 1.0
+                }
+                val time = CMTimeMakeWithSeconds(targetSeconds, 600)
+
+                // 3. 修复：在 autoreleasepool 内部必须使用带标签的 return@autoreleasepool
+                val cgImage = generator.copyCGImageAtTime(time, null, null)
+                    ?: return@autoreleasepool null
+
+                try {
+                    cgImage.toSkiaImageBitmapNoLock()
+                } finally {
+                    CFRelease(cgImage)
+                }
             }
-
-            // 注意：如果只是作为列表缩略图且不要求精确到某一帧，
-            // 可开启容差以大幅提升关键帧（I-Frame）提取速度（默认是精确解码，速度较慢）：
-            // generator.requestedTimeToleranceBefore = CMTimeMakeWithSeconds(0.5, 600)
-            // generator.requestedTimeToleranceAfter = CMTimeMakeWithSeconds(0.5, 600)
-
-            val durationSeconds = CMTimeGetSeconds(asset.duration)
-            val targetSeconds = when {
-                !durationSeconds.isFinite() || durationSeconds <= 0.0 -> 0.0
-                durationSeconds < 1.0 -> durationSeconds / 2.0
-                else -> 1.0
-            }
-            val time = CMTimeMakeWithSeconds(targetSeconds, 600)
-
-            // 3. 修复：在 autoreleasepool 内部必须使用带标签的 return@autoreleasepool
-            val cgImage = generator.copyCGImageAtTime(time, null, null)
-                ?: return@autoreleasepool null
-
-            try {
-                cgImage.toSkiaImageBitmap()
-            } finally {
-                CFRelease(cgImage)
-            }
+        } catch (e: Exception) {
+            logE("getVideoThumbnail", "error", e)
+            null
         }
-    } catch (e: Exception) {
-        logE("getVideoThumbnail", "error", e)
-        null
     }
 }
 
 
-fun getAudioCoverImage(filePath: Path): ImageBitmap? {
-    val asset = AVURLAsset.URLAssetWithURL(NSURL.fileURLWithPath(filePath.toString()), null)
+suspend fun getAudioCoverImage(filePath: Path): ImageBitmap? {
+    taskLimit.withPermit {
+        val asset = AVURLAsset.URLAssetWithURL(NSURL.fileURLWithPath(filePath.toString()), null)
 
-    // Look for common metadata (artwork)
-    val metadata = asset.commonMetadata
-    for (item in metadata) {
-        if (item is AVMetadataItem && item.commonKey == AVMetadataCommonKeyArtwork) {
-            val data = item.value as? NSData ?: continue
-            return UIImage(data).toImageBitmap() // Returns image NSData
+        // Look for common metadata (artwork)
+        val metadata = asset.commonMetadata
+        for (item in metadata) {
+            if (item is AVMetadataItem && item.commonKey == AVMetadataCommonKeyArtwork) {
+                val data = item.value as? NSData ?: continue
+                return UIImage(data).toImageBitmap() // Returns image NSData
+            }
         }
+        return null
     }
-    return null
 }

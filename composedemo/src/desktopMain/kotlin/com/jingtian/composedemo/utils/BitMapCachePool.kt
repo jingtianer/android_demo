@@ -90,7 +90,7 @@ actual suspend fun uriToImageBitmap(path: Path, scaleFactor: Int): ImageBitmap? 
         scaledBitmap.close()
     }.toComposeImageBitmap()
 }
-actual fun writeImage(bitmap: ImageBitmap, os: RawSink) {
+actual suspend fun writeImage(bitmap: ImageBitmap, os: RawSink) {
     val image = bitmap.toAwtImage()
     os.buffered().asOutputStream().use {
         ImageIO.write(image, "png", it)

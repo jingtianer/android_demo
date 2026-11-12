@@ -32,7 +32,7 @@ fun uriToImageBitmap(source: RawSource, scaleFactor: Int): ImageBitmap? {
     }
 }
 
-actual fun writeImage(bitmap: ImageBitmap, os: RawSink) {
+actual suspend fun writeImage(bitmap: ImageBitmap, os: RawSink) {
     os.buffered().asOutputStream().use {
         bitmap.asAndroidBitmap().compress(Bitmap.CompressFormat.PNG, 100, it)
     }

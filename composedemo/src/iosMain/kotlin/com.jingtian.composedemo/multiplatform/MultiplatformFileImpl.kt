@@ -13,7 +13,6 @@ import com.jingtian.composedemo.utils.getAudioCoverImage
 import com.jingtian.composedemo.utils.getVideoThumbnail
 import com.jingtian.composedemo.utils.readImageBoundsOnly
 import com.jingtian.composedemo.utils.toCFURLRef
-import com.jingtian.composedemo.utils.toSkiaImageBitmap
 import com.jingtian.composedemo.utils.uriToImageBitmap
 import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.ExperimentalForeignApi

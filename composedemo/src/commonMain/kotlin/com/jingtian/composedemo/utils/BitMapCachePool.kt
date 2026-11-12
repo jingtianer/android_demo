@@ -332,4 +332,4 @@ object BitMapCachePool {
 }
 
 expect suspend fun uriToImageBitmap(path: Path, scaleFactor: Int): ImageBitmap?
-expect fun writeImage(bitmap: ImageBitmap, os: RawSink)
+expect suspend fun writeImage(bitmap: ImageBitmap, os: RawSink)
