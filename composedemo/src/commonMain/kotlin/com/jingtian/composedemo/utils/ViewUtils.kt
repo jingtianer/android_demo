@@ -1,7 +1,10 @@
 package com.jingtian.composedemo.utils
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 
 @Composable
-expect fun Dp.dpValue(): Float
+fun Dp.dpValue(): Float = with(LocalDensity.current) {
+    this@dpValue.roundToPx().toFloat()
+}
