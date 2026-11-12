@@ -125,6 +125,10 @@ fun Gallery(
     naviController: NavController
 ) {
     if (album == null) {
+        Box(modifier = Modifier
+            .fillMaxSize()
+            .appBackground()
+        )
         return
     }
     val currentSelectedAlbumState = remember(album.value) { mutableStateOf(album.value) }
