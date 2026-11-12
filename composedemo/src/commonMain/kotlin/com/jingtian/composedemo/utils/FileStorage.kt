@@ -11,6 +11,8 @@ import com.jingtian.composedemo.multiplatform.getLongStorage
 import com.jingtian.composedemo.multiplatform.getMultiplatformFileFactory
 import com.jingtian.composedemo.multiplatform.newReentrantLock
 import com.jingtian.composedemo.multiplatform.use
+import com.jingtian.composedemo.utils.BitMapCachePool.calculateScaleFactor
+import com.jingtian.composedemo.utils.BitMapCachePool.scale
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -220,15 +222,7 @@ object FileStorageUtils {
             }
             return@launch
         }
-        // 1. 计算缩放比例（保持宽高比）
-        val width = bitmap.width
-        val height = bitmap.height
-        val scaleWidth = (maxWidth.toFloat() / width).takeIf { maxWidth > 0 }
-        val scaleHeight = (maxHeight.toFloat() / height).takeIf { maxHeight > 0 }
-        val scale = if (scaleWidth != null && scaleHeight != null) {
-            minOf(scaleWidth, scaleHeight)
-        } else scaleWidth ?: scaleHeight ?: 1f
-        val compressedBitmap = compressImageBitmap(bitmap, width, height, scale)
+        val compressedBitmap = bitmap.scale(calculateScaleFactor(bitmap.width, bitmap.height, maxWidth, maxHeight))
         withContext(Dispatchers.Main) {
             onLoadBitmap(compressedBitmap)
         }
@@ -276,5 +270,3 @@ object FileStorageUtils {
         else -> -1 to -1
     }
 }
-
-expect fun compressImageBitmap(bitmap: ImageBitmap, width: Int, height: Int, scale: Float): ImageBitmap

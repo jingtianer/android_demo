@@ -14,7 +14,7 @@ import kotlinx.io.buffered
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
 
-actual fun uriToImageBitmap(path: Path, scaleFactor: Int): ImageBitmap? {
+actual suspend fun uriToImageBitmap(path: Path, scaleFactor: Int): ImageBitmap? {
     return uriToImageBitmap(SystemFileSystem.source(path), scaleFactor)
 }
 

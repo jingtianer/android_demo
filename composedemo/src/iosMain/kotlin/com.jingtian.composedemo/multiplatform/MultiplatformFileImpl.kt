@@ -9,6 +9,10 @@ import com.jingtian.composedemo.utils.delete
 import com.jingtian.composedemo.utils.ensureNotExist
 import com.jingtian.composedemo.utils.exists
 import com.jingtian.composedemo.utils.extension
+import com.jingtian.composedemo.utils.getAudioCoverImage
+import com.jingtian.composedemo.utils.getVideoThumbnail
+import com.jingtian.composedemo.utils.readImageBoundsOnly
+import com.jingtian.composedemo.utils.toCFURLRef
 import com.jingtian.composedemo.utils.toSkiaImageBitmap
 import com.jingtian.composedemo.utils.uriToImageBitmap
 import kotlinx.cinterop.BetaInteropApi
@@ -18,6 +22,7 @@ import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.alloc
 import kotlinx.cinterop.autoreleasepool
 import kotlinx.cinterop.convert
+import kotlinx.cinterop.interpretObjCPointerOrNull
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.ptr
 import kotlinx.cinterop.reinterpret
@@ -71,6 +76,7 @@ import platform.CoreFoundation.CFRelease
 import platform.CoreGraphics.CGSizeMake
 import platform.CoreMedia.CMTimeGetSeconds
 import platform.CoreMedia.CMTimeMakeWithSeconds
+import platform.Foundation.CFBridgingRelease
 
 @OptIn(ExperimentalForeignApi::class)
 fun UIImage.toImageBitmap(): ImageBitmap {
@@ -96,63 +102,6 @@ open class MultiplatformFileImpl(val realFile: Path, val realExtension: String, 
         val htmlExtensions = arrayOf("html", "svg")
     }
 
-    @OptIn(ExperimentalForeignApi::class, BetaInteropApi::class)
-    fun getVideoThumbnail(filePath: Path): ImageBitmap? {
-        return try {
-            autoreleasepool {
-                val url = NSURL.fileURLWithPath(filePath.toString())
-                val asset = AVAsset.assetWithURL(url)
-                val generator = AVAssetImageGenerator(asset).apply {
-                    // 1. 自动处理视频旋转方向（竖屏/横屏矫正）
-                    appliesPreferredTrackTransform = true
-                    // 2. 关键优化：限制最大输出尺寸（保持宽高比），避免 4K 视频吐出巨型位图
-//                    maximumSize = CGSizeMake(maxWidth.toCGFloat(), maxHeight.toCGFloat())
-                }
-
-                // 注意：如果只是作为列表缩略图且不要求精确到某一帧，
-                // 可开启容差以大幅提升关键帧（I-Frame）提取速度（默认是精确解码，速度较慢）：
-                // generator.requestedTimeToleranceBefore = CMTimeMakeWithSeconds(0.5, 600)
-                // generator.requestedTimeToleranceAfter = CMTimeMakeWithSeconds(0.5, 600)
-
-                val durationSeconds = CMTimeGetSeconds(asset.duration)
-                val targetSeconds = when {
-                    !durationSeconds.isFinite() || durationSeconds <= 0.0 -> 0.0
-                    durationSeconds < 1.0 -> durationSeconds / 2.0
-                    else -> 1.0
-                }
-                val time = CMTimeMakeWithSeconds(targetSeconds, 600)
-
-                // 3. 修复：在 autoreleasepool 内部必须使用带标签的 return@autoreleasepool
-                val cgImage = generator.copyCGImageAtTime(time, null, null)
-                    ?: return@autoreleasepool null
-
-                try {
-                    cgImage.toSkiaImageBitmap()
-                } finally {
-                    CFRelease(cgImage)
-                }
-            }
-        } catch (e: Exception) {
-            logE("getVideoThumbnail", "error", e)
-            null
-        }
-    }
-
-
-    fun getAudioCoverImage(filePath: Path): ImageBitmap? {
-        val asset = AVURLAsset.URLAssetWithURL(NSURL.fileURLWithPath(filePath.toString()), null)
-
-        // Look for common metadata (artwork)
-        val metadata = asset.commonMetadata
-        for (item in metadata) {
-            if (item is AVMetadataItem && item.commonKey == AVMetadataCommonKeyArtwork) {
-                val data = item.value as? NSData ?: continue
-                return UIImage(data).toImageBitmap() // Returns image NSData
-            }
-        }
-        return null
-    }
-
     private val Path.isHidden: Boolean
         get() = name.startsWith(".")
 
@@ -168,55 +117,18 @@ open class MultiplatformFileImpl(val realFile: Path, val realExtension: String, 
     override suspend fun inputStream(): RawSource? = SystemFileSystem.source(realFile)
 
     @OptIn(ExperimentalForeignApi::class)
-    private fun Path.toCFURLRef(isDirectory: Boolean = false): CFURLRef? = memScoped {
-        val pathBytes = this@toCFURLRef.toString().encodeToByteArray()
-        pathBytes.usePinned { pinned ->
-            CFURLCreateFromFileSystemRepresentation(
-                kCFAllocatorDefault,
-                pinned.addressOf(0).reinterpret(),
-                pathBytes.size.convert(),
-                isDirectory
-            )
-        }
-    }
-
-    @OptIn(ExperimentalForeignApi::class)
     protected suspend fun imageBoundsOnly(): Pair<Int, Int>? = memScoped {
         val filePath = file()
         val fileUrl = filePath.toCFURLRef() ?: return null
-        val securityScopedUrl = NSURL.fileURLWithPath(filePath.toString(), false)
-        val needStopAccess = securityScopedUrl.startAccessingSecurityScopedResource()
-        val imageSource = CGImageSourceCreateWithURL(fileUrl, null)
-        if (imageSource == null) {
-            if (needStopAccess) {
-                securityScopedUrl.stopAccessingSecurityScopedResource()
-            }
-            CFRelease(fileUrl)
-            return@memScoped null
-        }
+        val securityScopedUrl = interpretObjCPointerOrNull<NSURL>(fileUrl.rawValue)
+        val needStopAccess = securityScopedUrl?.startAccessingSecurityScopedResource() ?: false
         try {
-            val properties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0u, null) ?: return@memScoped null
-            try {
-                val widthRef = CFDictionaryGetValue(properties, kCGImagePropertyPixelWidth) ?: return@memScoped null
-                val heightRef = CFDictionaryGetValue(properties, kCGImagePropertyPixelHeight) ?: return@memScoped null
-                val width = alloc<IntVar>()
-                val height = alloc<IntVar>()
-                CFNumberGetValue(widthRef.reinterpret<__CFNumber>(), kCFNumberSInt32Type, width.ptr)
-                CFNumberGetValue(heightRef.reinterpret<__CFNumber>(), kCFNumberSInt32Type, height.ptr)
-                if (width.value <= 0 || height.value <= 0) {
-                    null
-                } else {
-                    width.value to height.value
-                }
-            } finally {
-                CFRelease(properties)
-            }
+            return@memScoped readImageBoundsOnly(fileUrl)
         } finally {
             if (needStopAccess) {
-                securityScopedUrl.stopAccessingSecurityScopedResource()
+                securityScopedUrl?.stopAccessingSecurityScopedResource()
             }
             CFRelease(fileUrl)
-            CFRelease(imageSource)
         }
     }
 

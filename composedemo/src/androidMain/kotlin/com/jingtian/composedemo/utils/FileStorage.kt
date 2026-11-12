@@ -18,22 +18,6 @@ import kotlin.io.path.isDirectory
 actual fun getFileStorageRootDir(): Path = Path(app.getExternalFilesDir(null)!!.absolutePath)
 actual fun getFileCacheStorageRootDir(): Path = Path(app.externalCacheDir!!.absolutePath)
 actual fun getDBStorageRootDir(): Path = Path(getFileStorageRootDir().toString(), "database")
-actual fun compressImageBitmap(bitmap: ImageBitmap, width: Int, height: Int, scale: Float): ImageBitmap {
-    // 2. 创建缩放矩阵
-    val matrix = Matrix().apply {
-        postScale(scale, scale)
-    }
-
-    // 3. 压缩并返回新Bitmap（注意回收原始Bitmap避免内存泄漏）
-    val androidBitmap = bitmap.asAndroidBitmap()
-    val compressedBitmap = Bitmap.createBitmap(
-        androidBitmap, 0, 0, width, height, matrix, true
-    )
-    if (compressedBitmap != androidBitmap) {
-        androidBitmap.recycle() // 回收原始Bitmap
-    }
-    return compressedBitmap.asImageBitmap()
-}
 
 @RequiresApi(Build.VERSION_CODES.O)
 fun traverseDirNio(root: java.nio.file.Path, execute: (String, java.nio.file.Path)->Unit) {

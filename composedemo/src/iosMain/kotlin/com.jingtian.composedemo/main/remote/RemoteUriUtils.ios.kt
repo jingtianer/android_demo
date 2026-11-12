@@ -8,6 +8,8 @@ import com.jingtian.composedemo.multiplatform.logD
 import com.jingtian.composedemo.multiplatform.logE
 import com.jingtian.composedemo.multiplatform.use
 import com.jingtian.composedemo.utils.extension
+import com.jingtian.composedemo.utils.getAudioCoverImage
+import com.jingtian.composedemo.utils.getVideoThumbnail
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.usePinned
 import kotlinx.io.Buffer

@@ -192,7 +192,7 @@ object BitMapCachePool {
         getBitMapCachePool(fileType).clear(id)
     }
 
-    private fun calculateScaleFactor(
+    fun calculateScaleFactor(
         originalWidth: Int,
         originalHeight: Int,
         maxWidth: Int,
@@ -284,11 +284,11 @@ object BitMapCachePool {
         }
     }
 
-    private fun ImageBitmap.scale(
+    fun ImageBitmap.scale(
         scaleFactor: Int,
         config: ImageBitmapConfig = ImageBitmapConfig.Argb8888
     ): ImageBitmap {
-        if (scaleFactor <= 1) return this
+        if (scaleFactor < 1) return this
 
         val targetW = (width / scaleFactor).coerceAtLeast(1)
         val targetH = (height / scaleFactor).coerceAtLeast(1)
@@ -331,5 +331,5 @@ object BitMapCachePool {
     }
 }
 
-expect fun uriToImageBitmap(path: Path, scaleFactor: Int): ImageBitmap?
+expect suspend fun uriToImageBitmap(path: Path, scaleFactor: Int): ImageBitmap?
 expect fun writeImage(bitmap: ImageBitmap, os: RawSink)

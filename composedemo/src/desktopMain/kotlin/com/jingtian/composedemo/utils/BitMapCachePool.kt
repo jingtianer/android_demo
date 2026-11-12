@@ -41,7 +41,7 @@ import java.util.concurrent.ConcurrentHashMap
 import javax.imageio.ImageIO
 import kotlin.math.max
 
-actual fun uriToImageBitmap(path: Path, scaleFactor: Int): ImageBitmap? {
+actual suspend fun uriToImageBitmap(path: Path, scaleFactor: Int): ImageBitmap? {
     val bytes = SystemFileSystem.source(path).buffered().use {
         it.readAllBytesOrNull()
     } ?: return null

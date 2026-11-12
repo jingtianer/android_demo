@@ -12,12 +12,12 @@ import org.jetbrains.skia.ColorAlphaType
 import org.jetbrains.skia.EncodedImageFormat
 import org.jetbrains.skia.Image
 import org.jetbrains.skia.ImageInfo
-import org.jetbrains.skia.Paint
-import org.jetbrains.skia.Rect
 import androidx.compose.ui.graphics.ImageBitmap
 import cnames.structs.__CFNumber
 import com.jingtian.composedemo.multiplatform.logD
+import com.jingtian.composedemo.multiplatform.logE
 import com.jingtian.composedemo.multiplatform.toImageBitmap
+import com.jingtian.composedemo.utils.BitMapCachePool.scale
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.IntVar
 import kotlinx.cinterop.addressOf
@@ -29,7 +29,6 @@ import kotlinx.cinterop.reinterpret
 import kotlinx.cinterop.usePinned
 import kotlinx.cinterop.value
 import kotlinx.io.files.Path
-import kotlinx.io.readByteArray
 import platform.CoreFoundation.CFDictionaryCreateMutable
 import platform.CoreFoundation.CFDictionaryGetValue
 import platform.CoreFoundation.CFDictionarySetValue
@@ -56,15 +55,25 @@ import platform.ImageIO.kCGImageSourceGenerateImageSpecificLumaScaling
 import platform.ImageIO.kCGImageSourceShouldCache
 import platform.ImageIO.kCGImageSourceShouldCacheImmediately
 import platform.ImageIO.kCGImageSourceThumbnailMaxPixelSize
-import platform.UIKit.UIImage
 
 import kotlinx.cinterop.*
 import org.jetbrains.skia.ColorType
+import platform.AVFoundation.AVAsset
+import platform.AVFoundation.AVAssetImageGenerator
+import platform.AVFoundation.AVMetadataCommonKeyArtwork
+import platform.AVFoundation.AVMetadataItem
+import platform.AVFoundation.AVURLAsset
+import platform.AVFoundation.commonKey
+import platform.AVFoundation.commonMetadata
 import platform.CoreGraphics.*
+import platform.CoreMedia.CMTimeGetSeconds
+import platform.CoreMedia.CMTimeMakeWithSeconds
+import platform.Foundation.NSData
+import platform.UIKit.UIImage
 import platform.posix.memcpy
 
 @OptIn(ExperimentalForeignApi::class)
-private fun Path.toCFURLRef(isDirectory: Boolean = false): CFURLRef? = memScoped {
+fun Path.toCFURLRef(isDirectory: Boolean = false): CFURLRef? = memScoped {
     val pathBytes = this@toCFURLRef.toString().encodeToByteArray()
     pathBytes.usePinned { pinned ->
         CFURLCreateFromFileSystemRepresentation(
@@ -77,7 +86,7 @@ private fun Path.toCFURLRef(isDirectory: Boolean = false): CFURLRef? = memScoped
 }
 
 @OptIn(ExperimentalForeignApi::class)
-private fun readImageBoundsOnly(fileUrl: CFURLRef): Pair<Int, Int>? = memScoped {
+fun readImageBoundsOnly(fileUrl: CFURLRef): Pair<Int, Int>? = memScoped {
     val imageSource = CGImageSourceCreateWithURL(fileUrl, null) ?: return@memScoped null
     try {
         val properties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0u, null) ?: return@memScoped null
@@ -130,11 +139,15 @@ private fun decodeSampledImage(fileUrl: CFURLRef, maxPixelSize: Int): CGImageRef
 }
 
 @OptIn(ExperimentalForeignApi::class)
-actual fun uriToImageBitmap(path: Path, scaleFactor: Int): ImageBitmap? {
-    val fileUrl = path.toCFURLRef() ?: return null
-    val securityScopedUrl = NSURL.fileURLWithPath(path.toString(), false)
+actual suspend fun uriToImageBitmap(path: Path, scaleFactor: Int): ImageBitmap? {
+    return innerUriToImageBitmap(path, scaleFactor)
+}
 
-    val needStopAccess = securityScopedUrl.startAccessingSecurityScopedResource()
+@OptIn(ExperimentalForeignApi::class)
+private fun innerUriToImageBitmap(path: Path, scaleFactor: Int): ImageBitmap? {
+    val fileUrl = path.toCFURLRef() ?: return null
+    val securityScopedUrl = interpretObjCPointerOrNull<NSURL>(fileUrl.rawValue)
+    val needStopAccess = securityScopedUrl?.startAccessingSecurityScopedResource() ?: false
     return try {
         val (intrinsicWidth, intrinsicHeight) = readImageBoundsOnly(fileUrl) ?: return null
         val safeScaleFactor = maxOf(1, scaleFactor)
@@ -151,7 +164,7 @@ actual fun uriToImageBitmap(path: Path, scaleFactor: Int): ImageBitmap? {
         }
     } finally {
         if (needStopAccess) {
-            securityScopedUrl.stopAccessingSecurityScopedResource()
+            securityScopedUrl?.stopAccessingSecurityScopedResource()
         }
         CFRelease(fileUrl)
     }
@@ -229,3 +242,59 @@ actual fun writeImage(bitmap: ImageBitmap, os: RawSink) {
     }
 }
 
+@OptIn(ExperimentalForeignApi::class, BetaInteropApi::class)
+fun getVideoThumbnail(filePath: Path): ImageBitmap? {
+    return try {
+        autoreleasepool {
+            val url = NSURL.fileURLWithPath(filePath.toString())
+            val asset = AVAsset.assetWithURL(url)
+            val generator = AVAssetImageGenerator(asset).apply {
+                // 1. 自动处理视频旋转方向（竖屏/横屏矫正）
+                appliesPreferredTrackTransform = true
+                // 2. 关键优化：限制最大输出尺寸（保持宽高比），避免 4K 视频吐出巨型位图
+//                    maximumSize = CGSizeMake(maxWidth.toCGFloat(), maxHeight.toCGFloat())
+            }
+
+            // 注意：如果只是作为列表缩略图且不要求精确到某一帧，
+            // 可开启容差以大幅提升关键帧（I-Frame）提取速度（默认是精确解码，速度较慢）：
+            // generator.requestedTimeToleranceBefore = CMTimeMakeWithSeconds(0.5, 600)
+            // generator.requestedTimeToleranceAfter = CMTimeMakeWithSeconds(0.5, 600)
+
+            val durationSeconds = CMTimeGetSeconds(asset.duration)
+            val targetSeconds = when {
+                !durationSeconds.isFinite() || durationSeconds <= 0.0 -> 0.0
+                durationSeconds < 1.0 -> durationSeconds / 2.0
+                else -> 1.0
+            }
+            val time = CMTimeMakeWithSeconds(targetSeconds, 600)
+
+            // 3. 修复：在 autoreleasepool 内部必须使用带标签的 return@autoreleasepool
+            val cgImage = generator.copyCGImageAtTime(time, null, null)
+                ?: return@autoreleasepool null
+
+            try {
+                cgImage.toSkiaImageBitmap()
+            } finally {
+                CFRelease(cgImage)
+            }
+        }
+    } catch (e: Exception) {
+        logE("getVideoThumbnail", "error", e)
+        null
+    }
+}
+
+
+fun getAudioCoverImage(filePath: Path): ImageBitmap? {
+    val asset = AVURLAsset.URLAssetWithURL(NSURL.fileURLWithPath(filePath.toString()), null)
+
+    // Look for common metadata (artwork)
+    val metadata = asset.commonMetadata
+    for (item in metadata) {
+        if (item is AVMetadataItem && item.commonKey == AVMetadataCommonKeyArtwork) {
+            val data = item.value as? NSData ?: continue
+            return UIImage(data).toImageBitmap() // Returns image NSData
+        }
+    }
+    return null
+}
