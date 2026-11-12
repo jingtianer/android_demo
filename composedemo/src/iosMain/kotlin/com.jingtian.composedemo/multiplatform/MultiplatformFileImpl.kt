@@ -9,6 +9,7 @@ import com.jingtian.composedemo.utils.delete
 import com.jingtian.composedemo.utils.ensureNotExist
 import com.jingtian.composedemo.utils.exists
 import com.jingtian.composedemo.utils.extension
+import com.jingtian.composedemo.utils.toSkiaImageBitmap
 import com.jingtian.composedemo.utils.uriToImageBitmap
 import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.ExperimentalForeignApi
@@ -66,6 +67,10 @@ import platform.ImageIO.kCGImageSourceThumbnailMaxPixelSize
 import platform.UIKit.UIImage
 import platform.UIKit.UIImagePNGRepresentation
 import platform.posix.memcpy
+import platform.CoreFoundation.CFRelease
+import platform.CoreGraphics.CGSizeMake
+import platform.CoreMedia.CMTimeGetSeconds
+import platform.CoreMedia.CMTimeMakeWithSeconds
 
 @OptIn(ExperimentalForeignApi::class)
 fun UIImage.toImageBitmap(): ImageBitmap {
@@ -92,13 +97,23 @@ open class MultiplatformFileImpl(val realFile: Path, val realExtension: String, 
     }
 
     @OptIn(ExperimentalForeignApi::class, BetaInteropApi::class)
-    fun getVideoThumbnail(filePath: Path): ImageBitmap?  {
+    fun getVideoThumbnail(filePath: Path): ImageBitmap? {
         return try {
             autoreleasepool {
                 val url = NSURL.fileURLWithPath(filePath.toString())
                 val asset = AVAsset.assetWithURL(url)
-                val generator = AVAssetImageGenerator(asset)
-                generator.appliesPreferredTrackTransform = true
+                val generator = AVAssetImageGenerator(asset).apply {
+                    // 1. 自动处理视频旋转方向（竖屏/横屏矫正）
+                    appliesPreferredTrackTransform = true
+                    // 2. 关键优化：限制最大输出尺寸（保持宽高比），避免 4K 视频吐出巨型位图
+//                    maximumSize = CGSizeMake(maxWidth.toCGFloat(), maxHeight.toCGFloat())
+                }
+
+                // 注意：如果只是作为列表缩略图且不要求精确到某一帧，
+                // 可开启容差以大幅提升关键帧（I-Frame）提取速度（默认是精确解码，速度较慢）：
+                // generator.requestedTimeToleranceBefore = CMTimeMakeWithSeconds(0.5, 600)
+                // generator.requestedTimeToleranceAfter = CMTimeMakeWithSeconds(0.5, 600)
+
                 val durationSeconds = CMTimeGetSeconds(asset.duration)
                 val targetSeconds = when {
                     !durationSeconds.isFinite() || durationSeconds <= 0.0 -> 0.0
@@ -106,10 +121,13 @@ open class MultiplatformFileImpl(val realFile: Path, val realExtension: String, 
                     else -> 1.0
                 }
                 val time = CMTimeMakeWithSeconds(targetSeconds, 600)
+
+                // 3. 修复：在 autoreleasepool 内部必须使用带标签的 return@autoreleasepool
                 val cgImage = generator.copyCGImageAtTime(time, null, null)
+                    ?: return@autoreleasepool null
+
                 try {
-                    val uiImage = UIImage.imageWithCGImage(cgImage)
-                    uiImage.toImageBitmap()
+                    cgImage.toSkiaImageBitmap()
                 } finally {
                     CFRelease(cgImage)
                 }
@@ -119,6 +137,7 @@ open class MultiplatformFileImpl(val realFile: Path, val realExtension: String, 
             null
         }
     }
+
 
     fun getAudioCoverImage(filePath: Path): ImageBitmap? {
         val asset = AVURLAsset.URLAssetWithURL(NSURL.fileURLWithPath(filePath.toString()), null)

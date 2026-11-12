@@ -6,6 +6,8 @@ import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.ImageBitmapConfig
 import androidx.compose.ui.graphics.Paint
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import com.jingtian.composedemo.multiplatform.WeakRef
 import com.jingtian.composedemo.dao.DataBase
 import com.jingtian.composedemo.dao.model.FileInfo
@@ -128,7 +130,7 @@ object BitMapCachePool {
                 val cacheFile = getCacheFile(fileType.value, id, scaleFactor)
                 if (cacheFile.exists()) {
                     val bitmap = runCatching {
-                        uriToImageBitmap(cacheFile, scaleFactor)
+                        uriToImageBitmap(cacheFile, 1)
                     }.getOrNull()
                     if (bitmap != null) {
                         list.add(finalInsertPos, scaleFactor to bitmap)
@@ -282,10 +284,12 @@ object BitMapCachePool {
         }
     }
 
-    fun ImageBitmap.scale(
+    private fun ImageBitmap.scale(
         scaleFactor: Int,
         config: ImageBitmapConfig = ImageBitmapConfig.Argb8888
     ): ImageBitmap {
+        if (scaleFactor <= 1) return this
+
         val targetW = (width / scaleFactor).coerceAtLeast(1)
         val targetH = (height / scaleFactor).coerceAtLeast(1)
 
@@ -293,12 +297,17 @@ object BitMapCachePool {
         val canvas = Canvas(outBitmap)
         val paint = Paint().apply {
             isAntiAlias = true
-            filterQuality = FilterQuality.High
+            // 缩小图片时，Medium（双线性插值）在画质与 CPU 性能之间平衡最好，避免 High 带来的严重卡顿
+            filterQuality = FilterQuality.Medium
         }
 
-        canvas.drawImage(
+        // 关键修复：使用 drawImageRect 将完整的 srcSize 映射缩放到 dstSize
+        canvas.drawImageRect(
             image = this,
-            topLeftOffset = Offset.Zero,
+            srcOffset = IntOffset.Zero,
+            srcSize = IntSize(width, height),
+            dstOffset = IntOffset.Zero,
+            dstSize = IntSize(targetW, targetH),
             paint = paint
         )
         return outBitmap

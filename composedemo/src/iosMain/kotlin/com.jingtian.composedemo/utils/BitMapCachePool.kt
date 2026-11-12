@@ -16,6 +16,7 @@ import org.jetbrains.skia.Paint
 import org.jetbrains.skia.Rect
 import androidx.compose.ui.graphics.ImageBitmap
 import cnames.structs.__CFNumber
+import com.jingtian.composedemo.multiplatform.logD
 import com.jingtian.composedemo.multiplatform.toImageBitmap
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.IntVar
@@ -51,10 +52,16 @@ import platform.ImageIO.kCGImagePropertyPixelHeight
 import platform.ImageIO.kCGImagePropertyPixelWidth
 import platform.ImageIO.kCGImageSourceCreateThumbnailFromImageAlways
 import platform.ImageIO.kCGImageSourceCreateThumbnailWithTransform
+import platform.ImageIO.kCGImageSourceGenerateImageSpecificLumaScaling
 import platform.ImageIO.kCGImageSourceShouldCache
 import platform.ImageIO.kCGImageSourceShouldCacheImmediately
 import platform.ImageIO.kCGImageSourceThumbnailMaxPixelSize
 import platform.UIKit.UIImage
+
+import kotlinx.cinterop.*
+import org.jetbrains.skia.ColorType
+import platform.CoreGraphics.*
+import platform.posix.memcpy
 
 @OptIn(ExperimentalForeignApi::class)
 private fun Path.toCFURLRef(isDirectory: Boolean = false): CFURLRef? = memScoped {
@@ -103,10 +110,11 @@ private fun decodeSampledImage(fileUrl: CFURLRef, maxPixelSize: Int): CGImageRef
         val options = CFDictionaryCreateMutable(kCFAllocatorDefault, 0, null, null)
         try {
             CFDictionarySetValue(options, kCGImageSourceShouldCache, kCFBooleanFalse)
-            CFDictionarySetValue(options, kCGImageSourceShouldCacheImmediately, kCFBooleanFalse)
+            CFDictionarySetValue(options, kCGImageSourceShouldCacheImmediately, kCFBooleanTrue)
             CFDictionarySetValue(options, kCGImageSourceCreateThumbnailFromImageAlways, kCFBooleanTrue)
             CFDictionarySetValue(options, kCGImageSourceCreateThumbnailWithTransform, kCFBooleanTrue)
             CFDictionarySetValue(options, kCGImageSourceThumbnailMaxPixelSize, maxPixelSizeNumber)
+            CFDictionarySetValue(options, kCGImageSourceGenerateImageSpecificLumaScaling, kCFBooleanFalse)
             CGImageSourceCreateThumbnailAtIndex(imageSource, 0u, options)
         } finally {
             if (options != null) {
@@ -133,7 +141,11 @@ actual fun uriToImageBitmap(path: Path, scaleFactor: Int): ImageBitmap? {
         val targetLongSide = maxOf(intrinsicWidth, intrinsicHeight) / safeScaleFactor
         val cgImage = decodeSampledImage(fileUrl, targetLongSide) ?: return null
         try {
-            UIImage.imageWithCGImage(cgImage).toImageBitmap()
+            cgImage.toSkiaImageBitmap()?.also {
+                logD("uriToImageBitmap") {
+                    "path=$path\nsize=${it.width},${it.height}\noriginalSize=${intrinsicWidth},${intrinsicHeight}"
+                }
+            }
         } finally {
             CFRelease(cgImage)
         }
@@ -144,6 +156,63 @@ actual fun uriToImageBitmap(path: Path, scaleFactor: Int): ImageBitmap? {
         CFRelease(fileUrl)
     }
 }
+
+@OptIn(ExperimentalForeignApi::class)
+fun CGImageRef.toSkiaImageBitmap(): ImageBitmap? {
+    val width = CGImageGetWidth(this).toInt()
+    val height = CGImageGetHeight(this).toInt()
+    if (width <= 0 || height <= 0) return null
+
+    val colorSpace = CGColorSpaceCreateWithName(kCGColorSpaceSRGB)
+        ?: CGColorSpaceCreateDeviceRGB()
+        ?: return null
+
+    return try {
+        val bytesPerRow = width * 4
+        val totalBytes = height * bytesPerRow
+        val bitmapInfo = CGImageAlphaInfo.kCGImageAlphaPremultipliedLast.value or
+                kCGBitmapByteOrder32Big
+
+        val context = CGBitmapContextCreate(
+            data = null,
+            width = width.toULong(),
+            height = height.toULong(),
+            bitsPerComponent = 8u,
+            bytesPerRow = bytesPerRow.toULong(),
+            space = colorSpace,
+            bitmapInfo = bitmapInfo
+        ) ?: return null
+
+        try {
+            CGContextDrawImage(context, CGRectMake(0.0, 0.0, width.toDouble(), height.toDouble()), this)
+            val rawData = CGBitmapContextGetData(context) ?: return null
+
+            val imageInfo = ImageInfo(
+                width = width,
+                height = height,
+                colorType = ColorType.RGBA_8888,
+                alphaType = ColorAlphaType.PREMUL
+            )
+
+            val skiaBitmap = Bitmap()
+            if (!skiaBitmap.allocPixels(imageInfo)) return null
+
+            // 关键修改：直接向 Skia Bitmap 内部底层内存地址拷贝，不在 Kotlin 堆上创建大 ByteArray，减少 GC 卡顿
+            val dstNativePtr = skiaBitmap.peekPixels()?.addr ?: return null
+            val dstPointer = interpretCPointer<ByteVar>(dstNativePtr) ?: return null
+            memcpy(dstPointer, rawData, totalBytes.toULong())
+
+            Image.makeFromBitmap(skiaBitmap).toComposeImageBitmap()
+        } finally {
+            CGContextRelease(context)
+        }
+    } finally {
+        CGColorSpaceRelease(colorSpace)
+    }
+}
+
+
+
 actual fun writeImage(bitmap: ImageBitmap, os: RawSink) {
     // 1. Convert ImageBitmap to Skia Image and encode
     val skiaBitmap = bitmap.asSkiaBitmap()
