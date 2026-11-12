@@ -246,7 +246,7 @@ object FileStorageUtils {
         maxHeight: Int = -1,
         onLoadBitmap: suspend (ImageBitmap?)->Unit
     ): Job = coroutineScope.launch(Dispatchers.IO) {
-        BitMapCachePool.loadImage(fileInfo, maxWidth, maxHeight) {
+        BitMapCachePool.loadThumbnail(fileInfo, maxWidth, maxHeight) {
             getThumbnailByType(fileInfo.fileType, videoUri)
         }.second?.let {
             withContext(Dispatchers.Main) {

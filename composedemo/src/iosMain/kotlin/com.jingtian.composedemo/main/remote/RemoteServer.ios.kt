@@ -366,7 +366,7 @@ class IosSftpServer : SftpServer {
             albumItem.wire(fileInfo.second) { that ->
                 this.itemName = that.itemName
             }
-            BitMapCachePool.loadImage(fileInfo.first) { webSnapshot }
+            BitMapCachePool.saveThumbnail(fileInfo.first) { webSnapshot }
             Triple(fileInfo.first, albumItem, labelInfoList)
         }
     }

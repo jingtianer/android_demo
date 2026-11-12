@@ -263,7 +263,7 @@ object AlbumViewModel : SingletonViewModel() {
             val labelInfo = itemLabel.map { LabelInfo(label = it, albumItemId = albumItemId) }
             DataBase.dbImpl.getLabelInfoDao().insertAllLabel(labelInfo)
             if (webSnapShot != null) {
-                BitMapCachePool.loadImage(file) { webSnapShot }
+                BitMapCachePool.saveThumbnail(file) { webSnapShot }
             }
             return@block true
         }, onFailure = {
@@ -479,7 +479,7 @@ object AlbumViewModel : SingletonViewModel() {
                 .insertAllLabel(itemLabel.map { LabelInfo(albumItemId = albumItemId, label = it) })
 
             if (selectedFileType == FileType.HTML) {
-                BitMapCachePool.loadImage(file) { webBitmap }
+                BitMapCachePool.saveThumbnail(file) { webBitmap }
             }
         }) {
             albumItemListChange.notifyChange()

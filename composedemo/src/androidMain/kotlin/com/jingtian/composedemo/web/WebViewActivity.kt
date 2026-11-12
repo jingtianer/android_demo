@@ -82,7 +82,7 @@ class WebViewActivity: BaseActivity() {
             val bitmap = webView?.takeSnapShot(this.window.decorView)
             if (bitmap != null) {
                 BitMapCachePool.invalid(storageId, FileType.HTML)
-                BitMapCachePool.loadImage(FileInfo(
+                BitMapCachePool.saveThumbnail(FileInfo(
                     storageId = storageId,
                     fileType = FileType.HTML,
                     extension = uriExtension ?: "html"

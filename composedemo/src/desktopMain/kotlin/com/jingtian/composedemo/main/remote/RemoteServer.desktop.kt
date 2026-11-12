@@ -350,7 +350,7 @@ class SftpServerImpl : SftpServer {
                             this.itemName = that.itemName
                         }
                         onResult(true,  null)
-                        BitMapCachePool.loadImage(fileInfo.first) { webSnapshot }
+                        BitMapCachePool.saveThumbnail(fileInfo.first) { webSnapshot }
                         return@runCatching fileInfo
                     }.getOrElse {  e->
                         onResult(false, "文件拷贝发生错误: ${e.message}")

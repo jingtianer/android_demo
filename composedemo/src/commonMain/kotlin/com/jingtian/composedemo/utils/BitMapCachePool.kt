@@ -45,6 +45,9 @@ object BitMapCachePool {
     private val overallImagePool: MutableMap<FileType, BitMapCache> = mutableMapOf()
     private val lock = newReentrantLock()
 
+    private const val SCALE_FACTOR_GET_HIGHEST = -1
+    private const val SCALE_FACTOR_GET_HIGHEST_AND_PUT = -2
+
     private suspend fun getBitMapCachePool(fileType: FileType): BitMapCache {
         return lock.use {
             overallImagePool.getOrPut(fileType) {
@@ -84,7 +87,17 @@ object BitMapCachePool {
         ): ImageBitmap? {
             val queue = getQueue(id)
             return queue.write { list ->
-                if (scaleFactor == -1) {
+                if (scaleFactor == SCALE_FACTOR_GET_HIGHEST_AND_PUT) {
+                    getIfNotNull(queue, 0)?.let { (scaleFactor, bitmap) ->
+                        if (scaleFactor <= 1) {
+                            return@write bitmap
+                        }
+                    }
+                    return@write bitmapCreator()?.also {
+                        list.add(0, 1 to it)
+                    }
+                }
+                if (scaleFactor == SCALE_FACTOR_GET_HIGHEST) {
                     getIfNotNull(queue, 0)?.let { (scaleFactor, bitmap) ->
 //                        println("bitmapCache: id=$id, type=${fileType.value}, invalid scaleFactor, read any")
                         return@write bitmap
@@ -228,22 +241,45 @@ object BitMapCachePool {
         val bitmap = image.imageThumbnail(scaleFactor)
         return scaleFactor to bitmap
     }
+    suspend fun saveThumbnail(
+        fileInfo: FileInfo,
+        creator: suspend () -> ImageBitmap?,
+    ): Pair<Int, ImageBitmap?> {
+        val pool = getBitMapCachePool(fileInfo.fileType)
+        val bitmap = pool.put(fileInfo.storageId, 1, creator)
+        return 1 to bitmap
+    }
 
-    suspend fun loadImage(
+    suspend fun loadThumbnail(
         fileInfo: FileInfo,
         maxWidth: Int = -1,
         maxHeight: Int = -1,
         creator: suspend () -> ImageBitmap?,
     ): Pair<Int, ImageBitmap?> {
-        val bitmap = getBitMapCachePool(fileInfo.fileType).put(fileInfo.storageId, 1, creator)
-        return -1 to bitmap?.scale(
-            calculateScaleFactor(
-                bitmap.width,
-                bitmap.height,
-                maxWidth,
-                maxHeight
-            )
+        val pool = getBitMapCachePool(fileInfo.fileType)
+        val bitmap = pool.put(fileInfo.storageId, SCALE_FACTOR_GET_HIGHEST_AND_PUT, creator)
+        if (bitmap == null) {
+            return 1 to creator()
+        }
+        val scaleFactor = calculateScaleFactor(
+            bitmap.width,
+            bitmap.height,
+            maxWidth,
+            maxHeight
         )
+        if (scaleFactor == 1) {
+            return 1 to bitmap
+        }
+        return scaleFactor to pool.put(fileInfo.storageId, scaleFactor) {
+            bitmap.scale(
+                calculateScaleFactor(
+                    bitmap.width,
+                    bitmap.height,
+                    maxWidth,
+                    maxHeight
+                )
+            )
+        }
     }
 
     fun ImageBitmap.scale(
