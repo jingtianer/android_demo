@@ -121,18 +121,10 @@ fun PasswordGuardedMain(onPasswordChecked: () -> Unit = {}) {
         mutableStateOf(object : DefaultLifecycleObserver {
             override fun onStop(owner: LifecycleOwner) {
                 authViewModel.onStop(owner)
-                if (!JumpOnPurposeMarkHolder.isJumpOnPurpose.value) {
-                    authViewModel.cancelAllBioPrompt()
-                    isAuthed = false
-                }
             }
 
             override fun onPause(owner: LifecycleOwner) {
                 authViewModel.onPause(owner)
-                if (!JumpOnPurposeMarkHolder.isJumpOnPurpose.value) {
-                    authViewModel.cancelAllBioPrompt()
-                    isVisible = false
-                }
             }
 
             override fun onResume(owner: LifecycleOwner) {

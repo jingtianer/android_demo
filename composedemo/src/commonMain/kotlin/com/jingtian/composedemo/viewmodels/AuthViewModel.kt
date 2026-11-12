@@ -41,10 +41,18 @@ abstract class AuthViewModel : SingletonViewModel(), DefaultLifecycleObserver {
     }
     override fun onPause(owner: LifecycleOwner) {
         isAppEnterBackground = true
+        if (!JumpOnPurposeMarkHolder.isJumpOnPurpose.value) {
+            cancelAllBioPrompt()
+            isVisible.value = false
+        }
     }
 
     override fun onStop(owner: LifecycleOwner) {
-        isAppEnterBackground = true
+//        isAppEnterBackground = true
+//        if (!JumpOnPurposeMarkHolder.isJumpOnPurpose.value) {
+//            cancelAllBioPrompt()
+//            isAuthed.value = false
+//        }
     }
 
     override fun onResume(owner: LifecycleOwner) {
