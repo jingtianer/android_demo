@@ -15,6 +15,3 @@ import com.jingtian.composedemo.base.app
 import com.jingtian.composedemo.ui.widget.StarRateView
 import com.jingtian.composedemo.utils.ViewUtils.dpValue
 import kotlin.math.abs
-
-@Composable
-actual fun Dp.dpValue(): Float = this.dpValue
