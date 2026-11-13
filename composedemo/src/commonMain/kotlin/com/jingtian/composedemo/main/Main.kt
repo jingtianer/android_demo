@@ -27,6 +27,7 @@ import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.FloatState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableFloatState
 import androidx.compose.runtime.derivedStateOf
@@ -93,7 +94,7 @@ import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 
 @Composable
-expect fun rememberBackProgress(isEnable: Boolean): MutableFloatState
+expect fun rememberBackProgress(isEnable: Boolean): FloatState
 
 @OptIn(ExperimentalTime::class, ExperimentalComposeUiApi::class)
 @Composable

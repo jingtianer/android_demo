@@ -4,6 +4,7 @@ import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.FloatState
 import androidx.compose.runtime.MutableFloatState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -22,7 +23,7 @@ import kotlinx.coroutines.launch
 import java.util.concurrent.CancellationException
 
 @Composable
-actual fun rememberBackProgress(isEnable: Boolean): MutableFloatState {
+actual fun rememberBackProgress(isEnable: Boolean): FloatState {
     val backProgress = remember { mutableFloatStateOf(0f) }
     var enable by remember(isEnable) { mutableStateOf(isEnable) }
     val backDispatcher = LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
