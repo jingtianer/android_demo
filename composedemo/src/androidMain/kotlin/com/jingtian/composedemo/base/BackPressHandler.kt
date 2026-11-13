@@ -17,7 +17,6 @@ import kotlinx.coroutines.launch
 
 @Composable
 actual fun GalleryStateHolder.BackPressHandler(isOnTop: Boolean) {
-    val androidViewModel: AuthViewModel = authViewModel()
     val scope = rememberCoroutineScope()
     val dispatcher = LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
 
@@ -27,11 +26,6 @@ actual fun GalleryStateHolder.BackPressHandler(isOnTop: Boolean) {
                 withFrameNanos { }
                 val isEnabled = this@BackPressHandler.onBackPressed()
                 this@GalleryOnBackPressCallBack.isEnabled = isEnabled
-                if (!isEnabled) {
-                    androidViewModel.lock()
-                    dispatcher?.onBackPressed()
-                    this@GalleryOnBackPressCallBack.isEnabled = true
-                }
             }
         }
     }

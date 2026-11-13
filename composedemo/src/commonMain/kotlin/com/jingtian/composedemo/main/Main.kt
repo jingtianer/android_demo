@@ -103,8 +103,8 @@ fun PasswordGuardedMain(onPasswordChecked: () -> Unit = {}) {
         return
     }
     val authViewModel: AuthViewModel = authViewModel()
-    var isVisible by authViewModel.isVisible
-    var isAuthed by authViewModel.isAuthed
+    val isVisible by authViewModel.isVisible
+    val isAuthed by authViewModel.isAuthed
     val isLocked by authViewModel.isLocked
     val doAuth = remember {
         {
@@ -121,18 +121,10 @@ fun PasswordGuardedMain(onPasswordChecked: () -> Unit = {}) {
         mutableStateOf(object : DefaultLifecycleObserver {
             override fun onStop(owner: LifecycleOwner) {
                 authViewModel.onStop(owner)
-                if (!JumpOnPurposeMarkHolder.isJumpOnPurpose.value) {
-                    authViewModel.cancelAllBioPrompt()
-                    isAuthed = false
-                }
             }
 
             override fun onPause(owner: LifecycleOwner) {
                 authViewModel.onPause(owner)
-                if (!JumpOnPurposeMarkHolder.isJumpOnPurpose.value) {
-                    authViewModel.cancelAllBioPrompt()
-                    isVisible = false
-                }
             }
 
             override fun onResume(owner: LifecycleOwner) {
@@ -186,7 +178,6 @@ fun Main(
             DrawerValue.Open -> true
         }
     })
-    rememberCoroutineScope()
     val routerController = MainRouterController(naviController, drawerState)
     var currentSelectedAlbum by remember { mutableStateOf<IndexedValue<Album>?>(null) }
     val albumListChange by viewModel.albumListChange.observeAsState()

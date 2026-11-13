@@ -16,6 +16,7 @@ import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.jingtian.composedemo.multiplatform.logD
+import com.jingtian.composedemo.viewmodels.authViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.util.concurrent.CancellationException
@@ -58,6 +59,7 @@ actual fun rememberBackProgress(isEnable: Boolean): MutableFloatState {
             withFrameNanos { }
             externalScope.launch(Dispatchers.Main) {
                 backDispatcher?.onBackPressed()
+//                authViewModel().lock()
             }
         } catch (e: CancellationException) {
             backProgress.value = 0f

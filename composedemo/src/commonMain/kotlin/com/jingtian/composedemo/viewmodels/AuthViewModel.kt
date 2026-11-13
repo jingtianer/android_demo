@@ -30,6 +30,8 @@ abstract class AuthViewModel : SingletonViewModel(), DefaultLifecycleObserver {
     val isLocked: State<Boolean> = lockedState
     val isVisible = mutableStateOf(false)
     val isAuthed = mutableStateOf(false)
+    private var onStartGeneration = 0
+    private var onResumeGeneration = 0
     private val lastOnStopAuthTimeStamp = mutableLongStateOf(-1)
     private var isAppEnterBackground = false
     private var isDoingAuth = false
@@ -39,19 +41,37 @@ abstract class AuthViewModel : SingletonViewModel(), DefaultLifecycleObserver {
         }
         lockedState.value = true
     }
-    override fun onPause(owner: LifecycleOwner) {
-        isAppEnterBackground = true
-    }
 
-    override fun onStop(owner: LifecycleOwner) {
-        isAppEnterBackground = true
+    override fun onStart(owner: LifecycleOwner) {
+        isAppEnterBackground = false
+        onStartGeneration++
     }
 
     override fun onResume(owner: LifecycleOwner) {
         isAppEnterBackground = false
+        onResumeGeneration++
     }
-    override fun onStart(owner: LifecycleOwner) {
-        isAppEnterBackground = false
+
+    override fun onPause(owner: LifecycleOwner) {
+        onResumeGeneration--
+        if (onStartGeneration == 0) {
+            isAppEnterBackground = true
+            if (!JumpOnPurposeMarkHolder.isJumpOnPurpose.value) {
+                cancelAllBioPrompt()
+                isVisible.value = false
+            }
+        }
+    }
+
+    override fun onStop(owner: LifecycleOwner) {
+        onStartGeneration--
+        if (onStartGeneration == 0) {
+            isAppEnterBackground = true
+            if (!JumpOnPurposeMarkHolder.isJumpOnPurpose.value) {
+                cancelAllBioPrompt()
+                isAuthed.value = false
+            }
+        }
     }
 
     private fun checkState(checkLock: Boolean = false): Boolean {
