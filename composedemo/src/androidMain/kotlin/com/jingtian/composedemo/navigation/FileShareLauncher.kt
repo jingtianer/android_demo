@@ -78,9 +78,9 @@ class FileShareLauncher(val context: Context) : IFileShareLauncher {
     }
 }
 @Composable
-actual fun rememberFileShare(onResult: (Long)->Unit): MutableState<IFileShareLauncher> {
+actual fun rememberFileShare(onResult: (Long)->Unit): IFileShareLauncher {
     val context: Context = LocalContext.current
     return remember {
-        mutableStateOf(FileShareLauncher(context))
+        FileShareLauncher(context)
     }
 }

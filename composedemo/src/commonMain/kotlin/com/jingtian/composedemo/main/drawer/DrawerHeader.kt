@@ -98,7 +98,7 @@ fun DrawerHeader() {
         }
         userAvatarImage = bitmap
     }
-    val multipleImagePickerLauncher by rememberImagePicker { uri: MultiplatformFile?->
+    val multipleImagePickerLauncher = rememberImagePicker { uri: MultiplatformFile?->
         scope.launch(Dispatchers.IO) {
             uri?.takeIf { !it.isHidden() } ?: return@launch
             val imageStorage = FileStorageUtils.getStorage(FileType.IMAGE) ?: return@launch
@@ -158,9 +158,6 @@ fun DrawerHeader() {
         return Res * (1 - sqrt(.5f)) - r + halfBorder * sqrt(0.5f)
     }
 
-
-    val albumItemLauncher by rememberAlbumLauncher { result->
-    }
     Column(
         Modifier
             .fillMaxWidth()
@@ -169,7 +166,7 @@ fun DrawerHeader() {
     ) {
         val currentUserAvatarImage = userAvatarImage
 
-        val albumItemLauncher by rememberAlbumLauncher { result->
+        val albumItemLauncher = rememberAlbumLauncher { result->
         }
         val imageModifier = Modifier
             .size(avatarSize, avatarSize)

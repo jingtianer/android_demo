@@ -27,7 +27,7 @@ class ImagePicker(val launcher: ManagedActivityResultLauncher<PickVisualMediaReq
 }
 
 @Composable
-actual fun rememberImagePicker(onResult: (MultiplatformFile?)->Unit): MutableState<IImagePicker> {
+actual fun rememberImagePicker(onResult: (MultiplatformFile?)->Unit): IImagePicker {
     val multipleImagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
         onResult = { uri->
@@ -37,6 +37,6 @@ actual fun rememberImagePicker(onResult: (MultiplatformFile?)->Unit): MutableSta
         }
     )
     return remember {
-        mutableStateOf(ImagePicker(multipleImagePickerLauncher))
+        ImagePicker(multipleImagePickerLauncher)
     }
 }

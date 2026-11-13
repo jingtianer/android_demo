@@ -184,7 +184,7 @@ fun GalleryStateHolder.Gallery() {
         onAlbumNameChanged()
     }
 
-    val importDirLauncher by rememberDocumentTreePicker { uri ->
+    val importDirLauncher = rememberDocumentTreePicker { uri ->
         uri ?: return@rememberDocumentTreePicker
         viewModel.importFiles(album.value, uri)
     }

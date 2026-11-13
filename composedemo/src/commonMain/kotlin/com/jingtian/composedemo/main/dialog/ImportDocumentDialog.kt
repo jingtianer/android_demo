@@ -128,7 +128,7 @@ fun ImportDocumentDialog(dialogState: ImportDocumentDialogState, onDismiss: () -
     var isUploadingFile by dialogState.isUploadingFile
     val viewModel: AlbumViewModel = albumViewModel()
 
-    val importDirLauncher by rememberDocumentTreePicker { uri->
+    val importDirLauncher = rememberDocumentTreePicker { uri->
         dialogState.selectedUri.value = uri
     }
 

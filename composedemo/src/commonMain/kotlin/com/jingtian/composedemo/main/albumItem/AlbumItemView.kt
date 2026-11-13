@@ -245,7 +245,7 @@ fun AlbumItemViewStateHolder.AlbumItemView() {
         )
     }
 
-    val albumItemLauncher by rememberAlbumLauncher { result->
+    val albumItemLauncher = rememberAlbumLauncher { result->
         if (result.toInt() == -1) {
             scope.launch {
                 fetchImage(scope)

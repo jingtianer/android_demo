@@ -117,8 +117,8 @@ fun PasswordGuardedMain(onPasswordChecked: () -> Unit = {}) {
             }
         }
     }
-    val lifecycleObserver by remember {
-        mutableStateOf(object : DefaultLifecycleObserver {
+    val lifecycleObserver = remember {
+        object : DefaultLifecycleObserver {
             override fun onStop(owner: LifecycleOwner) {
                 authViewModel.onStop(owner)
             }
@@ -135,7 +135,7 @@ fun PasswordGuardedMain(onPasswordChecked: () -> Unit = {}) {
             override fun onStart(owner: LifecycleOwner) {
                 authViewModel.onStart(owner)
             }
-        })
+        }
     }
     Main(visible = isVisible && isAuthed && !isLocked) {
         doAuth()

@@ -22,7 +22,7 @@ class DocumentPicker(val launcher: ManagedActivityResultLauncher<Array<String>, 
 }
 
 @Composable
-actual fun rememberDocumentPicker(onResult: (MultiplatformFile?)->Unit): MutableState<IDocumentPicker> {
+actual fun rememberDocumentPicker(onResult: (MultiplatformFile?)->Unit): IDocumentPicker {
     val multipleImagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
         onResult = { uri->
@@ -32,6 +32,6 @@ actual fun rememberDocumentPicker(onResult: (MultiplatformFile?)->Unit): Mutable
         }
     )
     return remember {
-        mutableStateOf(DocumentPicker(multipleImagePickerLauncher))
+        DocumentPicker(multipleImagePickerLauncher)
     }
 }

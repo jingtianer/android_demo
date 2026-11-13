@@ -87,8 +87,8 @@ class AlbumItemLauncher : IAlbumItemLauncher {
 }
 
 @Composable
-actual fun rememberAlbumLauncher(onResult: (Long)->Unit): MutableState<IAlbumItemLauncher> {
+actual fun rememberAlbumLauncher(onResult: (Long)->Unit): IAlbumItemLauncher {
     return remember {
-        mutableStateOf(AlbumItemLauncher())
+        AlbumItemLauncher()
     }
 }

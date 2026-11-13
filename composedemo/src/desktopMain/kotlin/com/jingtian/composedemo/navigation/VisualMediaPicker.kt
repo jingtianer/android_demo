@@ -36,6 +36,6 @@ class ImagePicker(
 
 }
 @Composable
-actual fun rememberImagePicker(onResult: (MultiplatformFile?)->Unit): MutableState<IImagePicker> {
-    return remember { mutableStateOf(ImagePicker(onResult = onResult)) }
+actual fun rememberImagePicker(onResult: (MultiplatformFile?)->Unit): IImagePicker {
+    return remember { ImagePicker(onResult = onResult) }
 }

@@ -31,6 +31,6 @@ class DocumentTreePicker(val title: String, private val onResult: (Multiplatform
 }
 
 @Composable
-actual fun rememberDocumentTreePicker(onResult: (MultiplatformFile?) -> Unit): MutableState<IDocumentTreePicker>  {
-    return remember { mutableStateOf(DocumentTreePicker("导入目录", onResult)) }
+actual fun rememberDocumentTreePicker(onResult: (MultiplatformFile?) -> Unit): IDocumentTreePicker  {
+    return remember { DocumentTreePicker("导入目录", onResult) }
 }

@@ -2,6 +2,7 @@ package com.jingtian.composedemo.utils
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.State
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshots.SnapshotStateMap
 import com.jingtian.composedemo.multiplatform.SoftRef
@@ -51,7 +52,7 @@ fun <K, V : Any> MutableMap<K, SoftRef<V>>.getOrPutSoftRef(key: K, default: ()->
 }
 
 @Composable
-fun <T> MutableState<T>.observeAsState() = remember { this }
+fun <T> MutableState<T>.observeAsState(): State<T> = remember { this }
 
 val Path.isFile get() = SystemFileSystem.metadataOrNull(this)?.isRegularFile ?: false
 val Path.isDirectory get() = SystemFileSystem.metadataOrNull(this)?.isDirectory ?: false

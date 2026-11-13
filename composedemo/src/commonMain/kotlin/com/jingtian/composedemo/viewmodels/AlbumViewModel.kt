@@ -12,6 +12,7 @@ import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Snackbar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.LongState
 import androidx.compose.runtime.MutableLongState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
@@ -70,7 +71,7 @@ fun MutableLongState.notifyChange() {
 }
 
 @Composable
-fun MutableLongState.observeAsState() = remember { this }
+fun MutableLongState.observeAsState() : LongState = remember { this }
 
 object AlbumViewModel : SingletonViewModel() {
     private const val TAG = "AlbumViewModel"

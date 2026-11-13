@@ -10,4 +10,4 @@ interface IImagePicker {
 }
 
 @Composable
-expect fun rememberImagePicker(onResult: (MultiplatformFile?)->Unit): MutableState<IImagePicker>
+expect fun rememberImagePicker(onResult: (MultiplatformFile?)->Unit): IImagePicker
