@@ -254,7 +254,7 @@ class MainState(
     @Composable
     fun InstallBackHandlers(): BackProgressState {
         galleryStateHolder?.BackPressHandler(isOnTop)
-        return rememberBackProgress(!isOnTop || (galleryStateHolder?.let { !it.backEnable } ?: true))
+        return rememberBackProgress(isOnTop && (galleryStateHolder?.let { !it.backEnable } ?: true))
     }
 }
 
