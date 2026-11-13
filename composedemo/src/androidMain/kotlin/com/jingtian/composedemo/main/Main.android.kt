@@ -70,7 +70,7 @@ actual fun rememberBackProgress(isEnable: Boolean): BackProgressState {
             withFrameNanos { }
             externalScope.launch(Dispatchers.Main) {
                 backDispatcher?.onBackPressed()
-//                authViewModel().lock()
+                authViewModel().lock()
             }
         } catch (e: CancellationException) {
             backProgress.value = 0f

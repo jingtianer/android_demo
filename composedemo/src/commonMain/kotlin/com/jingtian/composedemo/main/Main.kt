@@ -66,6 +66,7 @@ import com.jingtian.composedemo.main.route.Settings
 import com.jingtian.composedemo.main.settings.SettingsPage
 import com.jingtian.composedemo.multiplatform.LowMemorySideEffect
 import com.jingtian.composedemo.multiplatform.SoftRef
+import com.jingtian.composedemo.multiplatform.logD
 import com.jingtian.composedemo.ui.theme.LocalAppPalette
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
 import com.jingtian.composedemo.viewmodels.AuthSuccess
@@ -161,6 +162,10 @@ class MainState(
         navBackStackEntry?.destination?.hasRoute(Gallery::class) ?: false
     }
 
+    val isBackEnable by derivedStateOf {
+        drawerState.isOpen || drawerState.isAnimationRunning
+    }
+
     val drawerState = DrawerState(
         initialValue = DrawerValue.Closed,
         confirmStateChange = this::confirmStateChange
@@ -253,8 +258,20 @@ class MainState(
 
     @Composable
     fun InstallBackHandlers(): BackProgressState {
-        galleryStateHolder?.BackPressHandler(isOnTop)
-        return rememberBackProgress(isOnTop && (galleryStateHolder?.let { !it.backEnable } ?: true))
+        galleryStateHolder?.BackPressHandler(isBackEnable) {
+            if (drawerState.isOpen) {
+                drawerState.close()
+                true
+            } else if (drawerState.isAnimationRunning) {
+                true
+            } else {
+                false
+            }
+        }
+        logD("InstallBackHandlers") {
+            "isBackEnable=$isBackEnable, gallery=${galleryStateHolder?.let { !it.backEnable }}, drawerState.isOpen=${drawerState.isOpen}, drawerState.isAnimationRunning=${drawerState.isAnimationRunning}"
+        }
+        return rememberBackProgress(isOnTop && !isBackEnable && (galleryStateHolder?.let { !it.backEnable } ?: true))
     }
 }
 

@@ -222,9 +222,7 @@ class GalleryStateHolder(val album: IndexedValue<Album>, val currentSelectedAlbu
     }
 
     val backEnable by derivedStateOf {
-        return@derivedStateOf if (drawerState.isOpen) {
-            true
-        } else if (enterEditMode) {
+        return@derivedStateOf if (enterEditMode) {
             true
         } else if (gallerySearchEnabled) {
             true
@@ -233,11 +231,8 @@ class GalleryStateHolder(val album: IndexedValue<Album>, val currentSelectedAlbu
         }
     }
 
-    suspend fun onBackPressed(): Boolean {
-        return if (drawerState.isOpen) {
-            drawerState.close()
-            true
-        } else if (enterEditMode) {
+    fun onBackPressed(): Boolean {
+        return if (enterEditMode) {
             enterEditMode = false
             true
         } else if (gallerySearchEnabled) {
