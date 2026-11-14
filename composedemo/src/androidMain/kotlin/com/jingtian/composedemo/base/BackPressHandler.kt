@@ -16,7 +16,7 @@ import com.jingtian.composedemo.viewmodels.authViewModel
 import kotlinx.coroutines.launch
 
 @Composable
-actual fun GalleryStateHolder.BackPressHandler(isEnable: Boolean, onBackPressed : suspend () -> Boolean) {
+actual fun BackPressHandler(isEnable: Boolean, onBackPressed : suspend () -> Boolean) {
     val scope = rememberCoroutineScope()
     val dispatcher = LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
 
@@ -24,7 +24,7 @@ actual fun GalleryStateHolder.BackPressHandler(isEnable: Boolean, onBackPressed 
         override fun handleOnBackPressed() {
             scope.launch {
                 withFrameNanos { }
-                val isEnabled = onBackPressed() || this@BackPressHandler.onBackPressed()
+                val isEnabled = onBackPressed()
                 this@GalleryOnBackPressCallBack.isEnabled = isEnabled
             }
         }
@@ -32,12 +32,12 @@ actual fun GalleryStateHolder.BackPressHandler(isEnable: Boolean, onBackPressed 
 
     var backPressedCallback by remember { mutableStateOf<GalleryOnBackPressCallBack?>(null) }
 
-    DisposableEffect(dispatcher, this@BackPressHandler, backEnable, isEnable) {
+    DisposableEffect(dispatcher, isEnable) {
         backPressedCallback?.apply {
             isEnabled = false
             remove()
         }
-        val innerBackPressedCallback = GalleryOnBackPressCallBack(isEnable = backEnable || isEnable)
+        val innerBackPressedCallback = GalleryOnBackPressCallBack(isEnable = isEnable)
         backPressedCallback = innerBackPressedCallback
         dispatcher?.addCallback(innerBackPressedCallback)
         onDispose {

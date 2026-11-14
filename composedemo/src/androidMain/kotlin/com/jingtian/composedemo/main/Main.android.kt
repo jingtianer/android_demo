@@ -24,7 +24,7 @@ import kotlinx.coroutines.launch
 import java.util.concurrent.CancellationException
 
 @Composable
-actual fun rememberBackProgress(isEnable: Boolean): BackProgressState {
+actual fun rememberBackProgress(isEnable: Boolean, onPredicableBackFinish: () -> Unit): BackProgressState {
     val backProgress = remember { mutableFloatStateOf(0f) }
     val isLeft = remember { mutableStateOf(true) }
     var enable by remember { mutableStateOf(true) }
@@ -70,7 +70,7 @@ actual fun rememberBackProgress(isEnable: Boolean): BackProgressState {
             withFrameNanos { }
             externalScope.launch(Dispatchers.Main) {
                 backDispatcher?.onBackPressed()
-                authViewModel().lock()
+                onPredicableBackFinish.invoke()
             }
         } catch (e: CancellationException) {
             backProgress.value = 0f

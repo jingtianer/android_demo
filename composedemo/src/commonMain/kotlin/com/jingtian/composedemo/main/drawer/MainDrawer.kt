@@ -21,6 +21,7 @@ import com.jingtian.composedemo.dao.DataBase
 import com.jingtian.composedemo.dao.model.Album
 import com.jingtian.composedemo.main.route.LocalRouterController
 import com.jingtian.composedemo.ui.theme.LocalAppPalette
+import com.jingtian.composedemo.ui.theme.clipDeviceRoundCorner
 import kotlinx.coroutines.launch
 
 @Composable

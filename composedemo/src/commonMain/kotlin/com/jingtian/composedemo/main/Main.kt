@@ -1,5 +1,7 @@
 package com.jingtian.composedemo.main
 
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideIn
 import androidx.compose.animation.slideOut
 import androidx.compose.foundation.background
@@ -35,7 +37,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.pointerInput
@@ -66,8 +67,8 @@ import com.jingtian.composedemo.main.route.Settings
 import com.jingtian.composedemo.main.settings.SettingsPage
 import com.jingtian.composedemo.multiplatform.LowMemorySideEffect
 import com.jingtian.composedemo.multiplatform.SoftRef
-import com.jingtian.composedemo.multiplatform.logD
 import com.jingtian.composedemo.ui.theme.LocalAppPalette
+import com.jingtian.composedemo.ui.theme.clipDeviceRoundCorner
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
 import com.jingtian.composedemo.viewmodels.AuthSuccess
 import com.jingtian.composedemo.viewmodels.AuthViewModel
@@ -78,6 +79,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.math.roundToInt
 
 class BackProgressState(backProgressState: MutableFloatState, isLeftState: MutableState<Boolean>) {
     val backProgress: FloatState = backProgressState
@@ -85,7 +87,10 @@ class BackProgressState(backProgressState: MutableFloatState, isLeftState: Mutab
 }
 
 @Composable
-expect fun rememberBackProgress(isEnable: Boolean): BackProgressState
+expect fun rememberBackProgress(
+    isEnable: Boolean,
+    onPredicableBackFinish: () -> Unit = {}
+): BackProgressState
 
 @Composable
 fun PasswordGuardedMain(onPasswordChecked: () -> Unit = {}) {
@@ -258,20 +263,23 @@ class MainState(
 
     @Composable
     fun InstallBackHandlers(): BackProgressState {
-        galleryStateHolder?.BackPressHandler(isBackEnable) {
+        val galleryBackEnable = galleryStateHolder?.backEnable ?: false
+        val backEnable = isBackEnable || galleryBackEnable
+        BackPressHandler(backEnable) {
             if (drawerState.isOpen) {
                 drawerState.close()
                 true
             } else if (drawerState.isAnimationRunning) {
                 true
+            } else if (galleryStateHolder?.onBackPressed() == true) {
+                true
             } else {
                 false
             }
         }
-        logD("InstallBackHandlers") {
-            "isBackEnable=$isBackEnable, gallery=${galleryStateHolder?.let { !it.backEnable }}, drawerState.isOpen=${drawerState.isOpen}, drawerState.isAnimationRunning=${drawerState.isAnimationRunning}"
+        return rememberBackProgress(isOnTop && !backEnable) {
+            authViewModel().lock()
         }
-        return rememberBackProgress(isOnTop && !isBackEnable && (galleryStateHolder?.let { !it.backEnable } ?: true))
     }
 }
 
@@ -323,7 +331,7 @@ fun MainState.Main(
     CompositionLocalProvider(LocalRouterController provides routerController) {
         Box(
             modifier = Modifier.fillMaxSize()
-                .predictiveBackVisual(backProgress = backProgress, visible = visible || !isOnTop)
+                .predictiveBackVisual(backProgress = backProgress, visible = visible)
         ) {
             Scaffold(
                 modifier = modifier.fillMaxSize(),
@@ -337,7 +345,7 @@ fun MainState.Main(
                             Modifier
                                 .fillMaxHeight()
                                 .fillMaxWidth(0.92f)
-                                .clip(RoundedCornerShape(0.dp, 20.dp, 20.dp, 0.dp))
+                                .clipDeviceRoundCorner()
                                 .background(LocalAppPalette.current.drawerBg)
                                 .windowInsetsPadding(
                                     WindowInsets.navigationBars.only(
@@ -361,16 +369,16 @@ fun MainState.Main(
                         navController = naviController,
                         startDestination = Gallery,
                         enterTransition = {
-                            slideIn { IntOffset(it.width, 0) }
+                            slideIn { IntOffset((it.width * 0.2f).roundToInt(), 0) } + scaleIn(initialScale = 0.8f)
                         },
                         exitTransition = {
-                            slideOut { IntOffset(-it.width, 0) }
+                            slideOut { IntOffset((it.width * 0.2f).roundToInt(), 0) } + scaleOut(targetScale = 0.8f)
                         },
                         popEnterTransition = {
-                            slideIn { IntOffset(-it.width, 0) }
+                            slideIn { IntOffset((it.width * 0.2f).roundToInt(), 0) } + scaleIn(initialScale = 0.8f)
                         },
                         popExitTransition = {
-                            slideOut { IntOffset(it.width, 0) }
+                            slideOut { IntOffset((it.width * 0.2f).roundToInt(), 0) } + scaleOut(targetScale = 0.8f)
                         },
                     ) {
                         composable<Gallery> {
@@ -392,10 +400,10 @@ fun MainState.Main(
                 Box(
                     modifier = Modifier.fillMaxSize()
                         .windowInsetsPadding(WindowInsets.systemGestures).pointerInput(Unit) {
-                        detectTapGestures(onTap = {
-                            onVisibleRequest()
+                            detectTapGestures(onTap = {
+                                onVisibleRequest()
+                            })
                         })
-                    })
             }
         }
     }

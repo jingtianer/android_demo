@@ -91,6 +91,7 @@ import com.jingtian.composedemo.base.resources.getPainter
 import com.jingtian.composedemo.main.labels.CheckableLabelView
 import com.jingtian.composedemo.ui.theme.LocalAppColorScheme
 import com.jingtian.composedemo.ui.theme.LocalAppPalette
+import com.jingtian.composedemo.ui.theme.appBackground
 import com.jingtian.composedemo.ui.theme.appBackgroundSlide
 import com.jingtian.composedemo.ui.theme.appBackgroundV2
 import com.jingtian.composedemo.utils.BackgroundColor
@@ -105,7 +106,7 @@ import kotlin.math.roundToInt
 @Composable
 fun SettingsPage() {
     Scaffold(
-        modifier = Modifier.fillMaxSize().appBackgroundV2()
+        modifier = Modifier.fillMaxSize().appBackground()
             .windowInsetsPadding(WindowInsets.statusBars),
         contentColor = Color.Transparent,
         containerColor = Color.Transparent,

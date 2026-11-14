@@ -1,32 +1,24 @@
 package com.jingtian.composedemo.ui.theme
 
-import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.structuralEqualityPolicy
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.jingtian.composedemo.utils.AppTheme
 import com.jingtian.composedemo.utils.BackgroundConfig
 import com.jingtian.composedemo.utils.UserStorage
-import com.jingtian.composedemo.utils.mainColor
-import com.jingtian.composedemo.viewmodels.AppThemeViewModel
 import com.jingtian.composedemo.viewmodels.appThemeViewModel
 import kotlin.math.min
 import kotlin.math.sqrt
@@ -152,6 +144,13 @@ val LocalAppColorScheme = compositionLocalOf(structuralEqualityPolicy()) { Light
 
 val goldenRatio = 2f / (sqrt(5f) + 1)
 
+
+@Composable
+expect fun rememberDeviceCornerRadii(): Shape
+
+@Composable
+fun Modifier.clipDeviceRoundCorner(): Modifier = this.clip(rememberDeviceCornerRadii())
+
 @Composable
 fun Modifier.appBackgroundV2(heightScale: Float = 1 - goldenRatio): Modifier {
     val backgroundColor = LocalAppColorScheme.current.background
@@ -169,6 +168,7 @@ fun Modifier.appBackgroundV2(heightScale: Float = 1 - goldenRatio): Modifier {
         val horizontalBrush = localHorizontalGradient.gradientColors.horizontalGradient()
 
         onDrawBehind {
+            drawRect(color = backgroundColor)
             drawRect(brush = horizontalBrush)
             drawRect(brush = verticalBrush)
         }
@@ -176,9 +176,9 @@ fun Modifier.appBackgroundV2(heightScale: Float = 1 - goldenRatio): Modifier {
 }
 
 @Composable
-fun Modifier.appBackground() = appBackgroundV2(heightScale = goldenRatio)
+fun Modifier.appBackground() = this.clipDeviceRoundCorner().appBackgroundV2(heightScale = goldenRatio)
 @Composable
-fun Modifier.drawerBackground() = appBackgroundV2(heightScale = 1f)
+fun Modifier.drawerBackground() = this.appBackgroundV2(heightScale = 1f)
 @Composable
 fun Modifier.dialogBackground() = appBackgroundV2(heightScale = goldenRatio)
 
