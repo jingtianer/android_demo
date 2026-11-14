@@ -11,11 +11,15 @@ import SwiftUI
 struct ComposeDemoApp: App {
     var body: some Scene {
         WindowGroup {
-            if #available(iOS 26.0, *) {
-                ContentView().ignoresSafeArea().containerShape(.rect).clipShape(ConcentricRectangle())
-            } else {
-                ContentView().ignoresSafeArea()
-            }
+            ComposeEntry()
+        }
+    }
+}
+
+struct ComposeEntry: View {
+    var body: some View {
+        GeometryReader { proxy in
+            ContentView().ignoresSafeArea()
         }
     }
 }

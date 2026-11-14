@@ -9,9 +9,17 @@ import SwiftUI
 import ComposeDemoFramework
 
 struct ContentView: UIViewControllerRepresentable {
+    
     func makeUIViewController(context: Context) -> UIViewController {
         // 这里调用的是 iosMain 里定义的 Kotlin 函数
-        let controller = MainViewControllerKt.MainViewController()
+        let controller = MainViewControllerKt.MainViewController(
+            screenRoundedCornerInsets: MainViewControllerKt.screenRoundedCornerInsets(
+                start: 0.0,
+                top: 0.0,
+                end: 0.0,
+                bottom: 0.0
+            )
+        )
         controller.edgesForExtendedLayout = .all
         controller.extendedLayoutIncludesOpaqueBars = true
         controller.modalPresentationStyle = .fullScreen

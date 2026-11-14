@@ -5,8 +5,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.dp
+import com.jingtian.composedemo.main.LocalScreenRoundedCornerInsets
 
 @Composable
 actual fun rememberDeviceCornerRadii(): Shape {
-    return remember { RoundedCornerShape(0.dp) }
+    return LocalScreenRoundedCornerInsets.current
 }
