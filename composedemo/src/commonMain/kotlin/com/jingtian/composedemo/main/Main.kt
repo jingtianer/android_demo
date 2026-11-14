@@ -2,6 +2,10 @@ package com.jingtian.composedemo.main
 
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.keyframes
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideIn
@@ -19,7 +23,6 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.systemGestures
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ModalNavigationDrawer
@@ -34,16 +37,18 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.backhandler.BackEventCompat
+import androidx.compose.ui.backhandler.PredictiveBackHandler
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -58,6 +63,11 @@ import com.jingtian.composedemo.BuildKonfig
 import com.jingtian.composedemo.base.BackPressHandler
 import com.jingtian.composedemo.dao.model.Album
 import com.jingtian.composedemo.demonstration.DemonstrationMain
+import com.jingtian.composedemo.main.MainState.Companion.ENTER_INITIAL_SCALE
+import com.jingtian.composedemo.main.MainState.Companion.EXIT_SCALE_SLIDE_DURATION
+import com.jingtian.composedemo.main.MainState.Companion.EXIT_TARGET_OFFSET
+import com.jingtian.composedemo.main.MainState.Companion.EXIT_TARTGET_SCALE
+import com.jingtian.composedemo.main.MainState.Companion.TRANSITION_ANIM_DURATION
 import com.jingtian.composedemo.main.drawer.MainDrawer
 import com.jingtian.composedemo.main.gallery.Gallery
 import com.jingtian.composedemo.main.gallery.GalleryStateHolder
@@ -79,8 +89,12 @@ import com.jingtian.composedemo.viewmodels.albumViewModel
 import com.jingtian.composedemo.viewmodels.authViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.coroutines.cancellation.CancellationException
 import kotlin.math.roundToInt
 
 class BackProgressState(backProgressState: MutableFloatState, isLeftState: MutableState<Boolean>) {
@@ -147,10 +161,20 @@ fun PasswordGuardedMain(onPasswordChecked: () -> Unit = {}) {
     }
 }
 
-class MainState(
+private class MainState(
     val naviController: NavHostController,
     currentBackStackEntryState: State<NavBackStackEntry?>,
 ) {
+    companion object {
+        const val EXIT_FATEOUT_DURATION = 100
+        const val TRANSITION_ANIM_DURATION = 300
+        const val EXIT_SCALE_SLIDE_DURATION = TRANSITION_ANIM_DURATION - EXIT_FATEOUT_DURATION
+        const val EXIT_TARTGET_SCALE = 0.8f
+        const val EXIT_TARGET_OFFSET: Float =
+            EXIT_SCALE_SLIDE_DURATION * 1f / TRANSITION_ANIM_DURATION
+        const val ENTER_INITIAL_SCALE: Float = 1 - ((1 - EXIT_TARTGET_SCALE) / EXIT_TARGET_OFFSET)
+    }
+
     var menuItemsEntity by mutableStateOf(emptyList<Album>())
     var menuItemsEntityInitialized by mutableStateOf(false)
     val viewModel: AlbumViewModel = albumViewModel()
@@ -306,8 +330,9 @@ fun Main(
     mainState.Main(visible, onVisibleRequest)
 }
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun MainState.Main(
+private fun MainState.Main(
     visible: Boolean = true,
     onVisibleRequest: () -> Unit = {}
 ) {
@@ -367,11 +392,25 @@ fun MainState.Main(
                     drawerState = drawerState,
                     gesturesEnabled = true
                 ) {
+                    val isLeft = true // by backProgressState.isLeft
                     NavHost(
                         navController = naviController,
                         startDestination = Gallery,
                         enterTransition = {
-                            slideIn { IntOffset((it.width * 0.8f).roundToInt(), 0) } + scaleIn(initialScale = 0.8f)
+                            val scale = scaleIn(
+                                initialScale = ENTER_INITIAL_SCALE,
+                                animationSpec = tween(
+                                    durationMillis = TRANSITION_ANIM_DURATION,
+                                    easing = LinearEasing
+                                )
+                            )
+                            val slide = slideIn(
+                                animationSpec = tween(
+                                    durationMillis = TRANSITION_ANIM_DURATION,
+                                    easing = LinearEasing
+                                )
+                            ) { IntOffset((if (isLeft) 1 else -1) * it.width, 0) }
+                            scale + slide
                         },
                         exitTransition = {
                             ExitTransition.None
@@ -380,7 +419,33 @@ fun MainState.Main(
                             EnterTransition.None
                         },
                         popExitTransition = {
-                            slideOut { IntOffset((it.width * 0.8f).roundToInt(), 0) } + scaleOut(targetScale = 0.8f)
+                            val slide = slideOut(
+                                animationSpec = tween(
+                                    durationMillis = EXIT_SCALE_SLIDE_DURATION,
+                                    easing = LinearEasing
+                                ),
+                                targetOffset = {
+                                    IntOffset(
+                                        ((if (isLeft) 1 else -1) * it.width * EXIT_TARGET_OFFSET).roundToInt(),
+                                        0
+                                    )
+                                }
+                            )
+                            val scale = scaleOut(
+                                animationSpec = tween(
+                                    durationMillis = EXIT_SCALE_SLIDE_DURATION,
+                                    easing = LinearEasing
+                                ),
+                                targetScale = EXIT_TARTGET_SCALE
+                            )
+                            val fade = fadeOut(
+                                animationSpec = keyframes {
+                                    durationMillis = TRANSITION_ANIM_DURATION
+                                    1f at EXIT_SCALE_SLIDE_DURATION
+                                    0f at TRANSITION_ANIM_DURATION
+                                }
+                            )
+                            slide + scale + fade
                         },
                     ) {
                         composable<Gallery> {
