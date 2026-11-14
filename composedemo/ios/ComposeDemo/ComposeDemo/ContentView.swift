@@ -9,17 +9,24 @@ import SwiftUI
 import ComposeDemoFramework
 
 struct ContentView: UIViewControllerRepresentable {
-    
+    /// The size of the top-leading corner inset.
+    let topLeading: CGFloat
+    /// The size of the top-trailing corner inset.
+    let topTrailing: CGFloat
+    /// The size of the bottom-leading corner inset.
+    let bottomLeading: CGFloat
+    /// The size of the bottom-trailing corner inset.
+    let bottomTrailing: CGFloat
+
     func makeUIViewController(context: Context) -> UIViewController {
         // 这里调用的是 iosMain 里定义的 Kotlin 函数
-        let controller = MainViewControllerKt.MainViewController(
-            screenRoundedCornerInsets: MainViewControllerKt.screenRoundedCornerInsets(
-                start: 0.0,
-                top: 0.0,
-                end: 0.0,
-                bottom: 0.0
-            )
+        MainViewControllerKt.screenRoundedCornerInsets(
+            topStart: topLeading,
+            topEnd: topTrailing,
+            bottomStart: bottomLeading,
+            bottomEnd: bottomLeading
         )
+        let controller = MainViewControllerKt.MainViewController()
         controller.edgesForExtendedLayout = .all
         controller.extendedLayoutIncludesOpaqueBars = true
         controller.modalPresentationStyle = .fullScreen
@@ -28,10 +35,20 @@ struct ContentView: UIViewControllerRepresentable {
     }
                                                                                                                                                                                                                          
     func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
-        // 通常不需要做更新
+        MainViewControllerKt.screenRoundedCornerInsets(
+            topStart: topLeading,
+            topEnd: topTrailing,
+            bottomStart: bottomLeading,
+            bottomEnd: bottomLeading
+        )
     }
 }
 
 #Preview {
-    ContentView()
+    ContentView(
+        topLeading: 20,
+        topTrailing: 20,
+        bottomLeading: 20,
+        bottomTrailing: 20
+    )
 }
