@@ -38,8 +38,8 @@ class DocumentPicker(
 }
 
 @Composable
-actual fun rememberDocumentPicker(onResult: (MultiplatformFile?)->Unit): MutableState<IDocumentPicker> {
+actual fun rememberDocumentPicker(onResult: (MultiplatformFile?)->Unit): IDocumentPicker {
     return remember {
-        mutableStateOf(DocumentPicker(onResult = onResult))
+        DocumentPicker(onResult = onResult)
     }
 }

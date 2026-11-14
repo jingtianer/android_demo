@@ -1,9 +1,11 @@
 package com.jingtian.composedemo.main
 
+import androidx.activity.BackEventCompat
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.FloatState
 import androidx.compose.runtime.MutableFloatState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -16,21 +18,23 @@ import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.jingtian.composedemo.multiplatform.logD
+import com.jingtian.composedemo.viewmodels.authViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.util.concurrent.CancellationException
 
 @Composable
-actual fun rememberBackProgress(isEnable: Boolean): MutableFloatState {
+actual fun rememberBackProgress(isEnable: Boolean, onPredicableBackFinish: () -> Unit): BackProgressState {
     val backProgress = remember { mutableFloatStateOf(0f) }
-    var enable by remember(isEnable) { mutableStateOf(isEnable) }
+    val isLeft = remember { mutableStateOf(true) }
+    var enable by remember { mutableStateOf(true) }
     val backDispatcher = LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
     val externalScope = rememberCoroutineScope()
     val lifecycleOwner = LocalLifecycleOwner.current
     val lifecycleObserver = remember {
         object : DefaultLifecycleObserver {
             private fun resetState() {
-                enable = isEnable
+                enable = true
                 backProgress.value = 0f
             }
             override fun onStart(owner: LifecycleOwner) {
@@ -48,16 +52,25 @@ actual fun rememberBackProgress(isEnable: Boolean): MutableFloatState {
             lifecycleOwner.lifecycle.removeObserver(observer = lifecycleObserver)
         }
     }
-    PredictiveBackHandler(enabled = enable) { backFlow ->
+    PredictiveBackHandler(enabled = enable && isEnable) { backFlow ->
         try {
             backFlow.collect { event->
                 backProgress.value = event.progress
+                when(event.swipeEdge) {
+                    BackEventCompat.EDGE_LEFT -> {
+                        isLeft.value = true
+                    }
+                    BackEventCompat.EDGE_RIGHT -> {
+                        isLeft.value = false
+                    }
+                }
             }
             backProgress.value = 1f
             enable = false
             withFrameNanos { }
             externalScope.launch(Dispatchers.Main) {
                 backDispatcher?.onBackPressed()
+                onPredicableBackFinish.invoke()
             }
         } catch (e: CancellationException) {
             backProgress.value = 0f
@@ -67,5 +80,5 @@ actual fun rememberBackProgress(isEnable: Boolean): MutableFloatState {
 
         }
     }
-    return backProgress
+    return remember { BackProgressState(backProgress, isLeft) }
 }

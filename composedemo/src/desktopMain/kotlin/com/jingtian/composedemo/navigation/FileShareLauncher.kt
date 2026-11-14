@@ -3,6 +3,7 @@ package com.jingtian.composedemo.navigation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import com.jingtian.composedemo.base.JumpOnPurposeMarkHolder
 import com.jingtian.composedemo.multiplatform.MultiplatformFile
 import com.jingtian.composedemo.multiplatform.MultiplatformFileImpl
@@ -22,6 +23,6 @@ class FileShareLauncher : IFileShareLauncher {
     }
 }
 @Composable
-actual fun rememberFileShare(onResult: (Long)->Unit): MutableState<IFileShareLauncher> {
-    return mutableStateOf(FileShareLauncher())
+actual fun rememberFileShare(onResult: (Long)->Unit): IFileShareLauncher {
+    return remember { FileShareLauncher() }
 }

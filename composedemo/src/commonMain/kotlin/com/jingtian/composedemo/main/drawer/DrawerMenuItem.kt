@@ -46,7 +46,7 @@ fun DrawerMenuItem(
     onItemClick: () -> Unit,
 ) {
     var deleteConfirmDialogState by remember { mutableStateOf(false) }
-    var albumName by remember { mutableStateOf(item.albumName) }
+    val albumName = item.albumName
     val viewModel: AlbumViewModel = albumViewModel()
     val size = 36.dp
     val modifier = Modifier

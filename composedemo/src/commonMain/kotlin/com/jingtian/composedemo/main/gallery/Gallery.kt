@@ -45,6 +45,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.FloatState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableFloatState
 import androidx.compose.runtime.getValue
@@ -158,7 +159,7 @@ fun Gallery(
 }
 
 fun Modifier.predictiveBackVisual(
-    backProgress: MutableFloatState,
+    backProgress: FloatState,
     visible: Boolean
 ): Modifier = this.blur(((if (visible) backProgress.value else 1f) * 40).dp)
 
@@ -184,7 +185,7 @@ fun GalleryStateHolder.Gallery() {
         onAlbumNameChanged()
     }
 
-    val importDirLauncher by rememberDocumentTreePicker { uri ->
+    val importDirLauncher = rememberDocumentTreePicker { uri ->
         uri ?: return@rememberDocumentTreePicker
         viewModel.importFiles(album.value, uri)
     }

@@ -280,7 +280,7 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
         }
     }
 
-    val multipleImagePickerLauncher by rememberDocumentPicker { uri: MultiplatformFile? ->
+    val multipleImagePickerLauncher = rememberDocumentPicker { uri: MultiplatformFile? ->
         scope.launch {
             uri?.takeIf { !it.isHidden() } ?: return@launch
             selectedFileType = uri.mediaType()

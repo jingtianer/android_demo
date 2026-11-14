@@ -10,4 +10,4 @@ interface IAlbumItemLauncher {
     suspend fun launch(albumItemRelation: AlbumItemRelation)
 }
 @Composable
-expect fun rememberAlbumLauncher(onResult: (Long)->Unit): MutableState<IAlbumItemLauncher>
+expect fun rememberAlbumLauncher(onResult: (Long)->Unit): IAlbumItemLauncher

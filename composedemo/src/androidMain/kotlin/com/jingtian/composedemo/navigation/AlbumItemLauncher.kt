@@ -67,7 +67,7 @@ class AlbumItemLauncher(
 }
 
 @Composable
-actual fun rememberAlbumLauncher(onResult: (Long)->Unit): MutableState<IAlbumItemLauncher> {
+actual fun rememberAlbumLauncher(onResult: (Long)->Unit): IAlbumItemLauncher {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val launcher = rememberLauncherForActivityResult(
@@ -76,6 +76,6 @@ actual fun rememberAlbumLauncher(onResult: (Long)->Unit): MutableState<IAlbumIte
         onResult.invoke(result.resultCode.toLong())
     }
     return remember {
-        mutableStateOf(AlbumItemLauncher(context, scope, launcher))
+        AlbumItemLauncher(context, scope, launcher)
     }
 }

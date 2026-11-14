@@ -127,7 +127,7 @@ fun AddItemDialog(album: Album, totalLabelList: List<String>, albumData: List<Al
     }
 
     val imageDpSize = imageWidth.dpValue()
-    val multipleImagePickerLauncher by rememberDocumentPicker(
+    val multipleImagePickerLauncher = rememberDocumentPicker(
         onResult = { uri: MultiplatformFile? ->
             scope.launch {
                 uri?.takeIf { !it.isHidden() } ?: return@launch

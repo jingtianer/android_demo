@@ -10,4 +10,4 @@ interface IFileShareLauncher {
     suspend fun launch(file: MultiplatformFile)
 }
 @Composable
-expect fun rememberFileShare(onResult: (Long)->Unit): MutableState<IFileShareLauncher>
+expect fun rememberFileShare(onResult: (Long)->Unit): IFileShareLauncher

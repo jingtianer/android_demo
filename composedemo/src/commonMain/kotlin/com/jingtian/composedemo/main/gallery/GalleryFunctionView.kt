@@ -54,8 +54,8 @@ fun RowScope.GalleryFunctionView(func: GalleryFunctions, onClick: ()->Unit) {
 @Composable
 public fun RowScope.ImportRemoteFunctionView(platformExtra: GalleryStateHolder, func: GalleryFunctions, onClick: ()->Unit) {
     val model = platformExtra
-    var showDialog by remember { model.showImportRemoteDialog }
-    val showImportRemoteDialogStateHolder by remember { model.showImportRemoteDialogStateHolder }
+    var showDialog by model.showImportRemoteDialog
+    val showImportRemoteDialogStateHolder by model.showImportRemoteDialogStateHolder
     GalleryFunctionView(func) {
         showDialog = true
         onClick.invoke()
@@ -71,7 +71,7 @@ public fun RowScope.ImportRemoteFunctionView(platformExtra: GalleryStateHolder, 
 @Composable
 public fun RowScope.DeleteRemoteFileFunctionView(platformExtra: GalleryStateHolder, func: GalleryFunctions, onClick: ()->Unit) {
     val model = platformExtra
-    var showDialog by remember { model.showDeleteRemoteFileConfirmDialog }
+    var showDialog by model.showDeleteRemoteFileConfirmDialog
     platformExtra.apply {
         @Composable
         fun ConfirmDialog() {

@@ -20,7 +20,7 @@ const val LOG_LEVEL_WTF = 3
 const val LOG_LEVEL_INFO = 4
 const val LOG_LEVEL_VERBOSE = 5
 
-const val LOG_LEVEL: LogLevel = -1 // if (BuildKonfig.isDebug) LOG_LEVEL_DEBUG else LOG_LEVEL_WARN
+val LOG_LEVEL: LogLevel = if (BuildKonfig.isDebug) LOG_LEVEL_DEBUG else LOG_LEVEL_WARN
 
 expect fun printLog(level: LogLevel, tag: String, msg: String)
 expect fun printLog(level: LogLevel, tag: String, msg: String, t: Throwable?)

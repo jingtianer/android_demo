@@ -69,10 +69,10 @@ class AlbumItemLauncher(val scope: CoroutineScope) : IAlbumItemLauncher {
 }
 
 @Composable
-actual fun rememberAlbumLauncher(onResult: (Long)->Unit): MutableState<IAlbumItemLauncher> {
+actual fun rememberAlbumLauncher(onResult: (Long)->Unit): IAlbumItemLauncher {
     val scope = rememberCoroutineScope()
     return remember {
-        mutableStateOf(AlbumItemLauncher(scope))
+        AlbumItemLauncher(scope)
     }
 }
 

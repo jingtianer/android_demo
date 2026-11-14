@@ -74,13 +74,13 @@ fun DrawerFunctionArea() {
 fun ShareDrawerFunctions() {
     val viewModel: AlbumViewModel = albumViewModel()
     val scope = rememberCoroutineScope()
-    val documentPicker by rememberDocumentPicker { uri->
+    val documentPicker = rememberDocumentPicker { uri->
         uri ?: return@rememberDocumentPicker
         scope.launch {
             ShareUtils.importSharedDb(viewModel, uri)
         }
     }
-    val rememberShareLauncher by rememberFileShare({})
+    val rememberShareLauncher = rememberFileShare({})
     DrawerFunctionView(onClick = {
         scope.launch {
             rememberShareLauncher.launch(ShareUtils.shareDataBase())

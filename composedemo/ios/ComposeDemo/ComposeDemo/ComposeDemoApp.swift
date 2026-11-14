@@ -11,7 +11,11 @@ import SwiftUI
 struct ComposeDemoApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView().ignoresSafeArea()
+            if #available(iOS 26.0, *) {
+                ContentView().ignoresSafeArea().containerShape(.rect).clipShape(ConcentricRectangle())
+            } else {
+                ContentView().ignoresSafeArea()
+            }
         }
     }
 }

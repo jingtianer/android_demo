@@ -10,4 +10,4 @@ interface IDocumentPicker {
 }
 
 @Composable
-expect fun rememberDocumentPicker(onResult: (MultiplatformFile?)->Unit): MutableState<IDocumentPicker>
+expect fun rememberDocumentPicker(onResult: (MultiplatformFile?)->Unit): IDocumentPicker
