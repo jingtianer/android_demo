@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
+import com.jingtian.composedemo.BuildKonfig
 import com.jingtian.composedemo.base.JumpOnPurposeMarkHolder
 import com.jingtian.composedemo.multiplatform.logD
 import com.jingtian.composedemo.viewmodels.AuthGlobalState.MIN_ON_STOP_DO_AUTH_TIME_GAP
@@ -54,7 +55,7 @@ abstract class AuthViewModel : SingletonViewModel(), DefaultLifecycleObserver {
 
     override fun onPause(owner: LifecycleOwner) {
         onResumeGeneration--
-        if (onStartGeneration == 0) {
+        if (!BuildKonfig.isAndroid || onStartGeneration == 0) {
             isAppEnterBackground = true
             if (!JumpOnPurposeMarkHolder.isJumpOnPurpose.value) {
                 cancelAllBioPrompt()
@@ -65,7 +66,7 @@ abstract class AuthViewModel : SingletonViewModel(), DefaultLifecycleObserver {
 
     override fun onStop(owner: LifecycleOwner) {
         onStartGeneration--
-        if (onStartGeneration == 0) {
+        if (!BuildKonfig.isAndroid || onStartGeneration == 0) {
             isAppEnterBackground = true
             if (!JumpOnPurposeMarkHolder.isJumpOnPurpose.value) {
                 cancelAllBioPrompt()
