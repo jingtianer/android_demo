@@ -1,5 +1,7 @@
 package com.jingtian.composedemo.main
 
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideIn
@@ -369,16 +371,16 @@ fun MainState.Main(
                         navController = naviController,
                         startDestination = Gallery,
                         enterTransition = {
-                            slideIn { IntOffset((it.width * 0.2f).roundToInt(), 0) } + scaleIn(initialScale = 0.8f)
+                            slideIn { IntOffset((it.width * 0.8f).roundToInt(), 0) } + scaleIn(initialScale = 0.8f)
                         },
                         exitTransition = {
-                            slideOut { IntOffset((it.width * 0.2f).roundToInt(), 0) } + scaleOut(targetScale = 0.8f)
+                            ExitTransition.None
                         },
                         popEnterTransition = {
-                            slideIn { IntOffset((it.width * 0.2f).roundToInt(), 0) } + scaleIn(initialScale = 0.8f)
+                            EnterTransition.None
                         },
                         popExitTransition = {
-                            slideOut { IntOffset((it.width * 0.2f).roundToInt(), 0) } + scaleOut(targetScale = 0.8f)
+                            slideOut { IntOffset((it.width * 0.8f).roundToInt(), 0) } + scaleOut(targetScale = 0.8f)
                         },
                     ) {
                         composable<Gallery> {
