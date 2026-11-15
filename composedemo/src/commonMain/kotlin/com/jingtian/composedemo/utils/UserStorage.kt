@@ -41,11 +41,11 @@ data class BackgroundConfig(
                 rawColor = Color(0xCAEFD7ee).toRawColor()
             ),
             middleColor = BackgroundColor(
-                rawColor = Color(0xF5BFD7ee).toRawColor(),
+                rawColor = Color(0xC0BFD7ee).toRawColor(),
                 startX = 0.8f,
             ),
             endColor = BackgroundColor(
-                rawColor = Color(0xABC9E9ee).toRawColor(),
+                rawColor = Color(0xC4C9E9ee).toRawColor(),
                 startX = 1f,
             ),
         )
