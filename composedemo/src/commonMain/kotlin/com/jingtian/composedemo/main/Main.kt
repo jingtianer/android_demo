@@ -1,7 +1,5 @@
 package com.jingtian.composedemo.main
 
-import androidx.compose.animation.EnterTransition
-import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.tween
@@ -71,6 +69,7 @@ import com.jingtian.composedemo.main.widget.EnterTransitionCreator
 import com.jingtian.composedemo.main.widget.ExitTransitionCreator
 import com.jingtian.composedemo.main.widget.SimpleNavHost
 import com.jingtian.composedemo.main.widget.SimpleNavHostController
+import com.jingtian.composedemo.main.widget.SizeTransitionCreator
 import com.jingtian.composedemo.main.widget.rememberSimpleNavHostController
 import com.jingtian.composedemo.multiplatform.LowMemorySideEffect
 import com.jingtian.composedemo.multiplatform.SoftRef
@@ -260,13 +259,9 @@ private class MainState(
     val routerController = MainRouterController(naviController, drawerState)
 
     val enterTransition: EnterTransitionCreator = { swipeEdge ->
-        val isLeft = when (swipeEdge) {
-            BackEventCompat.EDGE_LEFT -> {
-                true
-            }
-            else -> {
-                false
-            }
+        val orientation = when (swipeEdge) {
+            BackEventCompat.EDGE_LEFT -> 1
+            else -> -1
         }
         val scale = scaleIn(
             initialScale = ENTER_INITIAL_SCALE,
@@ -280,18 +275,18 @@ private class MainState(
                 durationMillis = TRANSITION_ANIM_DURATION,
                 easing = LinearEasing
             )
-        ) { IntOffset((if (isLeft) 1 else -1) * it.width, 0) }
+        ) { IntOffset(orientation * it.width, 0) }
         scale + slide
     }
 
+    val sizeTransition : SizeTransitionCreator = { _ ->
+        null
+    }
+
     val exitTransitionCreator: ExitTransitionCreator = { swipeEdge ->
-        val isLeft = when (swipeEdge) {
-            BackEventCompat.EDGE_LEFT -> {
-                true
-            }
-            else -> {
-                false
-            }
+        val orientation = when (swipeEdge) {
+            BackEventCompat.EDGE_LEFT -> 1
+            else -> -1
         }
         val slide = slideOut(
             animationSpec = tween(
@@ -300,16 +295,17 @@ private class MainState(
             ),
             targetOffset = {
                 IntOffset(
-                    ((if (isLeft) 1 else -1) * it.width * EXIT_TARGET_OFFSET).roundToInt(),
+                    (orientation * it.width * EXIT_TARGET_OFFSET).roundToInt(),
                     0
                 )
             }
         )
         val scale = scaleOut(
-            animationSpec = tween(
-                durationMillis = EXIT_SCALE_SLIDE_DURATION,
-                easing = LinearEasing
-            ),
+            animationSpec = keyframes { // ios要用keyframe 大小才不会乱
+                durationMillis = TRANSITION_ANIM_DURATION
+                1f at 0
+                EXIT_TARTGET_SCALE at EXIT_SCALE_SLIDE_DURATION
+            },
             targetScale = EXIT_TARTGET_SCALE
         )
         val fade = fadeOut(
@@ -510,6 +506,7 @@ private fun MainState.Main(
                         initialDestination = Gallery,
                         enterTransition = enterTransition,
                         exitTransition = exitTransitionCreator,
+                        sizeTransition = sizeTransition,
                         mapBuilder = {
                             composable(Gallery) {
                                 Gallery(
