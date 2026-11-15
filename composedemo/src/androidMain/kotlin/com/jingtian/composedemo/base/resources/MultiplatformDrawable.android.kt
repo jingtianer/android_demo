@@ -1,9 +1,11 @@
 package com.jingtian.composedemo.base.resources
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
 import com.jingtian.composedemo.R
+import com.jingtian.composedemo.viewmodels.appThemeViewModel
 import demoapp.composedemo.generated.resources.Res
 
 @Composable
@@ -19,7 +21,15 @@ actual fun getClearIcon(): Painter = painterResource(R.drawable.clear)
 actual fun getArrowDownIcon(): Painter = painterResource(R.drawable.arrow_down)
 
 @Composable
-actual fun getLockIcon(): Painter = painterResource(R.drawable.lock)
+actual fun getLockIcon(): Painter {
+    val appThemeViewModel = appThemeViewModel()
+    val isDark by appThemeViewModel.rememberIsDark()
+    return if (isDark) {
+        painterResource(R.drawable.lock_night)
+    } else {
+        painterResource(R.drawable.lock)
+    }
+}
 
 @Composable
 actual fun getSettingsIcon(): Painter = painterResource(R.drawable.settings)
