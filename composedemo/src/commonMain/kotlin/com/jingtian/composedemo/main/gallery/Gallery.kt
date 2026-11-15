@@ -1,5 +1,10 @@
 package com.jingtian.composedemo.main.gallery
 
+import androidx.compose.animation.core.AnimationState
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.animateTo
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -48,6 +53,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.FloatState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableFloatState
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -169,8 +175,23 @@ fun Gallery(
 @Composable
 fun Modifier.predictiveBackVisual(
     backProgress: FloatState,
+    isBackProgressing: State<Boolean>,
     visible: Boolean
 ): Modifier {
+    val exitAnim = remember { AnimationState(1f) }
+    LaunchedEffect(isBackProgressing.value, visible) {
+        if (!isBackProgressing.value && visible) {
+            exitAnim.animateTo(targetValue = 0f, animationSpec = tween(
+                durationMillis = 360,
+                easing = LinearOutSlowInEasing
+            ))
+        } else {
+            exitAnim.animateTo(targetValue = 1f, animationSpec = tween(
+                durationMillis = 360,
+                easing = LinearOutSlowInEasing
+            ))
+        }
+    }
     val lockIcon = getPainter(DrawableIcon.DrawableLock)
     return this.clipDeviceRoundCorner()
         .drawWithContent {
@@ -180,12 +201,12 @@ fun Modifier.predictiveBackVisual(
             drawIntoCanvas {
                 inset(horizontal = (canvasSize.width - imageSize.width) / 2, vertical = (canvasSize.height - imageSize.height) / 2) {
                     with(lockIcon) {
-                        draw(size = imageSize, alpha = if (visible) backProgress.value else 1f)
+                        draw(size = imageSize, alpha = if (!isBackProgressing.value) exitAnim.value else if (visible) backProgress.value else 1f)
                     }
                 }
             }
         }
-        .blur(((if (visible) backProgress.value else 1f) * 40).dp)
+        .blur(((if (!isBackProgressing.value) exitAnim.value else if (visible) backProgress.value else 1f) * 40).dp)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

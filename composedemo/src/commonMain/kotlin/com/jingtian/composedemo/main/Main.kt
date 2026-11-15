@@ -88,9 +88,10 @@ import kotlinx.coroutines.withContext
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.math.roundToInt
 
-class BackProgressState(backProgressState: MutableFloatState, isLeftState: MutableState<Boolean>) {
+class BackProgressState(backProgressState: MutableFloatState, isLeftState: MutableState<Boolean>, isBackProgressing: MutableState<Boolean>) {
     val backProgress: FloatState = backProgressState
     val isLeft: State<Boolean> = isLeftState
+    val isBackProgressing: State<Boolean> = isBackProgressing
 }
 
 @Composable
@@ -104,6 +105,7 @@ fun rememberBackProgress(
 ): BackProgressState {
     val backProgress = remember { mutableFloatStateOf(0f) }
     val isLeft = remember { mutableStateOf(true) }
+    val isBackProgressing = remember { mutableStateOf(false) }
     var enable by remember { mutableStateOf(true) }
     val externalScope = rememberCoroutineScope()
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -133,6 +135,7 @@ fun rememberBackProgress(
         try {
             backProgress.value = 0f
             backFlow.collect { event ->
+                isBackProgressing.value = true
                 backProgress.value = event.progress
                 when (event.swipeEdge) {
                     BackEventCompat.EDGE_LEFT -> {
@@ -146,6 +149,7 @@ fun rememberBackProgress(
             }
             backProgress.value = 1f
             enable = false
+            isBackProgressing.value = false
             withFrameNanos { }
             externalScope.launch(Dispatchers.Main) {
                 onPredicableBackFinish.invoke()
@@ -153,12 +157,13 @@ fun rememberBackProgress(
         } catch (e: CancellationException) {
             backProgress.value = 0f
             enable = true
+            isBackProgressing.value = false
             throw e
         } finally {
 
         }
     }
-    return remember { BackProgressState(backProgress, isLeft) }
+    return remember { BackProgressState(backProgress, isLeft, isBackProgressing) }
 }
 
 @Composable
@@ -433,7 +438,7 @@ private fun MainState.Main(
     CompositionLocalProvider(LocalRouterController provides routerController) {
         Box(
             modifier = Modifier.fillMaxSize()
-                .predictiveBackVisual(backProgress = backProgress, visible = visible)
+                .predictiveBackVisual(backProgress = backProgress, isBackProgressing = backProgressState.isBackProgressing, visible = visible)
         ) {
             Scaffold(
                 modifier = modifier.fillMaxSize(),
