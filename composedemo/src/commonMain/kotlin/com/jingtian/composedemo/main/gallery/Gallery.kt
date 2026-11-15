@@ -57,12 +57,17 @@ import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.drawscope.draw
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.drawscope.inset
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
@@ -114,6 +119,7 @@ import com.jingtian.composedemo.main.widget.SimpleNavHostController
 import com.jingtian.composedemo.multiplatform.LowMemorySideEffect
 import com.jingtian.composedemo.multiplatform.SoftRef
 import com.jingtian.composedemo.ui.theme.clipDeviceRoundCorner
+import com.jingtian.composedemo.ui.theme.goldenRatio
 import com.jingtian.composedemo.utils.getOrPutSoftRef
 import com.jingtian.composedemo.viewmodels.albumViewModel
 import com.jingtian.composedemo.viewmodels.observeAsState
@@ -164,7 +170,23 @@ fun Gallery(
 fun Modifier.predictiveBackVisual(
     backProgress: FloatState,
     visible: Boolean
-): Modifier = this.clipDeviceRoundCorner().blur(((if (visible) backProgress.value else 1f) * 40).dp)
+): Modifier {
+    val lockIcon = getPainter(DrawableIcon.DrawableLock)
+    return this.clipDeviceRoundCorner()
+        .drawWithContent {
+            val imageSize = Size(size.minDimension, size.minDimension) * goldenRatio
+            val canvasSize = size
+            drawContent()
+            drawIntoCanvas {
+                inset(horizontal = (canvasSize.width - imageSize.width) / 2, vertical = (canvasSize.height - imageSize.height) / 2) {
+                    with(lockIcon) {
+                        draw(size = imageSize, alpha = if (visible) backProgress.value else 1f)
+                    }
+                }
+            }
+        }
+        .blur(((if (visible) backProgress.value else 1f) * 40).dp)
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
