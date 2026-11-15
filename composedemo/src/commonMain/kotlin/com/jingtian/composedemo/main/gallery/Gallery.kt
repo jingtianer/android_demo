@@ -113,6 +113,7 @@ import com.jingtian.composedemo.main.dialog.rememberDocumentDialogState
 import com.jingtian.composedemo.main.widget.SimpleNavHostController
 import com.jingtian.composedemo.multiplatform.LowMemorySideEffect
 import com.jingtian.composedemo.multiplatform.SoftRef
+import com.jingtian.composedemo.ui.theme.clipDeviceRoundCorner
 import com.jingtian.composedemo.utils.getOrPutSoftRef
 import com.jingtian.composedemo.viewmodels.albumViewModel
 import com.jingtian.composedemo.viewmodels.observeAsState
@@ -159,10 +160,11 @@ fun Gallery(
     galleryStateHolder.Gallery()
 }
 
+@Composable
 fun Modifier.predictiveBackVisual(
     backProgress: FloatState,
     visible: Boolean
-): Modifier = this.blur(((if (visible) backProgress.value else 1f) * 40).dp)
+): Modifier = this.clipDeviceRoundCorner().blur(((if (visible) backProgress.value else 1f) * 40).dp)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

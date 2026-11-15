@@ -253,7 +253,6 @@ private class MainState(
 
     val drawerState = DrawerState(
         initialValue = DrawerValue.Closed,
-        confirmStateChange = this::confirmStateChange
     )
 
     val routerController = MainRouterController(naviController, drawerState)
@@ -336,24 +335,6 @@ private class MainState(
         }
     }
 
-    private fun confirmStateChange(drawerValue: DrawerValue): Boolean {
-        return when (drawerValue) {
-            DrawerValue.Closed -> {
-                val canClose =
-                    menuItemsEntity.isNotEmpty() || !isOnTop
-                if (!canClose) {
-                    val noAlbumToast = "没有任何合集，先创建合集吧"
-                    if (viewModel.currentBackgroundTask.value?.equals(noAlbumToast) != true) {
-                        viewModel.sendMessage(noAlbumToast)
-                    }
-                }
-                canClose
-            }
-
-            DrawerValue.Open -> true
-        }
-    }
-
     @Composable
     fun InstallSideEffects() {
         // 登录后拉取远端数据
@@ -373,9 +354,6 @@ private class MainState(
                     currentSelectedAlbum = nextSelectedAlbum
                     menuItemsEntityInitialized = true
                 }
-                if (value.isEmpty()) {
-                    drawerState.snapTo(DrawerValue.Open)
-                }
             }
         }
 
@@ -385,9 +363,9 @@ private class MainState(
         }
 
         // 导航栈变化 初始化完成
-        LaunchedEffect(navBackStackEntry, drawerState.isClosed, menuItemsEntityInitialized) {
+        LaunchedEffect(drawerState.isClosed, menuItemsEntityInitialized, isOnTop, drawerState.isAnimationRunning) {
             val canClose = menuItemsEntity.isNotEmpty() || !isOnTop
-            if (!canClose && drawerState.isClosed && menuItemsEntityInitialized) {
+            if (!canClose && drawerState.isClosed && menuItemsEntityInitialized && !drawerState.isAnimationRunning) {
                 val noAlbumToast = "没有任何合集，先创建合集吧"
                 if (viewModel.currentBackgroundTask.value?.equals(noAlbumToast) != true) {
                     viewModel.sendMessage(noAlbumToast)
