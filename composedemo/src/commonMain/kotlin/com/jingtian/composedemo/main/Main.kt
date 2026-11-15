@@ -249,7 +249,7 @@ private class MainState(
 
     val isBackEnable by derivedStateOf {
         val canClose = menuItemsEntity.isNotEmpty() || !isOnTop
-        (drawerState.isOpen || drawerState.isAnimationRunning) && canClose
+        (drawerState.isOpen) && canClose
     }
 
     val drawerState = DrawerState(
@@ -409,8 +409,6 @@ private class MainState(
             val canClose = menuItemsEntity.isNotEmpty() || !isOnTop
             if (drawerState.isOpen && canClose) {
                 drawerState.close()
-                true
-            } else if (drawerState.isAnimationRunning) {
                 true
             } else if (galleryStateHolder?.onBackPressed() == true) {
                 true
