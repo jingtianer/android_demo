@@ -105,43 +105,32 @@ import kotlin.math.roundToInt
 
 @Composable
 fun SettingsPage() {
-    Scaffold(
+    LazyColumn(
         modifier = Modifier.fillMaxSize().appBackground()
-            .windowInsetsPadding(WindowInsets.statusBars),
-        contentColor = Color.Transparent,
-        containerColor = Color.Transparent,
-        snackbarHost = {
-            GlobalSnapBar()
+            .windowInsetsPadding(WindowInsets.statusBars).padding(horizontal = 16.dp),
+        contentPadding = PaddingValues(vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(
+            space = 18.dp,
+            alignment = Alignment.Top
+        )
+    ) {
+        item {
+            SettingsCollapsableWrapper(DrawableIcon.DrawableBackgroundPaint, "背景调色盘") {
+                AppBackgroundSlideBar()
+            }
         }
-    ) { padding ->
-        CompositionLocalProvider(LocalContentColor provides LocalAppPalette.current.galleryHeaderColor) {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp).padding(padding),
-                contentPadding = PaddingValues(vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(
-                    space = 18.dp,
-                    alignment = Alignment.Top
-                )
-            ) {
-                item {
-                    SettingsCollapsableWrapper(DrawableIcon.DrawableBackgroundPaint, "背景调色盘") {
-                        AppBackgroundSlideBar()
-                    }
+        item {
+            SettingsCollapsableWrapper(DrawableIcon.DrawablePalette, "调色盘") {
+                Column {
+                    MainColorSlideBar()
+                    Spacer(modifier = Modifier.height(18.dp))
+                    ResetAllColor()
                 }
-                item {
-                    SettingsCollapsableWrapper(DrawableIcon.DrawablePalette, "调色盘") {
-                        Column {
-                            MainColorSlideBar()
-                            Spacer(modifier = Modifier.height(18.dp))
-                            ResetAllColor()
-                        }
-                    }
-                }
-                item {
-                    SettingsCollapsableWrapper(DrawableIcon.DrawableClear, "清理功能", initialExpand = false) {
-                        AppClearButtons()
-                    }
-                }
+            }
+        }
+        item {
+            SettingsCollapsableWrapper(DrawableIcon.DrawableClear, "清理功能", initialExpand = false) {
+                AppClearButtons()
             }
         }
     }
