@@ -83,23 +83,10 @@ func getHardcodedScreenCornerRadius() -> CGFloat {
         return 39.0
     case "iPhone11,2", "iPhone12,1":        // XR / 11
         return 41.5
-    case "iPad13,1", "iPad13,2",
-         "iPad14,1", "iPad14,2",
-         "iPad8,1", "iPad8,2", "iPad8,3", "iPad8,4",
-         "iPad8,5", "iPad8,6", "iPad8,7", "iPad8,8",
-         "iPad8,9", "iPad8,10",
-         "iPad13,4", "iPad13,5", "iPad13,6", "iPad13,7",
-         "iPad14,3", "iPad14,4",
-         "iPad14,5", "iPad14,6",
-         "iPad14,8", "iPad14,9",
-         "iPad14,10", "iPad14,11",
-         "iPad15,1", "iPad15,2",
-         "iPad15,3", "iPad15,4",
-         "iPad16,1", "iPad16,2",
-         "iPad16,3", "iPad16,4",
-         "iPad17,1", "iPad17,2":
-        return 18.0
     default:
+        if model.lowercased().starts(with: "ipad") {
+            return 18.0
+        }
         return 0.0
     }
 }
