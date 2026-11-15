@@ -8,7 +8,9 @@ import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.SeekableTransitionState
+import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.rememberTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.scaleIn
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -125,6 +127,7 @@ class SimpleNavHostController : AbstractSimpleNavHostController() {
         // 可预测返回
         var backProgress by mutableFloatStateOf(-1f)
         var swipeEdge by mutableIntStateOf(BackEventCompat.EDGE_LEFT)
+        var inPredictiveBack by mutableStateOf(false)
 
         // 返回键
         override val willHandleBackEvents: Boolean get() = backStack.size > 1
@@ -133,7 +136,7 @@ class SimpleNavHostController : AbstractSimpleNavHostController() {
         var finalEnterTransition by mutableStateOf<AnimatedContentTransitionScope<NavRouter?>.() -> EnterTransition>({ EnterTransition.None })
         var finalExitTransition by mutableStateOf<AnimatedContentTransitionScope<NavRouter?>.() -> ExitTransition>({ ExitTransition.None })
 
-        fun updateTransition(isPop: Boolean, isPredictive: Boolean, swipeEdge: Int) {
+        fun updateTransition(isPop: Boolean, swipeEdge: Int) {
             finalEnterTransition = if (isPop) {
                 { EnterTransition.None }
             } else {
@@ -158,7 +161,7 @@ class SimpleNavHostController : AbstractSimpleNavHostController() {
                 false
             }
             val finalStackTopEntry = backStack.lastOrNull()
-            updateTransition(isPop = isPop, isPredictive = false, swipeEdge = swipeEdge)
+            updateTransition(isPop = isPop, swipeEdge = swipeEdge)
             withFrameMillis {  }
             transitionState.snapTo(initialStackTopEntry)
             transitionState.animateTo(finalStackTopEntry)
@@ -196,40 +199,64 @@ fun SimpleNavHost(
 private fun SimpleNavHostController.SimpleNavHostControllerImpl.SimpleNavHost() {
     val transition = rememberTransition(transitionState, label = "entry")
 
-    val scope = rememberCoroutineScope()
     PredictiveBackHandler(enabled = willHandleBackEvents) { backFlow ->
         try {
             backFlow.collect { event ->
-                swipeEdge = event.swipeEdge
-                updateTransition(isPop = true, isPredictive = true, swipeEdge = event.swipeEdge)
-                if (event.swipeEdge != swipeEdge) {
-                    withFrameMillis {  }
+                if (willHandleBackEvents) {
+                    inPredictiveBack = true
                 }
                 backProgress = event.progress
-                val backProgressSnapshot = backProgress
-                val secondLastBackStackEntrySnapshot = secondLastBackStackEntry
-                scope.launch {
-                    transitionState.seekTo(backProgressSnapshot, secondLastBackStackEntrySnapshot)
-                }
+                swipeEdge = event.swipeEdge
             }
-            backProgress = 1f
-            val secondLastBackStackEntrySnapShot = secondLastBackStackEntry
-            scope.launch {
-                transitionState.animateTo(secondLastBackStackEntrySnapShot)
+            if (willHandleBackEvents) {
+                inPredictiveBack = false
+                backStack.removeLastOrNull()
             }
-            backStack.removeLastOrNull()
         } catch (e: CancellationException) {
-            backProgress = 1f
-            val currentBackStackEntrySnapshot = currentBackStackEntry
-            val swipeEdgeSnapshot = swipeEdge
-            scope.launch {
-                updateTransition(isPop = false, isPredictive = true, swipeEdge = swipeEdgeSnapshot)
-                withFrameMillis {  }
-                transitionState.animateTo(currentBackStackEntrySnapshot)
+            if (willHandleBackEvents) {
+                inPredictiveBack = false
             }
-            throw e
         } finally {
 
+        }
+    }
+
+    if (inPredictiveBack) {
+        LaunchedEffect(backProgress) {
+            updateTransition(isPop = true, swipeEdge = swipeEdge)
+            // Update transition progress safely (same guard against stale enabled state).
+            if (currentBackStack.size > 1) {
+                val previousEntry = secondLastBackStackEntry
+                transitionState.seekTo(backProgress, previousEntry)
+            }
+        }
+    } else {
+        LaunchedEffect(currentBackStackEntry) {
+            if (transitionState.currentState != currentBackStackEntry) {
+                transitionState.animateTo(currentBackStackEntry)
+            } else {
+                // convert from nanoseconds to milliseconds
+                val totalDuration = transition.totalDurationNanos / 1000000
+                // When the predictive back gesture is cancel, we need to manually animate
+                // the SeekableTransitionState from where it left off, to zero and then
+                // snapTo the final position.
+                animate(
+                    transitionState.fraction,
+                    0f,
+                    animationSpec = tween((transitionState.fraction * totalDuration).toInt())
+                ) { value, _ ->
+                    this@LaunchedEffect.launch {
+                        if (value > 0) {
+                            // Seek the original transition back to the currentState
+                            transitionState.seekTo(value)
+                        }
+                        if (value == 0f) {
+                            // Once we animate to the start, we need to snap to the right state.
+                            transitionState.snapTo(currentBackStackEntry)
+                        }
+                    }
+                }
+            }
         }
     }
 
