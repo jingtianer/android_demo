@@ -1,5 +1,6 @@
 package com.jingtian.composedemo.main.gallery
 
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
@@ -178,18 +179,20 @@ fun Modifier.predictiveBackVisual(
     isBackProgressing: State<Boolean>,
     visible: Boolean
 ): Modifier {
-    val exitAnim = remember { AnimationState(1f) }
-    LaunchedEffect(isBackProgressing.value, visible) {
+    val exitAnim = remember { Animatable(1f) }
+    LaunchedEffect(isBackProgressing.value, visible, backProgress.value) {
         if (!isBackProgressing.value && visible) {
             exitAnim.animateTo(targetValue = 0f, animationSpec = tween(
                 durationMillis = 360,
                 easing = LinearOutSlowInEasing
             ))
-        } else {
+        } else if (!visible) {
             exitAnim.animateTo(targetValue = 1f, animationSpec = tween(
                 durationMillis = 360,
                 easing = LinearOutSlowInEasing
             ))
+        } else {
+            exitAnim.snapTo(backProgress.value)
         }
     }
     val lockIcon = getPainter(DrawableIcon.DrawableLock)
@@ -201,12 +204,12 @@ fun Modifier.predictiveBackVisual(
             drawIntoCanvas {
                 inset(horizontal = (canvasSize.width - imageSize.width) / 2, vertical = (canvasSize.height - imageSize.height) / 2) {
                     with(lockIcon) {
-                        draw(size = imageSize, alpha = if (!isBackProgressing.value) exitAnim.value else if (visible) backProgress.value else 1f)
+                        draw(size = imageSize, alpha = if (!isBackProgressing.value || !visible) exitAnim.value else backProgress.value)
                     }
                 }
             }
         }
-        .blur(((if (!isBackProgressing.value) exitAnim.value else if (visible) backProgress.value else 1f) * 40).dp)
+        .blur(((if (!isBackProgressing.value || !visible) exitAnim.value else backProgress.value) * 40).dp)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
