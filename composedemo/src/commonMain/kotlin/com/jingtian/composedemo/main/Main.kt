@@ -219,13 +219,8 @@ private class MainState(
     val naviController: SimpleNavHostController,
 ) {
     companion object {
-        const val EXIT_FATEOUT_DURATION = 100
-        const val TRANSITION_ANIM_DURATION = 300
-        const val EXIT_SCALE_SLIDE_DURATION = TRANSITION_ANIM_DURATION - EXIT_FATEOUT_DURATION
-        const val EXIT_TARTGET_SCALE = 0.8f
-        const val EXIT_TARGET_OFFSET: Float =
-            EXIT_SCALE_SLIDE_DURATION * 1f / TRANSITION_ANIM_DURATION
-        const val ENTER_INITIAL_SCALE: Float = 1 - ((1 - EXIT_TARTGET_SCALE) / EXIT_TARGET_OFFSET)
+        const val TRANSITION_ANIM_DURATION = 360
+        const val ENTER_INITIAL_SCALE: Float = 0.8f
     }
 
     var menuItemsEntity by mutableStateOf(emptyList<Album>())
@@ -289,12 +284,12 @@ private class MainState(
         }
         val slide = slideOut(
             animationSpec = tween(
-                durationMillis = EXIT_SCALE_SLIDE_DURATION,
+                durationMillis = TRANSITION_ANIM_DURATION,
                 easing = LinearEasing
             ),
             targetOffset = {
                 IntOffset(
-                    (orientation * it.width * EXIT_TARGET_OFFSET).roundToInt(),
+                    orientation * it.width,
                     0
                 )
             }
@@ -303,18 +298,11 @@ private class MainState(
             animationSpec = keyframes { // ios要用keyframe 大小才不会乱
                 durationMillis = TRANSITION_ANIM_DURATION
                 1f at 0
-                EXIT_TARTGET_SCALE at EXIT_SCALE_SLIDE_DURATION
+                ENTER_INITIAL_SCALE at TRANSITION_ANIM_DURATION
             },
-            targetScale = EXIT_TARTGET_SCALE
+            targetScale = ENTER_INITIAL_SCALE
         )
-        val fade = fadeOut(
-            animationSpec = keyframes {
-                durationMillis = TRANSITION_ANIM_DURATION
-                1f at EXIT_SCALE_SLIDE_DURATION
-                0f at TRANSITION_ANIM_DURATION
-            }
-        )
-        slide + scale + fade
+        slide + scale
     }
 
     fun updateSelectedValue(list: List<Album>): IndexedValue<Album>? {
