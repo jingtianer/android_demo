@@ -5,10 +5,12 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.structuralEqualityPolicy
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavHostController
+import com.jingtian.composedemo.main.widget.NavRouter
+import com.jingtian.composedemo.main.widget.SimpleNavHostController
 import kotlinx.serialization.Serializable
 
 @Serializable
-sealed class MainRouter
+sealed class MainRouter : NavRouter()
 @Serializable
 object Gallery : MainRouter()
 @Serializable
@@ -25,30 +27,14 @@ object EmptyRouterController: IRouterController {}
 
 val LocalRouterController = compositionLocalOf<IRouterController>(structuralEqualityPolicy()) { EmptyRouterController }
 
-class MainRouterController(private val naviHost: NavHostController, private val drawerState: DrawerState): IRouterController {
+class MainRouterController(private val naviHost: SimpleNavHostController, private val drawerState: DrawerState): IRouterController {
     override suspend fun toGallery() {
         drawerState.close()
-        if (naviHost.currentBackStackEntry?.destination?.hasRoute(Gallery::class) == true) {
-            // NOP
-        } else if (naviHost.popBackStack<Gallery>(inclusive = false)) {
-            // NOP
-        } else {
-            naviHost.navigate(Gallery) {
-                launchSingleTop = true
-            }
-        }
+        naviHost.navigateTo(Gallery)
     }
 
     override suspend fun toSettings() {
         drawerState.close()
-        if (naviHost.currentBackStackEntry?.destination?.hasRoute(Settings::class) == true) {
-            // NOP
-        } else if (naviHost.popBackStack<Settings>(inclusive = false)) {
-            // NOP
-        } else {
-            naviHost.navigate(Settings) {
-                launchSingleTop = true
-            }
-        }
+        naviHost.navigateTo(Settings)
     }
 }

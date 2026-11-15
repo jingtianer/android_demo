@@ -47,29 +47,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.backhandler.BackEventCompat
 import androidx.compose.ui.backhandler.PredictiveBackHandler
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.IntOffset
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.navigation.NavBackStackEntry
-import androidx.navigation.NavDestination.Companion.hasRoute
-import androidx.navigation.NavHostController
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.compose.rememberNavController
 import com.jingtian.composedemo.BuildKonfig
 import com.jingtian.composedemo.base.BackPressHandler
 import com.jingtian.composedemo.dao.model.Album
 import com.jingtian.composedemo.demonstration.DemonstrationMain
-import com.jingtian.composedemo.main.MainState.Companion.ENTER_INITIAL_SCALE
-import com.jingtian.composedemo.main.MainState.Companion.EXIT_SCALE_SLIDE_DURATION
-import com.jingtian.composedemo.main.MainState.Companion.EXIT_TARGET_OFFSET
-import com.jingtian.composedemo.main.MainState.Companion.EXIT_TARTGET_SCALE
-import com.jingtian.composedemo.main.MainState.Companion.TRANSITION_ANIM_DURATION
 import com.jingtian.composedemo.main.drawer.MainDrawer
 import com.jingtian.composedemo.main.gallery.Gallery
 import com.jingtian.composedemo.main.gallery.GalleryStateHolder
@@ -79,6 +66,12 @@ import com.jingtian.composedemo.main.route.LocalRouterController
 import com.jingtian.composedemo.main.route.MainRouterController
 import com.jingtian.composedemo.main.route.Settings
 import com.jingtian.composedemo.main.settings.SettingsPage
+import com.jingtian.composedemo.main.widget.BackEventCompat
+import com.jingtian.composedemo.main.widget.EnterTransitionCreator
+import com.jingtian.composedemo.main.widget.ExitTransitionCreator
+import com.jingtian.composedemo.main.widget.SimpleNavHost
+import com.jingtian.composedemo.main.widget.SimpleNavHostController
+import com.jingtian.composedemo.main.widget.rememberSimpleNavHostController
 import com.jingtian.composedemo.multiplatform.LowMemorySideEffect
 import com.jingtian.composedemo.multiplatform.SoftRef
 import com.jingtian.composedemo.ui.theme.LocalAppPalette
@@ -91,9 +84,6 @@ import com.jingtian.composedemo.viewmodels.albumViewModel
 import com.jingtian.composedemo.viewmodels.authViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.cancellation.CancellationException
@@ -109,7 +99,10 @@ expect fun rememberNativeBackInvoker(): (suspend () -> Unit)
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun rememberBackProgress(isEnable: Boolean, onPredicableBackFinish: suspend () -> Unit): BackProgressState {
+fun rememberBackProgress(
+    isEnable: Boolean,
+    onPredicableBackFinish: suspend () -> Unit
+): BackProgressState {
     val backProgress = remember { mutableFloatStateOf(0f) }
     val isLeft = remember { mutableStateOf(true) }
     var enable by remember { mutableStateOf(true) }
@@ -121,6 +114,7 @@ fun rememberBackProgress(isEnable: Boolean, onPredicableBackFinish: suspend () -
                 enable = true
                 backProgress.value = 0f
             }
+
             override fun onStart(owner: LifecycleOwner) {
                 resetState()
             }
@@ -138,12 +132,14 @@ fun rememberBackProgress(isEnable: Boolean, onPredicableBackFinish: suspend () -
     }
     PredictiveBackHandler(enabled = enable && isEnable) { backFlow ->
         try {
-            backFlow.collect { event->
+            backProgress.value = 0f
+            backFlow.collect { event ->
                 backProgress.value = event.progress
-                when(event.swipeEdge) {
+                when (event.swipeEdge) {
                     BackEventCompat.EDGE_LEFT -> {
                         isLeft.value = true
                     }
+
                     BackEventCompat.EDGE_RIGHT -> {
                         isLeft.value = false
                     }
@@ -219,9 +215,9 @@ fun PasswordGuardedMain(onPasswordChecked: () -> Unit = {}) {
     }
 }
 
+@OptIn(ExperimentalComposeUiApi::class)
 private class MainState(
-    val naviController: NavHostController,
-    currentBackStackEntryState: State<NavBackStackEntry?>,
+    val naviController: SimpleNavHostController,
 ) {
     companion object {
         const val EXIT_FATEOUT_DURATION = 100
@@ -240,7 +236,7 @@ private class MainState(
     val albumListChange by viewModel.albumListChange
     val galleryStateHolderMap = mutableStateMapOf<Long, SoftRef<GalleryStateHolder>>()
 
-    val navBackStackEntry by currentBackStackEntryState
+    val navBackStackEntry get() = naviController.currentBackStackEntry
 
     val galleryStateHolder by derivedStateOf {
         currentSelectedAlbum?.value?.albumId?.let {
@@ -248,7 +244,7 @@ private class MainState(
         }
     }
     val isOnTop by derivedStateOf {
-        navBackStackEntry?.destination?.hasRoute(Gallery::class) ?: false
+        navBackStackEntry == Gallery
     }
 
     val isBackEnable by derivedStateOf {
@@ -261,6 +257,69 @@ private class MainState(
     )
 
     val routerController = MainRouterController(naviController, drawerState)
+
+    val enterTransition: EnterTransitionCreator = { swipeEdge ->
+        val isLeft = when (swipeEdge) {
+            BackEventCompat.EDGE_LEFT -> {
+                true
+            }
+            else -> {
+                false
+            }
+        }
+        val scale = scaleIn(
+            initialScale = ENTER_INITIAL_SCALE,
+            animationSpec = tween(
+                durationMillis = TRANSITION_ANIM_DURATION,
+                easing = LinearEasing
+            )
+        )
+        val slide = slideIn(
+            animationSpec = tween(
+                durationMillis = TRANSITION_ANIM_DURATION,
+                easing = LinearEasing
+            )
+        ) { IntOffset((if (isLeft) 1 else -1) * it.width, 0) }
+        scale + slide
+    }
+
+    val exitTransitionCreator: ExitTransitionCreator = { swipeEdge ->
+        val isLeft = when (swipeEdge) {
+            BackEventCompat.EDGE_LEFT -> {
+                true
+            }
+            else -> {
+                false
+            }
+        }
+        val slide = slideOut(
+            animationSpec = tween(
+                durationMillis = EXIT_SCALE_SLIDE_DURATION,
+                easing = LinearEasing
+            ),
+            targetOffset = {
+                IntOffset(
+                    ((if (isLeft) 1 else -1) * it.width * EXIT_TARGET_OFFSET).roundToInt(),
+                    0
+                )
+            }
+        )
+        val scale = scaleOut(
+            animationSpec = tween(
+                durationMillis = EXIT_SCALE_SLIDE_DURATION,
+                easing = LinearEasing
+            ),
+            targetScale = EXIT_TARTGET_SCALE
+        )
+        val fade = fadeOut(
+            animationSpec = keyframes {
+                durationMillis = TRANSITION_ANIM_DURATION
+                1f at EXIT_SCALE_SLIDE_DURATION
+                0f at TRANSITION_ANIM_DURATION
+            }
+        )
+        slide + scale + fade
+    }
 
     fun updateSelectedValue(list: List<Album>): IndexedValue<Album>? {
         val currentSelectedAlbum = currentSelectedAlbum
@@ -284,9 +343,7 @@ private class MainState(
         return when (drawerValue) {
             DrawerValue.Closed -> {
                 val canClose =
-                    menuItemsEntity.isNotEmpty() || (navBackStackEntry?.destination?.hasRoute(
-                        Gallery::class
-                    )?.not() ?: true)
+                    menuItemsEntity.isNotEmpty() || !isOnTop
                 if (!canClose) {
                     val noAlbumToast = "没有任何合集，先创建合集吧"
                     if (viewModel.currentBackgroundTask.value?.equals(noAlbumToast) != true) {
@@ -332,9 +389,7 @@ private class MainState(
 
         // 导航栈变化 初始化完成
         LaunchedEffect(navBackStackEntry, menuItemsEntityInitialized) {
-            val canClose =
-                menuItemsEntity.isNotEmpty() || (navBackStackEntry?.destination?.hasRoute(Gallery::class)
-                    ?.not() ?: true)
+            val canClose = menuItemsEntity.isNotEmpty() || !isOnTop
             if (!canClose && menuItemsEntityInitialized) {
                 val noAlbumToast = "没有任何合集，先创建合集吧"
                 if (viewModel.currentBackgroundTask.value?.equals(noAlbumToast) != true) {
@@ -349,6 +404,7 @@ private class MainState(
     fun InstallBackHandlers(): BackProgressState {
         val galleryBackEnable = galleryStateHolder?.backEnable ?: false
         val backEnable = isBackEnable || galleryBackEnable
+        naviController.shouldDisableBackEvents = backEnable
         BackPressHandler(backEnable) {
             if (drawerState.isOpen) {
                 drawerState.close()
@@ -371,12 +427,10 @@ private class MainState(
 
 @Composable
 private fun rememberMainState(): MainState {
-    val naviController = rememberNavController()
-    val currentBackStackEntryState = naviController.currentBackStackEntryAsState()
+    val naviController = rememberSimpleNavHostController()
     return remember {
         MainState(
             naviController = naviController,
-            currentBackStackEntryState = currentBackStackEntryState,
         )
     }
 }
@@ -390,7 +444,6 @@ fun Main(
     mainState.Main(visible, onVisibleRequest)
 }
 
-@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 private fun MainState.Main(
     visible: Boolean = true,
@@ -415,6 +468,7 @@ private fun MainState.Main(
             }
         }
     }
+
     CompositionLocalProvider(LocalRouterController provides routerController) {
         Box(
             modifier = Modifier.fillMaxSize()
@@ -452,75 +506,27 @@ private fun MainState.Main(
                     drawerState = drawerState,
                     gesturesEnabled = true
                 ) {
-                    val isLeft = true // by backProgressState.isLeft
-                    NavHost(
-                        navController = naviController,
-                        startDestination = Gallery,
-                        enterTransition = {
-                            val scale = scaleIn(
-                                initialScale = ENTER_INITIAL_SCALE,
-                                animationSpec = tween(
-                                    durationMillis = TRANSITION_ANIM_DURATION,
-                                    easing = LinearEasing
+                    SimpleNavHost(
+                        simpleNavHostController = naviController,
+                        initialDestination = Gallery,
+                        enterTransition = enterTransition,
+                        exitTransition = exitTransitionCreator,
+                        mapBuilder = {
+                            composable(Gallery) {
+                                Gallery(
+                                    galleryStateHolderMap,
+                                    currentSelectedAlbum,
+                                    menuItemsEntity,
+                                    drawerState,
+                                    naviController
                                 )
-                            )
-                            val slide = slideIn(
-                                animationSpec = tween(
-                                    durationMillis = TRANSITION_ANIM_DURATION,
-                                    easing = LinearEasing
-                                )
-                            ) { IntOffset((if (isLeft) 1 else -1) * it.width, 0) }
-                            scale + slide
-                        },
-                        exitTransition = {
-                            ExitTransition.None
-                        },
-                        popEnterTransition = {
-                            EnterTransition.None
-                        },
-                        popExitTransition = {
-                            val slide = slideOut(
-                                animationSpec = tween(
-                                    durationMillis = EXIT_SCALE_SLIDE_DURATION,
-                                    easing = LinearEasing
-                                ),
-                                targetOffset = {
-                                    IntOffset(
-                                        ((if (isLeft) 1 else -1) * it.width * EXIT_TARGET_OFFSET).roundToInt(),
-                                        0
-                                    )
-                                }
-                            )
-                            val scale = scaleOut(
-                                animationSpec = tween(
-                                    durationMillis = EXIT_SCALE_SLIDE_DURATION,
-                                    easing = LinearEasing
-                                ),
-                                targetScale = EXIT_TARTGET_SCALE
-                            )
-                            val fade = fadeOut(
-                                animationSpec = keyframes {
-                                    durationMillis = TRANSITION_ANIM_DURATION
-                                    1f at EXIT_SCALE_SLIDE_DURATION
-                                    0f at TRANSITION_ANIM_DURATION
-                                }
-                            )
-                            slide + scale + fade
-                        },
-                    ) {
-                        composable<Gallery> {
-                            Gallery(
-                                galleryStateHolderMap,
-                                currentSelectedAlbum,
-                                menuItemsEntity,
-                                drawerState,
-                                naviController
-                            )
+                            }
+
+                            composable(Settings) {
+                                SettingsPage()
+                            }
                         }
-                        composable<Settings> {
-                            SettingsPage()
-                        }
-                    }
+                    )
                 }
             }
             if (!visible) {

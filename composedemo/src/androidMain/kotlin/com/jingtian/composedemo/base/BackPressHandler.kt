@@ -37,11 +37,15 @@ actual fun BackPressHandler(isEnable: Boolean, onBackPressed : suspend () -> Boo
             isEnabled = false
             remove()
         }
-        val innerBackPressedCallback = GalleryOnBackPressCallBack(isEnable = isEnable)
-        backPressedCallback = innerBackPressedCallback
-        dispatcher?.addCallback(innerBackPressedCallback)
-        onDispose {
-            innerBackPressedCallback.remove()
+        if (isEnable) {
+            val innerBackPressedCallback = GalleryOnBackPressCallBack(isEnable = isEnable)
+            backPressedCallback = innerBackPressedCallback
+            dispatcher?.addCallback(innerBackPressedCallback)
+            onDispose {
+                innerBackPressedCallback.remove()
+            }
+        } else {
+            onDispose {  }
         }
     }
 }

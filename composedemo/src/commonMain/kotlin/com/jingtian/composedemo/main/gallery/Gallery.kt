@@ -110,6 +110,7 @@ import kotlinx.coroutines.withContext
 import com.jingtian.composedemo.base.resources.getPainter
 import com.jingtian.composedemo.main.dialog.ImportDocumentDialog
 import com.jingtian.composedemo.main.dialog.rememberDocumentDialogState
+import com.jingtian.composedemo.main.widget.SimpleNavHostController
 import com.jingtian.composedemo.multiplatform.LowMemorySideEffect
 import com.jingtian.composedemo.multiplatform.SoftRef
 import com.jingtian.composedemo.utils.getOrPutSoftRef
@@ -123,7 +124,7 @@ fun Gallery(
     album: IndexedValue<Album>?,
     albumList: List<Album>,
     drawerState: DrawerState,
-    naviController: NavController
+    naviController: SimpleNavHostController
 ) {
     if (album == null) {
         Box(modifier = Modifier

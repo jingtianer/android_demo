@@ -24,6 +24,7 @@ import com.jingtian.composedemo.dao.model.ItemRank
 import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
 import com.jingtian.composedemo.main.albumItem.AlbumItemViewStateHolder
 import com.jingtian.composedemo.main.remote.ImportRemoteDialogStateHolder
+import com.jingtian.composedemo.main.widget.SimpleNavHostController
 import com.jingtian.composedemo.multiplatform.SoftRef
 import com.jingtian.composedemo.multiplatform.logD
 import com.jingtian.composedemo.utils.dpValue
@@ -45,7 +46,7 @@ interface IPlatformExtra
 
 expect fun getPlatformExtra(): IPlatformExtra
 
-class GalleryStateHolder(val album: IndexedValue<Album>, val currentSelectedAlbum: State<Album>, val albumList: List<Album>, val drawerState: DrawerState, val viewModel: AlbumViewModel, val galleryDpConstants: GalleryDpConstants, val navController : NavController) {
+class GalleryStateHolder(val album: IndexedValue<Album>, val currentSelectedAlbum: State<Album>, val albumList: List<Album>, val drawerState: DrawerState, val viewModel: AlbumViewModel, val galleryDpConstants: GalleryDpConstants, val navController : SimpleNavHostController) {
     var addImageDialogState by mutableStateOf(false)
     var itemList by mutableStateOf(emptyList<AlbumItemRelation>())
     val filteredItemList = mutableStateListOf<AlbumItemRelation>()
