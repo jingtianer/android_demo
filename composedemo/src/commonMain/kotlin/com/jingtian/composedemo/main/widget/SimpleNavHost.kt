@@ -66,7 +66,6 @@ abstract class AbstractSimpleNavHostController {
     abstract val currentBackStack: List<NavRouter>
     abstract val currentBackStackEntry: NavRouter?
     abstract val secondLastBackStackEntry: NavRouter?
-    abstract var shouldDisableBackEvents: Boolean
     abstract val willHandleBackEvents: Boolean
     abstract suspend fun navigateTo(router: NavRouter)
     abstract suspend fun pop()
@@ -80,11 +79,6 @@ class SimpleNavHostController : AbstractSimpleNavHostController() {
         get() = impl.currentBackStackEntry
     override val secondLastBackStackEntry: NavRouter?
         get() = impl.secondLastBackStackEntry
-    override var shouldDisableBackEvents: Boolean
-        get() = impl.shouldDisableBackEvents
-        set(value) {
-            impl.shouldDisableBackEvents = value
-        }
     override val willHandleBackEvents: Boolean
         get() = impl.willHandleBackEvents
 
@@ -133,7 +127,6 @@ class SimpleNavHostController : AbstractSimpleNavHostController() {
         var swipeEdge by mutableIntStateOf(BackEventCompat.EDGE_LEFT)
 
         // 返回键
-        override var shouldDisableBackEvents by mutableStateOf(false)
         override val willHandleBackEvents: Boolean get() = backStack.size > 1
         // 动画
         val transitionState = SeekableTransitionState(currentBackStackEntry)
@@ -167,7 +160,7 @@ class SimpleNavHostController : AbstractSimpleNavHostController() {
             val finalStackTopEntry = backStack.lastOrNull()
             updateTransition(isPop = isPop, isPredictive = false, swipeEdge = swipeEdge)
             withFrameMillis {  }
-            transitionState.animateTo(initialStackTopEntry)
+            transitionState.snapTo(initialStackTopEntry)
             transitionState.animateTo(finalStackTopEntry)
         }
 
@@ -204,7 +197,7 @@ private fun SimpleNavHostController.SimpleNavHostControllerImpl.SimpleNavHost() 
     val transition = rememberTransition(transitionState, label = "entry")
 
     val scope = rememberCoroutineScope()
-    PredictiveBackHandler(enabled = willHandleBackEvents && !shouldDisableBackEvents) { backFlow ->
+    PredictiveBackHandler(enabled = willHandleBackEvents) { backFlow ->
         try {
             backFlow.collect { event ->
                 swipeEdge = event.swipeEdge
@@ -239,11 +232,6 @@ private fun SimpleNavHostController.SimpleNavHostControllerImpl.SimpleNavHost() 
 
         }
     }
-
-//    BackPressHandler(isEnable = willHandleBackEvents && !shouldDisableBackEvents) {
-//        pop()
-//        willHandleBackEvents && !shouldDisableBackEvents
-//    }
 
     transition.AnimatedContent(transitionSpec = {
         ContentTransform(

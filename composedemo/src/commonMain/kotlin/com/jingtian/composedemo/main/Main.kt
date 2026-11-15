@@ -248,7 +248,8 @@ private class MainState(
     }
 
     val isBackEnable by derivedStateOf {
-        drawerState.isOpen || drawerState.isAnimationRunning
+        val canClose = menuItemsEntity.isNotEmpty() || !isOnTop
+        (drawerState.isOpen || drawerState.isAnimationRunning) && canClose
     }
 
     val drawerState = DrawerState(
@@ -388,9 +389,9 @@ private class MainState(
         }
 
         // 导航栈变化 初始化完成
-        LaunchedEffect(navBackStackEntry, menuItemsEntityInitialized) {
+        LaunchedEffect(navBackStackEntry, drawerState.isClosed, menuItemsEntityInitialized) {
             val canClose = menuItemsEntity.isNotEmpty() || !isOnTop
-            if (!canClose && menuItemsEntityInitialized) {
+            if (!canClose && drawerState.isClosed && menuItemsEntityInitialized) {
                 val noAlbumToast = "没有任何合集，先创建合集吧"
                 if (viewModel.currentBackgroundTask.value?.equals(noAlbumToast) != true) {
                     viewModel.sendMessage(noAlbumToast)
@@ -404,9 +405,9 @@ private class MainState(
     fun InstallBackHandlers(): BackProgressState {
         val galleryBackEnable = galleryStateHolder?.backEnable ?: false
         val backEnable = isBackEnable || galleryBackEnable
-        naviController.shouldDisableBackEvents = backEnable
         BackPressHandler(backEnable) {
-            if (drawerState.isOpen) {
+            val canClose = menuItemsEntity.isNotEmpty() || !isOnTop
+            if (drawerState.isOpen && canClose) {
                 drawerState.close()
                 true
             } else if (drawerState.isAnimationRunning) {
