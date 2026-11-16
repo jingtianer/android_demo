@@ -1,18 +1,11 @@
 package com.jingtian.composedemo.main.gallery
 
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.AnimationState
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.LinearOutSlowInEasing
-import androidx.compose.animation.core.animateTo
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -39,21 +32,16 @@ import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalTextStyle
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.FloatState
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableFloatState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -64,29 +52,23 @@ import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
-import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.drawscope.draw
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.drawscope.inset
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalLayoutDirection
-import com.jingtian.composedemo.multiplatform.WeakRef
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
 import com.jingtian.composedemo.BuildKonfig
 import com.jingtian.composedemo.base.AppThemeConfirmDialog
 import com.jingtian.composedemo.base.AppThemeText
@@ -175,26 +157,8 @@ fun Gallery(
 
 @Composable
 fun Modifier.predictiveBackVisual(
-    backProgress: FloatState,
-    isBackProgressing: State<Boolean>,
-    visible: Boolean
+    predictiveBackVisualState: State<Float>
 ): Modifier {
-    val exitAnim = remember { Animatable(1f) }
-    LaunchedEffect(isBackProgressing.value, visible, backProgress.value) {
-        if (!isBackProgressing.value && visible) {
-            exitAnim.animateTo(targetValue = 0f, animationSpec = tween(
-                durationMillis = 360,
-                easing = LinearOutSlowInEasing
-            ))
-        } else if (!visible) {
-            exitAnim.animateTo(targetValue = 1f, animationSpec = tween(
-                durationMillis = 360,
-                easing = LinearOutSlowInEasing
-            ))
-        } else {
-            exitAnim.snapTo(backProgress.value)
-        }
-    }
     val lockIcon = getPainter(DrawableIcon.DrawableLock)
     return this.clipDeviceRoundCorner()
         .drawWithContent {
@@ -204,12 +168,12 @@ fun Modifier.predictiveBackVisual(
             drawIntoCanvas {
                 inset(horizontal = (canvasSize.width - imageSize.width) / 2, vertical = (canvasSize.height - imageSize.height) / 2) {
                     with(lockIcon) {
-                        draw(size = imageSize, alpha = if (!isBackProgressing.value || !visible) exitAnim.value else backProgress.value)
+                        draw(size = imageSize, alpha = predictiveBackVisualState.value)
                     }
                 }
             }
         }
-        .blur(((if (!isBackProgressing.value || !visible) exitAnim.value else backProgress.value) * 40).dp)
+        .blur((predictiveBackVisualState.value * 40).dp)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

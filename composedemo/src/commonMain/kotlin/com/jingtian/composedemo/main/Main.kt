@@ -1,9 +1,11 @@
 package com.jingtian.composedemo.main
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationSpec
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideIn
@@ -28,15 +30,12 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.FloatState
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableFloatState
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -55,6 +54,10 @@ import com.jingtian.composedemo.BuildKonfig
 import com.jingtian.composedemo.base.BackPressHandler
 import com.jingtian.composedemo.dao.model.Album
 import com.jingtian.composedemo.demonstration.DemonstrationMain
+import com.jingtian.composedemo.main.PredictiveBackVisualState.Companion.STATE_CANCEL
+import com.jingtian.composedemo.main.PredictiveBackVisualState.Companion.STATE_END
+import com.jingtian.composedemo.main.PredictiveBackVisualState.Companion.STATE_IDLE
+import com.jingtian.composedemo.main.PredictiveBackVisualState.Companion.STATE_START
 import com.jingtian.composedemo.main.drawer.MainDrawer
 import com.jingtian.composedemo.main.gallery.Gallery
 import com.jingtian.composedemo.main.gallery.GalleryStateHolder
@@ -73,6 +76,7 @@ import com.jingtian.composedemo.main.widget.SizeTransitionCreator
 import com.jingtian.composedemo.main.widget.rememberSimpleNavHostController
 import com.jingtian.composedemo.multiplatform.LowMemorySideEffect
 import com.jingtian.composedemo.multiplatform.SoftRef
+import com.jingtian.composedemo.multiplatform.logD
 import com.jingtian.composedemo.ui.theme.LocalAppPalette
 import com.jingtian.composedemo.ui.theme.clipDeviceRoundCorner
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
@@ -86,34 +90,57 @@ import kotlinx.coroutines.IO
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.cancellation.CancellationException
+import kotlin.math.abs
 import kotlin.math.roundToInt
-
-class BackProgressState(backProgressState: MutableFloatState, isLeftState: MutableState<Boolean>, isBackProgressing: MutableState<Boolean>) {
-    val backProgress: FloatState = backProgressState
-    val isLeft: State<Boolean> = isLeftState
-    val isBackProgressing: State<Boolean> = isBackProgressing
-}
 
 @Composable
 expect fun rememberNativeBackInvoker(): (suspend () -> Unit)
 
+private class PredictiveBackVisualState {
+    val anim = Animatable(initialValue = 1f)
+    val progress = mutableFloatStateOf(0f)
+    val swipeEdge = mutableIntStateOf(BackEventCompat.EDGE_LEFT)
+    val isEnable = mutableStateOf(false)
+    val backState = mutableIntStateOf(STATE_IDLE)
+
+    companion object {
+        const val STATE_IDLE = 0
+        const val STATE_START = 1
+        const val STATE_END = 2
+        const val STATE_CANCEL = 3
+    }
+}
+
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun rememberBackProgress(
+fun rememberPredictiveBackVisualState(
     isEnable: Boolean,
-    onPredicableBackFinish: suspend () -> Unit
-): BackProgressState {
-    val backProgress = remember { mutableFloatStateOf(0f) }
-    val isLeft = remember { mutableStateOf(true) }
-    val isBackProgressing = remember { mutableStateOf(false) }
-    var enable by remember { mutableStateOf(true) }
+    animationSpec: (Float, Float) -> AnimationSpec<Float> = { targetValue: Float, currentValue: Float ->
+        val leftAnimDuration = (abs(targetValue - currentValue) * 380).roundToInt()
+        tween(
+            durationMillis = leftAnimDuration,
+            easing = FastOutSlowInEasing
+        )
+    },
+    onPredicableBackFinish: suspend () -> Unit = {},
+): State<Float> {
+    val state = remember { PredictiveBackVisualState() }
+    val authViewModel = authViewModel()
+    val isVisible by authViewModel.isVisible
+    val isLocked by authViewModel.isLocked
+    val anim = state.anim
+    var backState by state.backState
+    var progress by state.progress
+    var swipeEdge by state.swipeEdge
+    var enable by state.isEnable
     val externalScope = rememberCoroutineScope()
     val lifecycleOwner = LocalLifecycleOwner.current
     val lifecycleObserver = remember {
         object : DefaultLifecycleObserver {
             private fun resetState() {
                 enable = true
-                backProgress.value = 0f
+                backState = STATE_IDLE
+                progress = 0f
             }
 
             override fun onStart(owner: LifecycleOwner) {
@@ -133,37 +160,53 @@ fun rememberBackProgress(
     }
     PredictiveBackHandler(enabled = enable && isEnable) { backFlow ->
         try {
-            backProgress.value = 0f
+            progress = 0f
+            backState = STATE_START
             backFlow.collect { event ->
-                isBackProgressing.value = true
-                backProgress.value = event.progress
-                when (event.swipeEdge) {
-                    BackEventCompat.EDGE_LEFT -> {
-                        isLeft.value = true
-                    }
-
-                    BackEventCompat.EDGE_RIGHT -> {
-                        isLeft.value = false
-                    }
-                }
+                progress = event.progress
+                swipeEdge = event.swipeEdge
             }
-            backProgress.value = 1f
+            progress = 1f
+            backState = STATE_END
             enable = false
-            isBackProgressing.value = false
-            withFrameNanos { }
-            externalScope.launch(Dispatchers.Main) {
-                onPredicableBackFinish.invoke()
-            }
         } catch (e: CancellationException) {
-            backProgress.value = 0f
+            progress = 0f
+            backState = STATE_CANCEL
             enable = true
-            isBackProgressing.value = false
             throw e
         } finally {
 
         }
     }
-    return remember { BackProgressState(backProgress, isLeft, isBackProgressing) }
+    LaunchedEffect(progress, isVisible, isLocked, backState) {
+        if ((backState == STATE_CANCEL || backState == STATE_IDLE) && !isLocked && isVisible) {
+            if (anim.value <= 0 || (anim.isRunning && anim.targetValue <= 0f)) {
+                return@LaunchedEffect
+            }
+            if (backState == STATE_IDLE) {
+                anim.snapTo(1f)
+            }
+            anim.animateTo(targetValue = 0f, animationSpec(0f, anim.value))
+        } else if (isLocked || !isVisible || backState == STATE_END) {
+            if (anim.value >= 1f || (anim.isRunning && anim.targetValue >= 1f)) {
+                return@LaunchedEffect
+            }
+            if (!isVisible) {
+                anim.snapTo(1f)
+            } else {
+                anim.animateTo(targetValue = 1f, animationSpec = animationSpec(1f, anim.value))
+            }
+            if (backState == STATE_END) {
+                withFrameNanos { }
+                externalScope.launch(Dispatchers.Main) {
+                    onPredicableBackFinish.invoke()
+                }
+            }
+        } else {
+            anim.snapTo(progress)
+        }
+    }
+    return anim.asState()
 }
 
 @Composable
@@ -368,7 +411,7 @@ private class MainState(
     }
 
     @Composable
-    fun InstallBackHandlers(): BackProgressState {
+    fun InstallBackHandlers(): State<Float> {
         val galleryBackEnable = galleryStateHolder?.backEnable ?: false
         val backEnable = isBackEnable || galleryBackEnable
         BackPressHandler(backEnable) {
@@ -383,7 +426,7 @@ private class MainState(
             }
         }
         val nativeBackInvoker = rememberNativeBackInvoker()
-        return rememberBackProgress(isOnTop && !backEnable) {
+        return rememberPredictiveBackVisualState(isOnTop && !backEnable) {
             nativeBackInvoker.invoke()
             authViewModel().lock()
         }
@@ -394,9 +437,7 @@ private class MainState(
 private fun rememberMainState(): MainState {
     val naviController = rememberSimpleNavHostController()
     return remember {
-        MainState(
-            naviController = naviController,
-        )
+        MainState(naviController = naviController,)
     }
 }
 
@@ -418,10 +459,8 @@ private fun MainState.Main(
         DemonstrationMain()
         return
     }
-
     val scope = rememberCoroutineScope()
-    val backProgressState = InstallBackHandlers()
-    val backProgress = backProgressState.backProgress
+    val predictiveBackVisualState = InstallBackHandlers()
     val modifier = if (visible) {
         Modifier.fillMaxSize()
     } else {
@@ -436,8 +475,7 @@ private fun MainState.Main(
 
     CompositionLocalProvider(LocalRouterController provides routerController) {
         Box(
-            modifier = Modifier.fillMaxSize()
-                .predictiveBackVisual(backProgress = backProgress, isBackProgressing = backProgressState.isBackProgressing, visible = visible)
+            modifier = Modifier.fillMaxSize().predictiveBackVisual(predictiveBackVisualState = predictiveBackVisualState)
         ) {
             Scaffold(
                 modifier = modifier.fillMaxSize(),
