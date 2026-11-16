@@ -105,9 +105,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.jingtian.composedemo.base.resources.getPainter
-import com.jingtian.composedemo.demonstration.gradient.GradientWrapper
 import com.jingtian.composedemo.demonstration.gradient.HorizontalShadowWrapper
-import com.jingtian.composedemo.demonstration.gradient.addBackgroundBlur
 import com.jingtian.composedemo.main.dialog.ImportDocumentDialog
 import com.jingtian.composedemo.main.dialog.rememberDocumentDialogState
 import com.jingtian.composedemo.main.widget.SimpleNavHostController
@@ -118,6 +116,10 @@ import com.jingtian.composedemo.ui.theme.goldenRatio
 import com.jingtian.composedemo.utils.getOrPutSoftRef
 import com.jingtian.composedemo.viewmodels.albumViewModel
 import com.jingtian.composedemo.viewmodels.observeAsState
+import dev.chrisbanes.haze.HazeProgressive
+import dev.chrisbanes.haze.hazeEffect
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.rememberHazeState
 import kotlinx.coroutines.IO
 
 @Composable
@@ -231,25 +233,34 @@ fun GalleryStateHolder.Gallery() {
     }
 
     val density = LocalDensity.current
+    val hazeState = rememberHazeState()
     Box(
         Modifier
             .fillMaxSize()
-            .appBackground()
     ) {
 
         fun getScrollOffset(): Float {
             return galleryScrollState.layoutInfo.visibleItemsInfo.map { it.index - it.offset.y.toFloat() / it.size.height }
                 .average().toFloat()
         }
-
         val naviBarInsets = WindowInsets.navigationBars.asPaddingValues()
         val bottomBarHeight = 52.dp
         val shadesHeight = 0.dp
+        Box(
+            modifier = Modifier.fillMaxSize()
+                .hazeSource(state = hazeState, zIndex = 3f)
+                .background(color = LocalAppColorScheme.current.background.copy(alpha = 0.3f))
+        )
+        Box(
+            modifier = Modifier.fillMaxSize()
+                .hazeSource(state = hazeState, zIndex = 1f)
+                .appBackground()
+        )
         LazyVerticalStaggeredGrid(
             columns = StaggeredGridCells.Adaptive((size + galleryItemPadding * 2)),
             Modifier
                 .fillMaxSize()
-                .addBackgroundBlur(0.3f, headerHeight)
+                .hazeSource(state = hazeState, zIndex = 2f)
                 .padding(start = galleryItemPadding, end = galleryItemPadding)
                 .nestedScroll(object : NestedScrollConnection {
                     override fun onPostScroll(
@@ -379,6 +390,11 @@ fun GalleryStateHolder.Gallery() {
                 }
         )
         Column(modifier = Modifier.fillMaxWidth()
+            .hazeEffect(state = hazeState) {
+                progressive = HazeProgressive.verticalGradient(
+                    startIntensity = 1f, endIntensity = 0.3f
+                )
+            }
             .onSizeChanged { with(density) { headerHeight = it.height.toDp().value } }
         ) {
             CompositionLocalProvider(
@@ -542,9 +558,11 @@ fun GalleryStateHolder.Gallery() {
             Box(
                 Modifier
                     .fillMaxWidth()
-                    .background(
-                        LocalAppColorScheme.current.background.copy(alpha = 0.90f),
-                    )
+                    .hazeEffect(state = hazeState) {
+                        progressive = HazeProgressive.verticalGradient(
+                            startIntensity = 0.3f, endIntensity = 1f
+                        )
+                    }
                     .windowInsetsPadding(WindowInsets.navigationBars)
                     .height(bottomBarHeight)
                     .align(Alignment.BottomCenter)

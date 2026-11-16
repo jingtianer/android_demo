@@ -82,26 +82,6 @@ private fun Modifier.verticalAlphaGradient(
     }
 }
 
-@Composable
-fun Modifier.addBackgroundBlur(
-    @FloatRange(from = 0.0, 1.0)
-    alpha: Float,
-    height: Float
-): Modifier {
-    val heightPx = with(LocalDensity.current) {
-        height.dp.roundToPx().toFloat()
-    }
-    return this.graphicsLayer {
-        compositingStrategy = CompositingStrategy.Offscreen
-    }.drawWithContent {
-        drawContent()
-        drawRect(brush = Brush.verticalGradient(colors = listOf(
-            Color.Black.copy(alpha = 0f),
-            Color.Black.copy(alpha = alpha)
-        )), size = size.copy(height = heightPx), blendMode = BlendMode.DstIn)
-    }
-}
-
 fun Modifier.addHorizontalEdgeMask(
     leftShadowWidth: Float,
     rightShadowWidth: Float,

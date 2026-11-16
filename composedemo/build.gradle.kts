@@ -116,6 +116,8 @@ kotlin {
                 implementation(libs.kotlinx.datetime)
                 implementation(libs.navigation.compose)
 
+                implementation(libs.haze)
+
                 // 尝试了 precompose 并不是compose预加载
 //                api("moe.tlaster:precompose:1.6.2")
 //
