@@ -2,8 +2,9 @@ package com.jingtian.composedemo.main.gallery
 
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.runtime.snapshots.SnapshotStateMap
+import androidx.compose.ui.Modifier
 
-fun LazyListScope.roundRectTabFilter(checkedList: SnapshotStateMap<String, Boolean>, filerList: List<String>) {
+fun LazyListScope.roundRectTabFilter(modifier: Modifier, checkedList: SnapshotStateMap<String, Boolean>, filerList: List<String>) {
     items(filerList.size, key = { index-> filerList[index] }) { index->
         val item = filerList[index]
         RoundRectCheckableLabel(
@@ -11,6 +12,7 @@ fun LazyListScope.roundRectTabFilter(checkedList: SnapshotStateMap<String, Boole
             checkedList[item] ?: false,
             checkedList,
             true,
+            modifier
         )
     }
 }

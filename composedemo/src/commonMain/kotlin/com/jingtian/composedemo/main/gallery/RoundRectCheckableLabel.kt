@@ -23,7 +23,7 @@ import com.jingtian.composedemo.viewmodels.AlbumViewModel
 import com.jingtian.composedemo.viewmodels.albumViewModel
 
 @Composable
-fun RoundRectCheckableLabel(item: String, isChecked: Boolean, checkedList: SnapshotStateMap<String, Boolean>, wrapContent: Boolean) {
+fun RoundRectCheckableLabel(item: String, isChecked: Boolean, checkedList: SnapshotStateMap<String, Boolean>, wrapContent: Boolean, modifier: Modifier = Modifier) {
     val paddings = LocalAppUIConstants.current.filterLabelPaddings
     val paddingInnerHorizontal = paddings[0]
     val paddingInnerVertical = paddings[1]
@@ -34,15 +34,11 @@ fun RoundRectCheckableLabel(item: String, isChecked: Boolean, checkedList: Snaps
         Modifier
             .padding(horizontal = paddingOuterHorizontal, vertical = paddingOuterVertical)
             .wrapContentWidth()
+            .clip(RoundedCornerShape(100))
+            .then(modifier)
             .height(LocalAppUIConstants.current.filterLabelHeight)
-            .background(
-                color = if (isChecked) LocalAppPalette.current.labelChecked else LocalAppPalette.current.labelUnChecked,
-                shape = RoundedCornerShape(100)
-            )
             .widthIn(LocalAppUIConstants.current.filterLabelHeight * LocalAppUIConstants.current.filterLabelAspectRatio)
-            .clip(
-                RoundedCornerShape(100),
-            )
+
     } else {
         Modifier
             .padding(horizontal = paddingOuterHorizontal, vertical = paddingOuterVertical)

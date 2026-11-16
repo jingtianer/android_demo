@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
@@ -48,19 +49,24 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.drawscope.inset
+import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -69,7 +75,9 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jingtian.composedemo.BuildKonfig
@@ -111,16 +119,21 @@ import com.jingtian.composedemo.main.dialog.rememberDocumentDialogState
 import com.jingtian.composedemo.main.widget.SimpleNavHostController
 import com.jingtian.composedemo.multiplatform.LowMemorySideEffect
 import com.jingtian.composedemo.multiplatform.SoftRef
+import com.jingtian.composedemo.multiplatform.logD
 import com.jingtian.composedemo.ui.theme.clipDeviceRoundCorner
 import com.jingtian.composedemo.ui.theme.goldenRatio
 import com.jingtian.composedemo.utils.getOrPutSoftRef
 import com.jingtian.composedemo.viewmodels.albumViewModel
+import com.jingtian.composedemo.viewmodels.appThemeViewModel
 import com.jingtian.composedemo.viewmodels.observeAsState
 import dev.chrisbanes.haze.HazeProgressive
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.HazeTint
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
 import kotlinx.coroutines.IO
+import kotlin.math.pow
 
 @Composable
 fun Gallery(
@@ -188,15 +201,72 @@ fun Modifier.predictiveBackVisual(
         .blur((predictiveBackVisualState.value * 40).dp)
 }
 
+fun ImageBitmap.sampleAverage(rect: IntRect): Color {
+    var sumR = 0L
+    var sumG = 0L
+    var sumB = 0L
+    val count = rect.width * rect.height
+    val buffer = IntArray(count)
+    this.readPixels(
+        buffer = buffer,
+        startX = rect.left,
+        startY = rect.top,
+        width = rect.width,
+        height = rect.height,
+        bufferOffset = 0,
+        stride = rect.width
+    )
+    for (pixel in buffer) {
+        val r = (pixel shr 16) and 0xFF
+        val g = (pixel shr 8) and 0xFF
+        val b = pixel and 0xFF
+        sumR += r
+        sumG += g
+        sumB += b
+    }
+    if (count == 0) return Color.Transparent
+    val avgR = sumR / count.toFloat() / 255f
+    val avgG = sumG / count.toFloat() / 255f
+    val avgB = sumB / count.toFloat() / 255f
+    return Color(avgR, avgG, avgB)
+}
+
+fun Color.relativeLuminance(): Float {
+    fun convert(v: Float): Float = if (v <= 0.03928f) v / 12.92f else (v + 0.055f)/1.055f.pow(2.4f)
+    return 0.2126f * convert(red) + 0.7152f * convert(green) + 0.0722f * convert(blue)
+}
+
+fun Color.adaptiveTextColor() = when {
+    relativeLuminance() > 0.55f -> Color.Black
+    relativeLuminance() < 0.45f -> Color.White
+    else -> null
+}
+
+@Composable
+fun Modifier.ovalGlass(hazeState: HazeState): Modifier {
+    return this.clip(RoundedCornerShape(100))
+        .hazeEffect(state = hazeState) {
+            progressive = HazeProgressive.verticalGradient(
+                startIntensity = 0.7f, endIntensity = 0.7f
+            )
+        }
+        .background(
+            color = LocalAppPalette.current.drawerBg.copy(alpha = 0.4f),
+        )
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GalleryStateHolder.Gallery() {
     val albumItemDataChange by viewModel.albumItemListChange.observeAsState()
     val scope = rememberCoroutineScope()
+    val graphicsLayer = rememberGraphicsLayer()
     val albumNameChange by viewModel.albumNameChange.observeAsState()
 //    LaunchedEffect(album) {
 //        initAlbumInfo()
 //    }
+    val density = LocalDensity.current
+    val bottomBarHeight = 76.dp
 
     LaunchedEffect(albumItemDataChange) {
         onAlbumDataChanged()
@@ -232,7 +302,6 @@ fun GalleryStateHolder.Gallery() {
         }
     }
 
-    val density = LocalDensity.current
     val hazeState = rememberHazeState()
     Box(
         Modifier
@@ -244,23 +313,19 @@ fun GalleryStateHolder.Gallery() {
                 .average().toFloat()
         }
         val naviBarInsets = WindowInsets.navigationBars.asPaddingValues()
-        val bottomBarHeight = 52.dp
         val shadesHeight = 0.dp
-        Box(
-            modifier = Modifier.fillMaxSize()
-                .hazeSource(state = hazeState, zIndex = 3f)
-                .background(color = LocalAppColorScheme.current.background.copy(alpha = 0.3f))
-        )
-        Box(
-            modifier = Modifier.fillMaxSize()
-                .hazeSource(state = hazeState, zIndex = 1f)
-                .appBackground()
-        )
         LazyVerticalStaggeredGrid(
             columns = StaggeredGridCells.Adaptive((size + galleryItemPadding * 2)),
             Modifier
                 .fillMaxSize()
                 .hazeSource(state = hazeState, zIndex = 2f)
+                .drawWithContent {
+                    graphicsLayer.record {
+                        this@drawWithContent.drawContent()
+                    }
+                    drawLayer(graphicsLayer)
+                }
+                .appBackground()
                 .padding(start = galleryItemPadding, end = galleryItemPadding)
                 .nestedScroll(object : NestedScrollConnection {
                     override fun onPostScroll(
@@ -283,7 +348,7 @@ fun GalleryStateHolder.Gallery() {
                 start = naviBarInsets.calculateStartPadding(LocalLayoutDirection.current),
                 top = headerHeight.dp + naviBarInsets.calculateTopPadding(),
                 end = naviBarInsets.calculateEndPadding(LocalLayoutDirection.current),
-                bottom = naviBarInsets.calculateBottomPadding() + if (enterEditMode) bottomBarHeight + shadesHeight else 0.dp
+                bottom = naviBarInsets.calculateBottomPadding() + bottomBarHeight
             ),
             state = galleryScrollState,
         ) {
@@ -311,6 +376,21 @@ fun GalleryStateHolder.Gallery() {
                 )
             }
         }
+
+        Box(modifier = Modifier.fillMaxWidth().align(Alignment.TopCenter).height(headerHeight.dp).hazeEffect(state = hazeState) {
+                progressive = HazeProgressive.verticalGradient(
+                    startIntensity = 1f, endIntensity = 0f
+                )
+            }
+        )
+        val labelUnChecked = LocalAppPalette.current.labelUnChecked
+        Box(modifier = Modifier.fillMaxWidth().align(Alignment.BottomCenter).height(bottomBarHeight).hazeEffect(state = hazeState) {
+                progressive = HazeProgressive.verticalGradient(
+                    startIntensity = 0f, endIntensity = 1f
+                )
+                tints = listOf(HazeTint.Unspecified.copy(labelUnChecked))
+            }
+        )
         val scrollBarColor = LocalAppPalette.current.labelTextColor.copy(alpha = 0.85f)
         val dp16 = 16.dp.dpValue()
         val dp6 = 6.dp.dpValue()
@@ -390,58 +470,68 @@ fun GalleryStateHolder.Gallery() {
                 }
         )
         Column(modifier = Modifier.fillMaxWidth()
-            .hazeEffect(state = hazeState) {
-                progressive = HazeProgressive.verticalGradient(
-                    startIntensity = 1f, endIntensity = 0.3f
-                )
-            }
             .onSizeChanged { with(density) { headerHeight = it.height.toDp().value } }
         ) {
-            CompositionLocalProvider(
-                LocalContentColor provides LocalAppPalette.current.galleryHeaderColor,
-                LocalTextStyle provides LocalTextStyle.current.copy(color = LocalAppPalette.current.galleryHeaderColor)
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .windowInsetsPadding(WindowInsets.statusBars)
+                    .padding(
+                        start = galleryItemPadding * 2,
+                        end = galleryItemPadding * 2,
+                        bottom = galleryItemPadding * 2
+                    )
+                    .wrapContentHeight()
             ) {
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .windowInsetsPadding(WindowInsets.statusBars)
-                        .padding(start = galleryItemPadding * 2, end = galleryItemPadding * 2, bottom = galleryItemPadding * 2)
-                        .wrapContentHeight()
-                ) {
-                    if (!gallerySearchEnabled) {
-                        Icon(
-                            painter = getPainter(DrawableIcon.DrawableDrawer),
-                            contentDescription = "打开drawer",
-                            modifier = Modifier
-                                .align(Alignment.CenterVertically)
-                                .size(LocalAppUIConstants.current.filterLabelHeight)
-                                .background(LocalAppPalette.current.labelUnChecked, shape = CircleShape)
-                                .clickable {
-                                    scope.launch {
-                                        if (drawerState.isOpen) {
-                                            drawerState.close()
-                                        } else {
-                                            drawerState.open()
-                                        }
+                if (!gallerySearchEnabled) {
+                    Icon(
+                        painter = getPainter(DrawableIcon.DrawableDrawer),
+                        contentDescription = "打开drawer",
+                        modifier = Modifier
+                            .align(Alignment.CenterVertically)
+                            .ovalGlass(hazeState)
+                            .size(LocalAppUIConstants.current.filterLabelHeight)
+                            .padding(4.dp)
+                            .clickable {
+                                scope.launch {
+                                    if (drawerState.isOpen) {
+                                        drawerState.close()
+                                    } else {
+                                        drawerState.open()
                                     }
                                 }
-                        )
-                        Spacer(Modifier.width(12.dp))
+                            }
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Box(modifier = Modifier.fillMaxWidth().align(Alignment.CenterVertically).weight(1f)) {
                         AppThemeText(
                             albumName.trim(),
                             Modifier
-                                .align(Alignment.CenterVertically)
-                                .weight(1f),
+                                .ovalGlass(hazeState)
+                                .padding(horizontal = 6.dp)
+                                .height(LocalAppUIConstants.current.filterLabelHeight)
+                                .widthIn(min = LocalAppUIConstants.current.filterLabelHeight)
+                                .padding(4.dp),
                             style = LocalTextStyle.current.copy(
-                                fontSize = 24.sp,
+                                fontSize = 20.sp,
                                 fontWeight = FontWeight(600)
                             ),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
-                        Spacer(Modifier.width(6.dp))
                     }
-                    if (gallerySearchEnabled) {
+                    Spacer(Modifier.width(6.dp))
+                }
+                if (gallerySearchEnabled) {
+                    Box(modifier = Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.CenterVertically)
+                        .padding(horizontal = 4.dp)
+                        .ovalGlass(hazeState)
+                        .weight(1f)
+                        .height(height = LocalAppUIConstants.current.filterLabelHeight),
+                        contentAlignment = Alignment.CenterStart
+                    ) {
                         BasicTextField(
                             value = gallerySearchWord,
                             onValueChange = {
@@ -451,103 +541,95 @@ fun GalleryStateHolder.Gallery() {
                                 }
                             },
                             modifier = Modifier
-                                .align(Alignment.CenterVertically)
-                                .fillMaxWidth()
-                                .padding(horizontal = 4.dp)
-                                .background(
-                                    color = LocalAppPalette.current.galleryCardBg,
-                                    shape = RoundedCornerShape(12.dp)
-                                )
-                                .padding(start = 12.dp, end = 6.dp, top = 8.dp, bottom = 8.dp)
-                                .weight(1f),
+                                .padding(4.dp)
+                                .padding(start = 12.dp, end = 6.dp),
                             singleLine = true,
                             textStyle = LocalTextStyle.current.copy(
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight(400),
-                                color = LocalTextStyle.current.color
+                                color = LocalTextStyle.current.color,
                             ),
                             cursorBrush = SolidColor(LocalTextStyle.current.color)
                         )
-                        Spacer(Modifier.width(6.dp))
                     }
-                    Icon(
-                        painter = getPainter(DrawableIcon.DrawableSearch),
-                        contentDescription = "搜索",
-                        modifier = Modifier
-                            .size(LocalAppUIConstants.current.filterLabelHeight)
-                            .background(LocalAppPalette.current.labelUnChecked, shape = CircleShape)
-                            .clickable {
-                                gallerySearchEnabled = !gallerySearchEnabled
-                                scope.launch {
-                                    if (gallerySearchEnabled) {
-                                        scrollOffsetY = 0f
-                                        searchGalleryScrollState.scrollToItem(0, 0)
-                                    }
-                                    updateScrollOffset()
-                                    if (!gallerySearchEnabled) {
-                                        updateGallerySearchWord("")
-                                    }
-                                }
-                            }
-                            .padding(4.dp)
-                            .align(Alignment.CenterVertically)
-                    )
                     Spacer(Modifier.width(6.dp))
-                    Icon(
-                        painter = getPainter(DrawableIcon.DrawableEditNormal),
-                        contentDescription = "编辑模式",
-                        modifier = Modifier
-                            .size(LocalAppUIConstants.current.filterLabelHeight)
-                            .background(LocalAppPalette.current.labelUnChecked, shape = CircleShape)
-                            .clickable { enterEditMode = !enterEditMode }
-                            .padding(4.dp)
-                            .align(Alignment.CenterVertically)
-                    )
                 }
-
-            }
-            CompositionLocalProvider(
-                LocalContentColor provides LocalAppPalette.current.galleryHeaderColor,
-                LocalTextStyle provides LocalTextStyle.current.copy(color = LocalAppPalette.current.galleryHeaderColor)
-            ) {
-                if (enterEditMode) {
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                    ) {
-                        HorizontalShadowWrapper(
-                            leftShadow = galleryItemPadding * 2,
-                            rightShadow = galleryItemPadding * 4,
-                            leftShadowContent = {},
-                            rightShadowContent = {
-                                Icon(
-                                    painter = getPainter(DrawableIcon.DrawableDown),
-                                    contentDescription = "过滤器",
-                                    modifier = Modifier
-                                        .size(LocalAppUIConstants.current.filterLabelHeight)
-                                        .background(LocalAppPalette.current.labelUnChecked, shape = CircleShape)
-                                        .clickable { showLabelFilter = !showLabelFilter }
-                                        .padding(start = 4.dp)
-                                )
-                                Spacer(modifier = Modifier.width(galleryItemPadding * 2))
-                            }
-                        ) {
-                            CompositionLocalProvider(LocalAppUIConstants provides LocalAppUIConstants.current.copy(
-                                filterLabelPaddings = listOf(0f.dp, 0f.dp, 0f.dp, 0f.dp)
-                            )) {
-                                LazyRow(
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .wrapContentHeight()
-                                        .padding(bottom = galleryItemPadding * 2)
-                                        .weight(1f),
-                                    contentPadding = PaddingValues(horizontal = galleryItemPadding * 2),
-                                    horizontalArrangement = Arrangement.spacedBy(galleryItemPadding * 2)
-                                ) {
-                                    roundRectTabFilter(labelFilterCheckedInfo, totalLabelList)
-                                    roundRectTabFilter(fileTypeCheckState, totalFileTypeList)
-                                    roundRectTabFilter(itemRankTypeCheckState, totalItemRankList)
+                Icon(
+                    painter = getPainter(DrawableIcon.DrawableSearch),
+                    contentDescription = "搜索",
+                    modifier = Modifier
+                        .clickable {
+                            gallerySearchEnabled = !gallerySearchEnabled
+                            scope.launch {
+                                if (gallerySearchEnabled) {
+                                    scrollOffsetY = 0f
+                                    searchGalleryScrollState.scrollToItem(0, 0)
                                 }
+                                updateScrollOffset()
+                                if (!gallerySearchEnabled) {
+                                    updateGallerySearchWord("")
+                                }
+                            }
+                        }
+                        .ovalGlass(hazeState)
+                        .size(LocalAppUIConstants.current.filterLabelHeight)
+                        .padding(4.dp)
+                        .align(Alignment.CenterVertically)
+                )
+                Spacer(Modifier.width(6.dp))
+                Icon(
+                    painter = getPainter(DrawableIcon.DrawableEditNormal),
+                    contentDescription = "编辑模式",
+                    modifier = Modifier
+                        .size(LocalAppUIConstants.current.filterLabelHeight)
+                        .clickable { enterEditMode = !enterEditMode }
+                        .ovalGlass(hazeState)
+                        .size(LocalAppUIConstants.current.filterLabelHeight)
+                        .padding(4.dp)
+                        .align(Alignment.CenterVertically)
+                )
+            }
+            if (enterEditMode) {
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                ) {
+                    HorizontalShadowWrapper(
+                        leftShadow = galleryItemPadding * 2,
+                        rightShadow = galleryItemPadding * 4,
+                        leftShadowContent = {},
+                        rightShadowContent = {
+                            Icon(
+                                painter = getPainter(DrawableIcon.DrawableDown),
+                                contentDescription = "过滤器",
+                                modifier = Modifier
+                                    .size(LocalAppUIConstants.current.filterLabelHeight)
+                                    .clickable { showLabelFilter = !showLabelFilter }
+                                    .ovalGlass(hazeState)
+                                    .size(LocalAppUIConstants.current.filterLabelHeight)
+                                    .padding(4.dp)
+                            )
+                            Spacer(modifier = Modifier.width(galleryItemPadding * 2))
+                        }
+                    ) {
+                        CompositionLocalProvider(
+                            LocalAppUIConstants provides LocalAppUIConstants.current.copy(
+                                filterLabelPaddings = listOf(0f.dp, 0f.dp, 0f.dp, 0f.dp)
+                            )
+                        ) {
+                            val blurModifier = Modifier.ovalGlass(hazeState)
+                            LazyRow(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .wrapContentHeight()
+                                    .padding(bottom = galleryItemPadding * 2)
+                                    .weight(1f),
+                                contentPadding = PaddingValues(horizontal = galleryItemPadding * 2),
+                                horizontalArrangement = Arrangement.spacedBy(galleryItemPadding * 2)
+                            ) {
+                                roundRectTabFilter(blurModifier, labelFilterCheckedInfo, totalLabelList)
+                                roundRectTabFilter(blurModifier, fileTypeCheckState, totalFileTypeList)
+                                roundRectTabFilter(blurModifier, itemRankTypeCheckState, totalItemRankList)
                             }
                         }
                     }
@@ -558,11 +640,6 @@ fun GalleryStateHolder.Gallery() {
             Box(
                 Modifier
                     .fillMaxWidth()
-                    .hazeEffect(state = hazeState) {
-                        progressive = HazeProgressive.verticalGradient(
-                            startIntensity = 0.3f, endIntensity = 1f
-                        )
-                    }
                     .windowInsetsPadding(WindowInsets.navigationBars)
                     .height(bottomBarHeight)
                     .align(Alignment.BottomCenter)
@@ -570,6 +647,9 @@ fun GalleryStateHolder.Gallery() {
                 Row(
                     Modifier
                         .wrapContentSize()
+                        .padding(start = galleryItemPadding * 2)
+                        .ovalGlass(hazeState)
+                        .padding(12.dp)
                         .align(Alignment.CenterStart)
                 ) {
                     if (selectAll) {
@@ -593,9 +673,12 @@ fun GalleryStateHolder.Gallery() {
                         }
                     }
                 }
+
                 Row(
                     Modifier
                         .wrapContentSize()
+                        .ovalGlass(hazeState)
+                        .padding(12.dp)
                         .align(Alignment.Center)
                 ) {
                     for (func in currentFunctions) {
@@ -655,9 +738,13 @@ fun GalleryStateHolder.Gallery() {
                         PlatformGalleryFunctionView(this@Gallery, func) { }
                     }
                 }
+
                 Row(
                     Modifier
                         .wrapContentSize()
+                        .padding(end = galleryItemPadding * 2)
+                        .ovalGlass(hazeState)
+                        .padding(12.dp)
                         .align(Alignment.CenterEnd)
                 ) {
                     GalleryFunctionView(EXIT) {
