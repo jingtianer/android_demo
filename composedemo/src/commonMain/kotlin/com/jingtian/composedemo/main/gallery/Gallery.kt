@@ -6,6 +6,7 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -64,6 +65,8 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -102,6 +105,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.jingtian.composedemo.base.resources.getPainter
+import com.jingtian.composedemo.demonstration.gradient.GradientWrapper
+import com.jingtian.composedemo.demonstration.gradient.HorizontalShadowWrapper
+import com.jingtian.composedemo.demonstration.gradient.addBackgroundBlur
 import com.jingtian.composedemo.main.dialog.ImportDocumentDialog
 import com.jingtian.composedemo.main.dialog.rememberDocumentDialogState
 import com.jingtian.composedemo.main.widget.SimpleNavHostController
@@ -123,9 +129,10 @@ fun Gallery(
     naviController: SimpleNavHostController
 ) {
     if (album == null) {
-        Box(modifier = Modifier
-            .fillMaxSize()
-            .appBackground()
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .appBackground()
         )
         return
     }
@@ -166,7 +173,10 @@ fun Modifier.predictiveBackVisual(
             val canvasSize = size
             drawContent()
             drawIntoCanvas {
-                inset(horizontal = (canvasSize.width - imageSize.width) / 2, vertical = (canvasSize.height - imageSize.height) / 2) {
+                inset(
+                    horizontal = (canvasSize.width - imageSize.width) / 2,
+                    vertical = (canvasSize.height - imageSize.height) / 2
+                ) {
                     with(lockIcon) {
                         draw(size = imageSize, alpha = predictiveBackVisualState.value)
                     }
@@ -220,406 +230,420 @@ fun GalleryStateHolder.Gallery() {
         }
     }
 
-    Column(
+    val density = LocalDensity.current
+    Box(
         Modifier
             .fillMaxSize()
             .appBackground()
-            .windowInsetsPadding(WindowInsets.statusBars)
     ) {
-        CompositionLocalProvider(
-            LocalContentColor provides LocalAppPalette.current.galleryHeaderColor,
-            LocalTextStyle provides LocalTextStyle.current.copy(color = LocalAppPalette.current.galleryHeaderColor)
-        ) {
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 8.dp)
-                    .wrapContentHeight()
-            ) {
-                if (!gallerySearchEnabled) {
-                    Icon(
-                        painter = getPainter(DrawableIcon.DrawableDrawer),
-                        contentDescription = "打开drawer",
-                        modifier = Modifier
-                            .align(Alignment.CenterVertically)
-                            .size(LocalAppUIConstants.current.filterLabelHeight)
-                            .background(LocalAppPalette.current.labelUnChecked, shape = CircleShape)
-                            .clickable {
-                                scope.launch {
-                                    if (drawerState.isOpen) {
-                                        drawerState.close()
-                                    } else {
-                                        drawerState.open()
-                                    }
-                                }
-                            }
-                            .padding(4.dp)
-                    )
-                    Spacer(Modifier.width(12.dp))
-                    AppThemeText(
-                        albumName.trim(),
-                        Modifier
-                            .align(Alignment.CenterVertically)
-                            .weight(1f),
-                        style = LocalTextStyle.current.copy(
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight(600)
-                        ),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Spacer(Modifier.width(6.dp))
-                }
-                if (gallerySearchEnabled) {
-                    BasicTextField(
-                        value = gallerySearchWord,
-                        onValueChange = {
-                            scope.launch {
-                                updateScrollOffset()
-                                updateGallerySearchWord(it)
-                            }
-                        },
-                        modifier = Modifier
-                            .align(Alignment.CenterVertically)
-                            .fillMaxWidth()
-                            .padding(horizontal = 4.dp)
-                            .background(
-                                color = LocalAppPalette.current.galleryCardBg,
-                                shape = RoundedCornerShape(12.dp)
-                            )
-                            .padding(start = 12.dp, end = 6.dp, top = 8.dp, bottom = 8.dp)
-                            .weight(1f),
-                        singleLine = true,
-                        textStyle = LocalTextStyle.current.copy(
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight(400),
-                            color = LocalTextStyle.current.color
-                        ),
-                        cursorBrush = SolidColor(LocalTextStyle.current.color)
-                    )
-                    Spacer(Modifier.width(6.dp))
-                }
-                Icon(
-                    painter = getPainter(DrawableIcon.DrawableSearch),
-                    contentDescription = "搜索",
-                    modifier = Modifier
-                        .size(LocalAppUIConstants.current.filterLabelHeight)
-                        .background(LocalAppPalette.current.labelUnChecked, shape = CircleShape)
-                        .clickable {
-                            gallerySearchEnabled = !gallerySearchEnabled
-                            scope.launch {
-                                if (gallerySearchEnabled) {
-                                    scrollOffsetY = 0f
-                                    searchGalleryScrollState.scrollToItem(0, 0)
-                                }
-                                updateScrollOffset()
-                                if (!gallerySearchEnabled) {
-                                    updateGallerySearchWord("")
-                                }
-                            }
-                        }
-                        .padding(4.dp)
-                        .align(Alignment.CenterVertically)
-                )
-                Spacer(Modifier.width(6.dp))
-                Icon(
-                    painter = getPainter(DrawableIcon.DrawableEditNormal),
-                    contentDescription = "编辑模式",
-                    modifier = Modifier
-                        .size(LocalAppUIConstants.current.filterLabelHeight)
-                        .background(LocalAppPalette.current.labelUnChecked, shape = CircleShape)
-                        .clickable { enterEditMode = !enterEditMode }
-                        .padding(4.dp)
-                        .align(Alignment.CenterVertically)
-                )
-            }
 
-        }
-        CompositionLocalProvider(
-            LocalContentColor provides LocalAppPalette.current.galleryHeaderColor,
-            LocalTextStyle provides LocalTextStyle.current.copy(color = LocalAppPalette.current.galleryHeaderColor)
-        ) {
-            if (enterEditMode) {
-                Row(
-                    Modifier
-                        .padding(start = 4.dp, end = 8.dp)
-                        .fillMaxWidth()
-                ) {
-                    LazyRow(
-                        Modifier
-                            .fillMaxWidth()
-                            .wrapContentHeight()
-                            .weight(1f)
-                    ) {
-                        roundRectTabFilter(labelFilterCheckedInfo, totalLabelList)
-                        roundRectTabFilter(fileTypeCheckState, totalFileTypeList)
-                        roundRectTabFilter(itemRankTypeCheckState, totalItemRankList)
-                    }
-
-                    Icon(
-                        painter = getPainter(DrawableIcon.DrawableDown),
-                        contentDescription = "过滤器",
-                        modifier = Modifier
-                            .size(LocalAppUIConstants.current.filterLabelHeight)
-                            .background(LocalAppPalette.current.labelUnChecked, shape = CircleShape)
-                            .clickable { showLabelFilter = !showLabelFilter }
-                            .padding(4.dp)
-                            .align(Alignment.CenterVertically)
-                    )
-                }
-            }
-        }
         fun getScrollOffset(): Float {
             return galleryScrollState.layoutInfo.visibleItemsInfo.map { it.index - it.offset.y.toFloat() / it.size.height }
                 .average().toFloat()
         }
 
-        Box(
+        val naviBarInsets = WindowInsets.navigationBars.asPaddingValues()
+        val bottomBarHeight = 52.dp
+        val shadesHeight = 0.dp
+        LazyVerticalStaggeredGrid(
+            columns = StaggeredGridCells.Adaptive((size + galleryItemPadding * 2)),
             Modifier
                 .fillMaxSize()
-                .weight(1f)
-        ) {
-            val naviBarInsets = WindowInsets.navigationBars.asPaddingValues()
-            val bottomBarHeight = 52.dp
-            val shadesHeight = 0.dp
-            LazyVerticalStaggeredGrid(
-                columns = StaggeredGridCells.Adaptive((size + galleryItemPadding * 2)),
-                Modifier
-                    .fillMaxSize()
-                    .padding(start = galleryItemPadding, end = galleryItemPadding)
-                    .nestedScroll(object : NestedScrollConnection {
-                        override fun onPostScroll(
-                            consumed: Offset,
-                            available: Offset,
-                            source: NestedScrollSource
-                        ): Offset {
+                .addBackgroundBlur(0.3f, headerHeight)
+                .padding(start = galleryItemPadding, end = galleryItemPadding)
+                .nestedScroll(object : NestedScrollConnection {
+                    override fun onPostScroll(
+                        consumed: Offset,
+                        available: Offset,
+                        source: NestedScrollSource
+                    ): Offset {
 //                            val info =
 //                                galleryScrollState.layoutInfo.visibleItemsInfo
 //                                    .map { "{${it.index}, ${it.offset.y}, ${it.size.height}}" }
 //                                    .fastJoinToString { it }
-                            scrollOffsetY =
-                                getScrollOffset() / galleryScrollState.layoutInfo.totalItemsCount * galleryScrollState.layoutInfo.viewportSize.height.toFloat()
-                            updateScrollOffset()
+                        scrollOffsetY =
+                            getScrollOffset() / galleryScrollState.layoutInfo.totalItemsCount * galleryScrollState.layoutInfo.viewportSize.height.toFloat()
+                        updateScrollOffset()
 //                            Log.d("jingtian", "onPostScroll: $info")
-                            return super.onPostScroll(consumed, available, source)
+                        return super.onPostScroll(consumed, available, source)
+                    }
+                }),
+            contentPadding = PaddingValues(
+                start = naviBarInsets.calculateStartPadding(LocalLayoutDirection.current),
+                top = headerHeight.dp + naviBarInsets.calculateTopPadding(),
+                end = naviBarInsets.calculateEndPadding(LocalLayoutDirection.current),
+                bottom = naviBarInsets.calculateBottomPadding() + if (enterEditMode) bottomBarHeight + shadesHeight else 0.dp
+            ),
+            state = galleryScrollState,
+        ) {
+            items(
+                filteredItemList.size,
+                key = { index ->
+                    filteredItemList[index].let {
+                        Triple(
+                            it.albumItem.itemId ?: DataBase.INVALID_ID,
+                            it.albumItem.fileId,
+                            it.fileInfo.storageId
+                        ) to it.hashCode()
+                    }
+                },
+                contentType = { index -> filteredItemList[index].fileInfo.fileType.value }) { index: Int ->
+                AlbumItemView(
+                    albumViewMap,
+                    filteredItemList[index],
+                    size,
+                    galleryItemPadding,
+                    currentSelectedItem,
+                    enterEditModeState,
+                    itemSelectStateChangeState,
+                    showEditDialogStateOnLongClickState
+                )
+            }
+        }
+        val scrollBarColor = LocalAppPalette.current.labelTextColor.copy(alpha = 0.85f)
+        val dp16 = 16.dp.dpValue()
+        val dp6 = 6.dp.dpValue()
+        val scrollAreaWidthDp = scrollAreaWidth.dpValue()
+        Box(
+            Modifier
+                .width(scrollAreaWidth)
+                .fillMaxHeight()
+                .padding(top = headerHeight.dp, bottom = naviBarInsets.calculateBottomPadding())
+                .align(Alignment.TopEnd)
+                .pointerInput(this@Gallery) {
+                    detectDragGestures(
+                        onDragStart = { offset ->
+                            scrollOffsetY = offset.y
+                            scrollBarSize[0] = dp16
+                            scrollBarOffset[0] = scrollAreaWidthDp - scrollBarSize[0]
+                            updateScrollOffset()
+                            scope.launch {
+                                updateScrollItem()
+                            }
+                        },
+                        onDrag = { pointerInputChange, offset ->
+                            scrollOffsetY += offset.y
+                            scrollBarSize[0] = dp16
+                            scrollBarOffset[0] = scrollAreaWidthDp - scrollBarSize[0]
+                            updateScrollOffset()
+                            scope.launch {
+                                updateScrollItem()
+                            }
+                        },
+                        onDragEnd = {
+                            scrollBarSize[0] = dp6
+                            scrollBarOffset[0] = scrollAreaWidthDp - scrollBarSize[0]
+                        },
+                        onDragCancel = {
+                            scrollBarSize[0] = dp6
+                            scrollBarOffset[0] = scrollAreaWidthDp - scrollBarSize[0]
                         }
-                    }),
-                contentPadding = PaddingValues(
-                    start = naviBarInsets.calculateStartPadding(LocalLayoutDirection.current),
-                    top = naviBarInsets.calculateTopPadding(),
-                    end = naviBarInsets.calculateEndPadding(LocalLayoutDirection.current),
-                    bottom = naviBarInsets.calculateBottomPadding() + if (enterEditMode) bottomBarHeight + shadesHeight else 0.dp
-                ),
-                state = galleryScrollState,
-            ) {
-                items(
-                    filteredItemList.size,
-                    key = { index ->
-                        filteredItemList[index].let {
-                            Triple(
-                                it.albumItem.itemId ?: DataBase.INVALID_ID,
-                                it.albumItem.fileId,
-                                it.fileInfo.storageId
-                            ) to it.hashCode()
-                        }
-                    },
-                    contentType = { index -> filteredItemList[index].fileInfo.fileType.value }) { index: Int ->
-                    AlbumItemView(
-                        albumViewMap,
-                        filteredItemList[index],
-                        size,
-                        galleryItemPadding,
-                        currentSelectedItem,
-                        enterEditModeState,
-                        itemSelectStateChangeState,
-                        showEditDialogStateOnLongClickState
                     )
                 }
-            }
-            val scrollBarColor = LocalAppPalette.current.labelTextColor.copy(alpha = 0.85f)
-            val dp16 = 16.dp.dpValue()
-            val dp6 = 6.dp.dpValue()
-            val scrollAreaWidthDp = scrollAreaWidth.dpValue()
-            Box(
-                Modifier
-                    .width(scrollAreaWidth)
-                    .fillMaxHeight()
-                    .align(Alignment.TopEnd)
-                    .pointerInput(this@Gallery) {
-                        detectDragGestures(
-                            onDragStart = { offset ->
-                                scrollOffsetY = offset.y
+                .pointerInput(this@Gallery) {
+                    awaitEachGesture {
+                        val downEvent = awaitFirstDown()
+                        scrollOffsetY = downEvent.position.y
+                        scope.launch {
+                            withContext(Dispatchers.Main) {
                                 scrollBarSize[0] = dp16
                                 scrollBarOffset[0] = scrollAreaWidthDp - scrollBarSize[0]
                                 updateScrollOffset()
-                                scope.launch {
-                                    updateScrollItem()
-                                }
-                            },
-                            onDrag = { pointerInputChange, offset ->
-                                scrollOffsetY += offset.y
-                                scrollBarSize[0] = dp16
+                                updateScrollItem()
+                            }
+                        }
+                    }
+                }
+                .pointerInput(this@Gallery) {
+                    awaitEachGesture {
+                        val upOrCancel = waitForUpOrCancellation()
+                        scrollOffsetY = upOrCancel?.position?.y ?: scrollOffsetY
+                        scope.launch {
+                            withContext(Dispatchers.Main) {
+                                scrollBarSize[0] = dp6
                                 scrollBarOffset[0] = scrollAreaWidthDp - scrollBarSize[0]
                                 updateScrollOffset()
-                                scope.launch {
-                                    updateScrollItem()
-                                }
-                            },
-                            onDragEnd = {
-                                scrollBarSize[0] = dp6
-                                scrollBarOffset[0] = scrollAreaWidthDp - scrollBarSize[0]
-                            },
-                            onDragCancel = {
-                                scrollBarSize[0] = dp6
-                                scrollBarOffset[0] = scrollAreaWidthDp - scrollBarSize[0]
-                            }
-                        )
-                    }
-                    .pointerInput(this@Gallery) {
-                        awaitEachGesture {
-                            val downEvent = awaitFirstDown()
-                            scrollOffsetY = downEvent.position.y
-                            scope.launch {
-                                withContext(Dispatchers.Main) {
-                                    scrollBarSize[0] = dp16
-                                    scrollBarOffset[0] = scrollAreaWidthDp - scrollBarSize[0]
-                                    updateScrollOffset()
-                                    updateScrollItem()
-                                }
+                                updateScrollItem()
                             }
                         }
                     }
-                    .pointerInput(this@Gallery) {
-                        awaitEachGesture {
-                            val upOrCancel = waitForUpOrCancellation()
-                            scrollOffsetY = upOrCancel?.position?.y ?: scrollOffsetY
-                            scope.launch {
-                                withContext(Dispatchers.Main) {
-                                    scrollBarSize[0] = dp6
-                                    scrollBarOffset[0] = scrollAreaWidthDp - scrollBarSize[0]
-                                    updateScrollOffset()
-                                    updateScrollItem()
-                                }
-                            }
-                        }
-                    }
-                    .drawWithContent {
-                        drawContent()
-                        drawRoundRect(
-                            scrollBarColor,
-                            Offset(scrollBarOffset[0], scrollBarOffset[1]),
-                            Size(scrollBarSize[0], scrollBarSize[1]),
-                            cornerRadius = CornerRadius(scrollBarSize[0] / 2)
-                        )
-                    }
-            )
-            if (enterEditMode) {
-                Box(
+                }
+                .drawWithContent {
+                    drawContent()
+                    drawRoundRect(
+                        scrollBarColor,
+                        Offset(scrollBarOffset[0], scrollBarOffset[1]),
+                        Size(scrollBarSize[0], scrollBarSize[1]),
+                        cornerRadius = CornerRadius(scrollBarSize[0] / 2)
+                    )
+                }
+        )
+        Column(modifier = Modifier.fillMaxWidth()
+            .onSizeChanged { with(density) { headerHeight = it.height.toDp().value } }
+        ) {
+            CompositionLocalProvider(
+                LocalContentColor provides LocalAppPalette.current.galleryHeaderColor,
+                LocalTextStyle provides LocalTextStyle.current.copy(color = LocalAppPalette.current.galleryHeaderColor)
+            ) {
+                Row(
                     Modifier
                         .fillMaxWidth()
-                        .background(
-                            LocalAppColorScheme.current.background.copy(alpha = 0.90f),
-                        )
-                        .windowInsetsPadding(WindowInsets.navigationBars)
-                        .height(bottomBarHeight)
-                        .align(Alignment.BottomCenter)
+                        .windowInsetsPadding(WindowInsets.statusBars)
+                        .padding(start = galleryItemPadding * 2, end = galleryItemPadding * 2, bottom = galleryItemPadding * 2)
+                        .wrapContentHeight()
                 ) {
-                    Row(
-                        Modifier
-                            .wrapContentSize()
-                            .align(Alignment.CenterStart)
-                    ) {
-                        if (selectAll) {
-                            GalleryFunctionView(SELECT_ALL) {
-                                scope.launch(Dispatchers.Default) {
-                                    val map = HashMap<Long, AlbumItemRelation>().apply {
-                                        putAll(filteredItemList.map {
-                                            (it.albumItem.itemId ?: DataBase.INVALID_ID) to it
-                                        })
-                                    }
-                                    withContext(Dispatchers.IO) {
-                                        currentSelectedItem.putAll(map)
-                                    }
-                                }
-                                itemSelectStateChange++
-                            }
-                        } else if (selectNone) {
-                            GalleryFunctionView(SELECT_NONE) {
-                                currentSelectedItem.clear()
-                                itemSelectStateChange++
-                            }
-                        }
-                    }
-                    Row(
-                        Modifier
-                            .wrapContentSize()
-                            .align(Alignment.Center)
-                    ) {
-                        for (func in currentFunctions) {
-                            when (func) {
-                                ADD -> {
-                                    GalleryFunctionView(func) {
-                                        addImageDialogState = true
-                                    }
-                                }
-
-                                IMPORT -> {
-                                    GalleryFunctionView(func) {
-                                        if (BuildKonfig.isRemote) {
-                                            importDocumentTreeDialog = true
+                    if (!gallerySearchEnabled) {
+                        Icon(
+                            painter = getPainter(DrawableIcon.DrawableDrawer),
+                            contentDescription = "打开drawer",
+                            modifier = Modifier
+                                .align(Alignment.CenterVertically)
+                                .size(LocalAppUIConstants.current.filterLabelHeight)
+                                .background(LocalAppPalette.current.labelUnChecked, shape = CircleShape)
+                                .clickable {
+                                    scope.launch {
+                                        if (drawerState.isOpen) {
+                                            drawerState.close()
                                         } else {
-                                            importDirLauncher.launch(null)
+                                            drawerState.open()
                                         }
                                     }
                                 }
-
-                                RENAME -> {
-                                    GalleryFunctionView(func) {
-                                        editAlbumDialogState = true
-                                    }
-                                }
-
-                                EDIT -> {
-                                    GalleryFunctionView(func) {
-                                        showEditDialog = true
-                                    }
-                                }
-
-                                DELETE -> {
-                                    GalleryFunctionView(func) {
-                                        showConfirmDeleteDialog = true
-                                    }
-                                }
-
-                                MOVE -> {
-                                    GalleryFunctionView(func) {
-                                        showMoveToDialog = true
-                                    }
-                                }
-
-                                GalleryFunctions.IMPORT_CIFS -> {
-                                    ImportRemoteFunctionView(this@Gallery, func) {}
-                                }
-
-                                GalleryFunctions.DELETE_CIFS_FILE -> {
-                                    DeleteRemoteFileFunctionView(this@Gallery, func) {}
-                                }
-
-                                else -> {}
-                            }
-                        }
-                        for (func in platformFunctions) {
-                            PlatformGalleryFunctionView(this@Gallery, func) { }
-                        }
+                        )
+                        Spacer(Modifier.width(12.dp))
+                        AppThemeText(
+                            albumName.trim(),
+                            Modifier
+                                .align(Alignment.CenterVertically)
+                                .weight(1f),
+                            style = LocalTextStyle.current.copy(
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight(600)
+                            ),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Spacer(Modifier.width(6.dp))
                     }
+                    if (gallerySearchEnabled) {
+                        BasicTextField(
+                            value = gallerySearchWord,
+                            onValueChange = {
+                                scope.launch {
+                                    updateScrollOffset()
+                                    updateGallerySearchWord(it)
+                                }
+                            },
+                            modifier = Modifier
+                                .align(Alignment.CenterVertically)
+                                .fillMaxWidth()
+                                .padding(horizontal = 4.dp)
+                                .background(
+                                    color = LocalAppPalette.current.galleryCardBg,
+                                    shape = RoundedCornerShape(12.dp)
+                                )
+                                .padding(start = 12.dp, end = 6.dp, top = 8.dp, bottom = 8.dp)
+                                .weight(1f),
+                            singleLine = true,
+                            textStyle = LocalTextStyle.current.copy(
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight(400),
+                                color = LocalTextStyle.current.color
+                            ),
+                            cursorBrush = SolidColor(LocalTextStyle.current.color)
+                        )
+                        Spacer(Modifier.width(6.dp))
+                    }
+                    Icon(
+                        painter = getPainter(DrawableIcon.DrawableSearch),
+                        contentDescription = "搜索",
+                        modifier = Modifier
+                            .size(LocalAppUIConstants.current.filterLabelHeight)
+                            .background(LocalAppPalette.current.labelUnChecked, shape = CircleShape)
+                            .clickable {
+                                gallerySearchEnabled = !gallerySearchEnabled
+                                scope.launch {
+                                    if (gallerySearchEnabled) {
+                                        scrollOffsetY = 0f
+                                        searchGalleryScrollState.scrollToItem(0, 0)
+                                    }
+                                    updateScrollOffset()
+                                    if (!gallerySearchEnabled) {
+                                        updateGallerySearchWord("")
+                                    }
+                                }
+                            }
+                            .padding(4.dp)
+                            .align(Alignment.CenterVertically)
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Icon(
+                        painter = getPainter(DrawableIcon.DrawableEditNormal),
+                        contentDescription = "编辑模式",
+                        modifier = Modifier
+                            .size(LocalAppUIConstants.current.filterLabelHeight)
+                            .background(LocalAppPalette.current.labelUnChecked, shape = CircleShape)
+                            .clickable { enterEditMode = !enterEditMode }
+                            .padding(4.dp)
+                            .align(Alignment.CenterVertically)
+                    )
+                }
+
+            }
+            CompositionLocalProvider(
+                LocalContentColor provides LocalAppPalette.current.galleryHeaderColor,
+                LocalTextStyle provides LocalTextStyle.current.copy(color = LocalAppPalette.current.galleryHeaderColor)
+            ) {
+                if (enterEditMode) {
                     Row(
                         Modifier
-                            .wrapContentSize()
-                            .align(Alignment.CenterEnd)
+                            .fillMaxWidth()
                     ) {
-                        GalleryFunctionView(EXIT) {
-                            enterEditMode = false
+                        HorizontalShadowWrapper(
+                            leftShadow = galleryItemPadding * 2,
+                            rightShadow = galleryItemPadding * 4,
+                            leftShadowContent = {},
+                            rightShadowContent = {
+                                Icon(
+                                    painter = getPainter(DrawableIcon.DrawableDown),
+                                    contentDescription = "过滤器",
+                                    modifier = Modifier
+                                        .size(LocalAppUIConstants.current.filterLabelHeight)
+                                        .background(LocalAppPalette.current.labelUnChecked, shape = CircleShape)
+                                        .clickable { showLabelFilter = !showLabelFilter }
+                                        .padding(start = 4.dp)
+                                )
+                                Spacer(modifier = Modifier.width(galleryItemPadding * 2))
+                            }
+                        ) {
+                            CompositionLocalProvider(LocalAppUIConstants provides LocalAppUIConstants.current.copy(
+                                filterLabelPaddings = listOf(0f.dp, 0f.dp, 0f.dp, 0f.dp)
+                            )) {
+                                LazyRow(
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .wrapContentHeight()
+                                        .padding(bottom = galleryItemPadding * 2)
+                                        .weight(1f),
+                                    contentPadding = PaddingValues(horizontal = galleryItemPadding * 2),
+                                    horizontalArrangement = Arrangement.spacedBy(galleryItemPadding * 2)
+                                ) {
+                                    roundRectTabFilter(labelFilterCheckedInfo, totalLabelList)
+                                    roundRectTabFilter(fileTypeCheckState, totalFileTypeList)
+                                    roundRectTabFilter(itemRankTypeCheckState, totalItemRankList)
+                                }
+                            }
                         }
+                    }
+                }
+            }
+        }
+        if (enterEditMode) {
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .background(
+                        LocalAppColorScheme.current.background.copy(alpha = 0.90f),
+                    )
+                    .windowInsetsPadding(WindowInsets.navigationBars)
+                    .height(bottomBarHeight)
+                    .align(Alignment.BottomCenter)
+            ) {
+                Row(
+                    Modifier
+                        .wrapContentSize()
+                        .align(Alignment.CenterStart)
+                ) {
+                    if (selectAll) {
+                        GalleryFunctionView(SELECT_ALL) {
+                            scope.launch(Dispatchers.Default) {
+                                val map = HashMap<Long, AlbumItemRelation>().apply {
+                                    putAll(filteredItemList.map {
+                                        (it.albumItem.itemId ?: DataBase.INVALID_ID) to it
+                                    })
+                                }
+                                withContext(Dispatchers.IO) {
+                                    currentSelectedItem.putAll(map)
+                                }
+                            }
+                            itemSelectStateChange++
+                        }
+                    } else if (selectNone) {
+                        GalleryFunctionView(SELECT_NONE) {
+                            currentSelectedItem.clear()
+                            itemSelectStateChange++
+                        }
+                    }
+                }
+                Row(
+                    Modifier
+                        .wrapContentSize()
+                        .align(Alignment.Center)
+                ) {
+                    for (func in currentFunctions) {
+                        when (func) {
+                            ADD -> {
+                                GalleryFunctionView(func) {
+                                    addImageDialogState = true
+                                }
+                            }
+
+                            IMPORT -> {
+                                GalleryFunctionView(func) {
+                                    if (BuildKonfig.isRemote) {
+                                        importDocumentTreeDialog = true
+                                    } else {
+                                        importDirLauncher.launch(null)
+                                    }
+                                }
+                            }
+
+                            RENAME -> {
+                                GalleryFunctionView(func) {
+                                    editAlbumDialogState = true
+                                }
+                            }
+
+                            EDIT -> {
+                                GalleryFunctionView(func) {
+                                    showEditDialog = true
+                                }
+                            }
+
+                            DELETE -> {
+                                GalleryFunctionView(func) {
+                                    showConfirmDeleteDialog = true
+                                }
+                            }
+
+                            MOVE -> {
+                                GalleryFunctionView(func) {
+                                    showMoveToDialog = true
+                                }
+                            }
+
+                            GalleryFunctions.IMPORT_CIFS -> {
+                                ImportRemoteFunctionView(this@Gallery, func) {}
+                            }
+
+                            GalleryFunctions.DELETE_CIFS_FILE -> {
+                                DeleteRemoteFileFunctionView(this@Gallery, func) {}
+                            }
+
+                            else -> {}
+                        }
+                    }
+                    for (func in platformFunctions) {
+                        PlatformGalleryFunctionView(this@Gallery, func) { }
+                    }
+                }
+                Row(
+                    Modifier
+                        .wrapContentSize()
+                        .align(Alignment.CenterEnd)
+                ) {
+                    GalleryFunctionView(EXIT) {
+                        enterEditMode = false
                     }
                 }
             }

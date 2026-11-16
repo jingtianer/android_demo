@@ -10,6 +10,7 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameMillis
 import com.jingtian.composedemo.multiplatform.WeakRef
@@ -63,6 +64,7 @@ class GalleryStateHolder(val album: IndexedValue<Album>, val currentSelectedAlbu
     var itemSelectStateChange by itemSelectStateChangeState
     val currentFunctions = mutableStateListOf<GalleryFunctions>()
     val platformFunctions = mutableStateListOf<GalleryFunctions>()
+    var headerHeight by mutableFloatStateOf(0f)
     val enterEditModeState = mutableStateOf(false)
     var enterEditMode by enterEditModeState
     var editAlbumDialogState by mutableStateOf(false)

@@ -1,11 +1,16 @@
 package com.jingtian.composedemo.demonstration.gradient
 
+import androidx.annotation.FloatRange
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -14,14 +19,25 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.BlurredEdgeTreatment
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.unit.dp
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
@@ -66,8 +82,27 @@ private fun Modifier.verticalAlphaGradient(
     }
 }
 
+@Composable
+fun Modifier.addBackgroundBlur(
+    @FloatRange(from = 0.0, 1.0)
+    alpha: Float,
+    height: Float
+): Modifier {
+    val heightPx = with(LocalDensity.current) {
+        height.dp.roundToPx().toFloat()
+    }
+    return this.graphicsLayer {
+        compositingStrategy = CompositingStrategy.Offscreen
+    }.drawWithContent {
+        drawContent()
+        drawRect(brush = Brush.verticalGradient(colors = listOf(
+            Color.Black.copy(alpha = 0f),
+            Color.Black.copy(alpha = alpha)
+        )), size = size.copy(height = heightPx), blendMode = BlendMode.DstIn)
+    }
+}
 
-private fun Modifier.addHorizontalEdgeMask(
+fun Modifier.addHorizontalEdgeMask(
     leftShadowWidth: Float,
     rightShadowWidth: Float,
 ): Modifier {
@@ -117,8 +152,8 @@ fun GradientWrapper(
     offsetY: Dp = 0.dp,
     leftShadow: Dp = 0.dp,
     rightShadow: Dp = 0.dp,
-    leftShadowContent: @Composable () -> Unit = {},
-    rightShadowContent: @Composable () -> Unit = {},
+    leftShadowContent: @Composable BoxScope.() -> Unit = {},
+    rightShadowContent: @Composable BoxScope.() -> Unit = {},
     content: @Composable () -> Unit = {},
 ) {
     val density = LocalDensity.current
@@ -177,5 +212,36 @@ fun GradientWrapper(
         ) {
             rightShadowContent()
         }
+    }
+}
+
+@Composable
+fun HorizontalShadowWrapper(
+    leftShadow: Dp = 0.dp,
+    rightShadow: Dp = 0.dp,
+    leftShadowContent: @Composable RowScope.() -> Unit = {},
+    rightShadowContent: @Composable RowScope.() -> Unit = {},
+    content: @Composable () -> Unit = {},
+) {
+    val density = LocalDensity.current
+    val leftShadowWidth = with(density) {
+        leftShadow.roundToPx().toFloat()
+    }
+    val rightShadowWidth = with(density) {
+        rightShadow.roundToPx().toFloat()
+    }
+    Row(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        leftShadowContent()
+        Box(
+            modifier = Modifier.addHorizontalEdgeMask(
+                leftShadowWidth = leftShadowWidth,
+                rightShadowWidth = rightShadowWidth
+            ).weight(1f)
+        ) {
+            content()
+        }
+        rightShadowContent()
     }
 }
