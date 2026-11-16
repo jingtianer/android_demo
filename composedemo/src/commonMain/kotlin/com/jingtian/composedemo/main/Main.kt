@@ -174,7 +174,6 @@ fun PasswordGuardedMain(onPasswordChecked: () -> Unit = {}) {
     }
     val authViewModel: AuthViewModel = authViewModel()
     val isVisible by authViewModel.isVisible
-    val isAuthed by authViewModel.isAuthed
     val isLocked by authViewModel.isLocked
     val doAuth = remember {
         {
@@ -207,7 +206,7 @@ fun PasswordGuardedMain(onPasswordChecked: () -> Unit = {}) {
             }
         }
     }
-    Main(visible = isVisible && isAuthed && !isLocked) {
+    Main(visible = isVisible && !isLocked) {
         doAuth()
     }
     val lifecycleOwner = LocalLifecycleOwner.current

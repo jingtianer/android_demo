@@ -30,7 +30,6 @@ abstract class AuthViewModel : SingletonViewModel(), DefaultLifecycleObserver {
     private val lockedState = mutableStateOf(true)
     val isLocked: State<Boolean> = lockedState
     val isVisible = mutableStateOf(false)
-    val isAuthed = mutableStateOf(false)
     private var onStartGeneration = 0
     private var onResumeGeneration = 0
     private val lastOnStopAuthTimeStamp = mutableLongStateOf(-1)
@@ -70,7 +69,6 @@ abstract class AuthViewModel : SingletonViewModel(), DefaultLifecycleObserver {
             isAppEnterBackground = true
             if (!JumpOnPurposeMarkHolder.isJumpOnPurpose.value) {
                 cancelAllBioPrompt()
-                isAuthed.value = false
             }
         }
     }
@@ -120,11 +118,12 @@ abstract class AuthViewModel : SingletonViewModel(), DefaultLifecycleObserver {
         val isJumpOnPurpose = JumpOnPurposeMarkHolder.isJumpOnPurpose.getAndSet(false)
         val isAppLockedSnapshot = isLocked.value
         val timeCost = !(lastOnStopAuthTimeStamp.value != -1L && Clock.System.now().toEpochMilliseconds() - lastOnStopAuthTimeStamp.value <= MIN_ON_STOP_DO_AUTH_TIME_GAP)
-        val shouldDoAuth = isAppLockedSnapshot || (!isAuthed.value && !isJumpOnPurpose && timeCost)
+        val shouldDoAuth = (isAppLockedSnapshot || timeCost) && !isJumpOnPurpose
         if (!shouldDoAuth) {
-            isAuthed.value = true
-            isVisible.value = true
-            lockedState.value = false
+            if (!isAppLockedSnapshot && !timeCost) {
+                isVisible.value = true
+                lockedState.value = false
+            }
             onAuthResult(AuthSkip)
             return
         }
@@ -141,7 +140,6 @@ abstract class AuthViewModel : SingletonViewModel(), DefaultLifecycleObserver {
                 is AuthSuccess -> {
                     lastOnStopAuthTimeStamp.value = Clock.System.now().toEpochMilliseconds()
                     isVisible.value = true
-                    isAuthed.value = true
                     lockedState.value = false
                 }
             }
