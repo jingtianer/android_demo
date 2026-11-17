@@ -9,6 +9,9 @@ import com.jingtian.composedemo.viewmodels.appThemeViewModel
 import demoapp.composedemo.generated.resources.Res
 
 @Composable
+actual fun getScaleIcon(): Painter = painterResource(R.drawable.scale)
+
+@Composable
 actual fun getPaletteIcon(): Painter = painterResource(R.drawable.palette)
 
 @Composable

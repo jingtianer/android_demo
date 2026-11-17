@@ -1,13 +1,17 @@
 package com.jingtian.composedemo.utils
 
 import androidx.annotation.FloatRange
+import androidx.compose.foundation.gestures.TransformableState
 import androidx.compose.runtime.State
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.Density
 import com.jingtian.composedemo.dao.model.User
 import com.jingtian.composedemo.multiplatform.getJsonStorage
 import com.jingtian.composedemo.multiplatform.getLongStorage
 import com.jingtian.composedemo.multiplatform.getRawStorage
+import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 import kotlin.math.roundToLong
 
@@ -186,5 +190,31 @@ object UserStorage {
             mainColor = DEFAULT_MAIN_COLOR_LITE
             backgroundConfig = BackgroundConfig.defaultLiteBackgroundColor
         }
+        _appScaleFactor = 1f
+    }
+
+    private val scaleFactorConfig = SharedPreferenceUtils.StateFullStorageJson(
+        getJsonStorage("user_config"),
+        "appScale",
+        defaultValue = 1f,
+        serializer = Float.serializer(),
+    )
+
+    private var _appScaleFactor by scaleFactorConfig
+
+    val appScaleFactor: State<Float> = scaleFactorConfig.state
+
+    const val MIN_APP_SCALE_FACTOR = 0.5f
+    const val MAX_APP_SCALE_FACTOR = 4f
+
+    fun updateScale(scale: Float) {
+        _appScaleFactor = scale.coerceIn(MIN_APP_SCALE_FACTOR, MAX_APP_SCALE_FACTOR)
+    }
+
+    fun scaledDensity(currentDensity: Density): Density {
+        return Density(
+            currentDensity.density * appScaleFactor.value,
+            currentDensity.fontScale
+        )
     }
 }

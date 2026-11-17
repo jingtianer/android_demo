@@ -13,8 +13,10 @@ import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.jingtian.composedemo.utils.BackgroundConfig
@@ -144,6 +146,7 @@ val LocalAppUIConstants = compositionLocalOf(structuralEqualityPolicy()) { AppUI
 val LocalSecondaryTextStyle = compositionLocalOf(structuralEqualityPolicy()) { TextStyle.Default }
 val LocalMiddleButtonConfig = compositionLocalOf(structuralEqualityPolicy()) { liteMiddleButtonConfig }
 val LocalAppColorScheme = compositionLocalOf(structuralEqualityPolicy()) { LightColorScheme }
+val LocalDeviceRealDensity = compositionLocalOf(structuralEqualityPolicy()) { Density(1f) }
 
 val goldenRatio = 2f / (sqrt(5f) + 1)
 
@@ -241,6 +244,8 @@ fun DemoAppTheme(
                 LocalContentColor provides contentColor,
                 LocalSecondaryTextStyle provides customSecondaryTextStyle,
                 LocalMiddleButtonConfig provides middleButtonConfig,
+                LocalDensity provides UserStorage.scaledDensity(LocalDensity.current),
+                LocalDeviceRealDensity provides LocalDensity.current,
                 content = content
             )
         }

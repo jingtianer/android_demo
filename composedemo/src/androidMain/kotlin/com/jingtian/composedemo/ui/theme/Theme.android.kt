@@ -6,6 +6,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -13,12 +14,13 @@ import androidx.compose.ui.unit.dp
 @Composable
 actual fun rememberDeviceCornerRadii(): Shape {
     val view = LocalView.current
-    return remember {
+    val density = LocalDensity.current.density
+
+    return remember(density) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
             return@remember RoundedCornerShape(0.dp)
         }
         val insets = view.rootWindowInsets ?: return@remember RoundedCornerShape(0.dp)
-        val density = view.resources.displayMetrics.density
 
         fun getRadius(pos: Int): Dp {
             val rc: RoundedCorner? = insets.getRoundedCorner(pos)

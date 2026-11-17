@@ -42,6 +42,7 @@ enum class DrawableIcon {
     DrawableArrowDown,
     DrawablePalette,
     DrawableBackgroundPaint,
+    DrawableScale,
 }
 
 @Composable
@@ -85,8 +86,12 @@ fun getPainter(icon: DrawableIcon): Painter {
         DrawableIcon.DrawableArrowDown -> getArrowDownIcon()
         DrawableIcon.DrawablePalette -> getPaletteIcon()
         DrawableIcon.DrawableBackgroundPaint -> getBackgroundPaintIcon()
+        DrawableIcon.DrawableScale -> getScaleIcon()
     }
 }
+
+@Composable
+expect fun getScaleIcon(): Painter
 
 @Composable
 expect fun getPaletteIcon(): Painter
