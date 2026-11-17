@@ -1,21 +1,15 @@
 package com.jingtian.composedemo.main.settings
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.EnterTransition
-import androidx.compose.animation.ExitTransition
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.AnimationState
 import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.animateTo
-import androidx.compose.animation.expandIn
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkOut
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.DragInteraction
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -42,23 +36,17 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
-import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SliderState
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberSliderState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.State
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -71,66 +59,136 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
 import com.jingtian.composedemo.base.AppThemeConfirmDialog
-import com.jingtian.composedemo.base.AppThemeText
 import com.jingtian.composedemo.base.resources.DrawableIcon
 import com.jingtian.composedemo.base.resources.getPainter
 import com.jingtian.composedemo.main.labels.CheckableLabelView
+import com.jingtian.composedemo.main.settings.SettingsPageState.globalVisual
+import com.jingtian.composedemo.main.widget.SimpleNavHostController
 import com.jingtian.composedemo.ui.theme.LocalAppColorScheme
 import com.jingtian.composedemo.ui.theme.LocalAppPalette
 import com.jingtian.composedemo.ui.theme.appBackground
 import com.jingtian.composedemo.ui.theme.appBackgroundSlide
-import com.jingtian.composedemo.ui.theme.appBackgroundV2
 import com.jingtian.composedemo.utils.BackgroundColor
 import com.jingtian.composedemo.utils.BackgroundConfig
 import com.jingtian.composedemo.utils.UserStorage
 import com.jingtian.composedemo.utils.color
 import com.jingtian.composedemo.utils.colorOf
-import com.jingtian.composedemo.viewmodels.GlobalSnapBar
-import com.jingtian.composedemo.viewmodels.albumViewModel
 import kotlin.math.roundToInt
 
-@Composable
-fun SettingsPage() {
-    LazyColumn(
-        modifier = Modifier.fillMaxSize().appBackground()
-            .windowInsetsPadding(WindowInsets.statusBars).padding(horizontal = 16.dp),
-        contentPadding = PaddingValues(vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(
-            space = 18.dp,
-            alignment = Alignment.Top
-        )
-    ) {
-        item {
-            SettingsCollapsableWrapper(DrawableIcon.DrawableBackgroundPaint, "背景调色盘") {
-                AppBackgroundSlideBar()
+private class SettingsPageSliderToken
+
+private object SettingsPageState {
+    val globalAlphaAnim = AnimationState(initialValue = 1f)
+    val globalAlpha: Float by globalAlphaAnim
+    private var currentPressedSlider by mutableStateOf<SettingsPageSliderToken?>(null)
+    fun setCurrentPressedToken(token: SettingsPageSliderToken) {
+        currentPressedSlider = token
+    }
+    fun resetCurrentPressedSlider(token: SettingsPageSliderToken) {
+        if (currentPressedSlider == token) {
+            currentPressedSlider = null
+        }
+    }
+
+    @Composable
+    fun Modifier.globalVisual(token: SettingsPageSliderToken? = null): Modifier {
+        return if (currentPressedSlider == null || token == currentPressedSlider) {
+            this
+        } else {
+            Modifier.graphicsLayer { alpha = globalAlpha }
+        }
+    }
+
+    @Composable
+    fun Install(simpleNavHostController: SimpleNavHostController) {
+        LaunchedEffect(currentPressedSlider) {
+            if (currentPressedSlider == null) {
+                simpleNavHostController.showSecondLastEntry = false
+                globalAlphaAnim.animateTo(1f)
+            } else {
+                simpleNavHostController.showSecondLastEntry = true
+                globalAlphaAnim.animateTo(0f)
             }
         }
-        item {
-            SettingsCollapsableWrapper(DrawableIcon.DrawablePalette, "调色盘") {
-                Column {
-                    MainColorSlideBar()
-                    Spacer(modifier = Modifier.height(18.dp))
-                    ResetAllColor()
+    }
+}
+
+@Composable
+private fun rememberSliderVisualToken() = remember { SettingsPageSliderToken() }
+
+@Composable
+private fun SliderTokenWrapper(content: @Composable (Modifier, MutableInteractionSource) -> Unit) {
+    val token = rememberSliderVisualToken()
+    val interactSource = remember { MutableInteractionSource() }
+    LaunchedEffect(Unit) {
+        interactSource.interactions.collect { event->
+            when(event) {
+                is PressInteraction.Press, is DragInteraction.Start -> {
+                    SettingsPageState.setCurrentPressedToken(token)
+                }
+                is PressInteraction.Cancel, is PressInteraction.Release, is DragInteraction.Cancel, is DragInteraction.Stop -> {
+                    SettingsPageState.resetCurrentPressedSlider(token)
                 }
             }
         }
-        item {
-            SettingsCollapsableWrapper(DrawableIcon.DrawableClear, "清理功能", initialExpand = false) {
-                AppClearButtons()
+    }
+    content(Modifier.globalVisual(token), interactSource)
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SliderWrapper(state: SliderState, modifier: Modifier) {
+    SliderTokenWrapper { innerModifier, mutableInteractionSource ->
+        Slider(
+            state = state,
+            modifier = innerModifier.then(modifier),
+            interactionSource = mutableInteractionSource,
+        )
+    }
+}
+
+@Composable
+fun SettingsPage(navController: SimpleNavHostController) {
+    SettingsPageState.Install(navController)
+    Box(modifier = Modifier.fillMaxSize()) {
+        Box(modifier = Modifier.fillMaxSize().globalVisual().appBackground())
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars).padding(horizontal = 16.dp),
+            contentPadding = PaddingValues(vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(
+                space = 18.dp,
+                alignment = Alignment.Top
+            )
+        ) {
+            item {
+                SettingsCollapsableWrapper(DrawableIcon.DrawableBackgroundPaint, "背景调色盘") {
+                    AppBackgroundSlideBar()
+                }
+            }
+            item {
+                SettingsCollapsableWrapper(DrawableIcon.DrawablePalette, "调色盘") {
+                    Column {
+                        MainColorSlideBar()
+                        Spacer(modifier = Modifier.height(18.dp).globalVisual())
+                        ResetAllColor()
+                    }
+                }
+            }
+            item {
+                SettingsCollapsableWrapper(DrawableIcon.DrawableClear, "清理功能", initialExpand = false) {
+                    AppClearButtons()
+                }
             }
         }
     }
@@ -201,7 +259,7 @@ fun CollapseDrawer(
 @Composable
 fun SettingsTitle(icon: DrawableIcon?, text: String, collapseDrawerState: CollapseDrawerState) {
     val anim by collapseDrawerState.anim
-    Row(modifier = Modifier.fillMaxWidth().clickable {
+    Row(modifier = Modifier.fillMaxWidth().globalVisual().clickable {
         collapseDrawerState.expand.value = !collapseDrawerState.expand.value
     }.padding(vertical = 10.dp)) {
         if (icon != null) {
@@ -233,7 +291,7 @@ fun AppClearButtons() {
     val viewModel = settingsViewModel()
     var showClearCacheConfirmDialog by remember { mutableStateOf(false) }
     var showClearDataConfirmDialog by remember { mutableStateOf(false) }
-    Row(Modifier.fillMaxWidth().padding(vertical = 10.dp)) {
+    Row(Modifier.fillMaxWidth().globalVisual().padding(vertical = 10.dp)) {
         Button(onClick = {
             showClearCacheConfirmDialog = true
         }, modifier = Modifier.weight(1f).height(38.dp)) {
@@ -278,7 +336,7 @@ fun AppClearButtons() {
 @Composable
 fun ResetAllColor() {
     val isDark = LocalAppPalette.current.isDark
-    Box(modifier = Modifier.fillMaxWidth()) {
+    Box(modifier = Modifier.fillMaxWidth().globalVisual()) {
         Button(onClick = {
             UserStorage.resetColors(isDark)
         }, modifier = Modifier.width(160.dp).height(36.dp).align(Alignment.CenterEnd)) {
@@ -323,6 +381,7 @@ fun ColorSlideBar(mainColor: Color, showDemo: Boolean = true, updateColor: (Colo
     val greenState = rememberSliderState(value = mainColor.green, valueRange = 0f..1f)
     val blueState = rememberSliderState(value = mainColor.blue, valueRange = 0f..1f)
     val alphaState = rememberSliderState(value = mainColor.alpha, valueRange = 0f..1f)
+
     LaunchedEffect(mainColor) {
         redState.value = mainColor.red
         greenState.value = mainColor.green
@@ -341,7 +400,7 @@ fun ColorSlideBar(mainColor: Color, showDemo: Boolean = true, updateColor: (Colo
     }
     Column(modifier = Modifier.fillMaxWidth().wrapContentHeight()) {
         if (showDemo) {
-            Row(modifier = Modifier.fillMaxWidth()) {
+            Row(modifier = Modifier.fillMaxWidth().globalVisual()) {
                 Button(onClick = {}, modifier = Modifier.weight(1f).height(38.dp)) {
                     Text("示例按钮", modifier = Modifier.align(Alignment.CenterVertically))
                 }
@@ -349,27 +408,15 @@ fun ColorSlideBar(mainColor: Color, showDemo: Boolean = true, updateColor: (Colo
             }
             Spacer(Modifier.height(12.dp))
         }
-        Text("alpha")
-        Slider(
-            state = alphaState,
-            modifier = Modifier.fillMaxWidth()
-        )
-        Text("red")
-        Slider(
-            state = redState,
-            modifier = Modifier.fillMaxWidth()
-        )
-        Text("green")
-        Slider(
-            state = greenState,
-            modifier = Modifier.fillMaxWidth()
-        )
-        Text("blue")
-        Slider(
-            state = blueState,
-            modifier = Modifier.fillMaxWidth()
-        )
-        Row(modifier = Modifier.fillMaxWidth().padding(top = 12.dp)) {
+        Text(modifier = Modifier.globalVisual(), text = "alpha")
+        SliderWrapper(state = alphaState, modifier = Modifier.fillMaxWidth())
+        Text(modifier = Modifier.globalVisual(), text = "red")
+        SliderWrapper(state = redState, modifier = Modifier.fillMaxWidth())
+        Text(modifier = Modifier.globalVisual(), text = "green")
+        SliderWrapper(state = greenState, modifier = Modifier.fillMaxWidth())
+        Text(modifier = Modifier.globalVisual(), text = "blue")
+        SliderWrapper(state = blueState, modifier = Modifier.fillMaxWidth())
+        Row(modifier = Modifier.globalVisual().fillMaxWidth().padding(top = 12.dp)) {
             ColorEditText(mainColor, ColorType.A) {
                 updateColor(mainColor.copy(alpha = it))
             }
@@ -432,8 +479,10 @@ fun AppBackgroundSlideBar() {
         backgroundConfig = backgroundConfig.onUpdate()
     }
 
+
     Column(modifier = Modifier.fillMaxWidth()) {
-        Box(modifier = Modifier.fillMaxWidth()) {
+        val token = rememberSliderVisualToken()
+        Box(modifier = Modifier.globalVisual(token).fillMaxWidth()) {
             val startDotPosition = remember(
                 backgroundConfigState,
                 backgroundConfigState.startColor.startX,
@@ -458,7 +507,10 @@ fun AppBackgroundSlideBar() {
                 }
             }
             Box(modifier = Modifier.fillMaxWidth().align(Alignment.Center).pointerInput(Unit) {
-                detectTapGestures(onTap = { offset ->
+                detectTapGestures(onPress = {
+                    SettingsPageState.setCurrentPressedToken(token)
+                }, onTap = { offset ->
+                    SettingsPageState.resetCurrentPressedSlider(token)
                     if (backgroundConfigState.middleColor == null) {
                         val value = dotValue(with(density) {
                             offset.x.toDp().value
@@ -480,6 +532,7 @@ fun AppBackgroundSlideBar() {
                 }
             }.height(slideBarHeight).clip(RoundedCornerShape(100)).appBackgroundSlide())
             BackgroundSlideDot(
+                token,
                 dotSize,
                 AppBackgroundSlideBarSelectedType.Start,
                 selectedType,
@@ -506,6 +559,7 @@ fun AppBackgroundSlideBar() {
                 }
             }
             BackgroundSlideDot(
+                token,
                 dotSize,
                 AppBackgroundSlideBarSelectedType.End,
                 selectedType,
@@ -534,6 +588,7 @@ fun AppBackgroundSlideBar() {
 
             if (backgroundConfigState.middleColor != null) {
                 BackgroundSlideDot(
+                    token,
                     dotSize,
                     AppBackgroundSlideBarSelectedType.Middle,
                     selectedType,
@@ -655,6 +710,7 @@ fun RowScope.ColorEditText(color: Color, colorType: ColorType, onUpdate: (value:
 
 @Composable
 private fun BoxScope.BackgroundSlideDot(
+    token: SettingsPageSliderToken,
     dotSize: Float,
     type: AppBackgroundSlideBarSelectedType,
     selectedType: AppBackgroundSlideBarSelectedType?,
@@ -676,6 +732,13 @@ private fun BoxScope.BackgroundSlideDot(
                 detectDragGestures(
                     onDragStart = {
                         onUpdate(type)
+                        SettingsPageState.setCurrentPressedToken(token)
+                    },
+                    onDragEnd = {
+                        SettingsPageState.resetCurrentPressedSlider(token)
+                    },
+                    onDragCancel = {
+                        SettingsPageState.resetCurrentPressedSlider(token)
                     }
                 ) { change, dragAmount ->
                     onDrag(dragAmount.x)

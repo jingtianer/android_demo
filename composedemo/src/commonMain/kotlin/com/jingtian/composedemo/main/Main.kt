@@ -524,7 +524,7 @@ private fun MainState.Main(
                                 }
 
                                 composable(Settings) {
-                                    SettingsPage()
+                                    SettingsPage(naviController)
                                 }
                             }
                         }

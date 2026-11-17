@@ -72,34 +72,17 @@ typealias EnterTransitionCreator = AnimatedContentTransitionScope<NavRouter?>.(s
 typealias ExitTransitionCreator = AnimatedContentTransitionScope<NavRouter?>.(swipeEdge: Int) -> ExitTransition
 typealias SizeTransitionCreator = AnimatedContentTransitionScope<NavRouter?>.(swipeEdge: Int) -> SizeTransform?
 
-abstract class AbstractSimpleNavHostController {
-    abstract val currentBackStack: List<NavRouter>
-    abstract val currentBackStackEntry: NavRouter?
-    abstract val secondLastBackStackEntry: NavRouter?
-    abstract val willHandleBackEvents: Boolean
-    abstract suspend fun navigateTo(router: NavRouter)
-    abstract suspend fun pop()
+interface AbstractSimpleNavHostController {
+    val currentBackStack: List<NavRouter>
+    val currentBackStackEntry: NavRouter?
+    val secondLastBackStackEntry: NavRouter?
+    val willHandleBackEvents: Boolean
+    var showSecondLastEntry: Boolean
+    suspend fun navigateTo(router: NavRouter)
+    suspend fun pop()
 }
 
-class SimpleNavHostController : AbstractSimpleNavHostController() {
-    private val impl = SimpleNavHostControllerImpl()
-    override val currentBackStack: List<NavRouter>
-        get() = impl.currentBackStack
-    override val currentBackStackEntry: NavRouter?
-        get() = impl.currentBackStackEntry
-    override val secondLastBackStackEntry: NavRouter?
-        get() = impl.secondLastBackStackEntry
-    override val willHandleBackEvents: Boolean
-        get() = impl.willHandleBackEvents
-
-    override suspend fun navigateTo(router: NavRouter) {
-        impl.navigateTo(router)
-    }
-
-    override suspend fun pop() {
-        impl.pop()
-    }
-
+class SimpleNavHostController(private val impl: SimpleNavHostControllerImpl = SimpleNavHostControllerImpl()) : AbstractSimpleNavHostController by impl {
     internal fun impl(
         initialDestination: NavRouter?,
         enterTransition: (@JvmSuppressWildcards EnterTransitionCreator) = { EnterTransition.None },
@@ -117,7 +100,7 @@ class SimpleNavHostController : AbstractSimpleNavHostController() {
         private var exitTransition: (@JvmSuppressWildcards ExitTransitionCreator) = { ExitTransition.None },
         private var sizeTransition: (@JvmSuppressWildcards SizeTransitionCreator)? = null,
         mapBuilder: NavMapBuilder.() -> Unit = {}
-    ) : AbstractSimpleNavHostController() {
+    ) : AbstractSimpleNavHostController {
         // 返回栈
         val backStack = mutableStateListOf<NavRouter>()
         override val currentBackStack: List<NavRouter> get() = this.backStack
@@ -146,6 +129,8 @@ class SimpleNavHostController : AbstractSimpleNavHostController() {
         var finalEnterTransition by mutableStateOf<AnimatedContentTransitionScope<NavRouter?>.() -> EnterTransition>({ EnterTransition.None })
         var finalExitTransition by mutableStateOf<AnimatedContentTransitionScope<NavRouter?>.() -> ExitTransition>({ ExitTransition.None })
         var finalSizeTransition by mutableStateOf<(AnimatedContentTransitionScope<NavRouter?>.() -> SizeTransform?)?>(null)
+
+        override var showSecondLastEntry: Boolean by mutableStateOf(false)
 
         fun updateTransition(isPop: Boolean, swipeEdge: Int) {
             finalEnterTransition = if (isPop) {
@@ -327,6 +312,9 @@ private fun SimpleNavHostController.SimpleNavHostControllerImpl.SimpleNavHost(
             targetContentZIndex = backStack.indexOf(targetState) / backStack.size.toFloat()
         )
     }) { state ->
+        if (showSecondLastEntry) {
+            navMap[secondLastBackStackEntry]?.content?.invoke()
+        }
         navMap[state]?.content?.invoke() ?: return@AnimatedContent
         if (state != null && state == secondLastBackStackEntry && transitionState.targetState != transitionState.currentState) {
             val targetIsSelf = transitionState.targetState == state
