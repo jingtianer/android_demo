@@ -73,7 +73,7 @@ fun RankLabel(
             .background(color = if (isSelected) itemRank.color() else Color.Transparent)
             .padding(padding),
     ) {
-        val isNight by appThemeViewModel().rememberIsDark()
+        val isNight = appThemeViewModel().rememberIsDark()
         val textStyle = LocalTextStyle.current.copy(fontWeight = FontWeight.ExtraBold)
         var textLayoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
         Text(

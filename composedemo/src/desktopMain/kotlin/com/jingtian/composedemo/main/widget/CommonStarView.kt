@@ -28,7 +28,7 @@ fun DesktopStarRateView(
     onScoreChange: (Float) -> Unit = {}
 ) {
     val appThemeViewModel: AppThemeViewModel = appThemeViewModel()
-    val isNight by appThemeViewModel.rememberIsDark()
+    val isNight = appThemeViewModel.rememberIsDark()
     @Composable
     fun RowScope.StarView(score: Int, currentSore: Int, onClick: (Int)->Unit) {
         Image(

@@ -434,33 +434,27 @@ fun AppBackgroundSlideBar() {
 
     Column(modifier = Modifier.fillMaxWidth()) {
         Box(modifier = Modifier.fillMaxWidth()) {
-            val startDotPosition by remember(
+            val startDotPosition = remember(
                 backgroundConfigState,
                 backgroundConfigState.startColor.startX,
                 slideBarWidth
             ) {
-                derivedStateOf {
-                    dotPosition(backgroundConfigState.startColor.startX).dp
-                }
+                dotPosition(backgroundConfigState.startColor.startX).dp
             }
-            val endDotPosition by remember(
+            val endDotPosition = remember(
                 backgroundConfigState,
                 backgroundConfigState.endColor.startX,
                 slideBarWidth
             ) {
-                derivedStateOf {
-                    dotPosition(backgroundConfigState.endColor.startX).dp
-                }
+                dotPosition(backgroundConfigState.endColor.startX).dp
             }
-            val middleDotPosition by remember(
+            val middleDotPosition = remember(
                 backgroundConfigState,
                 backgroundConfigState.middleColor?.startX,
                 slideBarWidth
             ) {
-                derivedStateOf {
-                    backgroundConfigState.middleColor?.let { middleColor ->
-                        dotPosition(middleColor.startX).dp
-                    }
+                backgroundConfigState.middleColor?.let { middleColor ->
+                    dotPosition(middleColor.startX).dp
                 }
             }
             Box(modifier = Modifier.fillMaxWidth().align(Alignment.Center).pointerInput(Unit) {
@@ -566,26 +560,24 @@ fun AppBackgroundSlideBar() {
                 }
             }
         }
-        val color by remember(selectedType) {
-            derivedStateOf {
-                when (selectedType) {
-                    AppBackgroundSlideBarSelectedType.Middle -> {
-                        backgroundConfigState.middleColor
-                    }
+        val color = remember(selectedType) {
+            when (selectedType) {
+                AppBackgroundSlideBarSelectedType.Middle -> {
+                    backgroundConfigState.middleColor
+                }
 
-                    AppBackgroundSlideBarSelectedType.Start -> {
-                        backgroundConfigState.startColor
-                    }
+                AppBackgroundSlideBarSelectedType.Start -> {
+                    backgroundConfigState.startColor
+                }
 
-                    AppBackgroundSlideBarSelectedType.End -> {
-                        backgroundConfigState.endColor
-                    }
+                AppBackgroundSlideBarSelectedType.End -> {
+                    backgroundConfigState.endColor
+                }
 
-                    null -> {
-                        null
-                    }
-                }?.color
-            }
+                null -> {
+                    null
+                }
+            }?.color
         }
 
         fun updateColor(color: Color) {

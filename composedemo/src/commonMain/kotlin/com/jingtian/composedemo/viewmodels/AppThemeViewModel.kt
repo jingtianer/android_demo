@@ -25,12 +25,10 @@ object AppThemeViewModel : SingletonViewModel() {
     val currentAppTheme:State<AppTheme> = currentAppThemeState
 
     @Composable
-    fun rememberIsDark(): State<Boolean> {
+    fun rememberIsDark(): Boolean {
         val isSystemDark = isSystemInDarkTheme()
-        return remember(isSystemDark) {
-            derivedStateOf {
-                AppTheme.isDark(currentAppTheme.value, isSystemDark)
-            }
+        return remember(isSystemDark, currentAppTheme.value) {
+            AppTheme.isDark(currentAppTheme.value, isSystemDark)
         }
     }
 

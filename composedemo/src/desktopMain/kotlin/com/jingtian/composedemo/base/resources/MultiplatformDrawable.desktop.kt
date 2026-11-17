@@ -23,7 +23,7 @@ actual fun getArrowDownIcon(): Painter = painterResource(Res.drawable.arrow_down
 @Composable
 actual fun getLockIcon(): Painter {
     val appThemeViewModel = appThemeViewModel()
-    val isDark by appThemeViewModel.rememberIsDark()
+    val isDark = appThemeViewModel.rememberIsDark()
     return if (isDark) {
         painterResource(Res.drawable.lock_night)
     } else {

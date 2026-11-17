@@ -35,7 +35,7 @@ actual fun ColumnScope.ScoreStar(itemScore: Float, padding: Dp) {
             .align(Alignment.CenterHorizontally)
     ) {
         val viewModel: AppThemeViewModel = appThemeViewModel()
-        val isDark by viewModel.rememberIsDark()
+        val isDark = viewModel.rememberIsDark()
         AndroidView({ context ->
             StarRateView(context).commonConfig(isDark).apply {
                 layoutParams = ViewGroup.LayoutParams(

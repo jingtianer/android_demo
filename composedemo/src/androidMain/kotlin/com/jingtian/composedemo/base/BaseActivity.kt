@@ -29,7 +29,7 @@ abstract class BaseActivity : AppCompatActivity() {
                 Content()
             }
             val appThemeViewModel = appThemeViewModel()
-            val isNight by appThemeViewModel.rememberIsDark()
+            val isNight = appThemeViewModel.rememberIsDark()
             LaunchedEffect(isNight) {
                 updateStateBar(isNight)
             }

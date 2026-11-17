@@ -278,18 +278,15 @@ private class MainState(
 
     val navBackStackEntry get() = naviController.currentBackStackEntry
 
-    val galleryStateHolder by derivedStateOf {
-        currentSelectedAlbum?.value?.albumId?.let {
-            galleryStateHolderMap[it]?.get()
-        }
-    }
-    val isOnTop by derivedStateOf {
-        navBackStackEntry == Gallery
+    val galleryStateHolder get() = currentSelectedAlbum?.value?.albumId?.let {
+        galleryStateHolderMap[it]?.get()
     }
 
-    val isBackEnable by derivedStateOf {
+    val isOnTop get() = navBackStackEntry == Gallery
+
+    val isBackEnable: Boolean get() {
         val canClose = menuItemsEntity.isNotEmpty() || !isOnTop
-        (drawerState.isOpen) && canClose
+        return (drawerState.isOpen) && canClose
     }
 
     val drawerState = DrawerState(

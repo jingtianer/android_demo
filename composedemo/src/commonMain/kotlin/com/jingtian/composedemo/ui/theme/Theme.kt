@@ -187,7 +187,7 @@ fun DemoAppTheme(
     content: @Composable () -> Unit
 ) {
     val appThemeViewModel = appThemeViewModel()
-    val isDark by appThemeViewModel.rememberIsDark()
+    val isDark = appThemeViewModel.rememberIsDark()
     val backgroundConfig by when {
         isDark -> UserStorage.darkBackgroundConfigState
         else -> UserStorage.liteBackgroundConfigState

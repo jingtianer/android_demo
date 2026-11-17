@@ -224,14 +224,12 @@ class GalleryStateHolder(val album: IndexedValue<Album>, val currentSelectedAlbu
         }
     }
 
-    val backEnable by derivedStateOf {
-        return@derivedStateOf if (enterEditMode) {
-            true
-        } else if (gallerySearchEnabled) {
-            true
-        } else {
-            false
-        }
+    val backEnable: Boolean get() = if (enterEditMode) {
+        true
+    } else if (gallerySearchEnabled) {
+        true
+    } else {
+        false
     }
 
     fun onBackPressed(): Boolean {
