@@ -71,7 +71,7 @@ fun MutableLongState.notifyChange() {
 }
 
 @Composable
-fun MutableLongState.observeAsState() : LongState = remember { this }
+fun MutableLongState.observeAsState() : LongState = this
 
 object AlbumViewModel : SingletonViewModel() {
     private const val TAG = "AlbumViewModel"

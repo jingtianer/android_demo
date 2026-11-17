@@ -27,9 +27,7 @@ object AppThemeViewModel : SingletonViewModel() {
     @Composable
     fun rememberIsDark(): Boolean {
         val isSystemDark = isSystemInDarkTheme()
-        return remember(isSystemDark, currentAppTheme.value) {
-            AppTheme.isDark(currentAppTheme.value, isSystemDark)
-        }
+        return AppTheme.isDark(currentAppTheme.value, isSystemDark)
     }
 
     fun setCurrentTheme(appTheme: AppTheme) {

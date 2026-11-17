@@ -67,50 +67,35 @@ import kotlin.math.min
 import com.jingtian.composedemo.base.resources.getPainter
 import com.jingtian.composedemo.base.resources.DrawableIcon
 import com.jingtian.composedemo.viewmodels.albumViewModel
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.IO
 
-@Composable
-fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumData: List<Album>, totalLabelList: List<String>, onDismiss: ()->Unit) {
+private class EditDialogState(val albumItemRelation: AlbumItemRelation, relatedAlbum: Album, rawTotalLabelList: List<String>) {
     val album = albumItemRelation.albumItem
     val viewModel : AlbumViewModel = albumViewModel()
 
-    var pickedImage by remember { mutableStateOf<ImageBitmap?>(null) }
-    var itemName by remember { mutableStateOf(album.itemName) }
-    var itemDesc by remember { mutableStateOf(album.desc) }
-    var itemRank by remember { mutableStateOf(album.rank) }
-    var itemScore by remember { mutableStateOf(album.score) }
-    val itemLabel = remember {
-        mutableStateListOf(*albumItemRelation.labelInfos.map { it.label }.toTypedArray())
-    }
-    val itemLabelSet = remember {
-        mutableStateMapOf(*albumItemRelation.labelInfos.map { it.label to it.label }.toTypedArray())
-    }
+    var pickedImage by mutableStateOf<ImageBitmap?>(null)
+    var itemName by mutableStateOf(album.itemName)
+    var itemDesc by mutableStateOf(album.desc)
+    var itemRank by mutableStateOf(album.rank)
+    var itemScore by mutableStateOf(album.score)
+    val itemLabel = mutableStateListOf(*albumItemRelation.labelInfos.map { it.label }.toTypedArray())
+    val itemLabelSet = mutableStateMapOf(*albumItemRelation.labelInfos.map { it.label to it.label }.toTypedArray())
 
-    var selectedUri by remember { mutableStateOf<MultiplatformFile?>(null) }
-    var selectedFileType by remember { mutableStateOf(albumItemRelation.fileInfo?.fileType) }
-    val scope = rememberCoroutineScope()
-    var imageResource by remember { mutableStateOf(DrawableIcon.DrawableUploadToCloud) }
+    var selectedUri by mutableStateOf<MultiplatformFile?>(null)
+    var selectedFileType by mutableStateOf(albumItemRelation.fileInfo?.fileType)
+    var imageResource by mutableStateOf(DrawableIcon.DrawableUploadToCloud)
 
-    val totalLabelList =
-        remember { mutableStateMapOf(*(totalLabelList.map { it to it }).toTypedArray()) }
-    val filteredTotalLabelList = remember {
-        mutableStateListOf(*((totalLabelList.keys - albumItemRelation.labelInfos.map { it.label }
-            .toSet()).toTypedArray()))
-    }
-    val selectedTotalLabelList = remember { mutableStateMapOf<String, String>() }
+    val totalLabelList = mutableStateMapOf(*(rawTotalLabelList.map { it to it }).toTypedArray())
+    val filteredTotalLabelList = mutableStateListOf(*((totalLabelList.keys - albumItemRelation.labelInfos.map { it.label }
+        .toSet()).toTypedArray()))
+    val selectedTotalLabelList = mutableStateMapOf<String, String>()
 
-    val imageWidth = min(
-        min(
-            screenWidth(),
-            screenHeight()
-        ) / 2, 180
-    ).dp
+    var webSnapShotTaker: (suspend ()-> ImageBitmap)? by mutableStateOf(null)
 
-    var webSnapShotTaker: (suspend ()-> ImageBitmap)? by remember { mutableStateOf(null) }
+    var currentSelectedAlbum by mutableStateOf(relatedAlbum)
 
-    var currentSelectedAlbum by remember { mutableStateOf(relatedAlbum) }
-
-    fun saveItem() {
+    fun saveItem(scope: CoroutineScope, onDismiss: () -> Unit) {
         val selectedUri = selectedUri
         val selectedFileType = selectedFileType
         if (selectedUri == null || selectedFileType == null || itemName.isNullOrBlank()) {
@@ -139,8 +124,7 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
         }
     }
 
-    val imageDpSize = imageWidth.dpValue()
-    suspend fun updateImage(uri: MultiplatformFile, fileType: FileType, fileInfo: FileInfo?) {
+    suspend fun updateImage(scope: CoroutineScope, uri: MultiplatformFile, fileType: FileType, fileInfo: FileInfo?, imageDpSize: Float) {
         withContext(Dispatchers.IO) {
             when (fileType) {
                 FileType.IMAGE -> {
@@ -253,11 +237,11 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
         }
     }
 
-    suspend fun onSelectedUriChange() {
+    suspend fun onSelectedUriChange(scope: CoroutineScope, imageDpSize: Float) {
         val uri = selectedUri
         val fileType = selectedFileType
         if (uri != null && fileType != null) {
-            updateImage(uri, fileType, null)
+            updateImage(scope, uri, fileType, null, imageDpSize)
         } else {
             imageResource = DrawableIcon.DrawableLoadFailed
         }
@@ -265,13 +249,32 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
             itemName = uri.fileName() ?: ""
         }
     }
+}
+
+@Composable
+fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumData: List<Album>, totalLabelList: List<String>, onDismiss: ()->Unit) {
+    val editDialogState = remember(albumItemRelation, relatedAlbum, totalLabelList) { EditDialogState(albumItemRelation, relatedAlbum, totalLabelList) }
+    editDialogState.EditDialog(albumData, onDismiss)
+}
+
+@Composable
+private fun EditDialogState.EditDialog(albumData: List<Album>, onDismiss: ()->Unit) {
+    val scope = rememberCoroutineScope()
+
+    val imageWidth = min(
+        min(
+            screenWidth(),
+            screenHeight()
+        ) / 2, 180
+    ).dp
+    val imageDpSize = imageWidth.dpValue()
 
     LaunchedEffect(Unit) {
         selectedUri = albumItemRelation.fileInfo?.getFileUri()
         val uri = selectedUri
         val fileType = selectedFileType
         if (uri != null && fileType != null) {
-            updateImage(uri, fileType, albumItemRelation.fileInfo)
+            updateImage(scope, uri, fileType, albumItemRelation.fileInfo, imageDpSize)
         } else {
             imageResource = DrawableIcon.DrawableLoadFailed
         }
@@ -285,7 +288,7 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
             uri?.takeIf { !it.isHidden() } ?: return@launch
             selectedFileType = uri.mediaType()
             selectedUri = uri
-            onSelectedUriChange()
+            onSelectedUriChange(scope, imageDpSize)
         }
     }
 
@@ -316,7 +319,7 @@ fun EditDialog(albumItemRelation: AlbumItemRelation, relatedAlbum: Album, albumD
 //            },
             onMiddleClick = null,
             onPositive = {
-                saveItem()
+                saveItem(scope, onDismiss)
             },
             onDismissRequest = {},
             properties = DialogProperties(usePlatformDefaultWidth = false)
