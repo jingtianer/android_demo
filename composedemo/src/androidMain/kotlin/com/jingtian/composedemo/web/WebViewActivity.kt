@@ -6,6 +6,8 @@ import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.ViewGroup
+import androidx.activity.BackEventCompat
+import androidx.activity.OnBackPressedCallback
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -68,6 +70,44 @@ class WebViewActivity: BaseActivity() {
             return
         }
         this.uri = uri
+
+        val callback = object : OnBackPressedCallback(true) {
+            override fun handleOnBackStarted(backEvent: BackEventCompat) {
+                // 手势开始
+            }
+
+            override fun handleOnBackProgressed(backEvent: BackEventCompat) {
+                // backEvent.progress 0~1，滑动过程
+            }
+
+            override fun handleOnBackPressed() { // todo: 加transition
+                CoroutineUtils.runIOTask({
+                    val bitmap = webView?.takeSnapShot(this@WebViewActivity.window.decorView)
+                    if (bitmap != null) {
+                        BitMapCachePool.invalid(storageId, FileType.HTML)
+                        BitMapCachePool.saveThumbnail(FileInfo(
+                            storageId = storageId,
+                            fileType = FileType.HTML,
+                            extension = uriExtension ?: "html"
+                        )) {
+                            bitmap.asImageBitmap()
+                        }
+                    }
+                }, onFailure = {
+                    setResult(2)
+                    // Log.d(TAG, "WebViewActivity: onBackPressed: $it")
+                    finish()
+                }) {
+                    setResult(Activity.RESULT_OK)
+                    finish()
+                }
+            }
+
+            override fun handleOnBackCancelled() {
+                // 手势取消，重置UI
+            }
+        }
+        onBackPressedDispatcher.addCallback(this, callback)
     }
 
     @Composable
@@ -77,28 +117,9 @@ class WebViewActivity: BaseActivity() {
         }
     }
 
-    override fun onBackPressed() {
-        CoroutineUtils.runIOTask({
-            val bitmap = webView?.takeSnapShot(this.window.decorView)
-            if (bitmap != null) {
-                BitMapCachePool.invalid(storageId, FileType.HTML)
-                BitMapCachePool.saveThumbnail(FileInfo(
-                    storageId = storageId,
-                    fileType = FileType.HTML,
-                    extension = uriExtension ?: "html"
-                )) {
-                    bitmap.asImageBitmap()
-                }
-            }
-        }, onFailure = {
-            setResult(2)
-            // Log.d(TAG, "WebViewActivity: onBackPressed: $it")
-            super.onBackPressed()
-        }) {
-            setResult(Activity.RESULT_OK)
-            super.onBackPressed()
-        }
-    }
+//    override fun onBackPressed() {
+//
+//    }
 
     override fun shouldFitSystemBars(): Boolean {
         return false
