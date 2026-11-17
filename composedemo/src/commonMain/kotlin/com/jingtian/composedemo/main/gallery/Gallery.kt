@@ -569,7 +569,7 @@ fun GalleryStateHolder.Gallery() {
                                 }
                             }
                         }
-                        .ovalGlass(hazeState)
+                        .ovalGlass(hazeState, color = if (gallerySearchEnabled) LocalAppPalette.current.labelChecked else null)
                         .size(LocalAppUIConstants.current.filterLabelHeight)
                         .padding(4.dp)
                         .align(Alignment.CenterVertically)
@@ -581,7 +581,7 @@ fun GalleryStateHolder.Gallery() {
                     modifier = Modifier
                         .size(LocalAppUIConstants.current.filterLabelHeight)
                         .clickable { enterEditMode = !enterEditMode }
-                        .ovalGlass(hazeState)
+                        .ovalGlass(hazeState, color = if (enterEditMode) LocalAppPalette.current.labelChecked else null)
                         .size(LocalAppUIConstants.current.filterLabelHeight)
                         .padding(4.dp)
                         .align(Alignment.CenterVertically)
@@ -603,7 +603,7 @@ fun GalleryStateHolder.Gallery() {
                                 modifier = Modifier
                                     .size(LocalAppUIConstants.current.filterLabelHeight)
                                     .clickable { showLabelFilter = !showLabelFilter }
-                                    .ovalGlass(hazeState)
+                                    .ovalGlass(hazeState, color = if (showLabelFilter) LocalAppPalette.current.labelChecked else null)
                                     .size(LocalAppUIConstants.current.filterLabelHeight)
                                     .padding(4.dp)
                             )
