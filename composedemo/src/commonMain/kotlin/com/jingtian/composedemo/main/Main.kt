@@ -511,19 +511,21 @@ private fun MainState.Main(
                         enterTransition = enterTransition,
                         exitTransition = exitTransitionCreator,
                         sizeTransition = sizeTransition,
-                        mapBuilder = {
-                            composable(Gallery) {
-                                Gallery(
-                                    galleryStateHolderMap,
-                                    currentSelectedAlbum,
-                                    menuItemsEntity,
-                                    drawerState,
-                                    naviController
-                                )
-                            }
+                        mapBuilder = remember(menuItemsEntity) {
+                            {
+                                composable(Gallery) {
+                                    Gallery(
+                                        galleryStateHolderMap,
+                                        currentSelectedAlbum,
+                                        menuItemsEntity,
+                                        drawerState,
+                                        naviController
+                                    )
+                                }
 
-                            composable(Settings) {
-                                SettingsPage()
+                                composable(Settings) {
+                                    SettingsPage()
+                                }
                             }
                         }
                     )

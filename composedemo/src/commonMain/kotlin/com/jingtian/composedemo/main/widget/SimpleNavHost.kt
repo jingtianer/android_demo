@@ -25,6 +25,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -61,7 +62,7 @@ class NavEntry internal constructor(
     val content: @Composable () -> Unit
 )
 
-class NavMapBuilder internal constructor(private val navMap: HashMap<NavRouter, NavEntry>) {
+class NavMapBuilder internal constructor(private val navMap: MutableMap<NavRouter, NavEntry>) {
     fun composable(navRouter: NavRouter, content: @Composable () -> Unit) {
         navMap[navRouter] = NavEntry(content)
     }
@@ -81,7 +82,7 @@ abstract class AbstractSimpleNavHostController {
 }
 
 class SimpleNavHostController : AbstractSimpleNavHostController() {
-    private var impl by mutableStateOf<AbstractSimpleNavHostController>(SimpleNavHostControllerImpl())
+    private val impl = SimpleNavHostControllerImpl()
     override val currentBackStack: List<NavRouter>
         get() = impl.currentBackStack
     override val currentBackStackEntry: NavRouter?
@@ -106,22 +107,21 @@ class SimpleNavHostController : AbstractSimpleNavHostController() {
         sizeTransition: (@JvmSuppressWildcards SizeTransitionCreator)? = null,
         mapBuilder: NavMapBuilder.() -> Unit
     ) : SimpleNavHostControllerImpl {
-        val impl = SimpleNavHostControllerImpl(initialDestination, enterTransition, exitTransition, sizeTransition, mapBuilder)
-        this.impl = impl
+        impl.update(initialDestination, enterTransition, exitTransition, sizeTransition, mapBuilder)
         return impl
     }
 
     class SimpleNavHostControllerImpl(
         initialDestination: NavRouter? = null,
-        private val enterTransition: (@JvmSuppressWildcards EnterTransitionCreator) = { EnterTransition.None },
-        private val exitTransition: (@JvmSuppressWildcards ExitTransitionCreator) = { ExitTransition.None },
-        private val sizeTransition: (@JvmSuppressWildcards SizeTransitionCreator)? = null,
+        private var enterTransition: (@JvmSuppressWildcards EnterTransitionCreator) = { EnterTransition.None },
+        private var exitTransition: (@JvmSuppressWildcards ExitTransitionCreator) = { ExitTransition.None },
+        private var sizeTransition: (@JvmSuppressWildcards SizeTransitionCreator)? = null,
         mapBuilder: NavMapBuilder.() -> Unit = {}
     ) : AbstractSimpleNavHostController() {
         // 返回栈
         val backStack = mutableStateListOf<NavRouter>()
         override val currentBackStack: List<NavRouter> get() = this.backStack
-        val navMap = HashMap<NavRouter, NavEntry>()
+        val navMap = mutableStateMapOf<NavRouter, NavEntry>()
         init {
             if (initialDestination != null) {
                 backStack.add(initialDestination)
@@ -179,7 +179,7 @@ class SimpleNavHostController : AbstractSimpleNavHostController() {
                 false
             }
             if (withAnim) {
-                val finalStackTopEntry = backStack.lastOrNull()
+                val finalStackTopEntry = currentBackStackEntry
                 updateTransition(isPop = isPop, swipeEdge = swipeEdge)
                 withFrameMillis {  }
                 transitionState.snapTo(initialStackTopEntry)
@@ -189,6 +189,31 @@ class SimpleNavHostController : AbstractSimpleNavHostController() {
 
         override suspend fun pop() {
             navigateTo(secondLastBackStackEntry ?: return)
+        }
+
+        fun update(
+            initialDestination: NavRouter?,
+            enterTransition: (@JvmSuppressWildcards EnterTransitionCreator) = { EnterTransition.None },
+            exitTransition: (@JvmSuppressWildcards ExitTransitionCreator) = { ExitTransition.None },
+            sizeTransition: (@JvmSuppressWildcards SizeTransitionCreator)? = null,
+            mapBuilder: NavMapBuilder.() -> Unit
+        ) {
+            this.exitTransition = exitTransition
+            this.enterTransition = enterTransition
+            this.sizeTransition = sizeTransition
+            navMap.clear()
+            navMap.also {
+                mapBuilder.invoke(NavMapBuilder(it))
+            }
+
+            backStack.removeAll { !navMap.contains(it) }
+
+            if (initialDestination != null && backStack.firstOrNull() != initialDestination) {
+                if (backStack.contains(initialDestination)) {
+                    backStack.remove(initialDestination)
+                }
+                backStack.add(0, initialDestination)
+            }
         }
     }
 }
@@ -208,7 +233,7 @@ fun SimpleNavHost(
     sizeTransition: (@JvmSuppressWildcards SizeTransitionCreator)? = null,
     mapBuilder: NavMapBuilder.() -> Unit = {},
 ) {
-    val controller = remember {
+    val controller = remember(initialDestination, enterTransition, exitTransition, sizeTransition, mapBuilder) {
         simpleNavHostController.impl(
             initialDestination, enterTransition, exitTransition, sizeTransition, mapBuilder
         )
@@ -233,7 +258,7 @@ private fun SimpleNavHostController.SimpleNavHostControllerImpl.SimpleNavHost(
                 swipeEdge = event.swipeEdge
             }
             if (willHandleBackEvents) {
-                pendingTargetRouter = backStack.getOrNull(backStack.size - 2)
+                pendingTargetRouter = secondLastBackStackEntry
                 inPredictiveBack = false
             }
         } catch (e: CancellationException) {
@@ -302,7 +327,7 @@ private fun SimpleNavHostController.SimpleNavHostControllerImpl.SimpleNavHost(
             targetContentZIndex = backStack.indexOf(targetState) / backStack.size.toFloat()
         )
     }) { state ->
-        navMap[state]?.content?.invoke()
+        navMap[state]?.content?.invoke() ?: return@AnimatedContent
         if (state != null && state == secondLastBackStackEntry && transitionState.targetState != transitionState.currentState) {
             val targetIsSelf = transitionState.targetState == state
             Canvas(Modifier.fillMaxSize()) { drawRect(scrimColor, alpha = if (targetIsSelf) 1 - transitionState.fraction else transitionState.fraction) }
