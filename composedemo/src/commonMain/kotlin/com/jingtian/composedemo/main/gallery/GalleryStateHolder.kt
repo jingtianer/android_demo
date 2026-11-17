@@ -1,24 +1,15 @@
 package com.jingtian.composedemo.main.gallery
 
 import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
-import androidx.compose.material3.DrawerState
 import androidx.compose.runtime.State
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.withFrameMillis
-import com.jingtian.composedemo.multiplatform.WeakRef
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewModelScope
-import androidx.navigation.NavBackStackEntry
-import androidx.navigation.NavController
-import androidx.navigation.NavDestination.Companion.hasRoute
 import com.jingtian.composedemo.dao.model.Album
 import com.jingtian.composedemo.dao.model.FileType
 import com.jingtian.composedemo.dao.model.ItemRank
@@ -27,8 +18,6 @@ import com.jingtian.composedemo.main.albumItem.AlbumItemViewStateHolder
 import com.jingtian.composedemo.main.remote.ImportRemoteDialogStateHolder
 import com.jingtian.composedemo.main.widget.SimpleNavHostController
 import com.jingtian.composedemo.multiplatform.SoftRef
-import com.jingtian.composedemo.multiplatform.logD
-import com.jingtian.composedemo.utils.dpValue
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -47,7 +36,7 @@ interface IPlatformExtra
 
 expect fun getPlatformExtra(): IPlatformExtra
 
-class GalleryStateHolder(val album: IndexedValue<Album>, val currentSelectedAlbum: State<Album>, val albumList: List<Album>, val drawerState: DrawerState, val viewModel: AlbumViewModel, val galleryDpConstants: GalleryDpConstants, val navController : SimpleNavHostController) {
+class GalleryStateHolder(val album: IndexedValue<Album>, val currentSelectedAlbum: State<Album>, val albumList: List<Album>, val viewModel: AlbumViewModel, val galleryDpConstants: GalleryDpConstants, val navController : SimpleNavHostController) {
     var addImageDialogState by mutableStateOf(false)
     var itemList by mutableStateOf(emptyList<AlbumItemRelation>())
     val filteredItemList = mutableStateListOf<AlbumItemRelation>()

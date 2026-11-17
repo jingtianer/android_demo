@@ -5,12 +5,17 @@ import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.keyframes
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideIn
 import androidx.compose.animation.slideOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.AnchoredDraggableState
+import androidx.compose.foundation.gestures.DraggableAnchors
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.anchoredDraggable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
@@ -46,7 +51,9 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.backhandler.PredictiveBackHandler
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -62,6 +69,7 @@ import com.jingtian.composedemo.main.drawer.MainDrawer
 import com.jingtian.composedemo.main.gallery.Gallery
 import com.jingtian.composedemo.main.gallery.GalleryStateHolder
 import com.jingtian.composedemo.main.gallery.predictiveBackVisual
+import com.jingtian.composedemo.main.route.Drawer
 import com.jingtian.composedemo.main.route.Gallery
 import com.jingtian.composedemo.main.route.LocalRouterController
 import com.jingtian.composedemo.main.route.MainRouterController
@@ -76,7 +84,6 @@ import com.jingtian.composedemo.main.widget.SizeTransitionCreator
 import com.jingtian.composedemo.main.widget.rememberSimpleNavHostController
 import com.jingtian.composedemo.multiplatform.LowMemorySideEffect
 import com.jingtian.composedemo.multiplatform.SoftRef
-import com.jingtian.composedemo.multiplatform.logD
 import com.jingtian.composedemo.ui.theme.LocalAppPalette
 import com.jingtian.composedemo.ui.theme.clipDeviceRoundCorner
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
@@ -286,14 +293,14 @@ private class MainState(
 
     val isBackEnable: Boolean get() {
         val canClose = menuItemsEntity.isNotEmpty() || !isOnTop
-        return (drawerState.isOpen) && canClose
+        return if (!isOnTop) {
+            navBackStackEntry == Drawer && !canClose
+        } else {
+            true
+        }
     }
 
-    val drawerState = DrawerState(
-        initialValue = DrawerValue.Closed,
-    )
-
-    val routerController = MainRouterController(naviController, drawerState)
+    val routerController = MainRouterController(naviController)
 
     val enterTransition: EnterTransitionCreator = { swipeEdge ->
         val orientation = when (swipeEdge) {
@@ -394,14 +401,14 @@ private class MainState(
         }
 
         // 导航栈变化 初始化完成
-        LaunchedEffect(drawerState.isClosed, menuItemsEntityInitialized, isOnTop, drawerState.isAnimationRunning) {
+        LaunchedEffect(menuItemsEntityInitialized, isOnTop) {
             val canClose = menuItemsEntity.isNotEmpty() || !isOnTop
-            if (!canClose && drawerState.isClosed && menuItemsEntityInitialized && !drawerState.isAnimationRunning) {
+            if (!canClose && isOnTop && menuItemsEntityInitialized) {
                 val noAlbumToast = "没有任何合集，先创建合集吧"
                 if (viewModel.currentBackgroundTask.value?.equals(noAlbumToast) != true) {
                     viewModel.sendMessage(noAlbumToast)
                 }
-                drawerState.open()
+                naviController.navigateTo(Drawer)
             }
         }
     }
@@ -409,20 +416,19 @@ private class MainState(
     @Composable
     fun InstallBackHandlers(): State<Float> {
         val galleryBackEnable = galleryStateHolder?.backEnable ?: false
-        val backEnable = isBackEnable || galleryBackEnable
+        val backEnable = galleryBackEnable
         BackPressHandler(backEnable) {
-            val canClose = menuItemsEntity.isNotEmpty() || !isOnTop
-            if (drawerState.isOpen && canClose) {
-                drawerState.close()
-                true
-            } else if (galleryStateHolder?.onBackPressed() == true) {
+            if (galleryStateHolder?.onBackPressed() == true) {
                 true
             } else {
                 false
             }
         }
+        val canClose = menuItemsEntity.isNotEmpty()
+        val handlerByNavHost = !isOnTop && !(naviController.secondLastBackStackEntry == Gallery && !canClose)
+        naviController.shouldHandleBack = handlerByNavHost
         val nativeBackInvoker = rememberNativeBackInvoker()
-        return rememberPredictiveBackVisualState(isOnTop && !backEnable) {
+        return rememberPredictiveBackVisualState(!handlerByNavHost && !backEnable) {
             nativeBackInvoker.invoke()
             authViewModel().lock()
         }
@@ -469,6 +475,8 @@ private fun MainState.Main(
         }
     }
 
+    val density = LocalDensity.current
+
     CompositionLocalProvider(LocalRouterController provides routerController) {
         Box(
             modifier = Modifier.fillMaxSize().predictiveBackVisual(predictiveBackVisualState = predictiveBackVisualState)
@@ -479,57 +487,51 @@ private fun MainState.Main(
                     GlobalSnapBar()
                 }
             ) { _ ->
-                ModalNavigationDrawer(
-                    drawerContent = {
-                        Box(
-                            Modifier
-                                .fillMaxHeight()
-                                .fillMaxWidth(0.92f)
-                                .clipDeviceRoundCorner()
-                                .background(LocalAppPalette.current.drawerBg)
-                                .windowInsetsPadding(
-                                    WindowInsets.navigationBars.only(
-                                        WindowInsetsSides.Vertical + WindowInsetsSides.Start
-                                    )
+                SimpleNavHost(
+                    simpleNavHostController = naviController,
+                    initialDestination = Gallery,
+                    enterTransition = enterTransition,
+                    exitTransition = exitTransitionCreator,
+                    sizeTransition = sizeTransition,
+                    mapBuilder = remember(menuItemsEntity) {
+                        {
+                            composable(Gallery) {
+                                Gallery(
+                                    galleryStateHolderMap,
+                                    currentSelectedAlbum,
+                                    menuItemsEntity,
+                                    naviController
                                 )
-                        ) {
-                            MainDrawer(menuItemsEntity) { index, album ->
-                                currentSelectedAlbum = IndexedValue(index, album)
-                                scope.launch {
-                                    routerController.toGallery()
-                                }
                             }
-                        }
-                    },
-                    Modifier.fillMaxSize(),
-                    drawerState = drawerState,
-                    gesturesEnabled = true
-                ) {
-                    SimpleNavHost(
-                        simpleNavHostController = naviController,
-                        initialDestination = Gallery,
-                        enterTransition = enterTransition,
-                        exitTransition = exitTransitionCreator,
-                        sizeTransition = sizeTransition,
-                        mapBuilder = remember(menuItemsEntity) {
-                            {
-                                composable(Gallery) {
-                                    Gallery(
-                                        galleryStateHolderMap,
-                                        currentSelectedAlbum,
-                                        menuItemsEntity,
-                                        drawerState,
-                                        naviController
-                                    )
-                                }
 
-                                composable(Settings) {
-                                    SettingsPage(naviController)
+                            composable(Settings) {
+                                SettingsPage(naviController)
+                            }
+
+                            composable(Drawer) {
+                                Box(
+                                    Modifier
+                                        .fillMaxHeight()
+                                        .fillMaxWidth()
+                                        .clipDeviceRoundCorner()
+                                        .background(LocalAppPalette.current.drawerBg)
+                                        .windowInsetsPadding(
+                                            WindowInsets.navigationBars.only(
+                                                WindowInsetsSides.Vertical + WindowInsetsSides.Start
+                                            )
+                                        )
+                                ) {
+                                    MainDrawer(menuItemsEntity) { index, album ->
+                                        currentSelectedAlbum = IndexedValue(index, album)
+                                        scope.launch {
+                                            routerController.toGallery()
+                                        }
+                                    }
                                 }
                             }
                         }
-                    )
-                }
+                    }
+                )
             }
             if (!visible) {
                 Box(

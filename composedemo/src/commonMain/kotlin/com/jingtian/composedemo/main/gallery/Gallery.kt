@@ -2,9 +2,11 @@ package com.jingtian.composedemo.main.gallery
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.TransformableState
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -46,6 +48,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -77,6 +80,7 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -116,31 +120,47 @@ import com.jingtian.composedemo.base.resources.getPainter
 import com.jingtian.composedemo.demonstration.gradient.HorizontalShadowWrapper
 import com.jingtian.composedemo.main.dialog.ImportDocumentDialog
 import com.jingtian.composedemo.main.dialog.rememberDocumentDialogState
+import com.jingtian.composedemo.main.route.Drawer
 import com.jingtian.composedemo.main.widget.SimpleNavHostController
 import com.jingtian.composedemo.multiplatform.LowMemorySideEffect
 import com.jingtian.composedemo.multiplatform.SoftRef
-import com.jingtian.composedemo.multiplatform.logD
 import com.jingtian.composedemo.ui.theme.clipDeviceRoundCorner
 import com.jingtian.composedemo.ui.theme.goldenRatio
 import com.jingtian.composedemo.utils.getOrPutSoftRef
 import com.jingtian.composedemo.viewmodels.albumViewModel
-import com.jingtian.composedemo.viewmodels.appThemeViewModel
 import com.jingtian.composedemo.viewmodels.observeAsState
 import dev.chrisbanes.haze.HazeProgressive
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeTint
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
 import kotlinx.coroutines.IO
 import kotlin.math.pow
 
+class DensityScalingState(
+    // Note: For accessibility, typical min/max values are ~0.75x and ~3.5x.
+    private val minScale: Float = 0.25f,
+    private val maxScale: Float = 2.5f,
+    private val currentDensity: Density
+) {
+    val transformableState = TransformableState { zoomChange, _, _ ->
+        scaleFactor.floatValue =
+            (scaleFactor.floatValue * zoomChange).coerceIn(minScale, maxScale)
+    }
+    val scaleFactor = mutableFloatStateOf(1f)
+    fun scaledDensity(): Density {
+        return Density(
+            currentDensity.density * scaleFactor.floatValue,
+            currentDensity.fontScale
+        )
+    }
+}
+
 @Composable
 fun Gallery(
     galleryStateHolderMap: SnapshotStateMap<Long, SoftRef<GalleryStateHolder>>,
     album: IndexedValue<Album>?,
     albumList: List<Album>,
-    drawerState: DrawerState,
     naviController: SimpleNavHostController
 ) {
     if (album == null) {
@@ -167,13 +187,13 @@ fun Gallery(
                 album,
                 currentSelectedAlbumState,
                 albumList,
-                drawerState,
                 viewModel,
                 galleryDpConstants,
                 naviController
             )
         }
     }
+
     galleryStateHolder.Gallery()
 }
 
@@ -232,7 +252,8 @@ fun ImageBitmap.sampleAverage(rect: IntRect): Color {
 }
 
 fun Color.relativeLuminance(): Float {
-    fun convert(v: Float): Float = if (v <= 0.03928f) v / 12.92f else (v + 0.055f)/1.055f.pow(2.4f)
+    fun convert(v: Float): Float =
+        if (v <= 0.03928f) v / 12.92f else (v + 0.055f) / 1.055f.pow(2.4f)
     return 0.2126f * convert(red) + 0.7152f * convert(green) + 0.0722f * convert(blue)
 }
 
@@ -273,7 +294,6 @@ fun Modifier.bottomOvalGlass(hazeState: HazeState, color: Color? = null): Modifi
 fun GalleryStateHolder.Gallery() {
     val albumItemDataChange by viewModel.albumItemListChange.observeAsState()
     val scope = rememberCoroutineScope()
-    val graphicsLayer = rememberGraphicsLayer()
     val albumNameChange by viewModel.albumNameChange.observeAsState()
 //    LaunchedEffect(album) {
 //        initAlbumInfo()
@@ -314,7 +334,8 @@ fun GalleryStateHolder.Gallery() {
             searchGalleryScrollState.scrollToItem(0, 0)
         }
     }
-
+    val currentDensity = LocalDensity.current
+    val scaleState = remember(currentDensity) { DensityScalingState(currentDensity = currentDensity) }
     val hazeState = rememberHazeState()
     Box(
         Modifier
@@ -325,21 +346,17 @@ fun GalleryStateHolder.Gallery() {
             return galleryScrollState.layoutInfo.visibleItemsInfo.map { it.index - it.offset.y.toFloat() / it.size.height }
                 .average().toFloat()
         }
+
         val naviBarInsets = WindowInsets.navigationBars.asPaddingValues()
-        val shadesHeight = 0.dp
         LazyVerticalStaggeredGrid(
-            columns = StaggeredGridCells.Adaptive((size + galleryItemPadding * 2)),
-            Modifier
+            columns = StaggeredGridCells.Adaptive((size * scaleState.scaleFactor.floatValue)),
+            verticalItemSpacing = galleryItemPadding * 2 * scaleState.scaleFactor.floatValue,
+            horizontalArrangement = Arrangement.spacedBy(galleryItemPadding * 2 * scaleState.scaleFactor.floatValue),
+            modifier = Modifier
                 .fillMaxSize()
                 .hazeSource(state = hazeState, zIndex = 2f)
-                .drawWithContent {
-                    graphicsLayer.record {
-                        this@drawWithContent.drawContent()
-                    }
-                    drawLayer(graphicsLayer)
-                }
                 .appBackground()
-                .padding(start = galleryItemPadding, end = galleryItemPadding)
+                .padding(start = galleryItemPadding * 2, end = galleryItemPadding * 2)
                 .nestedScroll(object : NestedScrollConnection {
                     override fun onPostScroll(
                         consumed: Offset,
@@ -356,7 +373,9 @@ fun GalleryStateHolder.Gallery() {
 //                            Log.d("jingtian", "onPostScroll: $info")
                         return super.onPostScroll(consumed, available, source)
                     }
-                }),
+                })
+                .transformable(state = scaleState.transformableState, canPan = { false }, lockRotationOnZoomPan = true)
+            ,
             contentPadding = PaddingValues(
                 start = naviBarInsets.calculateStartPadding(LocalLayoutDirection.current),
                 top = headerHeight.dp + naviBarInsets.calculateTopPadding(),
@@ -377,33 +396,38 @@ fun GalleryStateHolder.Gallery() {
                     }
                 },
                 contentType = { index -> filteredItemList[index].fileInfo.fileType.value }) { index: Int ->
-                AlbumItemView(
-                    albumViewMap,
-                    filteredItemList[index],
-                    size,
-                    galleryItemPadding,
-                    currentSelectedItem,
-                    enterEditModeState,
-                    itemSelectStateChangeState,
-                    showEditDialogStateOnLongClickState
-                )
+                CompositionLocalProvider(LocalDensity provides scaleState.scaledDensity()) {
+                    AlbumItemView(
+                        albumViewMap,
+                        filteredItemList[index],
+                        size,
+                        galleryItemPadding,
+                        currentSelectedItem,
+                        enterEditModeState,
+                        itemSelectStateChangeState,
+                        showEditDialogStateOnLongClickState
+                    )
+                }
             }
         }
 
-        Box(modifier = Modifier.fillMaxWidth().align(Alignment.TopCenter).height(headerHeight.dp).hazeEffect(state = hazeState) {
-                progressive = HazeProgressive.verticalGradient(
-                    startIntensity = 1f, endIntensity = 0f
-                )
-            }
+
+        Box(
+            modifier = Modifier.fillMaxWidth().align(Alignment.TopCenter).height(headerHeight.dp)
+                .hazeEffect(state = hazeState) {
+                    progressive = HazeProgressive.verticalGradient(
+                        startIntensity = 1f, endIntensity = 0f
+                    )
+                }
         )
         if (enterEditMode) {
             Box(
                 modifier = Modifier.fillMaxWidth().align(Alignment.BottomCenter)
                     .height(bottomBarHeight).hazeEffect(state = hazeState) {
-                    progressive = HazeProgressive.verticalGradient(
-                        startIntensity = 0f, endIntensity = 1f
-                    )
-                }
+                        progressive = HazeProgressive.verticalGradient(
+                            startIntensity = 0f, endIntensity = 1f
+                        )
+                    }
             )
         }
         val scrollBarColor = LocalAppPalette.current.labelTextColor.copy(alpha = 0.85f)
@@ -484,8 +508,9 @@ fun GalleryStateHolder.Gallery() {
                     )
                 }
         )
-        Column(modifier = Modifier.fillMaxWidth()
-            .onSizeChanged { with(density) { headerHeight = it.height.toDp().value } }
+        Column(
+            modifier = Modifier.fillMaxWidth()
+                .onSizeChanged { with(density) { headerHeight = it.height.toDp().value } }
         ) {
             Row(
                 Modifier
@@ -509,16 +534,15 @@ fun GalleryStateHolder.Gallery() {
                             .padding(4.dp)
                             .clickable {
                                 scope.launch {
-                                    if (drawerState.isOpen) {
-                                        drawerState.close()
-                                    } else {
-                                        drawerState.open()
-                                    }
+                                    navController.navigateTo(Drawer)
                                 }
                             }
                     )
                     Spacer(Modifier.width(12.dp))
-                    Box(modifier = Modifier.fillMaxWidth().align(Alignment.CenterVertically).weight(1f)) {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().align(Alignment.CenterVertically)
+                            .weight(1f)
+                    ) {
                         AppThemeText(
                             albumName.trim(),
                             Modifier
@@ -538,13 +562,14 @@ fun GalleryStateHolder.Gallery() {
                     Spacer(Modifier.width(6.dp))
                 }
                 if (gallerySearchEnabled) {
-                    Box(modifier = Modifier
-                        .fillMaxWidth()
-                        .align(Alignment.CenterVertically)
-                        .padding(horizontal = 4.dp)
-                        .ovalGlass(hazeState)
-                        .weight(1f)
-                        .height(height = LocalAppUIConstants.current.filterLabelHeight),
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .align(Alignment.CenterVertically)
+                            .padding(horizontal = 4.dp)
+                            .ovalGlass(hazeState)
+                            .weight(1f)
+                            .height(height = LocalAppUIConstants.current.filterLabelHeight),
                         contentAlignment = Alignment.CenterStart
                     ) {
                         BasicTextField(
@@ -586,7 +611,10 @@ fun GalleryStateHolder.Gallery() {
                                 }
                             }
                         }
-                        .ovalGlass(hazeState, color = if (gallerySearchEnabled) LocalAppPalette.current.labelChecked else null)
+                        .ovalGlass(
+                            hazeState,
+                            color = if (gallerySearchEnabled) LocalAppPalette.current.labelChecked else null
+                        )
                         .size(LocalAppUIConstants.current.filterLabelHeight)
                         .padding(4.dp)
                         .align(Alignment.CenterVertically)
@@ -598,7 +626,10 @@ fun GalleryStateHolder.Gallery() {
                     modifier = Modifier
                         .size(LocalAppUIConstants.current.filterLabelHeight)
                         .clickable { enterEditMode = !enterEditMode }
-                        .ovalGlass(hazeState, color = if (enterEditMode) LocalAppPalette.current.labelChecked else null)
+                        .ovalGlass(
+                            hazeState,
+                            color = if (enterEditMode) LocalAppPalette.current.labelChecked else null
+                        )
                         .size(LocalAppUIConstants.current.filterLabelHeight)
                         .padding(4.dp)
                         .align(Alignment.CenterVertically)
@@ -620,7 +651,10 @@ fun GalleryStateHolder.Gallery() {
                                 modifier = Modifier
                                     .size(LocalAppUIConstants.current.filterLabelHeight)
                                     .clickable { showLabelFilter = !showLabelFilter }
-                                    .ovalGlass(hazeState, color = if (showLabelFilter) LocalAppPalette.current.labelChecked else null)
+                                    .ovalGlass(
+                                        hazeState,
+                                        color = if (showLabelFilter) LocalAppPalette.current.labelChecked else null
+                                    )
                                     .size(LocalAppUIConstants.current.filterLabelHeight)
                                     .padding(4.dp)
                             )
@@ -641,9 +675,17 @@ fun GalleryStateHolder.Gallery() {
                                 contentPadding = PaddingValues(horizontal = galleryItemPadding * 2),
                                 horizontalArrangement = Arrangement.spacedBy(galleryItemPadding * 2)
                             ) {
-                                roundRectTabFilter(hazeState, labelFilterCheckedInfo, totalLabelList)
+                                roundRectTabFilter(
+                                    hazeState,
+                                    labelFilterCheckedInfo,
+                                    totalLabelList
+                                )
                                 roundRectTabFilter(hazeState, fileTypeCheckState, totalFileTypeList)
-                                roundRectTabFilter(hazeState, itemRankTypeCheckState, totalItemRankList)
+                                roundRectTabFilter(
+                                    hazeState,
+                                    itemRankTypeCheckState,
+                                    totalItemRankList
+                                )
                             }
                         }
                     }

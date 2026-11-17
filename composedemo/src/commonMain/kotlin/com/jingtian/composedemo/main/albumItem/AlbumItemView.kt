@@ -251,8 +251,7 @@ fun AlbumItemViewStateHolder.AlbumItemView() {
 
     Column(Modifier
         .width(size)
-        .padding(padding)
-        .pointerInput(this@AlbumItemView) {
+        .pointerInput(this@AlbumItemView) { // todo: 解决这里和zoom的冲突
             detectTapGestures(onLongPress = {
 //                enterEditState.value = true
 //                itemSelectStateChangeState.value += 1

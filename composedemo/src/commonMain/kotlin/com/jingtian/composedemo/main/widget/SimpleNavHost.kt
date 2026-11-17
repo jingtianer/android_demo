@@ -78,6 +78,7 @@ interface AbstractSimpleNavHostController {
     val secondLastBackStackEntry: NavRouter?
     val willHandleBackEvents: Boolean
     var showSecondLastEntry: Boolean
+    var shouldHandleBack: Boolean
     suspend fun navigateTo(router: NavRouter)
     suspend fun pop()
 }
@@ -121,9 +122,10 @@ class SimpleNavHostController(private val impl: SimpleNavHostControllerImpl = Si
         var swipeEdge by mutableIntStateOf(BackEventCompat.EDGE_LEFT)
         var inPredictiveBack by mutableStateOf(false)
         var pendingTargetRouter by mutableStateOf<NavRouter?>(null)
+        override var shouldHandleBack: Boolean by mutableStateOf(true)
 
         // 返回键
-        override val willHandleBackEvents: Boolean get() = backStack.size > 1
+        override val willHandleBackEvents: Boolean get() = backStack.size > 1 && shouldHandleBack
         // 动画
         val transitionState = SeekableTransitionState(currentBackStackEntry)
         var finalEnterTransition by mutableStateOf<AnimatedContentTransitionScope<NavRouter?>.() -> EnterTransition>({ EnterTransition.None })
