@@ -14,6 +14,8 @@ object Gallery : MainRouter()
 object Settings : MainRouter()
 @Serializable
 object Drawer : MainRouter()
+@Serializable
+object WebView : MainRouter()
 
 interface IRouterController {
     suspend fun toGallery() = Unit

@@ -12,15 +12,11 @@ import androidx.compose.animation.core.SeekableTransitionState
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.rememberTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.scaleIn
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.DrawerDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -28,21 +24,12 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameMillis
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.backhandler.PredictiveBackHandler
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
-import com.jingtian.composedemo.base.BackPressHandler
-import com.jingtian.composedemo.multiplatform.logD
-import com.jingtian.composedemo.ui.theme.LocalAppColorScheme
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.launch
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.jvm.JvmSuppressWildcards
@@ -77,7 +64,7 @@ interface AbstractSimpleNavHostController {
     val currentBackStackEntry: NavRouter?
     val secondLastBackStackEntry: NavRouter?
     val willHandleBackEvents: Boolean
-    var showSecondLastEntry: Boolean
+    var extraRenderEntry: NavRouter?
     var shouldHandleBack: Boolean
     suspend fun navigateTo(router: NavRouter)
     suspend fun pop()
@@ -132,7 +119,7 @@ class SimpleNavHostController(private val impl: SimpleNavHostControllerImpl = Si
         var finalExitTransition by mutableStateOf<AnimatedContentTransitionScope<NavRouter?>.() -> ExitTransition>({ ExitTransition.None })
         var finalSizeTransition by mutableStateOf<(AnimatedContentTransitionScope<NavRouter?>.() -> SizeTransform?)?>(null)
 
-        override var showSecondLastEntry: Boolean by mutableStateOf(false)
+        override var extraRenderEntry: NavRouter? by mutableStateOf(null)
 
         fun updateTransition(isPop: Boolean, swipeEdge: Int) {
             finalEnterTransition = if (isPop) {
@@ -314,8 +301,8 @@ private fun SimpleNavHostController.SimpleNavHostControllerImpl.SimpleNavHost(
             targetContentZIndex = backStack.indexOf(targetState) / backStack.size.toFloat()
         )
     }) { state ->
-        if (showSecondLastEntry) {
-            navMap[secondLastBackStackEntry]?.content?.invoke()
+        if (extraRenderEntry != null) {
+            navMap[extraRenderEntry]?.content?.invoke()
         }
         navMap[state]?.content?.invoke() ?: return@AnimatedContent
         if (state != null && state == secondLastBackStackEntry && transitionState.targetState != transitionState.currentState) {

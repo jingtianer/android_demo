@@ -78,6 +78,7 @@ import androidx.compose.ui.window.DialogProperties
 import com.jingtian.composedemo.base.AppThemeConfirmDialog
 import com.jingtian.composedemo.base.resources.DrawableIcon
 import com.jingtian.composedemo.base.resources.getPainter
+import com.jingtian.composedemo.main.route.Gallery
 import com.jingtian.composedemo.main.settings.SettingsPageState.currentAppDensity
 import com.jingtian.composedemo.main.settings.SettingsPageState.globalVisual
 import com.jingtian.composedemo.main.widget.SimpleNavHostController
@@ -246,9 +247,9 @@ private object SettingsPageState {
             if (currentPressedSlider == DummySettingsPageSliderToken) {
                 globalAlphaAnim.animateTo(1f, animationSpec = tween(durationMillis = 500))
                 withFrameMillis { }
-                simpleNavHostController.showSecondLastEntry = false
+                simpleNavHostController.extraRenderEntry = null
             } else {
-                simpleNavHostController.showSecondLastEntry = true
+                simpleNavHostController.extraRenderEntry = Gallery
                 withFrameMillis { }
                 withFrameMillis { }
                 withFrameMillis { }
