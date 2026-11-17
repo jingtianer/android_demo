@@ -21,24 +21,32 @@ import com.jingtian.composedemo.ui.theme.LocalAppPalette
 import com.jingtian.composedemo.ui.theme.LocalAppUIConstants
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
 import com.jingtian.composedemo.viewmodels.albumViewModel
+import dev.chrisbanes.haze.HazeState
 
 @Composable
-fun RoundRectCheckableLabel(item: String, isChecked: Boolean, checkedList: SnapshotStateMap<String, Boolean>, wrapContent: Boolean, modifier: Modifier = Modifier) {
+fun RoundRectCheckableLabel(item: String, isChecked: Boolean, checkedList: SnapshotStateMap<String, Boolean>, wrapContent: Boolean, hazeState: HazeState? = null) {
     val paddings = LocalAppUIConstants.current.filterLabelPaddings
     val paddingInnerHorizontal = paddings[0]
     val paddingInnerVertical = paddings[1]
     val paddingOuterHorizontal = paddings[2]
     val paddingOuterVertical = paddings[3]
     val viewModel: AlbumViewModel = albumViewModel()
-    val modifier = if (wrapContent) {
+    val modifier = if (hazeState != null) {
         Modifier
             .padding(horizontal = paddingOuterHorizontal, vertical = paddingOuterVertical)
             .wrapContentWidth()
             .clip(RoundedCornerShape(100))
-            .then(modifier)
+            .ovalGlass(hazeState, if (isChecked) LocalAppPalette.current.labelChecked else null)
             .height(LocalAppUIConstants.current.filterLabelHeight)
             .widthIn(LocalAppUIConstants.current.filterLabelHeight * LocalAppUIConstants.current.filterLabelAspectRatio)
-
+    } else if (wrapContent) {
+        Modifier
+            .padding(horizontal = paddingOuterHorizontal, vertical = paddingOuterVertical)
+            .wrapContentWidth()
+            .clip(RoundedCornerShape(100))
+            .background(color = if (isChecked) LocalAppPalette.current.labelChecked else LocalAppPalette.current.labelUnChecked,)
+            .height(LocalAppUIConstants.current.filterLabelHeight)
+            .widthIn(LocalAppUIConstants.current.filterLabelHeight * LocalAppUIConstants.current.filterLabelAspectRatio)
     } else {
         Modifier
             .padding(horizontal = paddingOuterHorizontal, vertical = paddingOuterVertical)

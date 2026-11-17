@@ -243,7 +243,7 @@ fun Color.adaptiveTextColor() = when {
 }
 
 @Composable
-fun Modifier.ovalGlass(hazeState: HazeState): Modifier {
+fun Modifier.ovalGlass(hazeState: HazeState, color: Color? = null): Modifier {
     return this.clip(RoundedCornerShape(100))
         .hazeEffect(state = hazeState) {
             progressive = HazeProgressive.verticalGradient(
@@ -251,7 +251,7 @@ fun Modifier.ovalGlass(hazeState: HazeState): Modifier {
             )
         }
         .background(
-            color = LocalAppPalette.current.drawerBg.copy(alpha = 0.4f),
+            color = color ?: LocalAppPalette.current.drawerBg.copy(alpha = 0.4f),
         )
 }
 
@@ -383,12 +383,10 @@ fun GalleryStateHolder.Gallery() {
                 )
             }
         )
-        val labelUnChecked = LocalAppPalette.current.labelUnChecked
         Box(modifier = Modifier.fillMaxWidth().align(Alignment.BottomCenter).height(bottomBarHeight).hazeEffect(state = hazeState) {
                 progressive = HazeProgressive.verticalGradient(
                     startIntensity = 0f, endIntensity = 1f
                 )
-                tints = listOf(HazeTint.Unspecified.copy(labelUnChecked))
             }
         )
         val scrollBarColor = LocalAppPalette.current.labelTextColor.copy(alpha = 0.85f)
@@ -617,7 +615,6 @@ fun GalleryStateHolder.Gallery() {
                                 filterLabelPaddings = listOf(0f.dp, 0f.dp, 0f.dp, 0f.dp)
                             )
                         ) {
-                            val blurModifier = Modifier.ovalGlass(hazeState)
                             LazyRow(
                                 Modifier
                                     .fillMaxWidth()
@@ -627,9 +624,9 @@ fun GalleryStateHolder.Gallery() {
                                 contentPadding = PaddingValues(horizontal = galleryItemPadding * 2),
                                 horizontalArrangement = Arrangement.spacedBy(galleryItemPadding * 2)
                             ) {
-                                roundRectTabFilter(blurModifier, labelFilterCheckedInfo, totalLabelList)
-                                roundRectTabFilter(blurModifier, fileTypeCheckState, totalFileTypeList)
-                                roundRectTabFilter(blurModifier, itemRankTypeCheckState, totalItemRankList)
+                                roundRectTabFilter(hazeState, labelFilterCheckedInfo, totalLabelList)
+                                roundRectTabFilter(hazeState, fileTypeCheckState, totalFileTypeList)
+                                roundRectTabFilter(hazeState, itemRankTypeCheckState, totalItemRankList)
                             }
                         }
                     }
