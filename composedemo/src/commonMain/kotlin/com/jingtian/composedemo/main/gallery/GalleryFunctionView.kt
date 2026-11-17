@@ -40,7 +40,7 @@ fun RowScope.GalleryFunctionView(func: GalleryFunctions, onClick: ()->Unit) {
             painter = func.iconProvider(),
             contentDescription = "${func.functionName}功能",
             modifier = Modifier
-                .size(32.dp)
+                .size(28.dp)
                 .align(Alignment.CenterHorizontally),
         )
         AppThemeText(

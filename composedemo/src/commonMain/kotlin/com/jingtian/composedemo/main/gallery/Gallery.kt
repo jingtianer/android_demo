@@ -396,12 +396,16 @@ fun GalleryStateHolder.Gallery() {
                 )
             }
         )
-        Box(modifier = Modifier.fillMaxWidth().align(Alignment.BottomCenter).height(bottomBarHeight).hazeEffect(state = hazeState) {
-                progressive = HazeProgressive.verticalGradient(
-                    startIntensity = 0f, endIntensity = 1f
-                )
-            }
-        )
+        if (enterEditMode) {
+            Box(
+                modifier = Modifier.fillMaxWidth().align(Alignment.BottomCenter)
+                    .height(bottomBarHeight).hazeEffect(state = hazeState) {
+                    progressive = HazeProgressive.verticalGradient(
+                        startIntensity = 0f, endIntensity = 1f
+                    )
+                }
+            )
+        }
         val scrollBarColor = LocalAppPalette.current.labelTextColor.copy(alpha = 0.85f)
         val dp16 = 16.dp.dpValue()
         val dp6 = 6.dp.dpValue()
@@ -659,7 +663,7 @@ fun GalleryStateHolder.Gallery() {
                         .wrapContentSize()
                         .padding(start = galleryItemPadding * 2)
                         .bottomOvalGlass(hazeState)
-                        .padding(12.dp)
+                        .padding(8.dp)
                         .align(Alignment.CenterStart)
                 ) {
                     if (selectAll) {
@@ -688,7 +692,7 @@ fun GalleryStateHolder.Gallery() {
                     Modifier
                         .wrapContentSize()
                         .bottomOvalGlass(hazeState)
-                        .padding(12.dp)
+                        .padding(8.dp)
                         .align(Alignment.Center)
                 ) {
                     for (func in currentFunctions) {
@@ -754,7 +758,7 @@ fun GalleryStateHolder.Gallery() {
                         .wrapContentSize()
                         .padding(end = galleryItemPadding * 2)
                         .bottomOvalGlass(hazeState)
-                        .padding(12.dp)
+                        .padding(8.dp)
                         .align(Alignment.CenterEnd)
                 ) {
                     GalleryFunctionView(EXIT) {
