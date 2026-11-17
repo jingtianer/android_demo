@@ -106,7 +106,7 @@ expect fun rememberNativeBackInvoker(): (suspend () -> Unit)
 private class PredictiveBackVisualState {
     val anim = Animatable(initialValue = 1f)
     val progress = mutableFloatStateOf(0f)
-    val swipeEdge = mutableIntStateOf(BackEventCompat.EDGE_LEFT)
+    val swipeEdge = mutableIntStateOf(BackEventCompat.EDGE_RIGHT)
     val isEnable = mutableStateOf(false)
     val backState = mutableIntStateOf(STATE_IDLE)
 

@@ -119,7 +119,7 @@ class SimpleNavHostController(private val impl: SimpleNavHostControllerImpl = Si
 
         // 可预测返回
         var backProgress by mutableFloatStateOf(-1f)
-        var swipeEdge by mutableIntStateOf(BackEventCompat.EDGE_LEFT)
+        var swipeEdge by mutableIntStateOf(BackEventCompat.EDGE_RIGHT)
         var inPredictiveBack by mutableStateOf(false)
         var pendingTargetRouter by mutableStateOf<NavRouter?>(null)
         override var shouldHandleBack: Boolean by mutableStateOf(true)
