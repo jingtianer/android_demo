@@ -560,25 +560,23 @@ fun AppBackgroundSlideBar() {
                 }
             }
         }
-        val color = remember(selectedType) {
-            when (selectedType) {
-                AppBackgroundSlideBarSelectedType.Middle -> {
-                    backgroundConfigState.middleColor
-                }
+        val color = when (selectedType) {
+            AppBackgroundSlideBarSelectedType.Middle -> {
+                backgroundConfigState.middleColor
+            }
 
-                AppBackgroundSlideBarSelectedType.Start -> {
-                    backgroundConfigState.startColor
-                }
+            AppBackgroundSlideBarSelectedType.Start -> {
+                backgroundConfigState.startColor
+            }
 
-                AppBackgroundSlideBarSelectedType.End -> {
-                    backgroundConfigState.endColor
-                }
+            AppBackgroundSlideBarSelectedType.End -> {
+                backgroundConfigState.endColor
+            }
 
-                null -> {
-                    null
-                }
-            }?.color
-        }
+            null -> {
+                null
+            }
+        }?.color
 
         fun updateColor(color: Color) {
             var backgroundConfig by if (isDark) {

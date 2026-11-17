@@ -251,7 +251,20 @@ fun Modifier.ovalGlass(hazeState: HazeState, color: Color? = null): Modifier {
             )
         }
         .background(
-            color = color ?: LocalAppPalette.current.drawerBg.copy(alpha = 0.4f),
+            color = color ?: LocalAppPalette.current.dialogBg.copy(alpha = 0.4f),
+        )
+}
+
+@Composable
+fun Modifier.bottomOvalGlass(hazeState: HazeState, color: Color? = null): Modifier {
+    return this.clip(RoundedCornerShape(100))
+        .hazeEffect(state = hazeState) {
+            progressive = HazeProgressive.verticalGradient(
+                startIntensity = 0.7f, endIntensity = 0.7f
+            )
+        }
+        .background(
+            color = color ?: LocalAppPalette.current.glassColor.copy(alpha = 0.4f),
         )
 }
 
@@ -645,7 +658,7 @@ fun GalleryStateHolder.Gallery() {
                     Modifier
                         .wrapContentSize()
                         .padding(start = galleryItemPadding * 2)
-                        .ovalGlass(hazeState)
+                        .bottomOvalGlass(hazeState)
                         .padding(12.dp)
                         .align(Alignment.CenterStart)
                 ) {
@@ -674,7 +687,7 @@ fun GalleryStateHolder.Gallery() {
                 Row(
                     Modifier
                         .wrapContentSize()
-                        .ovalGlass(hazeState)
+                        .bottomOvalGlass(hazeState)
                         .padding(12.dp)
                         .align(Alignment.Center)
                 ) {
@@ -740,7 +753,7 @@ fun GalleryStateHolder.Gallery() {
                     Modifier
                         .wrapContentSize()
                         .padding(end = galleryItemPadding * 2)
-                        .ovalGlass(hazeState)
+                        .bottomOvalGlass(hazeState)
                         .padding(12.dp)
                         .align(Alignment.CenterEnd)
                 ) {

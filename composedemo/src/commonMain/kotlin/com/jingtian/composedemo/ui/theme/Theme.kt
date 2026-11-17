@@ -58,6 +58,7 @@ data class AppUIConstants(
 
 data class AppPalette(
     val drawerBg: Color,
+    val glassColor: Color,
     val dialogBg: Color,
     val labelChecked: Color,
     val labelUnChecked: Color,
@@ -75,6 +76,7 @@ data class AppPalette(
 
 private val darkAppPalette = AppPalette(
     drawerBg = Color(red = 28, green = 27, blue = 31),
+    glassColor = Color(red = 80, green = 80, blue = 80),
     dialogBg = Color(red = 28, green = 27, blue = 31),
     labelChecked = Color(0x663B79A2),
     labelUnChecked = colorD8D8D8_2f,
@@ -92,6 +94,7 @@ private val darkAppPalette = AppPalette(
 )
 private val liteAppPalette = AppPalette(
     drawerBg = Color(red = 255, green = 251, blue = 254),
+    glassColor = Color(red = 200, green = 200, blue = 200),
     dialogBg = Color(red = 255, green = 251, blue = 254),
     labelChecked = Color(0x664CB9A1),
 //    labelChecked = Color(0x4f90CCE5),
