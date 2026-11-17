@@ -73,6 +73,7 @@ import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
@@ -126,6 +127,7 @@ import com.jingtian.composedemo.multiplatform.LowMemorySideEffect
 import com.jingtian.composedemo.multiplatform.SoftRef
 import com.jingtian.composedemo.ui.theme.clipDeviceRoundCorner
 import com.jingtian.composedemo.ui.theme.goldenRatio
+import com.jingtian.composedemo.utils.UserStorage
 import com.jingtian.composedemo.utils.getOrPutSoftRef
 import com.jingtian.composedemo.viewmodels.albumViewModel
 import com.jingtian.composedemo.viewmodels.observeAsState
@@ -136,6 +138,7 @@ import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
 import kotlinx.coroutines.IO
 import kotlin.math.pow
+import kotlin.math.sqrt
 
 class DensityScalingState(
     // Note: For accessibility, typical min/max values are ~0.75x and ~3.5x.
@@ -143,14 +146,15 @@ class DensityScalingState(
     private val maxScale: Float = 2.5f,
     private val currentDensity: Density
 ) {
-    val transformableState = TransformableState { zoomChange, _, _ ->
-        scaleFactor.floatValue =
-            (scaleFactor.floatValue * zoomChange).coerceIn(minScale, maxScale)
+    val scaleFactor get() = UserStorage.galleryScaleFactor
+
+    fun updateGalleryScaleFactor(scale: Float) {
+        UserStorage.galleryScaleFactor = (UserStorage.galleryScaleFactor * (if (scale > 1) sqrt(scale) else scale * scale)).coerceIn(minScale, maxScale)
     }
-    val scaleFactor = mutableFloatStateOf(1f)
+
     fun scaledDensity(): Density {
         return Density(
-            currentDensity.density * scaleFactor.floatValue,
+            currentDensity.density *UserStorage.galleryScaleFactor,
             currentDensity.fontScale
         )
     }
@@ -349,13 +353,45 @@ fun GalleryStateHolder.Gallery() {
 
         val naviBarInsets = WindowInsets.navigationBars.asPaddingValues()
         LazyVerticalStaggeredGrid(
-            columns = StaggeredGridCells.Adaptive((size * scaleState.scaleFactor.floatValue)),
-            verticalItemSpacing = galleryItemPadding * 2 * scaleState.scaleFactor.floatValue,
-            horizontalArrangement = Arrangement.spacedBy(galleryItemPadding * 2 * scaleState.scaleFactor.floatValue),
+            columns = StaggeredGridCells.Adaptive((size * scaleState.scaleFactor)),
+            verticalItemSpacing = galleryItemPadding * 2 * scaleState.scaleFactor,
+            horizontalArrangement = Arrangement.spacedBy(galleryItemPadding * 2 * scaleState.scaleFactor),
             modifier = Modifier
                 .fillMaxSize()
                 .hazeSource(state = hazeState, zIndex = 2f)
                 .appBackground()
+                .pointerInput(Unit) {
+                    awaitEachGesture {
+                        awaitFirstDown(pass = PointerEventPass.Initial)
+
+                        var baseDistance: Float? = null
+
+                        do {
+                            val event = awaitPointerEvent(pass = PointerEventPass.Initial)
+                            val changes = event.changes
+
+                            if (changes.size >= 2) {
+                                // 双指：消费事件，阻断向下传递
+                                changes.forEach { it.consume() }
+
+                                val p0 = changes[0].position
+                                val p1 = changes[1].position
+                                val dx = p0.x - p1.x
+                                val dy = p0.y - p1.y
+                                val currentDist = sqrt(dx * dx + dy * dy)
+                                baseDistance?.let { baseDistance ->
+                                    if (baseDistance > 0.0001f) {
+                                        val factor = currentDist / baseDistance
+                                        scaleState.updateGalleryScaleFactor(factor)
+                                    }
+                                } ?: run {
+                                    baseDistance = currentDist
+                                }
+                            }
+                            // 单指：不消费，什么都不做，事件正常冒泡
+                        } while (changes.any { it.pressed })
+                    }
+                }
                 .padding(start = galleryItemPadding * 2, end = galleryItemPadding * 2)
                 .nestedScroll(object : NestedScrollConnection {
                     override fun onPostScroll(
@@ -374,7 +410,6 @@ fun GalleryStateHolder.Gallery() {
                         return super.onPostScroll(consumed, available, source)
                     }
                 })
-                .transformable(state = scaleState.transformableState, canPan = { false }, lockRotationOnZoomPan = true)
             ,
             contentPadding = PaddingValues(
                 start = naviBarInsets.calculateStartPadding(LocalLayoutDirection.current),

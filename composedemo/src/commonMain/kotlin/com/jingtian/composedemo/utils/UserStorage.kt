@@ -2,6 +2,7 @@ package com.jingtian.composedemo.utils
 
 import androidx.annotation.FloatRange
 import androidx.compose.foundation.gestures.TransformableState
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.ui.graphics.Brush
@@ -203,6 +204,15 @@ object UserStorage {
     private var _appScaleFactor by scaleFactorConfig
 
     val appScaleFactor: State<Float> = scaleFactorConfig.state
+
+    private val galleryScaleFactorConfig = SharedPreferenceUtils.StateFullStorageJson(
+        getJsonStorage("user_config"),
+        "galleryScale",
+        defaultValue = 1f,
+        serializer = Float.serializer(),
+    )
+
+    var galleryScaleFactor: Float by galleryScaleFactorConfig
 
     const val MIN_APP_SCALE_FACTOR = 0.5f
     const val MAX_APP_SCALE_FACTOR = 4f
