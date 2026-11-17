@@ -3,6 +3,7 @@ package com.jingtian.composedemo.main.settings
 import androidx.compose.animation.core.AnimationState
 import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.animateTo
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -14,6 +15,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowColumn
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
@@ -29,6 +32,7 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -43,14 +47,19 @@ import androidx.compose.material3.SliderState
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberSliderState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.ProvidableCompositionLocal
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -72,7 +81,6 @@ import androidx.compose.ui.window.DialogProperties
 import com.jingtian.composedemo.base.AppThemeConfirmDialog
 import com.jingtian.composedemo.base.resources.DrawableIcon
 import com.jingtian.composedemo.base.resources.getPainter
-import com.jingtian.composedemo.main.labels.CheckableLabelView
 import com.jingtian.composedemo.main.settings.SettingsPageState.globalVisual
 import com.jingtian.composedemo.main.widget.SimpleNavHostController
 import com.jingtian.composedemo.ui.theme.LocalAppColorScheme
@@ -84,41 +92,53 @@ import com.jingtian.composedemo.utils.BackgroundConfig
 import com.jingtian.composedemo.utils.UserStorage
 import com.jingtian.composedemo.utils.color
 import com.jingtian.composedemo.utils.colorOf
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.rememberHazeState
 import kotlin.math.roundToInt
 
-private class SettingsPageSliderToken
+private open class SettingsPageSliderToken
+private object DummySettingsPageSliderToken : SettingsPageSliderToken()
 
 private object SettingsPageState {
     val globalAlphaAnim = AnimationState(initialValue = 1f)
     val globalAlpha: Float by globalAlphaAnim
-    private var currentPressedSlider by mutableStateOf<SettingsPageSliderToken?>(null)
+    private var currentPressedSlider by mutableStateOf<SettingsPageSliderToken>(
+        DummySettingsPageSliderToken
+    )
+
     fun setCurrentPressedToken(token: SettingsPageSliderToken) {
         currentPressedSlider = token
     }
+
     fun resetCurrentPressedSlider(token: SettingsPageSliderToken) {
         if (currentPressedSlider == token) {
-            currentPressedSlider = null
+            currentPressedSlider = DummySettingsPageSliderToken
         }
     }
 
     @Composable
     fun Modifier.globalVisual(token: SettingsPageSliderToken? = null): Modifier {
-        return if (currentPressedSlider == null || token == currentPressedSlider) {
+        return if (token == currentPressedSlider) {
             this
         } else {
-            Modifier.graphicsLayer { alpha = globalAlpha }
+            this.graphicsLayer { alpha = globalAlpha }
         }
     }
 
     @Composable
     fun Install(simpleNavHostController: SimpleNavHostController) {
         LaunchedEffect(currentPressedSlider) {
-            if (currentPressedSlider == null) {
+            if (currentPressedSlider == DummySettingsPageSliderToken) {
+                globalAlphaAnim.animateTo(1f, animationSpec = tween(durationMillis = 500))
+                withFrameMillis { }
                 simpleNavHostController.showSecondLastEntry = false
-                globalAlphaAnim.animateTo(1f)
             } else {
                 simpleNavHostController.showSecondLastEntry = true
-                globalAlphaAnim.animateTo(0f)
+                withFrameMillis { }
+                withFrameMillis { }
+                withFrameMillis { }
+                globalAlphaAnim.animateTo(0f, animationSpec = tween(durationMillis = 500))
             }
         }
     }
@@ -132,11 +152,12 @@ private fun SliderTokenWrapper(content: @Composable (Modifier, MutableInteractio
     val token = rememberSliderVisualToken()
     val interactSource = remember { MutableInteractionSource() }
     LaunchedEffect(Unit) {
-        interactSource.interactions.collect { event->
-            when(event) {
+        interactSource.interactions.collect { event ->
+            when (event) {
                 is PressInteraction.Press, is DragInteraction.Start -> {
                     SettingsPageState.setCurrentPressedToken(token)
                 }
+
                 is PressInteraction.Cancel, is PressInteraction.Release, is DragInteraction.Cancel, is DragInteraction.Stop -> {
                     SettingsPageState.resetCurrentPressedSlider(token)
                 }
@@ -158,13 +179,20 @@ fun SliderWrapper(state: SliderState, modifier: Modifier) {
     }
 }
 
+val LocalHazeState: ProvidableCompositionLocal<HazeState?> =
+    compositionLocalOf { null }
+
 @Composable
 fun SettingsPage(navController: SimpleNavHostController) {
     SettingsPageState.Install(navController)
     Box(modifier = Modifier.fillMaxSize()) {
-        Box(modifier = Modifier.fillMaxSize().globalVisual().appBackground())
+        Box(
+            modifier = Modifier.fillMaxSize().globalVisual()
+                .appBackground()
+        )
         LazyColumn(
-            modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars).padding(horizontal = 16.dp),
+            modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars)
+                .padding(horizontal = 16.dp),
             contentPadding = PaddingValues(vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(
                 space = 18.dp,
@@ -186,7 +214,11 @@ fun SettingsPage(navController: SimpleNavHostController) {
                 }
             }
             item {
-                SettingsCollapsableWrapper(DrawableIcon.DrawableClear, "清理功能", initialExpand = false) {
+                SettingsCollapsableWrapper(
+                    DrawableIcon.DrawableClear,
+                    "清理功能",
+                    initialExpand = false
+                ) {
                     AppClearButtons()
                 }
             }
@@ -237,7 +269,8 @@ fun CollapseDrawer(
                 .clipToBounds()
                 .layout { measurable, constraints ->
                     // 强制无限高度测量content，拿到完整原生高度
-                    val placeable = measurable.measure(constraints.copy(maxHeight = Constraints.Infinity))
+                    val placeable =
+                        measurable.measure(constraints.copy(maxHeight = Constraints.Infinity))
                     val fullHeight = placeable.height
                     val visibleHeight = (fullHeight * (1 - progress)).roundToInt()
 
@@ -399,15 +432,6 @@ fun ColorSlideBar(mainColor: Color, showDemo: Boolean = true, updateColor: (Colo
         )
     }
     Column(modifier = Modifier.fillMaxWidth().wrapContentHeight()) {
-        if (showDemo) {
-            Row(modifier = Modifier.fillMaxWidth().globalVisual()) {
-                Button(onClick = {}, modifier = Modifier.weight(1f).height(38.dp)) {
-                    Text("示例按钮", modifier = Modifier.align(Alignment.CenterVertically))
-                }
-                CheckableLabelView("示例标签", true) {}
-            }
-            Spacer(Modifier.height(12.dp))
-        }
         Text(modifier = Modifier.globalVisual(), text = "alpha")
         SliderWrapper(state = alphaState, modifier = Modifier.fillMaxWidth())
         Text(modifier = Modifier.globalVisual(), text = "red")
@@ -434,15 +458,24 @@ fun ColorSlideBar(mainColor: Color, showDemo: Boolean = true, updateColor: (Colo
 }
 
 @Composable
-fun SettingsCollapsableWrapper(icon: DrawableIcon?, title: String, initialExpand: Boolean = true, content: @Composable () -> Unit) {
+fun SettingsCollapsableWrapper(
+    icon: DrawableIcon?,
+    title: String,
+    initialExpand: Boolean = true,
+    content: @Composable () -> Unit
+) {
     val collapseDrawerState = rememberCollapseDrawerState(initialExpand = initialExpand)
-    CollapseDrawer(modifier = Modifier.fillMaxWidth(), collapseDrawerState = collapseDrawerState, header = {
-        SettingsTitle(icon, title, collapseDrawerState)
-    }, content = {
-        Box(modifier = Modifier.padding(vertical = 10.dp)) {
-            content()
-        }
-    })
+    CollapseDrawer(
+        modifier = Modifier.fillMaxWidth(),
+        collapseDrawerState = collapseDrawerState,
+        header = {
+            SettingsTitle(icon, title, collapseDrawerState)
+        },
+        content = {
+            Box(modifier = Modifier.padding(vertical = 10.dp)) {
+                content()
+            }
+        })
 }
 
 @Composable
@@ -668,6 +701,7 @@ fun AppBackgroundSlideBar() {
             }
         }
         color?.let { color ->
+            Spacer(Modifier.height(12.dp))
             ColorSlideBar(color, false, ::updateColor)
         }
     }
