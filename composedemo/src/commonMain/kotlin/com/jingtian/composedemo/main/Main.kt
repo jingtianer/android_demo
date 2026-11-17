@@ -188,9 +188,9 @@ fun rememberPredictiveBackVisualState(
             }
             anim.animateTo(targetValue = 0f, animationSpec(0f, anim.value))
         } else if (isLocked || !isVisible || backState == STATE_END) {
-            if (anim.value >= 1f || (anim.isRunning && anim.targetValue >= 1f)) {
-                return@LaunchedEffect
-            }
+//            if (anim.value >= 1f || (anim.isRunning && anim.targetValue >= 1f)) {
+//                return@LaunchedEffect
+//            }
             if (!isVisible) {
                 anim.snapTo(1f)
             } else {
