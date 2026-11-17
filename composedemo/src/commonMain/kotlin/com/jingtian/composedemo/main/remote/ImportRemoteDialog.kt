@@ -26,6 +26,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -57,6 +58,7 @@ import com.jingtian.composedemo.viewmodels.AuthSuccess
 import com.jingtian.composedemo.viewmodels.AuthViewModel
 import com.jingtian.composedemo.viewmodels.albumViewModel
 import com.jingtian.composedemo.viewmodels.authViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class ImportRemoteDialogStateHolder {
@@ -286,6 +288,7 @@ fun ImportRemoteDialogStateHolder.SftpServerEditDialog(
     onDismiss: () -> Unit
 ) {
     val viewModel: AuthViewModel = authViewModel()
+    val scope = rememberCoroutineScope()
     if (!sftpServer.authed && isEdit) {
         val cipher = sftpServer.get().getDecryptCipher(sftpServer.get())
         viewModel.doAuth(cipher) { authResult ->
@@ -412,16 +415,21 @@ fun ImportRemoteDialogStateHolder.SftpServerEditDialog(
                 var keyboardType by remember {
                     mutableIntStateOf(0)
                 } // 0 password, 1 text
-                val interactiveSource = remember { MutableInteractionSource() }
-                if (interactiveSource.collectIsFocusedAsState().value) {
-                    keyboardType = 1
-                } else {
-                    keyboardType = 0
-                }
+//                val interactiveSource = remember { MutableInteractionSource() }
+//                if (interactiveSource.collectIsFocusedAsState().value) {
+//                    keyboardType = 1
+//                } else {
+//                    keyboardType = 0
+//                }
                 OutlinedTextField(
                     sftpServer.password,
                     {
+                        keyboardType = 1
                         sftpServer.password = it
+                        scope.launch {
+                            delay(1500)
+                            keyboardType = 0
+                        }
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -451,7 +459,7 @@ fun ImportRemoteDialogStateHolder.SftpServerEditDialog(
                             PasswordVisualTransformation()
                         }
                     },
-                    interactionSource = interactiveSource,
+//                    interactionSource = interactiveSource,
                 )
             }
 
