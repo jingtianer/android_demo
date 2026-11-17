@@ -218,13 +218,12 @@ fun PasswordGuardedMain(onPasswordChecked: () -> Unit = {}) {
     val authViewModel: AuthViewModel = authViewModel()
     val isVisible by authViewModel.isVisible
     val isLocked by authViewModel.isLocked
-    val doAuth = remember {
-        {
-            authViewModel.login { authResult ->
-                when (authResult) {
-                    is AuthSuccess -> {
-                        onPasswordChecked()
-                    }
+
+    fun doAuth() {
+        authViewModel.login { authResult ->
+            when (authResult) {
+                is AuthSuccess -> {
+                    onPasswordChecked()
                 }
             }
         }

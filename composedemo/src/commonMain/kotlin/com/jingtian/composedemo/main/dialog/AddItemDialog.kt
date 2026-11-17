@@ -69,46 +69,37 @@ import com.jingtian.composedemo.main.remote.ServerType
 import com.jingtian.composedemo.main.remote.SftpServer
 import com.jingtian.composedemo.main.remote.SftpServerDescView
 import com.jingtian.composedemo.main.remote.toHolder
+import com.jingtian.composedemo.navigation.IDocumentPicker
 import com.jingtian.composedemo.viewmodels.albumViewModel
+import kotlinx.coroutines.CoroutineScope
 
-@Composable
-fun AddItemDialog(album: Album, totalLabelList: List<String>, albumData: List<Album>, onDismiss: () -> Unit) {
+private class AddItemDialogState(val album: Album) {
 
-    var pickedImage by remember { mutableStateOf<ImageBitmap?>(null) }
-    var itemName by remember { mutableStateOf("") }
-    var itemDesc by remember { mutableStateOf("") }
-    var itemRank by remember { mutableStateOf(ItemRank.NONE) }
-    val selectedTotalLabelList = remember { mutableStateMapOf<String, String>() }
-    var itemScore by remember { mutableFloatStateOf(0.0f) }
-    val itemLabel = remember { mutableStateListOf<String>() }
-    val itemLabelSet = remember { mutableStateMapOf<String, String>() }
-    var webSnapShotTaker: (suspend ()-> ImageBitmap)? by remember { mutableStateOf(null) }
+    var currentSelectedServer by mutableStateOf<SftpServer?>(null)
 
-    var serverList by remember { mutableStateOf(emptyList<SftpServer>()) }
+    var pickedImage by mutableStateOf<ImageBitmap?>(null)
+    var itemName by mutableStateOf("")
+    var itemDesc by mutableStateOf("")
+    var itemRank by mutableStateOf(ItemRank.NONE)
+    val selectedTotalLabelList = mutableStateMapOf<String, String>()
+    var itemScore by mutableFloatStateOf(0.0f)
+    val itemLabel = mutableStateListOf<String>()
+    val itemLabelSet = mutableStateMapOf<String, String>()
+    var webSnapShotTaker: (suspend ()-> ImageBitmap)? by mutableStateOf(null)
+    var serverList by mutableStateOf(emptyList<SftpServer>())
 
-    if (BuildKonfig.isRemote) {
-        LaunchedEffect(Unit) {
-            serverList = ServerStorage.getStorage<SftpServer>(ServerType.SFTP).allServer()
-        }
-    }
-
-    var currentSelectedServer by remember {
-        mutableStateOf<SftpServer?>(null)
-    }
-
-    var selectedUri by remember { mutableStateOf<MultiplatformFile?>(null) }
-    val scope = rememberCoroutineScope()
-    var imageResource by remember { mutableStateOf(DrawableIcon.DrawableUploadToCloud) }
+    var selectedUri by mutableStateOf<MultiplatformFile?>(null)
+    var imageResource by mutableStateOf(DrawableIcon.DrawableUploadToCloud)
     val viewModel: AlbumViewModel = albumViewModel()
-    val imageWidth = min(
-        min(
-            screenWidth(),
-            screenHeight()
-        ) / 2, 180
-    ).dp
-    var currentSelectedAlbum by remember { mutableStateOf(album) }
-    var selectedFileType by remember { mutableStateOf<FileType?>(null) }
-    fun saveItem() {
+
+    var currentSelectedAlbum by mutableStateOf(album)
+    var selectedFileType by mutableStateOf<FileType?>(null)
+
+    var openAlbumList by mutableStateOf(false)
+    var openServerList by mutableStateOf(false)
+    var addItemValue by mutableStateOf("")
+
+    fun saveItem(scope: CoroutineScope, onDismiss: () -> Unit) {
         if (selectedUri == null || itemName.isBlank()) {
             viewModel.sendMessage("数据不合法，缺少文件或标题")
             return
@@ -126,79 +117,106 @@ fun AddItemDialog(album: Album, totalLabelList: List<String>, albumData: List<Al
         }
     }
 
+    fun pickImage(multipleImagePickerLauncher: IDocumentPicker) {
+        multipleImagePickerLauncher.launch(FileType.mimes)
+    }
+
+    suspend fun pickFileResult(scope: CoroutineScope, uri: MultiplatformFile?, imageDpSize: Float) {
+        uri?.takeIf { !it.isHidden() } ?: return
+//            println("AddItemDialog: onResult: uri ${uri.file}")
+        when (uri.mediaType()) {
+            FileType.IMAGE -> {
+                BitMapCachePool.toBitMap(
+                    scope,
+                    uri,
+                    maxWidth = imageDpSize.toInt()
+                ) { _, bitmap ->
+                    pickedImage = bitmap
+                }
+            }
+
+            FileType.VIDEO -> {
+                FileStorageUtils.getThumbnail(
+                    FileType.VIDEO,
+                    scope,
+                    uri,
+                    maxWidth = imageDpSize.toInt()
+                ) { bitmap ->
+                    pickedImage = bitmap
+                }
+            }
+
+            FileType.AUDIO -> {
+                imageResource = DrawableIcon.DrawableMusic
+                pickedImage = null
+                FileStorageUtils.getThumbnail(
+                    FileType.AUDIO,
+                    scope,
+                    uri,
+                    maxWidth = imageDpSize.toInt()
+                ) { bitmap ->
+                    pickedImage = bitmap
+                }
+            }
+
+            FileType.HTML -> {
+                imageResource = DrawableIcon.DrawableChrome
+                pickedImage = null
+                FileStorageUtils.getThumbnail(
+                    FileType.HTML,
+                    scope,
+                    uri,
+                    maxWidth = imageDpSize.toInt()
+                ) { bitmap ->
+                    pickedImage = bitmap
+                }
+            }
+
+            FileType.RegularFile -> {
+                imageResource = DrawableIcon.DrawableFile
+                pickedImage = null
+            }
+        }
+        if (itemName.isNullOrBlank()) {
+            itemName = uri.fileName() ?: ""
+        }
+        selectedUri = uri
+        selectedUri?.let { selectedUri ->
+            selectedFileType = selectedUri.mediaType()
+        }
+    }
+}
+
+@Composable
+fun AddItemDialog(album: Album, totalLabelList: List<String>, albumData: List<Album>, onDismiss: () -> Unit) {
+    val addItemDialogState = remember(album) { AddItemDialogState(album) }
+    addItemDialogState.AddItemDialog(totalLabelList, albumData, onDismiss)
+}
+
+@Composable
+private fun AddItemDialogState.AddItemDialog(totalLabelList: List<String>, albumData: List<Album>, onDismiss: () -> Unit) {
+    val scope = rememberCoroutineScope()
+
+    if (BuildKonfig.isRemote) {
+        LaunchedEffect(Unit) {
+            serverList = ServerStorage.getStorage<SftpServer>(ServerType.SFTP).allServer()
+        }
+    }
+    val imageWidth = min(
+        min(
+            screenWidth(),
+            screenHeight()
+        ) / 2, 180
+    ).dp
+
     val imageDpSize = imageWidth.dpValue()
     val multipleImagePickerLauncher = rememberDocumentPicker(
         onResult = { uri: MultiplatformFile? ->
             scope.launch {
-                uri?.takeIf { !it.isHidden() } ?: return@launch
-//            println("AddItemDialog: onResult: uri ${uri.file}")
-                when (uri.mediaType()) {
-                    FileType.IMAGE -> {
-                        BitMapCachePool.toBitMap(
-                            scope,
-                            uri,
-                            maxWidth = imageDpSize.toInt()
-                        ) { _, bitmap ->
-                            pickedImage = bitmap
-                        }
-                    }
-
-                    FileType.VIDEO -> {
-                        FileStorageUtils.getThumbnail(
-                            FileType.VIDEO,
-                            scope,
-                            uri,
-                            maxWidth = imageDpSize.toInt()
-                        ) { bitmap ->
-                            pickedImage = bitmap
-                        }
-                    }
-
-                    FileType.AUDIO -> {
-                        imageResource = DrawableIcon.DrawableMusic
-                        pickedImage = null
-                        FileStorageUtils.getThumbnail(
-                            FileType.AUDIO,
-                            scope,
-                            uri,
-                            maxWidth = imageDpSize.toInt()
-                        ) { bitmap ->
-                            pickedImage = bitmap
-                        }
-                    }
-
-                    FileType.HTML -> {
-                        imageResource = DrawableIcon.DrawableChrome
-                        pickedImage = null
-                        FileStorageUtils.getThumbnail(
-                            FileType.HTML,
-                            scope,
-                            uri,
-                            maxWidth = imageDpSize.toInt()
-                        ) { bitmap ->
-                            pickedImage = bitmap
-                        }
-                    }
-
-                    FileType.RegularFile -> {
-                        imageResource = DrawableIcon.DrawableFile
-                        pickedImage = null
-                    }
-                }
-                if (itemName.isNullOrBlank()) {
-                    itemName = uri.fileName() ?: ""
-                }
-                selectedUri = uri
-                selectedUri?.let { selectedUri ->
-                    selectedFileType = selectedUri.mediaType()
-                }
+                pickFileResult(scope, uri, imageDpSize)
             }
         }
     )
-
-    fun pickImage() {
-        multipleImagePickerLauncher.launch(FileType.mimes)
-    }
 
     AppThemeDialog(
         Modifier
@@ -208,10 +226,8 @@ fun AddItemDialog(album: Album, totalLabelList: List<String>, albumData: List<Al
         onDismissRequest = {},
         properties = DialogProperties(usePlatformDefaultWidth = false),
         onNegative = onDismiss,
-        onPositive = { saveItem() }
+        onPositive = { saveItem(scope, onDismiss) }
     ) { _, actionButtons ->
-        var openAlbumList by remember { mutableStateOf(false) }
-        var openServerList by remember { mutableStateOf(false) }
         Box {
             LazyColumn(
                 Modifier
@@ -322,7 +338,6 @@ fun AddItemDialog(album: Album, totalLabelList: List<String>, albumData: List<Al
                             .fillMaxWidth()
                     ) {
                         item {
-                            var addItemValue by remember { mutableStateOf("") }
                             EditableLabelView(addItemValue, enableEdit = true, onRemove = {
                                 val addLabelList = addItemValue
                                     .trim()
@@ -397,7 +412,7 @@ fun AddItemDialog(album: Album, totalLabelList: List<String>, albumData: List<Al
                     Modifier
                         .size(imageWidth)
                         .clickable {
-                            pickImage()
+                            pickImage(multipleImagePickerLauncher)
                         }
                         .clip(RoundedCornerShape(12.dp))
                         .align(Alignment.TopCenter),
@@ -408,7 +423,7 @@ fun AddItemDialog(album: Album, totalLabelList: List<String>, albumData: List<Al
                     Modifier
                         .size(imageWidth)
                         .clickable {
-                            pickImage()
+                            pickImage(multipleImagePickerLauncher)
                         }
                         .clip(RoundedCornerShape(12.dp))
                         .align(Alignment.TopCenter),
@@ -429,7 +444,7 @@ fun AddItemDialog(album: Album, totalLabelList: List<String>, albumData: List<Al
                     Modifier
                         .size(imageWidth)
                         .clickable {
-                            pickImage()
+                            pickImage(multipleImagePickerLauncher)
                         }
                         .clip(RoundedCornerShape(12.dp))
                         .align(Alignment.TopCenter),

@@ -233,16 +233,12 @@ fun AlbumItemViewStateHolder.AlbumItemView() {
         initImage(scope)
     }
 
-    val fileTypeIcon by remember(albumItemRelation.fileInfo.fileType) {
-        mutableStateOf(
-            when (albumItemRelation.fileInfo.fileType) {
-                FileType.IMAGE -> DrawableIcon.DrawablePicIcon
-                FileType.VIDEO -> DrawableIcon.DrawableVideoIcon
-                FileType.AUDIO -> DrawableIcon.DrawableMusicIcon
-                FileType.HTML -> DrawableIcon.DrawableWebIcon
-                FileType.RegularFile -> DrawableIcon.DrawableDocIcon
-            }
-        )
+    val fileTypeIcon = when (albumItemRelation.fileInfo.fileType) {
+        FileType.IMAGE -> DrawableIcon.DrawablePicIcon
+        FileType.VIDEO -> DrawableIcon.DrawableVideoIcon
+        FileType.AUDIO -> DrawableIcon.DrawableMusicIcon
+        FileType.HTML -> DrawableIcon.DrawableWebIcon
+        FileType.RegularFile -> DrawableIcon.DrawableDocIcon
     }
 
     val albumItemLauncher = rememberAlbumLauncher { result->
