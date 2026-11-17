@@ -149,7 +149,7 @@ class DensityScalingState(
     val scaleFactor get() = UserStorage.galleryScaleFactor
 
     fun updateGalleryScaleFactor(scale: Float) {
-        UserStorage.galleryScaleFactor = (UserStorage.galleryScaleFactor * (if (scale > 1) sqrt(scale) else scale * scale)).coerceIn(minScale, maxScale)
+        UserStorage.galleryScaleFactor = (scale).coerceIn(minScale, maxScale)
     }
 
     fun scaledDensity(): Density {
@@ -364,8 +364,11 @@ fun GalleryStateHolder.Gallery() {
                     awaitEachGesture {
                         awaitFirstDown(pass = PointerEventPass.Initial)
 
-                        var baseDistance: Float? = null
-
+                        var lastDistance: Float? = null
+                        var secondLastDistance: Float? = null
+                        var minDistance: Float? = null
+                        var maxDistance: Float? = null
+                        var initialScale = scaleState.scaleFactor
                         do {
                             val event = awaitPointerEvent(pass = PointerEventPass.Initial)
                             val changes = event.changes
@@ -379,13 +382,39 @@ fun GalleryStateHolder.Gallery() {
                                 val dx = p0.x - p1.x
                                 val dy = p0.y - p1.y
                                 val currentDist = sqrt(dx * dx + dy * dy)
-                                baseDistance?.let { baseDistance ->
-                                    if (baseDistance > 0.0001f) {
-                                        val factor = currentDist / baseDistance
-                                        scaleState.updateGalleryScaleFactor(factor)
+                                if (lastDistance == null || minDistance == null || maxDistance == null) {
+                                    minDistance = currentDist
+                                    maxDistance = currentDist
+                                    lastDistance = currentDist
+                                } else {
+                                    if (secondLastDistance != null) {
+                                        val baseDistance = if (currentDist > lastDistance && lastDistance < secondLastDistance) {
+                                            minDistance = lastDistance
+                                            initialScale = scaleState.scaleFactor
+                                            lastDistance
+                                        } else if (currentDist < lastDistance && lastDistance > secondLastDistance) {
+                                            maxDistance = lastDistance
+                                            initialScale = scaleState.scaleFactor
+                                            lastDistance
+                                        } else if (currentDist > lastDistance && lastDistance > secondLastDistance) {
+                                            minDistance
+                                        } else if (currentDist < lastDistance && lastDistance < secondLastDistance) {
+                                            maxDistance
+                                        } else {
+                                            null
+                                        }
+                                        if (baseDistance != null) {
+                                            scaleState.updateGalleryScaleFactor(initialScale * currentDist / baseDistance)
+                                            secondLastDistance = lastDistance
+                                            lastDistance = currentDist
+                                        }
+                                    } else {
+                                        if (currentDist != lastDistance) {
+                                            scaleState.updateGalleryScaleFactor(initialScale * currentDist / lastDistance)
+                                            secondLastDistance = lastDistance
+                                            lastDistance = currentDist
+                                        }
                                     }
-                                } ?: run {
-                                    baseDistance = currentDist
                                 }
                             }
                             // 单指：不消费，什么都不做，事件正常冒泡
