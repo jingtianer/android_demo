@@ -15,6 +15,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -36,6 +37,7 @@ actual fun ColumnScope.ScoreStar(itemScore: Float, padding: Dp) {
     ) {
         val viewModel: AppThemeViewModel = appThemeViewModel()
         val isDark = viewModel.rememberIsDark()
+        val density = LocalDensity.current
         AndroidView({ context ->
             StarRateView(context).commonConfig(isDark).apply {
                 layoutParams = ViewGroup.LayoutParams(
@@ -52,6 +54,7 @@ actual fun ColumnScope.ScoreStar(itemScore: Float, padding: Dp) {
             update = {
                 it.commonConfig(isDark)
                 it.setScore(itemScore)
+                it.layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, with(density) { 30.dp.roundToPx() })
             })
     }
 }
