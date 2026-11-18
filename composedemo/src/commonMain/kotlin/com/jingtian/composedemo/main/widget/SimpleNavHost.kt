@@ -225,15 +225,12 @@ private fun SimpleNavHostController.SimpleNavHostControllerImpl.SimpleNavHost(
     scrimColor: Color,
 ) {
     val transition = rememberTransition(transitionState, label = "entry")
-    var onBackJob by remember { mutableStateOf<Job?>(null) }
 
     PredictiveBackHandler(enabled = willHandleBackEvents) { backFlow ->
         try {
             val callback = navMap[currentBackStackEntry]?.callback
-            if (callback != null && onBackJob == null) {
-                onBackJob = CoroutineUtils.runIOTask({
-                    callback.invoke()
-                })
+            if (callback != null) {
+                callback.invoke()
                 navMap[currentBackStackEntry]?.callback = null
             }
             backFlow.collect { event ->
@@ -272,19 +269,13 @@ private fun SimpleNavHostController.SimpleNavHostControllerImpl.SimpleNavHost(
             val pendingTargetRouterSnapshot = pendingTargetRouter
             if (transitionState.currentState != currentBackStackEntry) {
                 transitionState.animateTo(currentBackStackEntry)
-                onBackJob?.join()
-                onBackJob = null
             } else if (transitionState.currentState != pendingTargetRouterSnapshot && pendingTargetRouterSnapshot != null) {
                 transitionState.animateTo(pendingTargetRouter)
-                onBackJob?.join()
-                onBackJob = null
                 navigateTo(pendingTargetRouterSnapshot, withAnim = false)
                 pendingTargetRouter = null
             } else {
                 if (pendingTargetRouterSnapshot != null) {
                     transitionState.animateTo(pendingTargetRouterSnapshot)
-                    onBackJob?.join()
-                    onBackJob = null
                     navigateTo(pendingTargetRouterSnapshot, withAnim = false)
                     pendingTargetRouter = null
                     return@LaunchedEffect
@@ -310,8 +301,6 @@ private fun SimpleNavHostController.SimpleNavHostControllerImpl.SimpleNavHost(
                         }
                     }
                 }
-                onBackJob?.join()
-                onBackJob = null
             }
         }
     }

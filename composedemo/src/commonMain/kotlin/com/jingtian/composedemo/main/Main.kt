@@ -95,6 +95,7 @@ import com.jingtian.composedemo.ui.theme.LocalAppPalette
 import com.jingtian.composedemo.ui.theme.appBackground
 import com.jingtian.composedemo.ui.theme.clipDeviceRoundCorner
 import com.jingtian.composedemo.utils.BitMapCachePool
+import com.jingtian.composedemo.utils.CoroutineUtils
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
 import com.jingtian.composedemo.viewmodels.AuthSuccess
 import com.jingtian.composedemo.viewmodels.AuthViewModel
@@ -551,17 +552,20 @@ private fun MainState.Main(
                                         val storageId = currentWebViewFile.first?.storageId ?: DataBase.INVALID_ID
                                         val uriExtension = currentWebViewFile.first?.extension
                                         val bitmap = this.tackSnapShot()
-                                        BitMapCachePool.invalid(storageId, FileType.HTML)
-                                        BitMapCachePool.saveThumbnail(
-                                            FileInfo(
-                                                storageId = storageId,
-                                                fileType = FileType.HTML,
-                                                extension = uriExtension ?: "html"
-                                            )
-                                        ) {
-                                            bitmap
+                                        CoroutineUtils.runIOTask({
+                                            BitMapCachePool.invalid(storageId, FileType.HTML)
+                                            BitMapCachePool.saveThumbnail(
+                                                FileInfo(
+                                                    storageId = storageId,
+                                                    fileType = FileType.HTML,
+                                                    extension = uriExtension ?: "html"
+                                                )
+                                            ) {
+                                                bitmap
+                                            }
+                                        }) {
+                                            viewModel.imageInvalid.value = storageId
                                         }
-                                        viewModel.imageInvalid.value = storageId
                                     }
                                 }
                                 entry.callback = snapShotTaker
