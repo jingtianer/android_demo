@@ -255,6 +255,7 @@ fun AlbumItemViewStateHolder.AlbumItemView() {
         if (imageInvalid.value == this@AlbumItemView.albumItemRelation.fileInfo.storageId) {
             scope.launch {
                 fetchImage(scope)
+                viewModel.imageInvalid.value = DataBase.INVALID_ID
             }
         }
     }
