@@ -424,12 +424,7 @@ fun ImportRemoteDialogStateHolder.SftpServerEditDialog(
                 OutlinedTextField(
                     sftpServer.password,
                     {
-                        keyboardType = 1
                         sftpServer.password = it
-                        scope.launch {
-                            delay(1500)
-                            keyboardType = 0
-                        }
                     },
                     modifier = Modifier
                         .fillMaxWidth()
