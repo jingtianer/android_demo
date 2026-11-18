@@ -39,8 +39,8 @@ actual fun CommonWebView(modifier: Modifier, file: MultiplatformFile?, enabled: 
                 return this@init.takeSnapShot(decoreView ?: this@init).asImageBitmap()
             }
 
-            override fun initForSnapShot(width: Dp?, height: Dp?, enabled: Boolean) {
-                this@init.initForSnapShot(width?.dpValue?.toInt()?: ViewGroup.LayoutParams.MATCH_PARENT, height?.dpValue?.toInt()?: ViewGroup.LayoutParams.MATCH_PARENT, enable = enabled)
+            override fun initForSnapShot(width: Int?, height: Int?, enabled: Boolean) {
+                this@init.initForSnapShot(width ?: ViewGroup.LayoutParams.MATCH_PARENT, height ?: ViewGroup.LayoutParams.MATCH_PARENT, enable = enabled)
             }
         })
     }

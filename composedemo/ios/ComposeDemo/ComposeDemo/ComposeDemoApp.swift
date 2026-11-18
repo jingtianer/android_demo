@@ -10,6 +10,9 @@ import UIKit
 
 @main
 struct ComposeDemoApp: App {
+    init() {
+        initApp()
+    }
     var body: some Scene {
         WindowGroup {
             ComposeEntry()

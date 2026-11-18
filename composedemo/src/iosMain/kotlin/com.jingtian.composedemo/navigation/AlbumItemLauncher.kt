@@ -9,6 +9,8 @@ import com.jingtian.composedemo.base.JumpOnPurposeMarkHolder
 import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.FileType
 import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
+import com.jingtian.composedemo.main.route.IRouterController
+import com.jingtian.composedemo.main.route.LocalRouterController
 import com.jingtian.composedemo.multiplatform.MultiplatformFileImpl
 import com.jingtian.composedemo.multiplatform.logD
 import com.jingtian.composedemo.utils.exists
@@ -27,7 +29,7 @@ import platform.UIKit.UIDocumentInteractionControllerDelegateProtocol
 import platform.UIKit.UIViewController
 import platform.darwin.NSObject
 
-class AlbumItemLauncher(val scope: CoroutineScope) : IAlbumItemLauncher {
+class AlbumItemLauncher(val scope: CoroutineScope, val mainNavController: IRouterController) : IAlbumItemLauncher {
 
     private suspend fun openFile(filePath: Path, file: FileInfo) {
 //        logD("AlbumItemLauncher") { "openFile: file:${filePath.name}, ${filePath.exists()}, ${filePath}" }
@@ -43,6 +45,10 @@ class AlbumItemLauncher(val scope: CoroutineScope) : IAlbumItemLauncher {
     }
 
     override suspend fun launch(fileName: String, fileInfo: FileInfo) {
+        if (fileInfo.fileType == FileType.HTML) {
+            mainNavController.toWebView(fileInfo to fileInfo.getFileUri())
+            return
+        }
         scope.launch(Dispatchers.Main) {
             val timeoutCancel = atomic(false)
             scope.launch {
@@ -71,8 +77,9 @@ class AlbumItemLauncher(val scope: CoroutineScope) : IAlbumItemLauncher {
 @Composable
 actual fun rememberAlbumLauncher(onResult: (Long)->Unit): IAlbumItemLauncher {
     val scope = rememberCoroutineScope()
+    val mainNavController = LocalRouterController.current
     return remember {
-        AlbumItemLauncher(scope)
+        AlbumItemLauncher(scope, mainNavController)
     }
 }
 

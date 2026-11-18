@@ -8,7 +8,7 @@ import com.jingtian.composedemo.multiplatform.MultiplatformFile
 
 interface ICommonWebViewScope {
     suspend fun tackSnapShot(): ImageBitmap
-    fun initForSnapShot(width: Dp?, height: Dp?, enabled: Boolean)
+    fun initForSnapShot(width: Int?, height: Int?, enabled: Boolean)
 }
 
 @Composable

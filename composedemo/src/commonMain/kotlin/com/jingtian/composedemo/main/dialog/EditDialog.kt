@@ -33,6 +33,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -493,6 +494,10 @@ private fun EditDialogState.EditDialog(albumData: List<Album>, onDismiss: ()->Un
                         contentScale = ContentScale.FillWidth
                     )
                 } else if (selectedFileType == FileType.HTML && selectedUri != null) {
+                    val density = LocalDensity.current
+                    val imageWidthPx = with(density) {
+                        imageWidth.roundToPx()
+                    }
                     CommonWebView(
                         Modifier
                             .size(imageWidth)
@@ -506,7 +511,7 @@ private fun EditDialogState.EditDialog(albumData: List<Album>, onDismiss: ()->Un
                         width = imageWidth,
                         height = imageWidth,
                     ) {
-                        initForSnapShot(imageWidth, imageWidth, false)
+                        initForSnapShot(imageWidthPx, imageWidthPx, false)
                         webSnapShotTaker = suspend {
                             this.tackSnapShot()
                         }
