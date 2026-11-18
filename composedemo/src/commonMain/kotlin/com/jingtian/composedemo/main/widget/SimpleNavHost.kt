@@ -24,6 +24,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -225,17 +226,19 @@ private fun SimpleNavHostController.SimpleNavHostControllerImpl.SimpleNavHost(
     scrimColor: Color,
 ) {
     val transition = rememberTransition(transitionState, label = "entry")
+    var onBackJob by remember { mutableStateOf<Job?>(null) }
+    val scope = rememberCoroutineScope()
 
     PredictiveBackHandler(enabled = willHandleBackEvents) { backFlow ->
         try {
             val callback = navMap[currentBackStackEntry]?.callback
-            if (callback != null) {
-                callback.invoke()
+            if (callback != null && onBackJob != null) {
+                onBackJob = scope.launch {
+                    callback.invoke()
+                }
                 navMap[currentBackStackEntry]?.callback = null
             }
             backFlow.collect { event ->
-                if (!inPredictiveBack) {
-                }
                 if (willHandleBackEvents) {
                     inPredictiveBack = true
                 }
@@ -268,12 +271,39 @@ private fun SimpleNavHostController.SimpleNavHostControllerImpl.SimpleNavHost(
         LaunchedEffect(currentBackStackEntry, pendingTargetRouter) {
             val pendingTargetRouterSnapshot = pendingTargetRouter
             if (transitionState.currentState != currentBackStackEntry) {
+                if (onBackJob == null) {
+                    val callback = navMap[transitionState.currentState]?.callback
+                    onBackJob = scope.launch {
+                        callback?.invoke()
+                    }
+                    navMap[transitionState.currentState]?.callback = null
+                }
+                onBackJob?.join()
+                onBackJob = null
                 transitionState.animateTo(currentBackStackEntry)
             } else if (transitionState.currentState != pendingTargetRouterSnapshot && pendingTargetRouterSnapshot != null) {
+                if (onBackJob == null) {
+                    val callback = navMap[transitionState.currentState]?.callback
+                    onBackJob = scope.launch {
+                        callback?.invoke()
+                    }
+                    navMap[transitionState.currentState]?.callback = null
+                }
+                onBackJob?.join()
+                onBackJob = null
                 transitionState.animateTo(pendingTargetRouter)
                 navigateTo(pendingTargetRouterSnapshot, withAnim = false)
                 pendingTargetRouter = null
             } else {
+                if (onBackJob == null) {
+                    val callback = navMap[transitionState.currentState]?.callback
+                    onBackJob = scope.launch {
+                        callback?.invoke()
+                    }
+                    navMap[transitionState.currentState]?.callback = null
+                }
+                onBackJob?.join()
+                onBackJob = null
                 if (pendingTargetRouterSnapshot != null) {
                     transitionState.animateTo(pendingTargetRouterSnapshot)
                     navigateTo(pendingTargetRouterSnapshot, withAnim = false)
