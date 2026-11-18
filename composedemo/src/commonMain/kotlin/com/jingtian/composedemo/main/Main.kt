@@ -83,6 +83,7 @@ import com.jingtian.composedemo.main.settings.SettingsPage
 import com.jingtian.composedemo.main.widget.BackEventCompat
 import com.jingtian.composedemo.main.widget.EnterTransitionCreator
 import com.jingtian.composedemo.main.widget.ExitTransitionCreator
+import com.jingtian.composedemo.main.widget.NavEntry
 import com.jingtian.composedemo.main.widget.SimpleNavHost
 import com.jingtian.composedemo.main.widget.SimpleNavHostController
 import com.jingtian.composedemo.main.widget.SizeTransitionCreator
@@ -522,53 +523,11 @@ private fun MainState.Main(
                             }
 
                             composable(Drawer) {
-                                Box(
-                                    Modifier
-                                        .fillMaxHeight()
-                                        .fillMaxWidth()
-                                        .clipDeviceRoundCorner()
-                                        .background(LocalAppPalette.current.drawerBg)
-                                        .windowInsetsPadding(
-                                            WindowInsets.navigationBars.only(
-                                                WindowInsetsSides.Vertical + WindowInsetsSides.Start
-                                            )
-                                        )
-                                ) {
-                                    MainDrawer(menuItemsEntity) { index, album ->
-                                        currentSelectedAlbum = IndexedValue(index, album)
-                                        scope.launch {
-                                            routerController.toGallery()
-                                        }
-                                    }
-                                }
+                                Drawer()
                             }
 
                             composable(WebView) { entry->
-                                var snapShotTaker: suspend () -> Unit by remember { mutableStateOf({}) }
-                                CommonWebView(modifier = Modifier.fillMaxSize().appBackground().windowInsetsPadding(
-                                    WindowInsets.systemBars
-                                ), currentWebViewFile.second) {
-                                    snapShotTaker = {
-                                        val storageId = currentWebViewFile.first?.storageId ?: DataBase.INVALID_ID
-                                        val uriExtension = currentWebViewFile.first?.extension
-                                        val bitmap = this.tackSnapShot()
-                                        CoroutineUtils.runIOTask({
-                                            BitMapCachePool.invalid(storageId, FileType.HTML)
-                                            BitMapCachePool.saveThumbnail(
-                                                FileInfo(
-                                                    storageId = storageId,
-                                                    fileType = FileType.HTML,
-                                                    extension = uriExtension ?: "html"
-                                                )
-                                            ) {
-                                                bitmap
-                                            }
-                                        }) {
-                                            viewModel.imageInvalid.value = storageId
-                                        }
-                                    }
-                                }
-                                entry.callback = snapShotTaker
+                                WebView(entry)
                             }
                         }
                     }
@@ -587,4 +546,57 @@ private fun MainState.Main(
     }
 
     InstallSideEffects()
+}
+
+@Composable
+private fun MainState.Drawer() {
+    val scope = rememberCoroutineScope()
+    Box(
+        Modifier
+            .fillMaxHeight()
+            .fillMaxWidth()
+            .clipDeviceRoundCorner()
+            .background(LocalAppPalette.current.drawerBg)
+            .windowInsetsPadding(
+                WindowInsets.navigationBars.only(
+                    WindowInsetsSides.Vertical + WindowInsetsSides.Start
+                )
+            )
+    ) {
+        MainDrawer(menuItemsEntity) { index, album ->
+            currentSelectedAlbum = IndexedValue(index, album)
+            scope.launch {
+                routerController.toGallery()
+            }
+        }
+    }
+}
+
+@Composable
+fun MainState.WebView(entry: NavEntry) {
+    var snapShotTaker: suspend () -> Unit by remember { mutableStateOf({}) }
+    CommonWebView(modifier = Modifier.fillMaxSize().appBackground().windowInsetsPadding(
+        WindowInsets.systemBars
+    ), currentWebViewFile.second) {
+        snapShotTaker = {
+            val storageId = currentWebViewFile.first?.storageId ?: DataBase.INVALID_ID
+            val uriExtension = currentWebViewFile.first?.extension
+            val bitmap = this.tackSnapShot()
+            CoroutineUtils.runIOTask({
+                BitMapCachePool.invalid(storageId, FileType.HTML)
+                BitMapCachePool.saveThumbnail(
+                    FileInfo(
+                        storageId = storageId,
+                        fileType = FileType.HTML,
+                        extension = uriExtension ?: "html"
+                    )
+                ) {
+                    bitmap
+                }
+            }) {
+                viewModel.imageInvalid.value = storageId
+            }
+        }
+    }
+    entry.callback = snapShotTaker
 }
