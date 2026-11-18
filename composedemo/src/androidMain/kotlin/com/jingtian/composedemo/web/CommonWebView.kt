@@ -2,12 +2,14 @@ package com.jingtian.composedemo.web
 
 import android.view.View
 import android.view.ViewGroup
+import androidx.activity.compose.LocalActivity
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.jingtian.composedemo.multiplatform.MultiplatformFile
@@ -25,6 +27,7 @@ actual fun CommonWebView(modifier: Modifier, file: MultiplatformFile?, enabled: 
             (file as? MultiplatformFileImpl)?.getUri()
         }
     }
+    val decoreView = LocalActivity.current?.window?.decorView
     val scope = rememberCoroutineScope()
     fun CommonWebView.init() {
         scope.launch {
@@ -33,7 +36,7 @@ actual fun CommonWebView(modifier: Modifier, file: MultiplatformFile?, enabled: 
         isEnabled = enabled
         viewScope(object : ICommonWebViewScope {
             override suspend fun tackSnapShot(): ImageBitmap {
-                return this@init.takeSnapShot().asImageBitmap()
+                return this@init.takeSnapShot(decoreView ?: this@init).asImageBitmap()
             }
 
             override fun initForSnapShot(width: Dp?, height: Dp?, enabled: Boolean) {

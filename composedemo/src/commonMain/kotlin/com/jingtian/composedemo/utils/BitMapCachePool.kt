@@ -13,6 +13,7 @@ import com.jingtian.composedemo.dao.DataBase
 import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.FileType
 import com.jingtian.composedemo.multiplatform.MultiplatformFile
+import com.jingtian.composedemo.multiplatform.logD
 import com.jingtian.composedemo.multiplatform.newReentrantLock
 import com.jingtian.composedemo.multiplatform.use
 import kotlinx.coroutines.CoroutineScope
@@ -91,9 +92,7 @@ object BitMapCachePool {
             return queue.write { list ->
                 if (scaleFactor == SCALE_FACTOR_GET_HIGHEST_AND_PUT) {
                     getIfNotNull(queue, 0)?.let { (scaleFactor, bitmap) ->
-                        if (scaleFactor <= 1) {
-                            return@write bitmap
-                        }
+                        return@write bitmap
                     }
                     return@write bitmapCreator()?.also {
                         list.add(0, 1 to it)
@@ -142,13 +141,9 @@ object BitMapCachePool {
                 if (bitmap != null) {
                     list.add(finalInsertPos, scaleFactor to bitmap)
                     if (scaleFactor > 1) {
-                        CoroutineUtils.runIOTask({
-                            SystemFileSystem.sink(cacheFile).use {
-                                writeImage(bitmap, it)
-                            }
-                        }, onFailure = { e ->
-//                            println("bitmapCache: id=$id, type=${fileType.value}, scaleFactor=$scaleFactor, cache fail\n$e")
-                        })
+                        SystemFileSystem.sink(cacheFile).use {
+                            writeImage(bitmap, it)
+                        }
                     } else {
                         cacheFile.delete()
                     }
@@ -248,8 +243,13 @@ object BitMapCachePool {
         creator: suspend () -> ImageBitmap?,
     ): Pair<Int, ImageBitmap?> {
         val pool = getBitMapCachePool(fileInfo.fileType)
-        val bitmap = pool.put(fileInfo.storageId, 1, creator)
-        return 1 to bitmap
+        val scaleFactor = if (fileInfo.fileType == FileType.HTML) {
+            2
+        } else {
+            1
+        }
+        val bitmap = pool.put(fileInfo.storageId, scaleFactor, creator)
+        return scaleFactor to bitmap
     }
 
     suspend fun loadThumbnail(
@@ -259,7 +259,11 @@ object BitMapCachePool {
         creator: suspend () -> ImageBitmap?,
     ): Pair<Int, ImageBitmap?> {
         val pool = getBitMapCachePool(fileInfo.fileType)
-        val bitmap = pool.put(fileInfo.storageId, SCALE_FACTOR_GET_HIGHEST_AND_PUT, creator)
+        val bitmap = if (fileInfo.fileType == FileType.HTML) {
+            pool.put(fileInfo.storageId, 2, creator)
+        } else {
+            pool.put(fileInfo.storageId, SCALE_FACTOR_GET_HIGHEST_AND_PUT, creator)
+        }
         if (bitmap == null) {
             return 1 to creator()
         }

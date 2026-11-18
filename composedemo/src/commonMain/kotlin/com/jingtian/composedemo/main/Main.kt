@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.systemGestures
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.DrawerState
@@ -59,7 +60,10 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.jingtian.composedemo.BuildKonfig
 import com.jingtian.composedemo.base.BackPressHandler
+import com.jingtian.composedemo.dao.DataBase
 import com.jingtian.composedemo.dao.model.Album
+import com.jingtian.composedemo.dao.model.FileInfo
+import com.jingtian.composedemo.dao.model.FileType
 import com.jingtian.composedemo.demonstration.DemonstrationMain
 import com.jingtian.composedemo.main.PredictiveBackVisualState.Companion.STATE_CANCEL
 import com.jingtian.composedemo.main.PredictiveBackVisualState.Companion.STATE_END
@@ -74,6 +78,7 @@ import com.jingtian.composedemo.main.route.Gallery
 import com.jingtian.composedemo.main.route.LocalRouterController
 import com.jingtian.composedemo.main.route.MainRouterController
 import com.jingtian.composedemo.main.route.Settings
+import com.jingtian.composedemo.main.route.WebView
 import com.jingtian.composedemo.main.settings.SettingsPage
 import com.jingtian.composedemo.main.widget.BackEventCompat
 import com.jingtian.composedemo.main.widget.EnterTransitionCreator
@@ -83,15 +88,20 @@ import com.jingtian.composedemo.main.widget.SimpleNavHostController
 import com.jingtian.composedemo.main.widget.SizeTransitionCreator
 import com.jingtian.composedemo.main.widget.rememberSimpleNavHostController
 import com.jingtian.composedemo.multiplatform.LowMemorySideEffect
+import com.jingtian.composedemo.multiplatform.MultiplatformFile
 import com.jingtian.composedemo.multiplatform.SoftRef
+import com.jingtian.composedemo.multiplatform.logD
 import com.jingtian.composedemo.ui.theme.LocalAppPalette
+import com.jingtian.composedemo.ui.theme.appBackground
 import com.jingtian.composedemo.ui.theme.clipDeviceRoundCorner
+import com.jingtian.composedemo.utils.BitMapCachePool
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
 import com.jingtian.composedemo.viewmodels.AuthSuccess
 import com.jingtian.composedemo.viewmodels.AuthViewModel
 import com.jingtian.composedemo.viewmodels.GlobalSnapBar
 import com.jingtian.composedemo.viewmodels.albumViewModel
 import com.jingtian.composedemo.viewmodels.authViewModel
+import com.jingtian.composedemo.web.CommonWebView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.launch
@@ -268,7 +278,7 @@ fun PasswordGuardedMain(onPasswordChecked: () -> Unit = {}) {
 }
 
 @OptIn(ExperimentalComposeUiApi::class)
-private class MainState(
+class MainState(
     val naviController: SimpleNavHostController,
 ) {
     companion object {
@@ -300,7 +310,7 @@ private class MainState(
         }
     }
 
-    val routerController = MainRouterController(naviController)
+    val routerController = MainRouterController(naviController, this)
 
     val enterTransition: EnterTransitionCreator = { swipeEdge ->
         val orientation = when (swipeEdge) {
@@ -354,6 +364,8 @@ private class MainState(
         )
         slide + scale
     }
+
+    var currentWebViewFile by mutableStateOf<Pair<FileInfo?, MultiplatformFile?>>(null to null)
 
     fun updateSelectedValue(list: List<Album>): IndexedValue<Album>? {
         val currentSelectedAlbum = currentSelectedAlbum
@@ -528,6 +540,31 @@ private fun MainState.Main(
                                         }
                                     }
                                 }
+                            }
+
+                            composable(WebView) { entry->
+                                var snapShotTaker: suspend () -> Unit by remember { mutableStateOf({}) }
+                                CommonWebView(modifier = Modifier.fillMaxSize().appBackground().windowInsetsPadding(
+                                    WindowInsets.systemBars
+                                ), currentWebViewFile.second) {
+                                    snapShotTaker = {
+                                        val storageId = currentWebViewFile.first?.storageId ?: DataBase.INVALID_ID
+                                        val uriExtension = currentWebViewFile.first?.extension
+                                        val bitmap = this.tackSnapShot()
+                                        BitMapCachePool.invalid(storageId, FileType.HTML)
+                                        BitMapCachePool.saveThumbnail(
+                                            FileInfo(
+                                                storageId = storageId,
+                                                fileType = FileType.HTML,
+                                                extension = uriExtension ?: "html"
+                                            )
+                                        ) {
+                                            bitmap
+                                        }
+                                        viewModel.imageInvalid.value = storageId
+                                    }
+                                }
+                                entry.callback = snapShotTaker
                             }
                         }
                     }

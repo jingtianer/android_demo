@@ -19,6 +19,8 @@ import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.FileType
 import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
 import com.jingtian.composedemo.main.playIntent
+import com.jingtian.composedemo.main.route.IRouterController
+import com.jingtian.composedemo.main.route.LocalRouterController
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -30,10 +32,15 @@ import kotlinx.coroutines.withTimeoutOrNull
 
 class AlbumItemLauncher(
     val context: Context,
+    val mainNavController: IRouterController,
     val scope: CoroutineScope,
     val launcher: ManagedActivityResultLauncher<Intent, ActivityResult>
 ) : IAlbumItemLauncher{
     override suspend fun launch(fileName: String, fileInfo: FileInfo) {
+        if (fileInfo.fileType == FileType.HTML) {
+            mainNavController.toWebView(fileInfo to fileInfo.getFileUri())
+            return
+        }
         JumpOnPurposeMarkHolder.isJumpOnPurpose.value = true
         scope.launch(Dispatchers.Main) {
             val timeoutJob = scope.launch(Dispatchers.Main) {
@@ -75,7 +82,8 @@ actual fun rememberAlbumLauncher(onResult: (Long)->Unit): IAlbumItemLauncher {
     ) { result ->
         onResult.invoke(result.resultCode.toLong())
     }
-    return remember {
-        AlbumItemLauncher(context, scope, launcher)
+    val mainNavController = LocalRouterController.current
+    return remember(mainNavController, onResult) {
+        AlbumItemLauncher(context, mainNavController, scope, launcher)
     }
 }

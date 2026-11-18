@@ -2,8 +2,11 @@ package com.jingtian.composedemo.main.route
 
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.structuralEqualityPolicy
+import com.jingtian.composedemo.dao.model.FileInfo
+import com.jingtian.composedemo.main.MainState
 import com.jingtian.composedemo.main.widget.NavRouter
 import com.jingtian.composedemo.main.widget.SimpleNavHostController
+import com.jingtian.composedemo.multiplatform.MultiplatformFile
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -23,13 +26,15 @@ interface IRouterController {
     suspend fun toSettings() = Unit
 
     suspend fun toDrawer() = Unit
+
+    suspend fun toWebView(file: Pair<FileInfo?, MultiplatformFile?>) = Unit
 }
 
 object EmptyRouterController: IRouterController {}
 
 val LocalRouterController = compositionLocalOf<IRouterController>(structuralEqualityPolicy()) { EmptyRouterController }
 
-class MainRouterController(private val naviHost: SimpleNavHostController): IRouterController {
+class MainRouterController(private val naviHost: SimpleNavHostController, val mainState: MainState): IRouterController {
     override suspend fun toGallery() {
         naviHost.navigateTo(Gallery)
     }
@@ -40,5 +45,10 @@ class MainRouterController(private val naviHost: SimpleNavHostController): IRout
 
     override suspend fun toDrawer() {
         naviHost.navigateTo(Drawer)
+    }
+
+    override suspend fun toWebView(file: Pair<FileInfo?, MultiplatformFile?>) {
+        mainState.currentWebViewFile = file
+        naviHost.navigateTo(WebView)
     }
 }

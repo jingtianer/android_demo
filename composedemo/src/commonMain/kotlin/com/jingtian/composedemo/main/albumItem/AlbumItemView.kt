@@ -249,6 +249,16 @@ fun AlbumItemViewStateHolder.AlbumItemView() {
         }
     }
 
+    val imageInvalid = viewModel.imageInvalid
+
+    LaunchedEffect(imageInvalid.value) {
+        if (imageInvalid.value == this@AlbumItemView.albumItemRelation.fileInfo.storageId) {
+            scope.launch {
+                fetchImage(scope)
+            }
+        }
+    }
+
     Column(Modifier
         .width(size)
         .pointerInput(this@AlbumItemView) { // todo: 解决这里和zoom的冲突

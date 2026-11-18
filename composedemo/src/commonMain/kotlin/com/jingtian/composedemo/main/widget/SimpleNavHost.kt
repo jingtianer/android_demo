@@ -30,6 +30,8 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.backhandler.PredictiveBackHandler
 import androidx.compose.ui.graphics.Color
+import com.jingtian.composedemo.utils.CoroutineUtils
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.jvm.JvmSuppressWildcards
@@ -46,11 +48,13 @@ open class NavRouter {
 }
 
 class NavEntry internal constructor(
-    val content: @Composable () -> Unit
-)
+    val content: @Composable (NavEntry) -> Unit
+) {
+    var callback: (suspend () -> Unit)? by mutableStateOf(null)
+}
 
 class NavMapBuilder internal constructor(private val navMap: MutableMap<NavRouter, NavEntry>) {
-    fun composable(navRouter: NavRouter, content: @Composable () -> Unit) {
+    fun composable(navRouter: NavRouter, content: @Composable (NavEntry) -> Unit) {
         navMap[navRouter] = NavEntry(content)
     }
 }
@@ -221,10 +225,20 @@ private fun SimpleNavHostController.SimpleNavHostControllerImpl.SimpleNavHost(
     scrimColor: Color,
 ) {
     val transition = rememberTransition(transitionState, label = "entry")
+    var onBackJob by remember { mutableStateOf<Job?>(null) }
 
     PredictiveBackHandler(enabled = willHandleBackEvents) { backFlow ->
         try {
+            val callback = navMap[currentBackStackEntry]?.callback
+            if (callback != null && onBackJob == null) {
+                onBackJob = CoroutineUtils.runIOTask({
+                    callback.invoke()
+                })
+                navMap[currentBackStackEntry]?.callback = null
+            }
             backFlow.collect { event ->
+                if (!inPredictiveBack) {
+                }
                 if (willHandleBackEvents) {
                     inPredictiveBack = true
                 }
@@ -258,13 +272,19 @@ private fun SimpleNavHostController.SimpleNavHostControllerImpl.SimpleNavHost(
             val pendingTargetRouterSnapshot = pendingTargetRouter
             if (transitionState.currentState != currentBackStackEntry) {
                 transitionState.animateTo(currentBackStackEntry)
+                onBackJob?.join()
+                onBackJob = null
             } else if (transitionState.currentState != pendingTargetRouterSnapshot && pendingTargetRouterSnapshot != null) {
                 transitionState.animateTo(pendingTargetRouter)
+                onBackJob?.join()
+                onBackJob = null
                 navigateTo(pendingTargetRouterSnapshot, withAnim = false)
                 pendingTargetRouter = null
             } else {
                 if (pendingTargetRouterSnapshot != null) {
                     transitionState.animateTo(pendingTargetRouterSnapshot)
+                    onBackJob?.join()
+                    onBackJob = null
                     navigateTo(pendingTargetRouterSnapshot, withAnim = false)
                     pendingTargetRouter = null
                     return@LaunchedEffect
@@ -290,6 +310,8 @@ private fun SimpleNavHostController.SimpleNavHostControllerImpl.SimpleNavHost(
                         }
                     }
                 }
+                onBackJob?.join()
+                onBackJob = null
             }
         }
     }
@@ -302,9 +324,13 @@ private fun SimpleNavHostController.SimpleNavHostControllerImpl.SimpleNavHost(
         )
     }) { state ->
         if (extraRenderEntry != null) {
-            navMap[extraRenderEntry]?.content?.invoke()
+            navMap[extraRenderEntry]?.let {
+                it.content.invoke(it)
+            }
         }
-        navMap[state]?.content?.invoke() ?: return@AnimatedContent
+        navMap[state]?.let {
+            it.content.invoke(it)
+        } ?: return@AnimatedContent
         if (state != null && state == secondLastBackStackEntry && transitionState.targetState != transitionState.currentState) {
             val targetIsSelf = transitionState.targetState == state
             Canvas(Modifier.fillMaxSize()) { drawRect(scrimColor, alpha = if (targetIsSelf) 1 - transitionState.fraction else transitionState.fraction) }

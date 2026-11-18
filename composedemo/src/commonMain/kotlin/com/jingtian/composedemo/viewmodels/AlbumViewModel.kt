@@ -92,6 +92,7 @@ object AlbumViewModel : SingletonViewModel() {
     val albumNameChange = mutableLongStateOf(0L)
     val albumItemListChange = mutableLongStateOf(0L)
     val filterCheckChanged = mutableLongStateOf(0L)
+    val imageInvalid = mutableLongStateOf(-1L)
 
     suspend fun getAlbumName(albumId: Long): Album {
         return albumDao.getAlbum(albumId)
