@@ -42,6 +42,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -588,35 +589,16 @@ fun GalleryStateHolder.Gallery() {
                     .wrapContentHeight()
             ) {
                 if (!gallerySearchEnabled) {
-                    Icon(
-                        painter = getPainter(DrawableIcon.DrawableDrawer),
-                        contentDescription = "打开drawer",
-                        modifier = Modifier
-                            .align(Alignment.CenterVertically)
-                            .ovalGlass(hazeState)
-                            .size(LocalAppUIConstants.current.filterLabelHeight)
-                            .padding(4.dp)
-                            .clickable {
-                                scope.launch {
-                                    navController.navigateTo(Drawer)
-                                }
-                            }
-                    )
-                    Spacer(Modifier.width(12.dp))
                     Box(
                         modifier = Modifier.fillMaxWidth().align(Alignment.CenterVertically)
                             .weight(1f)
                     ) {
-                        AppThemeText(
-                            albumName.trim(),
+                        Text(
+                            albumName.trim().replaceFirstChar { it.uppercase() },
                             Modifier
-                                .ovalGlass(hazeState)
-                                .padding(horizontal = 6.dp)
-                                .height(LocalAppUIConstants.current.filterLabelHeight)
-                                .widthIn(min = LocalAppUIConstants.current.filterLabelHeight)
-                                .padding(4.dp),
+                                .widthIn(min = LocalAppUIConstants.current.filterLabelHeight),
                             style = LocalTextStyle.current.copy(
-                                fontSize = 20.sp,
+                                fontSize = 24.sp,
                                 fontWeight = FontWeight(600)
                             ),
                             maxLines = 1,
@@ -725,9 +707,10 @@ fun GalleryStateHolder.Gallery() {
                             Spacer(modifier = Modifier.width(galleryItemPadding * 2))
                         }
                     ) {
+                        val uiConsts = LocalAppUIConstants.current
                         CompositionLocalProvider(
-                            LocalAppUIConstants provides LocalAppUIConstants.current.copy(
-                                filterLabelPaddings = listOf(0f.dp, 0f.dp, 0f.dp, 0f.dp)
+                            LocalAppUIConstants provides uiConsts.copy(
+                                filterLabelPaddings = listOf(uiConsts.filterLabelPaddings[0], 0f.dp, 0f.dp, 0f.dp)
                             )
                         ) {
                             LazyRow(
