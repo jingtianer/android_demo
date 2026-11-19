@@ -25,10 +25,12 @@ class SnapshotWebView: UIView, ISnapshotWebView {
     // 对齐 Android settings
     private func setupConfig() {
         let config = webView.configuration
-        config.preferences.javaScriptEnabled = true
 //        config.preferences.allowsMixedContent = true
         if #available(iOS 14.0, *) {
+            webView.configuration.defaultWebpagePreferences.allowsContentJavaScript = true
 //            config.preferences.isFileAccessFromFileURLsAllowed = true
+        } else {
+            config.preferences.javaScriptEnabled = true
         }
         // 没有 allowUniversalAccessFromFileURLs 原生开关（iOS限制）
         // defaultTextEncodingName：WKWebView 自动识别UTF-8，不需要单独设置
@@ -45,8 +47,18 @@ class SnapshotWebView: UIView, ISnapshotWebView {
         ])
     }
     
+    var isEnable: Bool = true
+
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        guard isEnable else {
+            // 关闭：返回 nil，整个视图以及子view（WKWebView）不接收触摸，事件直接跳过
+            return nil
+        }
+        return super.hitTest(point, with: event)
+    }
+    
     /// 对应 Android initForSnapShot
-    func initForSnapShot(width: Int?, height: Int?, enableZoom: Bool = false) {
+    func initForSnapshot(width: Int?, height: Int?, enableZoom: Bool = false) {
         if let w = width, let h = height {
             // 非空：固定尺寸（离屏快照模式）
             self.frame = CGRect(x: 0, y: 0, width: CGFloat(w), height: CGFloat(h))
@@ -54,6 +66,7 @@ class SnapshotWebView: UIView, ISnapshotWebView {
             // 移除约束，避免和frame冲突
             webView.removeConstraints(webView.constraints)
         }
+        isEnable = enableZoom
 //        webView.scrollView.isZoomEnabled = enableZoom
         webView.scrollView.showsHorizontalScrollIndicator = false
         webView.scrollView.showsVerticalScrollIndicator = false
@@ -89,13 +102,13 @@ class SnapshotWebView: UIView, ISnapshotWebView {
             return self
         }
 
-    func doInitForSnapShot(width: NSNumber?, height: NSNumber?, enabled_: Bool) {
+    func doInitForSnapshot(width: NSNumber?, height: NSNumber?, enabled_: Bool) {
         let w: Int? = width?.intValue
         let h: Int? = height?.intValue
-        initForSnapShot(width: w, height: h, enableZoom: enabled_)
+        initForSnapshot(width: w, height: h, enableZoom: enabled_)
     }
 
-    func tackSnapShot(completionHandler: @escaping (UIImage?, NSError?) -> Void) {
+    func takeSnapshot(completionHandler: @escaping (UIImage?, NSError?) -> Void) {
         Task {
             do {
                 let img = try await webView.takeSnapshot()
@@ -105,7 +118,7 @@ class SnapshotWebView: UIView, ISnapshotWebView {
             }
         }
     }
-    func tackSnapShot() async throws -> UIImage {
+    func takeSnapshot() async throws -> UIImage {
         return try await webView.takeSnapshot()
     }
 }

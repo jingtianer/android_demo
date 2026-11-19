@@ -9,6 +9,7 @@ import android.view.ViewGroup
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.FrameLayout
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.IOException
@@ -38,7 +39,7 @@ class CommonWebView @JvmOverloads constructor(
     }
 
     fun initForSnapShot(width: Int, height: Int, enable: Boolean = false) {
-        layoutParams = ViewGroup.LayoutParams(width, height)
+        layoutParams = FrameLayout.LayoutParams(width, height)
         isHorizontalFadingEdgeEnabled = false
         isVerticalFadingEdgeEnabled = false
         settings.apply {

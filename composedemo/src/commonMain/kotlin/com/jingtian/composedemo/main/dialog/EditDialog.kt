@@ -36,7 +36,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.jingtian.composedemo.base.AppThemeDialog
 import com.jingtian.composedemo.base.AppThemeText
 import com.jingtian.composedemo.base.screenHeight
@@ -508,12 +507,12 @@ private fun EditDialogState.EditDialog(albumData: List<Album>, onDismiss: ()->Un
                             .align(Alignment.TopCenter),
                         selectedUri,
                         false,
-                        width = imageWidth,
-                        height = imageWidth,
+                        width = imageWidthPx,
+                        height = imageWidthPx,
                     ) {
-                        initForSnapShot(imageWidthPx, imageWidthPx, false)
+                        initForSnapshot(imageWidthPx, imageWidthPx, false)
                         webSnapShotTaker = suspend {
-                            this.tackSnapShot()
+                            this.takeSnapshot()
                         }
                     }
                 } else {

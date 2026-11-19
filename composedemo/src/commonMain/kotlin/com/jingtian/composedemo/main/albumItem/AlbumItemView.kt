@@ -19,6 +19,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
@@ -35,6 +36,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import com.jingtian.composedemo.multiplatform.WeakRef
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -43,6 +46,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.jingtian.composedemo.BuildKonfig
 import com.jingtian.composedemo.base.AppThemeText
 import com.jingtian.composedemo.dao.DataBase
 import com.jingtian.composedemo.dao.model.FileInfo
@@ -64,11 +68,13 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.jingtian.composedemo.base.resources.getPainter
 import com.jingtian.composedemo.base.resources.DrawableIcon
+import com.jingtian.composedemo.multiplatform.MultiplatformFile
 import com.jingtian.composedemo.multiplatform.SoftRef
 import com.jingtian.composedemo.multiplatform.logD
 import com.jingtian.composedemo.utils.getOrPutSoftRef
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
 import com.jingtian.composedemo.viewmodels.albumViewModel
+import com.jingtian.composedemo.web.CommonWebView
 import kotlinx.coroutines.IO
 
 class AlbumItemViewStateHolder(
@@ -88,7 +94,7 @@ class AlbumItemViewStateHolder(
     var itemRank by mutableStateOf(albumItemRelation.albumItem.rank)
     var itemScore by mutableFloatStateOf(albumItemRelation.albumItem.score)
     var itemLabel by mutableStateOf(albumItemRelation.labelInfos)
-    var imageResource by mutableStateOf(DrawableIcon.DrawableLoadFailed)
+    var imageResource: DrawableIcon? by mutableStateOf(DrawableIcon.DrawableLoadFailed)
     var intrinsicRatio by mutableFloatStateOf(
         albumItemRelation.fileInfo.aspectRatio()
     )
@@ -115,6 +121,8 @@ class AlbumItemViewStateHolder(
             this.width > 0 && this.height > 0
         } ?: 1f
     }
+
+    var webViewUri: MultiplatformFile? by mutableStateOf(null)
 
     suspend fun fetchImage(scope: CoroutineScope) {
 //        Log.d("jingtian", "fetchImage: ${albumItemRelation.fileInfo.fileType.name}, ${albumItemRelation.fileInfo.storageId}")
@@ -184,6 +192,10 @@ class AlbumItemViewStateHolder(
                         maxWidth = dpSize.toInt(),
                     ) { bitmap ->
                         imageBitmap = bitmap
+                        if (bitmap == null && BuildKonfig.isAndroid) {
+                            imageResource = null
+                            webViewUri = uri
+                        }
                     }
                 }
             }
@@ -259,10 +271,13 @@ fun AlbumItemViewStateHolder.AlbumItemView() {
             }
         }
     }
-
+    val itemWidth = remember { mutableIntStateOf(0) }
     Column(Modifier
-        .width(size)
-        .pointerInput(this@AlbumItemView) { // todo: 解决这里和zoom的冲突
+        .fillMaxWidth()
+        .onSizeChanged {
+            itemWidth.value = it.width
+        }
+        .pointerInput(this@AlbumItemView) {
             detectTapGestures(onLongPress = {
 //                enterEditState.value = true
 //                itemSelectStateChangeState.value += 1
@@ -358,14 +373,18 @@ fun AlbumItemViewStateHolder.AlbumItemView() {
                         .align(Alignment.Center),
                     contentScale = ContentScale.FillWidth
                 )
-            } else if (albumItemRelation.fileInfo.fileType == FileType.HTML) {
-//                CommonWebView(Modifier
-//                    .fillMaxWidth()
-//                    .aspectRatioOrNull(intrinsicRatio)
-//                    .align(Alignment.Center),
-//                    uri = albumItemRelation.fileInfo.getFileUri(),
-//                    enabled = false,
-//                )
+            } else if (webViewUri != null) {
+                val density = LocalDensity.current
+                CommonWebView(Modifier
+                    .size(with(density) {
+                        itemWidth.value.toDp()
+                    })
+                    .align(Alignment.Center),
+                    width = itemWidth.value,
+                    height = itemWidth.value,
+                    file = webViewUri,
+                    enabled = false
+                )
             }
             RankLabel(modifier = Modifier.align(Alignment.TopEnd), itemRank = itemRank)
         }

@@ -96,7 +96,7 @@ private val darkAppPalette = AppPalette(
 )
 private val liteAppPalette = AppPalette(
     drawerBg = Color(red = 255, green = 251, blue = 254),
-    glassColor = Color(red = 200, green = 200, blue = 200),
+    glassColor = Color(red = 220, green = 220, blue = 220),
     dialogBg = Color(red = 255, green = 251, blue = 254),
     labelChecked = Color(0x664CB9A1),
 //    labelChecked = Color(0x4f90CCE5),

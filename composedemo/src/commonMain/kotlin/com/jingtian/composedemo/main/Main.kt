@@ -5,18 +5,14 @@ import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.keyframes
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideIn
 import androidx.compose.animation.slideOut
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.AnchoredDraggableState
-import androidx.compose.foundation.gestures.DraggableAnchors
-import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.anchoredDraggable
 import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
@@ -29,16 +25,12 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.systemGestures
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.material3.DrawerState
-import androidx.compose.material3.DrawerValue
-import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -51,8 +43,14 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.backhandler.PredictiveBackHandler
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.PointerInputChange
+import androidx.compose.ui.input.pointer.PointerInputEventHandler
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.util.VelocityTracker
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.DefaultLifecycleObserver
@@ -83,6 +81,8 @@ import com.jingtian.composedemo.main.settings.SettingsPage
 import com.jingtian.composedemo.main.widget.BackEventCompat
 import com.jingtian.composedemo.main.widget.EnterTransitionCreator
 import com.jingtian.composedemo.main.widget.ExitTransitionCreator
+import com.jingtian.composedemo.main.widget.ISimpleNavSeekHandler
+import com.jingtian.composedemo.main.widget.NavEntry
 import com.jingtian.composedemo.main.widget.SimpleNavHost
 import com.jingtian.composedemo.main.widget.SimpleNavHostController
 import com.jingtian.composedemo.main.widget.SizeTransitionCreator
@@ -90,7 +90,6 @@ import com.jingtian.composedemo.main.widget.rememberSimpleNavHostController
 import com.jingtian.composedemo.multiplatform.LowMemorySideEffect
 import com.jingtian.composedemo.multiplatform.MultiplatformFile
 import com.jingtian.composedemo.multiplatform.SoftRef
-import com.jingtian.composedemo.multiplatform.logD
 import com.jingtian.composedemo.ui.theme.LocalAppPalette
 import com.jingtian.composedemo.ui.theme.appBackground
 import com.jingtian.composedemo.ui.theme.clipDeviceRoundCorner
@@ -109,6 +108,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.math.abs
+import kotlin.math.min
 import kotlin.math.roundToInt
 
 @Composable
@@ -490,9 +490,11 @@ private fun MainState.Main(
 
     val density = LocalDensity.current
 
+    var rootBoxWidth by remember { mutableIntStateOf(0) }
+
     CompositionLocalProvider(LocalRouterController provides routerController) {
         Box(
-            modifier = Modifier.fillMaxSize().predictiveBackVisual(predictiveBackVisualState = predictiveBackVisualState)
+            modifier = Modifier.fillMaxSize().predictiveBackVisual(predictiveBackVisualState = predictiveBackVisualState).onSizeChanged { rootBoxWidth = it.width }.drawerGesture(naviController, rootBoxWidth)
         ) {
             Scaffold(
                 modifier = modifier.fillMaxSize(),
@@ -522,53 +524,11 @@ private fun MainState.Main(
                             }
 
                             composable(Drawer) {
-                                Box(
-                                    Modifier
-                                        .fillMaxHeight()
-                                        .fillMaxWidth()
-                                        .clipDeviceRoundCorner()
-                                        .background(LocalAppPalette.current.drawerBg)
-                                        .windowInsetsPadding(
-                                            WindowInsets.navigationBars.only(
-                                                WindowInsetsSides.Vertical + WindowInsetsSides.Start
-                                            )
-                                        )
-                                ) {
-                                    MainDrawer(menuItemsEntity) { index, album ->
-                                        currentSelectedAlbum = IndexedValue(index, album)
-                                        scope.launch {
-                                            routerController.toGallery()
-                                        }
-                                    }
-                                }
+                                Drawer()
                             }
 
                             composable(WebView) { entry->
-                                var snapShotTaker: suspend () -> Unit by remember { mutableStateOf({}) }
-                                CommonWebView(modifier = Modifier.fillMaxSize().appBackground().windowInsetsPadding(
-                                    WindowInsets.systemBars
-                                ), currentWebViewFile.second) {
-                                    snapShotTaker = {
-                                        val storageId = currentWebViewFile.first?.storageId ?: DataBase.INVALID_ID
-                                        val uriExtension = currentWebViewFile.first?.extension
-                                        val bitmap = this.tackSnapShot()
-                                        CoroutineUtils.runIOTask({
-                                            BitMapCachePool.invalid(storageId, FileType.HTML)
-                                            BitMapCachePool.saveThumbnail(
-                                                FileInfo(
-                                                    storageId = storageId,
-                                                    fileType = FileType.HTML,
-                                                    extension = uriExtension ?: "html"
-                                                )
-                                            ) {
-                                                bitmap
-                                            }
-                                        }) {
-                                            viewModel.imageInvalid.value = storageId
-                                        }
-                                    }
-                                }
-                                entry.callback = snapShotTaker
+                                WebView(entry)
                             }
                         }
                     }
@@ -587,4 +547,140 @@ private fun MainState.Main(
     }
 
     InstallSideEffects()
+}
+
+@Composable
+private fun MainState.Drawer() {
+    val scope = rememberCoroutineScope()
+    Box(
+        Modifier
+            .fillMaxHeight()
+            .fillMaxWidth()
+            .clipDeviceRoundCorner()
+            .background(LocalAppPalette.current.drawerBg)
+            .windowInsetsPadding(
+                WindowInsets.navigationBars.only(
+                    WindowInsetsSides.Vertical + WindowInsetsSides.Start
+                )
+            )
+    ) {
+        MainDrawer(menuItemsEntity) { index, album ->
+            currentSelectedAlbum = IndexedValue(index, album)
+            scope.launch {
+                routerController.toGallery()
+            }
+        }
+    }
+}
+
+@Composable
+fun MainState.WebView(entry: NavEntry) {
+    var snapShotTaker: suspend () -> Unit by remember { mutableStateOf({}) }
+    CommonWebView(modifier = Modifier.fillMaxSize().appBackground().windowInsetsPadding(
+        WindowInsets.systemBars
+    ), currentWebViewFile.second) {
+        snapShotTaker = {
+            val storageId = currentWebViewFile.first?.storageId ?: DataBase.INVALID_ID
+            val uriExtension = currentWebViewFile.first?.extension
+            val bitmap = this.takeSnapshot()
+            CoroutineUtils.runIOTask({
+                BitMapCachePool.invalid(storageId, FileType.HTML)
+                BitMapCachePool.saveThumbnail(
+                    FileInfo(
+                        storageId = storageId,
+                        fileType = FileType.HTML,
+                        extension = uriExtension ?: "html"
+                    )
+                ) {
+                    bitmap
+                }
+            }) {
+                viewModel.imageInvalid.value = storageId
+            }
+        }
+    }
+    entry.callback = snapShotTaker
+}
+
+class DrawerGestureState(private val naviController: SimpleNavHostController) {
+    private var seekHandler: ISimpleNavSeekHandler? = null// by mutableStateOf<ISimpleNavSeekHandler?>(null)
+    private var seekProgress = 0f
+    private var firstEventOffsetX = -1f
+    private var isPush = true
+    private val velocityTracker = VelocityTracker()
+
+    private fun ensureCurrentSeekHandler(): ISimpleNavSeekHandler {
+        seekHandler?.let { return it }
+        isPush = naviController.currentBackStackEntry == Gallery
+        return naviController.seekHandler(if (isPush) Drawer else naviController.secondLastBackStackEntry ?: Gallery).also {
+            seekHandler = it
+        }
+    }
+
+    fun handler(width: Int, flingVelocity: Float): PointerInputEventHandler {
+        return PointerInputEventHandler {
+            detectDragGestures(
+                onDragStart = {
+                    ensureCurrentSeekHandler().init()
+                    seekProgress = 0f
+                    firstEventOffsetX = -1f
+                    velocityTracker.resetTracking()
+                },
+                onDragEnd = {
+                    if (abs(seekProgress) >= 0.3 || abs(velocityTracker.calculateVelocity().x) >= flingVelocity) {
+                        ensureCurrentSeekHandler().finish()
+                    } else {
+                        ensureCurrentSeekHandler().revoke()
+                    }
+//                    logD("seekHandler") {
+//                        "seekProgress=$seekProgress, calculateVelocity=${velocityTracker.calculateVelocity()}, flingVelocity=$flingVelocity"
+//                    }
+                    seekHandler = null
+                    seekProgress = 0f
+                    firstEventOffsetX = -1f
+                    velocityTracker.resetTracking()
+                },
+                onDragCancel = {
+                    ensureCurrentSeekHandler().revoke()
+                    seekHandler = null
+                    seekProgress = 0f
+                    firstEventOffsetX = -1f
+                    velocityTracker.resetTracking()
+                },
+                onDrag = { change: PointerInputChange, dragAmount: Offset ->
+                    if (firstEventOffsetX == -1f) {
+                        firstEventOffsetX = change.position.x
+                    }
+                    val currentSeekProgress = (seekProgress + dragAmount.x / width)
+//                    logD("seekHandler") {
+//                        "dragging: seekProgress=$seekProgress, firstEventOffsetX=$firstEventOffsetX, width=$width"
+//                    }
+                    velocityTracker.addPosition(change.uptimeMillis, change.position)
+                    if (seekProgress == 0f) {
+                        seekProgress = currentSeekProgress.coerceIn(-1f, 1f)
+                    } else if (seekProgress > 0f && currentSeekProgress > 0f) {
+                        seekProgress = currentSeekProgress.coerceIn(0f, 1f)
+                    } else if (seekProgress < 0f && currentSeekProgress < 0f){
+                        seekProgress = currentSeekProgress.coerceIn(-1f, 0f)
+                    }
+                    val handler = ensureCurrentSeekHandler()
+                    handler.seekTo(abs(seekProgress), if ((seekProgress <= 0) xor isPush) {
+                        BackEventCompat.EDGE_RIGHT
+                    } else {
+                        BackEventCompat.EDGE_LEFT
+                    })
+                }
+            )
+        }
+    }
+
+
+}
+@Composable
+private fun Modifier.drawerGesture(naviController: SimpleNavHostController, width: Int): Modifier {
+    val drawerGestureState = remember(naviController) { DrawerGestureState(naviController) }
+    if (naviController.currentBackStackEntry == WebView) {
+        return this
+    }
+    return this.pointerInput(Unit, drawerGestureState.handler(min(with(LocalDensity.current) { 360.dp.roundToPx() }, width), LocalViewConfiguration.current.minimumFlingVelocity))
 }

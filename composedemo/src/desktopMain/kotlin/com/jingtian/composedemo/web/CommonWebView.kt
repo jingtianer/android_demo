@@ -10,8 +10,8 @@ actual fun CommonWebView(
     modifier: Modifier,
     file: MultiplatformFile?,
     enabled: Boolean,
-    width: Dp?,
-    height: Dp?,
+    width: Int?,
+    height: Int?,
     viewScope: ICommonWebViewScope.() -> Unit
 ) {
 
