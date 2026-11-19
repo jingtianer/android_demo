@@ -50,6 +50,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -110,6 +111,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.math.abs
+import kotlin.math.min
 import kotlin.math.roundToInt
 
 @Composable
@@ -608,7 +610,7 @@ class DrawerGestureState(private val naviController: SimpleNavHostController) {
     private var seekProgress = 0f
     private var firstEventOffsetX = -1f
     private var isPush = true
-    val velocityTracker = VelocityTracker()
+    private val velocityTracker = VelocityTracker()
 
     private fun ensureCurrentSeekHandler(): ISimpleNavSeekHandler {
         seekHandler?.let { return it }
@@ -618,10 +620,7 @@ class DrawerGestureState(private val naviController: SimpleNavHostController) {
         }
     }
 
-    fun handler(width: Int, density: Density): PointerInputEventHandler {
-        val mexVelocity = with(density) {
-            125.dp.roundToPx()
-        }
+    fun handler(width: Int, flingVelocity: Float): PointerInputEventHandler {
         return PointerInputEventHandler {
             detectDragGestures(
                 onDragStart = {
@@ -631,11 +630,14 @@ class DrawerGestureState(private val naviController: SimpleNavHostController) {
                     velocityTracker.resetTracking()
                 },
                 onDragEnd = {
-                    if (abs(seekProgress) >= 0.6 || velocityTracker.calculateVelocity().x >= mexVelocity) {
+                    if (abs(seekProgress) >= 0.3 || abs(velocityTracker.calculateVelocity().x) >= flingVelocity) {
                         ensureCurrentSeekHandler().finish()
                     } else {
                         ensureCurrentSeekHandler().revoke()
                     }
+//                    logD("seekHandler") {
+//                        "seekProgress=$seekProgress, calculateVelocity=${velocityTracker.calculateVelocity()}, flingVelocity=$flingVelocity"
+//                    }
                     seekHandler = null
                     seekProgress = 0f
                     firstEventOffsetX = -1f
@@ -654,7 +656,7 @@ class DrawerGestureState(private val naviController: SimpleNavHostController) {
                     }
                     val currentSeekProgress = (seekProgress + dragAmount.x / width)
 //                    logD("seekHandler") {
-//                        "dragging: seekProgress=$seekProgress, firstEventOffsetX=$firstEventOffsetX, dragWidth=$dragWidth, width=$width"
+//                        "dragging: seekProgress=$seekProgress, firstEventOffsetX=$firstEventOffsetX, width=$width"
 //                    }
                     velocityTracker.addPosition(change.uptimeMillis, change.position)
                     if (seekProgress == 0f) {
@@ -680,5 +682,8 @@ class DrawerGestureState(private val naviController: SimpleNavHostController) {
 @Composable
 private fun Modifier.drawerGesture(naviController: SimpleNavHostController, width: Int): Modifier {
     val drawerGestureState = remember(naviController) { DrawerGestureState(naviController) }
-    return this.pointerInput(Unit, drawerGestureState.handler(width, LocalDeviceRealDensity.current))
+    if (naviController.currentBackStackEntry == WebView) {
+        return this
+    }
+    return this.pointerInput(Unit, drawerGestureState.handler(min(with(LocalDensity.current) { 360.dp.roundToPx() }, width), LocalViewConfiguration.current.minimumFlingVelocity))
 }

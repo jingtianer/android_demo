@@ -120,7 +120,7 @@ class SimpleNavHostController(private val impl: SimpleNavHostControllerImpl = Si
         override val secondLastBackStackEntry get() = backStack.getOrNull(backStack.size - 2)
 
         // 可预测返回
-        var backProgress by mutableFloatStateOf(-1f)
+        var backProgress by mutableFloatStateOf(0f)
         var swipeEdge by mutableIntStateOf(BackEventCompat.EDGE_RIGHT)
         var inPredictiveBack by mutableStateOf(false)
         var pendingTargetRouter by mutableStateOf<NavRouter?>(null)
@@ -347,75 +347,80 @@ private fun SimpleNavHostController.SimpleNavHostControllerImpl.SimpleNavHost(
         }
     }
 
-    if (inPredictiveBack) {
-        LaunchedEffect(backProgress, pendingTargetRouter) {
-            updateTransition(isPop = isPop, swipeEdge = swipeEdge)
-            // Update transition progress safely (same guard against stale enabled state).
-            transitionState.seekTo(backProgress, pendingTargetRouter)
-//            logD("seekHandler") {
-//                "LaunchedEffect, inPredictiveBack, seekTo backProgress=$backProgress, pendingTargetRouter=$pendingTargetRouter"
-//            }
+    LaunchedEffect(backProgress, pendingTargetRouter, inPredictiveBack) {
+        if (!inPredictiveBack) {
+            return@LaunchedEffect
         }
-    } else {
-        LaunchedEffect(currentBackStackEntry, pendingTargetRouter) {
-            updateTransition(isPop, swipeEdge)
-            val pendingTargetRouterSnapshot = pendingTargetRouter
-            if (isPop) {
-                handleBackJob(scope)
-                joinBackJob()
-            }
-            if (transitionState.currentState != pendingTargetRouterSnapshot && pendingTargetRouterSnapshot != null) {
+        updateTransition(isPop = isPop, swipeEdge = swipeEdge)
+        // Update transition progress safely (same guard against stale enabled state).
+        transitionState.seekTo(backProgress, pendingTargetRouter)
+//        logD("seekHandler") {
+//            "LaunchedEffect, inPredictiveBack, seekTo backProgress=$backProgress, pendingTargetRouter=$pendingTargetRouter"
+//        }
+    }
+    LaunchedEffect(currentBackStackEntry, pendingTargetRouter, inPredictiveBack) {
+        if (inPredictiveBack) {
+            return@LaunchedEffect
+        }
+        updateTransition(isPop, swipeEdge)
+        val pendingTargetRouterSnapshot = pendingTargetRouter
+        if (isPop) {
+            handleBackJob(scope)
+            joinBackJob()
+        }
+        if (transitionState.currentState != pendingTargetRouterSnapshot && pendingTargetRouterSnapshot != null) {
+//            logD("seekHandler") {
+//                "LaunchedEffect, !inPredictiveBack currentState!=pendingTargetRouterSnapshot backProgress=$backProgress, pendingTargetRouter=$pendingTargetRouter"
+//            }
+            transitionState.animateTo(pendingTargetRouterSnapshot)
+            navigateTo(pendingTargetRouterSnapshot, withAnim = false)
+            pendingTargetRouter = null
+            currentSeekHandler = null
+        } else {
+            if (pendingTargetRouterSnapshot != null) {
 //                logD("seekHandler") {
-//                    "LaunchedEffect, !inPredictiveBack currentState!=pendingTargetRouterSnapshot backProgress=$backProgress, pendingTargetRouter=$pendingTargetRouter"
+//                    "LaunchedEffect, !inPredictiveBack finish currentState==pendingTargetRouterSnapshot backProgress=$backProgress, pendingTargetRouter=$pendingTargetRouter"
 //                }
                 transitionState.animateTo(pendingTargetRouterSnapshot)
                 navigateTo(pendingTargetRouterSnapshot, withAnim = false)
                 pendingTargetRouter = null
                 currentSeekHandler = null
-            } else {
-                if (pendingTargetRouterSnapshot != null) {
-//                    logD("seekHandler") {
-//                        "LaunchedEffect, !inPredictiveBack finish currentState==pendingTargetRouterSnapshot backProgress=$backProgress, pendingTargetRouter=$pendingTargetRouter"
-//                    }
-                    transitionState.animateTo(pendingTargetRouterSnapshot)
-                    navigateTo(pendingTargetRouterSnapshot, withAnim = false)
-                    pendingTargetRouter = null
-                    currentSeekHandler = null
-                    return@LaunchedEffect
-                }
-//                logD("seekHandler") {
-//                    "LaunchedEffect, !inPredictiveBack revoke currentState==pendingTargetRouterSnapshot backProgress=$backProgress, pendingTargetRouter=$pendingTargetRouter"
-//                }
-                // convert from nanoseconds to milliseconds
-                val totalDuration = transition.totalDurationNanos / 1000000
-                // When the predictive back gesture is cancel, we need to manually animate
-                // the SeekableTransitionState from where it left off, to zero and then
-                // snapTo the final position.
-                animate(
-                    transitionState.fraction,
-                    0f,
-                    animationSpec = tween((transitionState.fraction * totalDuration).toInt())
-                ) { value, _ ->
-                    this@LaunchedEffect.launch {
-                        if (value > 0) {
-                            // Seek the original transition back to the currentState
-                            transitionState.seekTo(value)
-//                            logD("seekHandler") {
-//                                "LaunchedEffect, !inPredictiveBack revoke value=$value"
-//                            }
-                        }
-                        if (value == 0f) {
-                            // Once we animate to the start, we need to snap to the right state.
-                            transitionState.seekTo(0f)
-                            transitionState.snapTo(currentBackStackEntry)
-//                            logD("seekHandler") {
-//                                "LaunchedEffect, !inPredictiveBack revoke value=$value, snapTo"
-//                            }
-                        }
+                return@LaunchedEffect
+            }
+//            logD("seekHandler") {
+//                "LaunchedEffect, !inPredictiveBack revoke currentState==pendingTargetRouterSnapshot backProgress=$backProgress, pendingTargetRouter=$pendingTargetRouter"
+//            }
+            transitionState.seekTo(backProgress, currentSeekHandler?.target ?: currentBackStackEntry)
+
+            // convert from nanoseconds to milliseconds
+            val totalDuration = transition.totalDurationNanos / 1000000
+            // When the predictive back gesture is cancel, we need to manually animate
+            // the SeekableTransitionState from where it left off, to zero and then
+            // snapTo the final position.
+            animate(
+                transitionState.fraction,
+                0f,
+                animationSpec = tween((transitionState.fraction * totalDuration).toInt())
+            ) { value, _ ->
+                this@LaunchedEffect.launch {
+                    if (value > 0) {
+                        // Seek the original transition back to the currentState
+                        transitionState.seekTo(value)
+//                        logD("seekHandler") {
+//                            "LaunchedEffect, !inPredictiveBack revoke value=$value"
+//                        }
+                    }
+                    if (value == 0f) {
+                        // Once we animate to the start, we need to snap to the right state.
+                        transitionState.seekTo(0f)
+                        transitionState.snapTo(currentBackStackEntry)
+//                        logD("seekHandler") {
+//                            "LaunchedEffect, !inPredictiveBack revoke value=$value, snapTo"
+//                        }
                     }
                 }
-                currentSeekHandler = null
             }
+            currentSeekHandler = null
         }
     }
     transition.AnimatedContent(transitionSpec = {
