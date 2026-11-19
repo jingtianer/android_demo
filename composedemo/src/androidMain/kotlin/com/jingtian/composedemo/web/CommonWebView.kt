@@ -1,5 +1,6 @@
 package com.jingtian.composedemo.web
 
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
@@ -21,14 +22,26 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class CommonWebViewWrapper(val commonWebView: CommonWebView) : FrameLayout(commonWebView.context) {
+class CommonWebViewWrapper(commonWebView: CommonWebView, var isEnable: Boolean = true) : FrameLayout(commonWebView.context) {
     init {
         addView(commonWebView, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
+    }
+
+    override fun onTouchEvent(event: MotionEvent?): Boolean {
+        return isEnable && super.onTouchEvent(event)
+    }
+
+    override fun dispatchTouchEvent(ev: MotionEvent?): Boolean {
+        return isEnable && super.dispatchTouchEvent(ev)
+    }
+
+    override fun onInterceptTouchEvent(ev: MotionEvent?): Boolean {
+        return isEnable && super.onInterceptTouchEvent(ev)
     }
 }
 
 @Composable
-actual fun CommonWebView(modifier: Modifier, file: MultiplatformFile?, enabled: Boolean, width: Dp?, height: Dp?, viewScope: ICommonWebViewScope.()->Unit) {
+actual fun CommonWebView(modifier: Modifier, file: MultiplatformFile?, enabled: Boolean, width: Int?, height: Int?, viewScope: ICommonWebViewScope.()->Unit) {
     val uri = suspend {
         withContext(Dispatchers.IO) {
             (file as? MultiplatformFileImpl)?.getUri()
@@ -41,22 +54,22 @@ actual fun CommonWebView(modifier: Modifier, file: MultiplatformFile?, enabled: 
         }
         isEnabled = enabled
         viewScope(object : ICommonWebViewScope {
-            override suspend fun tackSnapShot(): ImageBitmap {
+            override suspend fun takeSnapshot(): ImageBitmap {
                 return this@init.takeSnapShot(view).asImageBitmap()
             }
 
-            override fun initForSnapShot(width: Int?, height: Int?, enabled: Boolean) {
+            override fun initForSnapshot(width: Int?, height: Int?, enabled: Boolean) {
                 this@init.initForSnapShot(width ?: ViewGroup.LayoutParams.MATCH_PARENT, height ?: ViewGroup.LayoutParams.MATCH_PARENT, enable = enabled)
             }
         })
     }
     AndroidView(factory = { context->
         val webView = CommonWebView(context)
-        val wrapper = CommonWebViewWrapper(webView)
+        val wrapper = CommonWebViewWrapper(webView, isEnable = enabled)
         webView.apply {
 //            layoutParams = ViewGroup.LayoutParams(width?.dpValue?.toInt()?:ViewGroup.LayoutParams.MATCH_PARENT, height?.dpValue?.toInt()?:ViewGroup.LayoutParams.MATCH_PARENT)
             init(wrapper)
-            initForSnapShot(width?.dpValue?.toInt()?: ViewGroup.LayoutParams.MATCH_PARENT, height?.dpValue?.toInt()?: ViewGroup.LayoutParams.MATCH_PARENT, enable = enabled)
+            initForSnapShot(width?.toInt()?: ViewGroup.LayoutParams.MATCH_PARENT, height?.toInt()?: ViewGroup.LayoutParams.MATCH_PARENT, enable = enabled)
         }
         wrapper
     }, modifier = modifier)

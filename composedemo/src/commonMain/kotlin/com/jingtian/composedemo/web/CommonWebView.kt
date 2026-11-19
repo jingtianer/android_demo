@@ -7,9 +7,9 @@ import androidx.compose.ui.unit.Dp
 import com.jingtian.composedemo.multiplatform.MultiplatformFile
 
 interface ICommonWebViewScope {
-    suspend fun tackSnapShot(): ImageBitmap
-    fun initForSnapShot(width: Int?, height: Int?, enabled: Boolean)
+    suspend fun takeSnapshot(): ImageBitmap
+    fun initForSnapshot(width: Int?, height: Int?, enabled: Boolean)
 }
 
 @Composable
-expect fun CommonWebView(modifier: Modifier = Modifier, file: MultiplatformFile?, enabled: Boolean = true, width: Dp? = null, height: Dp? = null, viewScope: ICommonWebViewScope.()->Unit = {})
+expect fun CommonWebView(modifier: Modifier = Modifier, file: MultiplatformFile?, enabled: Boolean = true, width: Int? = null, height: Int? = null, viewScope: ICommonWebViewScope.()->Unit = {})

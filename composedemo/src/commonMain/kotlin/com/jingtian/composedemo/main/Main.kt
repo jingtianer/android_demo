@@ -51,7 +51,6 @@ import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalViewConfiguration
-import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.DefaultLifecycleObserver
@@ -91,9 +90,7 @@ import com.jingtian.composedemo.main.widget.rememberSimpleNavHostController
 import com.jingtian.composedemo.multiplatform.LowMemorySideEffect
 import com.jingtian.composedemo.multiplatform.MultiplatformFile
 import com.jingtian.composedemo.multiplatform.SoftRef
-import com.jingtian.composedemo.multiplatform.logD
 import com.jingtian.composedemo.ui.theme.LocalAppPalette
-import com.jingtian.composedemo.ui.theme.LocalDeviceRealDensity
 import com.jingtian.composedemo.ui.theme.appBackground
 import com.jingtian.composedemo.ui.theme.clipDeviceRoundCorner
 import com.jingtian.composedemo.utils.BitMapCachePool
@@ -585,7 +582,7 @@ fun MainState.WebView(entry: NavEntry) {
         snapShotTaker = {
             val storageId = currentWebViewFile.first?.storageId ?: DataBase.INVALID_ID
             val uriExtension = currentWebViewFile.first?.extension
-            val bitmap = this.tackSnapShot()
+            val bitmap = this.takeSnapshot()
             CoroutineUtils.runIOTask({
                 BitMapCachePool.invalid(storageId, FileType.HTML)
                 BitMapCachePool.saveThumbnail(

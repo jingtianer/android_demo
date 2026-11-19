@@ -35,7 +35,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.jingtian.composedemo.BuildKonfig
 import com.jingtian.composedemo.base.AppThemeDialog
 import com.jingtian.composedemo.base.AppThemeText
@@ -64,7 +63,6 @@ import kotlinx.coroutines.launch
 import kotlin.math.min
 import com.jingtian.composedemo.base.resources.getPainter
 import com.jingtian.composedemo.base.resources.DrawableIcon
-import com.jingtian.composedemo.main.remote.RemoteServer
 import com.jingtian.composedemo.main.remote.ServerStorage
 import com.jingtian.composedemo.main.remote.ServerType
 import com.jingtian.composedemo.main.remote.SftpServer
@@ -434,12 +432,12 @@ private fun AddItemDialogState.AddItemDialog(totalLabelList: List<String>, album
                         .align(Alignment.TopCenter),
                     selectedUri,
                     false,
-                    width = imageWidth,
-                    height = imageWidth,
+                    width = imageWidthPx,
+                    height = imageWidthPx,
                 ) {
-                    initForSnapShot(imageWidthPx, imageWidthPx, false)
+                    initForSnapshot(imageWidthPx, imageWidthPx, false)
                     webSnapShotTaker = suspend {
-                        this.tackSnapShot()
+                        this.takeSnapshot()
                     }
                 }
             } else {
