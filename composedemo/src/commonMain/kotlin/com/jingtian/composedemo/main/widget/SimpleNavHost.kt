@@ -31,7 +31,8 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.backhandler.PredictiveBackHandler
 import androidx.compose.ui.graphics.Color
-import com.jingtian.composedemo.utils.CoroutineUtils
+import com.jingtian.composedemo.multiplatform.logD
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlin.coroutines.cancellation.CancellationException
@@ -64,6 +65,14 @@ typealias EnterTransitionCreator = AnimatedContentTransitionScope<NavRouter?>.(s
 typealias ExitTransitionCreator = AnimatedContentTransitionScope<NavRouter?>.(swipeEdge: Int) -> ExitTransition
 typealias SizeTransitionCreator = AnimatedContentTransitionScope<NavRouter?>.(swipeEdge: Int) -> SizeTransform?
 
+interface ISimpleNavSeekHandler {
+    val target: NavRouter
+    fun init()
+    fun seekTo(progress: Float, swipeEdge: Int)
+    fun finish()
+    fun revoke()
+}
+
 interface AbstractSimpleNavHostController {
     val currentBackStack: List<NavRouter>
     val currentBackStackEntry: NavRouter?
@@ -73,6 +82,7 @@ interface AbstractSimpleNavHostController {
     var shouldHandleBack: Boolean
     suspend fun navigateTo(router: NavRouter)
     suspend fun pop()
+    fun seekHandler(router: NavRouter): ISimpleNavSeekHandler
 }
 
 class SimpleNavHostController(private val impl: SimpleNavHostControllerImpl = SimpleNavHostControllerImpl()) : AbstractSimpleNavHostController by impl {
@@ -115,6 +125,7 @@ class SimpleNavHostController(private val impl: SimpleNavHostControllerImpl = Si
         var inPredictiveBack by mutableStateOf(false)
         var pendingTargetRouter by mutableStateOf<NavRouter?>(null)
         override var shouldHandleBack: Boolean by mutableStateOf(true)
+        var isPop by mutableStateOf(false)
 
         // 返回键
         override val willHandleBackEvents: Boolean get() = backStack.size > 1 && shouldHandleBack
@@ -146,28 +157,120 @@ class SimpleNavHostController(private val impl: SimpleNavHostControllerImpl = Si
             navigateTo(router, withAnim = true)
         }
 
-        suspend fun navigateTo(router: NavRouter, withAnim: Boolean) {
-            val initialStackTopEntry = backStack.lastOrNull()
-            val isPop = if (backStack.contains(router)) {
-                if (backStack.isNotEmpty() && backStack.last() != router) {
-                    backStack.removeLast()
+        private fun isPop(router: NavRouter, modifyStack: Boolean = true): Boolean {
+            return if (backStack.contains(router)) {
+                if (modifyStack) {
+                    if (backStack.isNotEmpty() && backStack.last() != router) {
+                        backStack.removeLast()
+                    }
                 }
                 true
             } else {
-                backStack.add(router)
+                if (modifyStack) {
+                    backStack.add(router)
+                }
                 false
             }
+        }
+
+        private var onBackJob: Job? by mutableStateOf(null)
+
+        fun handleBackJob(scope: CoroutineScope) {
+            val callback = navMap[currentBackStackEntry]?.callback
+            if (callback != null && onBackJob != null) {
+                onBackJob = scope.launch {
+                    callback.invoke()
+                }
+                navMap[currentBackStackEntry]?.callback = null
+            }
+        }
+
+        suspend fun joinBackJob() {
+            onBackJob?.let {
+                it.join()
+                onBackJob = null
+            }
+        }
+
+        suspend fun navigateTo(router: NavRouter, withAnim: Boolean) {
             if (withAnim) {
-                val finalStackTopEntry = currentBackStackEntry
-                updateTransition(isPop = isPop, swipeEdge = swipeEdge)
                 withFrameMillis {  }
-                transitionState.snapTo(initialStackTopEntry)
-                transitionState.animateTo(finalStackTopEntry)
+                seekHandler(router).apply {
+                    init()
+                    finish()
+                }
+            } else {
+                isPop(router, modifyStack = true)
             }
         }
 
         override suspend fun pop() {
             navigateTo(secondLastBackStackEntry ?: return)
+        }
+
+        var currentSeekHandler: ISimpleNavSeekHandler? = null
+
+        override fun seekHandler(router: NavRouter): ISimpleNavSeekHandler {
+            currentSeekHandler?.let {
+                return it.takeIf { it.target == router } ?: EmptySimpleNavSeekHandler(router)
+            }
+            if (currentBackStack == router) {
+                return EmptySimpleNavSeekHandler(router)
+            }
+            val isPop = if (isPop(router, modifyStack = false)) {
+                true
+            } else {
+                isPop(router, modifyStack = true)
+                false
+            }
+            val handler = SimpleNavSeekHandler(isPop, router).also {
+                currentSeekHandler = it
+            }
+            return handler
+        }
+        private class EmptySimpleNavSeekHandler(override val target: NavRouter) : ISimpleNavSeekHandler {
+            override fun init() = Unit
+            override fun seekTo(progress: Float, swipeEdge: Int) = Unit
+            override fun finish() = Unit
+            override fun revoke() = Unit
+        }
+        private inner class SimpleNavSeekHandler(private val isPop: Boolean, override val target: NavRouter): ISimpleNavSeekHandler {
+            override fun init() {
+                if (currentSeekHandler !== this@SimpleNavSeekHandler) {
+                    return
+                }
+                this@SimpleNavHostControllerImpl.isPop = isPop
+                inPredictiveBack = true
+                pendingTargetRouter = target
+            }
+            override fun seekTo(progress: Float, swipeEdge: Int) {
+                if (currentSeekHandler !== this@SimpleNavSeekHandler) {
+                    return
+                }
+                this@SimpleNavHostControllerImpl.backProgress = progress
+                this@SimpleNavHostControllerImpl.swipeEdge = swipeEdge
+            }
+            override fun finish() {
+                if (currentSeekHandler !== this@SimpleNavSeekHandler) {
+                    return
+                }
+                inPredictiveBack = false
+                pendingTargetRouter = target
+//                currentSeekHandler = null
+            }
+            override fun revoke() {
+                if (currentSeekHandler !== this@SimpleNavSeekHandler) {
+                    return
+                }
+                if (!isPop) {
+                    if (backStack.lastOrNull() == target) {
+                        backStack.removeLast()
+                    }
+                }
+                inPredictiveBack = false
+                pendingTargetRouter = null
+//                currentSeekHandler = null
+            }
         }
 
         fun update(
@@ -226,90 +329,63 @@ private fun SimpleNavHostController.SimpleNavHostControllerImpl.SimpleNavHost(
     scrimColor: Color,
 ) {
     val transition = rememberTransition(transitionState, label = "entry")
-    var onBackJob by remember { mutableStateOf<Job?>(null) }
     val scope = rememberCoroutineScope()
 
     PredictiveBackHandler(enabled = willHandleBackEvents) { backFlow ->
+        val seekHandler = seekHandler(secondLastBackStackEntry ?: return@PredictiveBackHandler)
         try {
-            val callback = navMap[currentBackStackEntry]?.callback
-            if (callback != null && onBackJob != null) {
-                onBackJob = scope.launch {
-                    callback.invoke()
-                }
-                navMap[currentBackStackEntry]?.callback = null
-            }
+            seekHandler.init()
+            handleBackJob(scope)
             backFlow.collect { event ->
-                if (willHandleBackEvents) {
-                    inPredictiveBack = true
-                }
-                backProgress = event.progress
-                swipeEdge = event.swipeEdge
+                seekHandler.seekTo(event.progress, event.swipeEdge)
             }
-            if (willHandleBackEvents) {
-                pendingTargetRouter = secondLastBackStackEntry
-                inPredictiveBack = false
-            }
+            seekHandler.finish()
         } catch (e: CancellationException) {
-            if (willHandleBackEvents) {
-                inPredictiveBack = false
-            }
+            seekHandler.revoke()
         } finally {
 
         }
     }
 
     if (inPredictiveBack) {
-        LaunchedEffect(backProgress) {
-            updateTransition(isPop = true, swipeEdge = swipeEdge)
+        LaunchedEffect(backProgress, pendingTargetRouter) {
+            updateTransition(isPop = isPop, swipeEdge = swipeEdge)
             // Update transition progress safely (same guard against stale enabled state).
-            if (currentBackStack.size > 1) {
-                val previousEntry = secondLastBackStackEntry
-                transitionState.seekTo(backProgress, previousEntry)
-            }
+            transitionState.seekTo(backProgress, pendingTargetRouter)
+//            logD("seekHandler") {
+//                "LaunchedEffect, inPredictiveBack, seekTo backProgress=$backProgress, pendingTargetRouter=$pendingTargetRouter"
+//            }
         }
     } else {
         LaunchedEffect(currentBackStackEntry, pendingTargetRouter) {
+            updateTransition(isPop, swipeEdge)
             val pendingTargetRouterSnapshot = pendingTargetRouter
-            if (transitionState.currentState != currentBackStackEntry) {
-                if (onBackJob == null) {
-                    val callback = navMap[transitionState.currentState]?.callback
-                    onBackJob = scope.launch {
-                        callback?.invoke()
-                    }
-                    navMap[transitionState.currentState]?.callback = null
-                }
-                onBackJob?.join()
-                onBackJob = null
-                transitionState.animateTo(currentBackStackEntry)
-            } else if (transitionState.currentState != pendingTargetRouterSnapshot && pendingTargetRouterSnapshot != null) {
-                if (onBackJob == null) {
-                    val callback = navMap[transitionState.currentState]?.callback
-                    onBackJob = scope.launch {
-                        callback?.invoke()
-                    }
-                    navMap[transitionState.currentState]?.callback = null
-                }
-                onBackJob?.join()
-                onBackJob = null
-                transitionState.animateTo(pendingTargetRouter)
+            if (isPop) {
+                handleBackJob(scope)
+                joinBackJob()
+            }
+            if (transitionState.currentState != pendingTargetRouterSnapshot && pendingTargetRouterSnapshot != null) {
+//                logD("seekHandler") {
+//                    "LaunchedEffect, !inPredictiveBack currentState!=pendingTargetRouterSnapshot backProgress=$backProgress, pendingTargetRouter=$pendingTargetRouter"
+//                }
+                transitionState.animateTo(pendingTargetRouterSnapshot)
                 navigateTo(pendingTargetRouterSnapshot, withAnim = false)
                 pendingTargetRouter = null
+                currentSeekHandler = null
             } else {
-                if (onBackJob == null) {
-                    val callback = navMap[transitionState.currentState]?.callback
-                    onBackJob = scope.launch {
-                        callback?.invoke()
-                    }
-                    navMap[transitionState.currentState]?.callback = null
-                }
-                onBackJob?.join()
-                onBackJob = null
                 if (pendingTargetRouterSnapshot != null) {
+//                    logD("seekHandler") {
+//                        "LaunchedEffect, !inPredictiveBack finish currentState==pendingTargetRouterSnapshot backProgress=$backProgress, pendingTargetRouter=$pendingTargetRouter"
+//                    }
                     transitionState.animateTo(pendingTargetRouterSnapshot)
                     navigateTo(pendingTargetRouterSnapshot, withAnim = false)
                     pendingTargetRouter = null
+                    currentSeekHandler = null
                     return@LaunchedEffect
                 }
+//                logD("seekHandler") {
+//                    "LaunchedEffect, !inPredictiveBack revoke currentState==pendingTargetRouterSnapshot backProgress=$backProgress, pendingTargetRouter=$pendingTargetRouter"
+//                }
                 // convert from nanoseconds to milliseconds
                 val totalDuration = transition.totalDurationNanos / 1000000
                 // When the predictive back gesture is cancel, we need to manually animate
@@ -324,13 +400,21 @@ private fun SimpleNavHostController.SimpleNavHostControllerImpl.SimpleNavHost(
                         if (value > 0) {
                             // Seek the original transition back to the currentState
                             transitionState.seekTo(value)
+//                            logD("seekHandler") {
+//                                "LaunchedEffect, !inPredictiveBack revoke value=$value"
+//                            }
                         }
                         if (value == 0f) {
                             // Once we animate to the start, we need to snap to the right state.
+                            transitionState.seekTo(0f)
                             transitionState.snapTo(currentBackStackEntry)
+//                            logD("seekHandler") {
+//                                "LaunchedEffect, !inPredictiveBack revoke value=$value, snapTo"
+//                            }
                         }
                     }
                 }
+                currentSeekHandler = null
             }
         }
     }

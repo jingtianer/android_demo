@@ -5,18 +5,14 @@ import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.keyframes
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideIn
 import androidx.compose.animation.slideOut
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.AnchoredDraggableState
-import androidx.compose.foundation.gestures.DraggableAnchors
-import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.anchoredDraggable
 import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
@@ -29,16 +25,12 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.systemGestures
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.material3.DrawerState
-import androidx.compose.material3.DrawerValue
-import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -51,8 +43,14 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.backhandler.PredictiveBackHandler
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.PointerInputChange
+import androidx.compose.ui.input.pointer.PointerInputEventHandler
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.util.VelocityTracker
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.DefaultLifecycleObserver
@@ -83,6 +81,7 @@ import com.jingtian.composedemo.main.settings.SettingsPage
 import com.jingtian.composedemo.main.widget.BackEventCompat
 import com.jingtian.composedemo.main.widget.EnterTransitionCreator
 import com.jingtian.composedemo.main.widget.ExitTransitionCreator
+import com.jingtian.composedemo.main.widget.ISimpleNavSeekHandler
 import com.jingtian.composedemo.main.widget.NavEntry
 import com.jingtian.composedemo.main.widget.SimpleNavHost
 import com.jingtian.composedemo.main.widget.SimpleNavHostController
@@ -93,6 +92,7 @@ import com.jingtian.composedemo.multiplatform.MultiplatformFile
 import com.jingtian.composedemo.multiplatform.SoftRef
 import com.jingtian.composedemo.multiplatform.logD
 import com.jingtian.composedemo.ui.theme.LocalAppPalette
+import com.jingtian.composedemo.ui.theme.LocalDeviceRealDensity
 import com.jingtian.composedemo.ui.theme.appBackground
 import com.jingtian.composedemo.ui.theme.clipDeviceRoundCorner
 import com.jingtian.composedemo.utils.BitMapCachePool
@@ -491,9 +491,11 @@ private fun MainState.Main(
 
     val density = LocalDensity.current
 
+    var rootBoxWidth by remember { mutableIntStateOf(0) }
+
     CompositionLocalProvider(LocalRouterController provides routerController) {
         Box(
-            modifier = Modifier.fillMaxSize().predictiveBackVisual(predictiveBackVisualState = predictiveBackVisualState)
+            modifier = Modifier.fillMaxSize().predictiveBackVisual(predictiveBackVisualState = predictiveBackVisualState).onSizeChanged { rootBoxWidth = it.width }.drawerGesture(naviController, rootBoxWidth)
         ) {
             Scaffold(
                 modifier = modifier.fillMaxSize(),
@@ -599,4 +601,84 @@ fun MainState.WebView(entry: NavEntry) {
         }
     }
     entry.callback = snapShotTaker
+}
+
+class DrawerGestureState(private val naviController: SimpleNavHostController) {
+    private var seekHandler: ISimpleNavSeekHandler? = null// by mutableStateOf<ISimpleNavSeekHandler?>(null)
+    private var seekProgress = 0f
+    private var firstEventOffsetX = -1f
+    private var isPush = true
+    val velocityTracker = VelocityTracker()
+
+    private fun ensureCurrentSeekHandler(): ISimpleNavSeekHandler {
+        seekHandler?.let { return it }
+        isPush = naviController.currentBackStackEntry == Gallery
+        return naviController.seekHandler(if (isPush) Drawer else naviController.secondLastBackStackEntry ?: Gallery).also {
+            seekHandler = it
+        }
+    }
+
+    fun handler(width: Int, density: Density): PointerInputEventHandler {
+        val mexVelocity = with(density) {
+            125.dp.roundToPx()
+        }
+        return PointerInputEventHandler {
+            detectDragGestures(
+                onDragStart = {
+                    ensureCurrentSeekHandler().init()
+                    seekProgress = 0f
+                    firstEventOffsetX = -1f
+                    velocityTracker.resetTracking()
+                },
+                onDragEnd = {
+                    if (abs(seekProgress) >= 0.6 || velocityTracker.calculateVelocity().x >= mexVelocity) {
+                        ensureCurrentSeekHandler().finish()
+                    } else {
+                        ensureCurrentSeekHandler().revoke()
+                    }
+                    seekHandler = null
+                    seekProgress = 0f
+                    firstEventOffsetX = -1f
+                    velocityTracker.resetTracking()
+                },
+                onDragCancel = {
+                    ensureCurrentSeekHandler().revoke()
+                    seekHandler = null
+                    seekProgress = 0f
+                    firstEventOffsetX = -1f
+                    velocityTracker.resetTracking()
+                },
+                onDrag = { change: PointerInputChange, dragAmount: Offset ->
+                    if (firstEventOffsetX == -1f) {
+                        firstEventOffsetX = change.position.x
+                    }
+                    val currentSeekProgress = (seekProgress + dragAmount.x / width)
+//                    logD("seekHandler") {
+//                        "dragging: seekProgress=$seekProgress, firstEventOffsetX=$firstEventOffsetX, dragWidth=$dragWidth, width=$width"
+//                    }
+                    velocityTracker.addPosition(change.uptimeMillis, change.position)
+                    if (seekProgress == 0f) {
+                        seekProgress = currentSeekProgress.coerceIn(-1f, 1f)
+                    } else if (seekProgress > 0f && currentSeekProgress > 0f) {
+                        seekProgress = currentSeekProgress.coerceIn(0f, 1f)
+                    } else if (seekProgress < 0f && currentSeekProgress < 0f){
+                        seekProgress = currentSeekProgress.coerceIn(-1f, 0f)
+                    }
+                    val handler = ensureCurrentSeekHandler()
+                    handler.seekTo(abs(seekProgress), if ((seekProgress <= 0) xor isPush) {
+                        BackEventCompat.EDGE_RIGHT
+                    } else {
+                        BackEventCompat.EDGE_LEFT
+                    })
+                }
+            )
+        }
+    }
+
+
+}
+@Composable
+private fun Modifier.drawerGesture(naviController: SimpleNavHostController, width: Int): Modifier {
+    val drawerGestureState = remember(naviController) { DrawerGestureState(naviController) }
+    return this.pointerInput(Unit, drawerGestureState.handler(width, LocalDeviceRealDensity.current))
 }
