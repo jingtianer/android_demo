@@ -177,7 +177,7 @@ class SimpleNavHostController(private val impl: SimpleNavHostControllerImpl = Si
 
         fun handleBackJob(scope: CoroutineScope) {
             val callback = navMap[currentBackStackEntry]?.callback
-            if (callback != null && onBackJob != null) {
+            if (callback != null && onBackJob == null) {
                 onBackJob = scope.launch {
                     callback.invoke()
                 }
