@@ -71,8 +71,10 @@ import com.jingtian.composedemo.main.drawer.MainDrawer
 import com.jingtian.composedemo.main.gallery.Gallery
 import com.jingtian.composedemo.main.gallery.GalleryStateHolder
 import com.jingtian.composedemo.main.gallery.predictiveBackVisual
+import com.jingtian.composedemo.main.viewer.ImagePlayer
 import com.jingtian.composedemo.main.route.Drawer
 import com.jingtian.composedemo.main.route.Gallery
+import com.jingtian.composedemo.main.route.ImageViewer
 import com.jingtian.composedemo.main.route.LocalRouterController
 import com.jingtian.composedemo.main.route.MainRouterController
 import com.jingtian.composedemo.main.route.Settings
@@ -367,6 +369,7 @@ class MainState(
     }
 
     var currentWebViewFile by mutableStateOf<Pair<FileInfo?, MultiplatformFile?>>(null to null)
+    var currentImageViewer by mutableStateOf<MultiplatformFile?>(null)
 
     fun updateSelectedValue(list: List<Album>): IndexedValue<Album>? {
         val currentSelectedAlbum = currentSelectedAlbum
@@ -529,6 +532,19 @@ private fun MainState.Main(
 
                             composable(WebView) { entry->
                                 WebView(entry)
+                            }
+
+                            composable(ImageViewer) {
+                                val currentImageViewer = currentImageViewer
+                                if (currentImageViewer != null) {
+                                    ImagePlayer(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .clipDeviceRoundCorner()
+                                            .appBackground(),
+                                        currentImageViewer
+                                    )
+                                }
                             }
                         }
                     }

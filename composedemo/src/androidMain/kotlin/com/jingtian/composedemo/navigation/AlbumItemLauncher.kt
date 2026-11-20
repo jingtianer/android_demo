@@ -37,9 +37,16 @@ class AlbumItemLauncher(
     val launcher: ManagedActivityResultLauncher<Intent, ActivityResult>
 ) : IAlbumItemLauncher{
     override suspend fun launch(fileName: String, fileInfo: FileInfo) {
-        if (fileInfo.fileType == FileType.HTML) {
-            mainNavController.toWebView(fileInfo to fileInfo.getFileUri())
-            return
+        when(fileInfo.fileType) {
+            FileType.HTML -> {
+                mainNavController.toWebView(fileInfo to fileInfo.getFileUri())
+                return
+            }
+            FileType.IMAGE -> {
+                mainNavController.toImageViewer(fileInfo.getFileUri())
+                return
+            }
+            else -> {}
         }
         JumpOnPurposeMarkHolder.isJumpOnPurpose.value = true
         scope.launch(Dispatchers.Main) {

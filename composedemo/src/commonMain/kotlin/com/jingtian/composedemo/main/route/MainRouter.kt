@@ -19,6 +19,8 @@ object Settings : MainRouter()
 object Drawer : MainRouter()
 @Serializable
 object WebView : MainRouter()
+@Serializable
+object ImageViewer : MainRouter()
 
 interface IRouterController {
     suspend fun toGallery() = Unit
@@ -28,6 +30,8 @@ interface IRouterController {
     suspend fun toDrawer() = Unit
 
     suspend fun toWebView(file: Pair<FileInfo?, MultiplatformFile?>) = Unit
+
+    suspend fun toImageViewer(file: MultiplatformFile?) = Unit
 }
 
 object EmptyRouterController: IRouterController {}
@@ -50,5 +54,13 @@ class MainRouterController(private val naviHost: SimpleNavHostController, val ma
     override suspend fun toWebView(file: Pair<FileInfo?, MultiplatformFile?>) {
         mainState.currentWebViewFile = file
         naviHost.navigateTo(WebView)
+    }
+
+    override suspend fun toImageViewer(file: MultiplatformFile?) {
+        mainState.currentImageViewer = file
+        if (file == null) {
+            return
+        }
+        naviHost.navigateTo(ImageViewer)
     }
 }

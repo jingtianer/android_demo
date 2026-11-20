@@ -118,6 +118,12 @@ kotlin {
 
                 implementation(libs.haze)
 
+                val version = "1.1.1-beta.3"
+                // 图片浏览库
+                implementation("com.jvziyaoyao.scale:image-viewer:$version")
+                // 大型图片支持（可选）
+                implementation("com.jvziyaoyao.scale:sampling-decoder:$version")
+
                 // 尝试了 precompose 并不是compose预加载
 //                api("moe.tlaster:precompose:1.6.2")
 //

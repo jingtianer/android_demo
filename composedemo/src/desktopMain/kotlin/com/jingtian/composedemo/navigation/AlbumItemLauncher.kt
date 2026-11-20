@@ -8,6 +8,9 @@ import com.jingtian.composedemo.base.JumpOnPurposeMarkHolder
 import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.FileType
 import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
+import com.jingtian.composedemo.main.route.IRouterController
+import com.jingtian.composedemo.main.route.LocalRouterController
+import com.jingtian.composedemo.main.route.MainRouterController
 import com.jingtian.composedemo.multiplatform.MultiplatformFileImpl
 import com.jingtian.composedemo.utils.globalWorkDir
 import java.awt.Desktop
@@ -15,7 +18,7 @@ import java.io.File
 import java.nio.file.Files
 import kotlin.io.path.exists
 
-class AlbumItemLauncher : IAlbumItemLauncher {
+class AlbumItemLauncher(val mainRouterController: IRouterController) : IAlbumItemLauncher {
     companion object {
         private val linkDir = File(globalWorkDir, "tmp/links")
         init {
@@ -72,6 +75,19 @@ class AlbumItemLauncher : IAlbumItemLauncher {
     }
 
     override suspend fun launch(fileName: String, fileInfo: FileInfo) {
+        when(fileInfo.fileType) {
+//            FileType.HTML -> {
+//                mainNavController.toWebView(fileInfo to fileInfo.getFileUri())
+//                return
+//            }
+            FileType.IMAGE -> {
+                mainNavController.toImageViewer(fileInfo.getFileUri())
+                return
+            }
+            else-> {
+
+            }
+        }
         JumpOnPurposeMarkHolder.isJumpOnPurpose.value = true
         when(fileInfo.fileType) {
             FileType.HTML -> openUrl(fileName, fileInfo)
@@ -88,7 +104,8 @@ class AlbumItemLauncher : IAlbumItemLauncher {
 
 @Composable
 actual fun rememberAlbumLauncher(onResult: (Long)->Unit): IAlbumItemLauncher {
-    return remember {
-        AlbumItemLauncher()
+    val mainRouterController = LocalRouterController.current
+    return remember(mainRouterController) {
+        AlbumItemLauncher(mainRouterController)
     }
 }
