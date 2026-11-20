@@ -85,14 +85,15 @@ interface AbstractSimpleNavHostController {
     fun seekHandler(router: NavRouter): ISimpleNavSeekHandler
 }
 
-class SimpleNavHostController(private val impl: SimpleNavHostControllerImpl = SimpleNavHostControllerImpl()) : AbstractSimpleNavHostController by impl {
+class SimpleNavHostController(private val impl: SimpleNavHostControllerImpl = SimpleNavHostControllerImpl()) :
+    AbstractSimpleNavHostController by impl {
     internal fun impl(
         initialDestination: NavRouter?,
         enterTransition: (@JvmSuppressWildcards EnterTransitionCreator) = { EnterTransition.None },
         exitTransition: (@JvmSuppressWildcards ExitTransitionCreator) = { ExitTransition.None },
         sizeTransition: (@JvmSuppressWildcards SizeTransitionCreator)? = null,
         mapBuilder: NavMapBuilder.() -> Unit
-    ) : SimpleNavHostControllerImpl {
+    ): SimpleNavHostControllerImpl {
         impl.update(initialDestination, enterTransition, exitTransition, sizeTransition, mapBuilder)
         return impl
     }
@@ -108,6 +109,7 @@ class SimpleNavHostController(private val impl: SimpleNavHostControllerImpl = Si
         val backStack = mutableStateListOf<NavRouter>()
         override val currentBackStack: List<NavRouter> get() = this.backStack
         val navMap = mutableStateMapOf<NavRouter, NavEntry>()
+
         init {
             if (initialDestination != null) {
                 backStack.add(initialDestination)
@@ -116,6 +118,7 @@ class SimpleNavHostController(private val impl: SimpleNavHostControllerImpl = Si
                 mapBuilder.invoke(NavMapBuilder(it))
             }
         }
+
         override val currentBackStackEntry get() = backStack.lastOrNull()
         override val secondLastBackStackEntry get() = backStack.getOrNull(backStack.size - 2)
 
@@ -129,11 +132,16 @@ class SimpleNavHostController(private val impl: SimpleNavHostControllerImpl = Si
 
         // 返回键
         override val willHandleBackEvents: Boolean get() = backStack.size > 1 && shouldHandleBack
+
         // 动画
         val transitionState = SeekableTransitionState(currentBackStackEntry)
-        var finalEnterTransition by mutableStateOf<AnimatedContentTransitionScope<NavRouter?>.() -> EnterTransition>({ EnterTransition.None })
-        var finalExitTransition by mutableStateOf<AnimatedContentTransitionScope<NavRouter?>.() -> ExitTransition>({ ExitTransition.None })
-        var finalSizeTransition by mutableStateOf<(AnimatedContentTransitionScope<NavRouter?>.() -> SizeTransform?)?>(null)
+        var finalEnterTransition by mutableStateOf<AnimatedContentTransitionScope<NavRouter?>.() -> EnterTransition>(
+            { EnterTransition.None })
+        var finalExitTransition by mutableStateOf<AnimatedContentTransitionScope<NavRouter?>.() -> ExitTransition>(
+            { ExitTransition.None })
+        var finalSizeTransition by mutableStateOf<(AnimatedContentTransitionScope<NavRouter?>.() -> SizeTransform?)?>(
+            null
+        )
 
         override var extraRenderEntry: NavRouter? by mutableStateOf(null)
 
@@ -148,7 +156,7 @@ class SimpleNavHostController(private val impl: SimpleNavHostControllerImpl = Si
             } else {
                 { ExitTransition.None }
             }
-            finalSizeTransition = sizeTransition?.let { sizeTransition->
+            finalSizeTransition = sizeTransition?.let { sizeTransition ->
                 { sizeTransition(this, swipeEdge) }
             }
         }
@@ -194,7 +202,7 @@ class SimpleNavHostController(private val impl: SimpleNavHostControllerImpl = Si
 
         suspend fun navigateTo(router: NavRouter, withAnim: Boolean) {
             if (withAnim) {
-                withFrameMillis {  }
+                withFrameMillis { }
                 seekHandler(router).apply {
                     init()
                     finish()
@@ -228,13 +236,23 @@ class SimpleNavHostController(private val impl: SimpleNavHostControllerImpl = Si
             }
             return handler
         }
-        private class EmptySimpleNavSeekHandler(override val target: NavRouter) : ISimpleNavSeekHandler {
+
+        private class EmptySimpleNavSeekHandler(override val target: NavRouter) :
+            ISimpleNavSeekHandler {
             override fun init() = Unit
             override fun seekTo(progress: Float, swipeEdge: Int) = Unit
             override fun finish() = Unit
             override fun revoke() = Unit
+
+            override fun toString(): String {
+                return "EmptySimpleNavSeekHandler"
+            }
         }
-        private inner class SimpleNavSeekHandler(private val isPop: Boolean, override val target: NavRouter): ISimpleNavSeekHandler {
+
+        private inner class SimpleNavSeekHandler(
+            private val isPop: Boolean,
+            override val target: NavRouter
+        ) : ISimpleNavSeekHandler {
             override fun init() {
                 if (currentSeekHandler !== this@SimpleNavSeekHandler) {
                     return
@@ -243,6 +261,7 @@ class SimpleNavHostController(private val impl: SimpleNavHostControllerImpl = Si
                 inPredictiveBack = true
                 pendingTargetRouter = target
             }
+
             override fun seekTo(progress: Float, swipeEdge: Int) {
                 if (currentSeekHandler !== this@SimpleNavSeekHandler) {
                     return
@@ -250,6 +269,7 @@ class SimpleNavHostController(private val impl: SimpleNavHostControllerImpl = Si
                 this@SimpleNavHostControllerImpl.backProgress = progress
                 this@SimpleNavHostControllerImpl.swipeEdge = swipeEdge
             }
+
             override fun finish() {
                 if (currentSeekHandler !== this@SimpleNavSeekHandler) {
                     return
@@ -258,6 +278,7 @@ class SimpleNavHostController(private val impl: SimpleNavHostControllerImpl = Si
                 pendingTargetRouter = target
 //                currentSeekHandler = null
             }
+
             override fun revoke() {
                 if (currentSeekHandler !== this@SimpleNavSeekHandler) {
                     return
@@ -270,6 +291,10 @@ class SimpleNavHostController(private val impl: SimpleNavHostControllerImpl = Si
                 inPredictiveBack = false
                 pendingTargetRouter = null
 //                currentSeekHandler = null
+            }
+
+            override fun toString(): String {
+                return "SimpleNavSeekHandler isPop=$isPop, target=$target, inPredictiveBack=$inPredictiveBack"
             }
         }
 
@@ -307,6 +332,7 @@ fun rememberSimpleNavHostController(): SimpleNavHostController {
 
 @Composable
 fun SimpleNavHost(
+    modifier: Modifier,
     simpleNavHostController: SimpleNavHostController = rememberSimpleNavHostController(),
     initialDestination: NavRouter? = null,
     scrimColor: Color = DrawerDefaults.scrimColor,
@@ -315,50 +341,57 @@ fun SimpleNavHost(
     sizeTransition: (@JvmSuppressWildcards SizeTransitionCreator)? = null,
     mapBuilder: NavMapBuilder.() -> Unit = {},
 ) {
-    val controller = remember(initialDestination, enterTransition, exitTransition, sizeTransition, mapBuilder) {
-        simpleNavHostController.impl(
-            initialDestination, enterTransition, exitTransition, sizeTransition, mapBuilder
-        )
-    }
-    controller.SimpleNavHost(scrimColor = scrimColor)
+    val controller =
+        remember(initialDestination, enterTransition, exitTransition, sizeTransition, mapBuilder) {
+            simpleNavHostController.impl(
+                initialDestination, enterTransition, exitTransition, sizeTransition, mapBuilder
+            )
+        }
+    controller.SimpleNavHost(modifier = modifier, scrimColor = scrimColor)
 }
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 private fun SimpleNavHostController.SimpleNavHostControllerImpl.SimpleNavHost(
+    modifier: Modifier,
     scrimColor: Color,
 ) {
     val transition = rememberTransition(transitionState, label = "entry")
     val scope = rememberCoroutineScope()
 
     PredictiveBackHandler(enabled = willHandleBackEvents) { backFlow ->
-        val seekHandler = seekHandler(secondLastBackStackEntry ?: return@PredictiveBackHandler)
-        try {
-            seekHandler.init()
-            handleBackJob(scope)
-            backFlow.collect { event ->
-                seekHandler.seekTo(event.progress, event.swipeEdge)
-            }
-            seekHandler.finish()
-        } catch (e: CancellationException) {
-            seekHandler.revoke()
-        } finally {
+        val secondLastBackStackEntry = secondLastBackStackEntry
+        if (secondLastBackStackEntry != null) {
+            try {
+                backFlow.collect { event ->
+                    val seekHandler = seekHandler(secondLastBackStackEntry)
+                    if (!inPredictiveBack) {
+                        seekHandler.init()
+                        handleBackJob(scope)
+                    }
+                    seekHandler.seekTo(event.progress, event.swipeEdge)
+                }
+                seekHandler(secondLastBackStackEntry).finish()
+            } catch (e: CancellationException) {
+                seekHandler(secondLastBackStackEntry).revoke()
+            } finally {
 
+            }
+        } else {
+            backFlow.collect { event ->
+            }
         }
     }
 
-    LaunchedEffect(backProgress, pendingTargetRouter, inPredictiveBack) {
+    LaunchedEffect(backProgress, pendingTargetRouter, inPredictiveBack, swipeEdge, isPop) {
         if (!inPredictiveBack) {
             return@LaunchedEffect
         }
         updateTransition(isPop = isPop, swipeEdge = swipeEdge)
         // Update transition progress safely (same guard against stale enabled state).
         transitionState.seekTo(backProgress, pendingTargetRouter)
-//        logD("seekHandler") {
-//            "LaunchedEffect, inPredictiveBack, seekTo backProgress=$backProgress, pendingTargetRouter=$pendingTargetRouter"
-//        }
     }
-    LaunchedEffect(currentBackStackEntry, pendingTargetRouter, inPredictiveBack) {
+    LaunchedEffect(currentBackStackEntry, pendingTargetRouter, inPredictiveBack, swipeEdge, isPop) {
         if (inPredictiveBack) {
             return@LaunchedEffect
         }
@@ -390,7 +423,10 @@ private fun SimpleNavHostController.SimpleNavHostControllerImpl.SimpleNavHost(
 //            logD("seekHandler") {
 //                "LaunchedEffect, !inPredictiveBack revoke currentState==pendingTargetRouterSnapshot backProgress=$backProgress, pendingTargetRouter=$pendingTargetRouter"
 //            }
-            transitionState.seekTo(backProgress, currentSeekHandler?.target ?: currentBackStackEntry)
+            transitionState.seekTo(
+                backProgress,
+                currentSeekHandler?.target ?: currentBackStackEntry
+            )
 
             // convert from nanoseconds to milliseconds
             val totalDuration = transition.totalDurationNanos / 1000000
@@ -423,14 +459,16 @@ private fun SimpleNavHostController.SimpleNavHostControllerImpl.SimpleNavHost(
             currentSeekHandler = null
         }
     }
-    transition.AnimatedContent(transitionSpec = {
-        ContentTransform(
-            initialContentExit = finalExitTransition.invoke(this),
-            targetContentEnter = finalEnterTransition.invoke(this),
-            sizeTransform = finalSizeTransition?.invoke(this),
-            targetContentZIndex = backStack.indexOf(targetState) / backStack.size.toFloat()
-        )
-    }) { state ->
+    transition.AnimatedContent(
+        modifier = modifier,
+        transitionSpec = {
+            ContentTransform(
+                initialContentExit = finalExitTransition.invoke(this),
+                targetContentEnter = finalEnterTransition.invoke(this),
+                sizeTransform = finalSizeTransition?.invoke(this),
+                targetContentZIndex = backStack.indexOf(targetState) / backStack.size.toFloat()
+            )
+        }) { state ->
         if (extraRenderEntry != null) {
             navMap[extraRenderEntry]?.let {
                 it.content.invoke(it)
@@ -441,7 +479,12 @@ private fun SimpleNavHostController.SimpleNavHostControllerImpl.SimpleNavHost(
         } ?: return@AnimatedContent
         if (state != null && state == secondLastBackStackEntry && transitionState.targetState != transitionState.currentState) {
             val targetIsSelf = transitionState.targetState == state
-            Canvas(Modifier.fillMaxSize()) { drawRect(scrimColor, alpha = if (targetIsSelf) 1 - transitionState.fraction else transitionState.fraction) }
+            Canvas(Modifier.fillMaxSize()) {
+                drawRect(
+                    scrimColor,
+                    alpha = if (targetIsSelf) 1 - transitionState.fraction else transitionState.fraction
+                )
+            }
         }
     }
 }

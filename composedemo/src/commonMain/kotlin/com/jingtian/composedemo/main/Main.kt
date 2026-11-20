@@ -15,13 +15,16 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.safeGestures
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.systemGestures
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -29,8 +32,10 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.IntState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -44,15 +49,21 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.backhandler.PredictiveBackHandler
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.PointerInputEventHandler
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalViewConfiguration
+import androidx.compose.ui.platform.ViewConfiguration
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.util.fastRoundToInt
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -92,6 +103,7 @@ import com.jingtian.composedemo.main.widget.rememberSimpleNavHostController
 import com.jingtian.composedemo.multiplatform.LowMemorySideEffect
 import com.jingtian.composedemo.multiplatform.MultiplatformFile
 import com.jingtian.composedemo.multiplatform.SoftRef
+import com.jingtian.composedemo.multiplatform.logD
 import com.jingtian.composedemo.ui.theme.LocalAppPalette
 import com.jingtian.composedemo.ui.theme.appBackground
 import com.jingtian.composedemo.ui.theme.clipDeviceRoundCorner
@@ -248,6 +260,7 @@ fun PasswordGuardedMain(onPasswordChecked: () -> Unit = {}) {
             }
         }
     }
+
     val lifecycleObserver = remember {
         object : DefaultLifecycleObserver {
             override fun onStop(owner: LifecycleOwner) {
@@ -298,20 +311,22 @@ class MainState(
 
     val navBackStackEntry get() = naviController.currentBackStackEntry
 
-    val galleryStateHolder get() = currentSelectedAlbum?.value?.albumId?.let {
-        galleryStateHolderMap[it]?.get()
-    }
+    val galleryStateHolder
+        get() = currentSelectedAlbum?.value?.albumId?.let {
+            galleryStateHolderMap[it]?.get()
+        }
 
     val isOnTop get() = navBackStackEntry == Gallery
 
-    val isBackEnable: Boolean get() {
-        val canClose = menuItemsEntity.isNotEmpty() || !isOnTop
-        return if (!isOnTop) {
-            navBackStackEntry == Drawer && !canClose
-        } else {
-            true
+    val isBackEnable: Boolean
+        get() {
+            val canClose = menuItemsEntity.isNotEmpty() || !isOnTop
+            return if (!isOnTop) {
+                navBackStackEntry == Drawer && !canClose
+            } else {
+                true
+            }
         }
-    }
 
     val routerController = MainRouterController(naviController, this)
 
@@ -336,7 +351,7 @@ class MainState(
         scale + slide
     }
 
-    val sizeTransition : SizeTransitionCreator = { _ ->
+    val sizeTransition: SizeTransitionCreator = { _ ->
         null
     }
 
@@ -441,7 +456,8 @@ class MainState(
             }
         }
         val canClose = menuItemsEntity.isNotEmpty()
-        val handlerByNavHost = !isOnTop && !(naviController.secondLastBackStackEntry == Gallery && !canClose)
+        val handlerByNavHost =
+            !isOnTop && !(naviController.secondLastBackStackEntry == Gallery && !canClose)
         naviController.shouldHandleBack = handlerByNavHost
         val nativeBackInvoker = rememberNativeBackInvoker()
         return rememberPredictiveBackVisualState(!handlerByNavHost && !backEnable) {
@@ -455,7 +471,7 @@ class MainState(
 private fun rememberMainState(): MainState {
     val naviController = rememberSimpleNavHostController()
     return remember {
-        MainState(naviController = naviController,)
+        MainState(naviController = naviController)
     }
 }
 
@@ -493,11 +509,11 @@ private fun MainState.Main(
 
     val density = LocalDensity.current
 
-    var rootBoxWidth by remember { mutableIntStateOf(0) }
-
     CompositionLocalProvider(LocalRouterController provides routerController) {
         Box(
-            modifier = Modifier.fillMaxSize().predictiveBackVisual(predictiveBackVisualState = predictiveBackVisualState).onSizeChanged { rootBoxWidth = it.width }.drawerGesture(naviController, rootBoxWidth)
+            modifier = Modifier.fillMaxSize()
+                .predictiveBackVisual(predictiveBackVisualState = predictiveBackVisualState)
+                .drawerGesture(naviController)
         ) {
             Scaffold(
                 modifier = modifier.fillMaxSize(),
@@ -506,6 +522,7 @@ private fun MainState.Main(
                 }
             ) { _ ->
                 SimpleNavHost(
+                    modifier = Modifier,
                     simpleNavHostController = naviController,
                     initialDestination = Gallery,
                     enterTransition = enterTransition,
@@ -530,7 +547,7 @@ private fun MainState.Main(
                                 Drawer()
                             }
 
-                            composable(WebView) { entry->
+                            composable(WebView) { entry ->
                                 WebView(entry)
                             }
 
@@ -592,9 +609,11 @@ private fun MainState.Drawer() {
 @Composable
 fun MainState.WebView(entry: NavEntry) {
     var snapShotTaker: suspend () -> Unit by remember { mutableStateOf({}) }
-    CommonWebView(modifier = Modifier.fillMaxSize().appBackground().windowInsetsPadding(
-        WindowInsets.systemBars
-    ), currentWebViewFile.second) {
+    CommonWebView(
+        modifier = Modifier.fillMaxSize().appBackground().windowInsetsPadding(
+            WindowInsets.systemBars
+        ), currentWebViewFile.second
+    ) {
         snapShotTaker = {
             val storageId = currentWebViewFile.first?.storageId ?: DataBase.INVALID_ID
             val uriExtension = currentWebViewFile.first?.extension
@@ -618,32 +637,41 @@ fun MainState.WebView(entry: NavEntry) {
     entry.callback = snapShotTaker
 }
 
-class DrawerGestureState(private val naviController: SimpleNavHostController) {
-    private var seekHandler: ISimpleNavSeekHandler? = null// by mutableStateOf<ISimpleNavSeekHandler?>(null)
+class DrawerGestureState(
+    private val naviController: SimpleNavHostController,
+    private val paddings: State<Rect>,
+) {
+    private var seekHandler: ISimpleNavSeekHandler? =
+        null// by mutableStateOf<ISimpleNavSeekHandler?>(null)
     private var seekProgress = 0f
     private var firstEventOffsetX = -1f
+    private var firstEventOffsetY = -1f
     private var isPush = true
+    private var isDragInSafeArea: Boolean = false
     private val velocityTracker = VelocityTracker()
 
     private fun ensureCurrentSeekHandler(): ISimpleNavSeekHandler {
         seekHandler?.let { return it }
         isPush = naviController.currentBackStackEntry == Gallery
-        return naviController.seekHandler(if (isPush) Drawer else naviController.secondLastBackStackEntry ?: Gallery).also {
+        return naviController.seekHandler(
+            if (isPush) Drawer else naviController.secondLastBackStackEntry ?: Gallery
+        ).also {
             seekHandler = it
         }
     }
 
-    fun handler(width: Int, flingVelocity: Float): PointerInputEventHandler {
+    fun handler(): PointerInputEventHandler {
         return PointerInputEventHandler {
             detectDragGestures(
                 onDragStart = {
-                    ensureCurrentSeekHandler().init()
                     seekProgress = 0f
                     firstEventOffsetX = -1f
+                    firstEventOffsetY = -1f
+                    isDragInSafeArea = false
                     velocityTracker.resetTracking()
                 },
                 onDragEnd = {
-                    if (abs(seekProgress) >= 0.3 || abs(velocityTracker.calculateVelocity().x) >= flingVelocity) {
+                    if (abs(seekProgress) >= 0.3 || abs(velocityTracker.calculateVelocity().x) >= viewConfiguration.minimumFlingVelocity) {
                         ensureCurrentSeekHandler().finish()
                     } else {
                         ensureCurrentSeekHandler().revoke()
@@ -654,6 +682,8 @@ class DrawerGestureState(private val naviController: SimpleNavHostController) {
                     seekHandler = null
                     seekProgress = 0f
                     firstEventOffsetX = -1f
+                    firstEventOffsetY = -1f
+                    isDragInSafeArea = false
                     velocityTracker.resetTracking()
                 },
                 onDragCancel = {
@@ -661,30 +691,44 @@ class DrawerGestureState(private val naviController: SimpleNavHostController) {
                     seekHandler = null
                     seekProgress = 0f
                     firstEventOffsetX = -1f
+                    firstEventOffsetY = -1f
+                    isDragInSafeArea = false
                     velocityTracker.resetTracking()
                 },
                 onDrag = { change: PointerInputChange, dragAmount: Offset ->
-                    if (firstEventOffsetX == -1f) {
+                    if (firstEventOffsetX == -1f || firstEventOffsetY == -1f) {
                         firstEventOffsetX = change.position.x
+                        firstEventOffsetY = change.position.y
+                        if (firstEventOffsetX !in paddings.value.left..size.width - paddings.value.right || firstEventOffsetY !in paddings.value.top..size.height - paddings.value.bottom) {
+                            isDragInSafeArea = false
+                            return@detectDragGestures
+                        }
+                        isDragInSafeArea = true
+                        ensureCurrentSeekHandler().init()
                     }
-                    val currentSeekProgress = (seekProgress + dragAmount.x / width)
-//                    logD("seekHandler") {
-//                        "dragging: seekProgress=$seekProgress, firstEventOffsetX=$firstEventOffsetX, width=$width"
-//                    }
+                    if (!isDragInSafeArea) {
+                        return@detectDragGestures
+                    }
+                    val currentSeekProgress = (seekProgress + dragAmount.x / size.width.toFloat())
+                    logD("seekHandler") {
+                        "dragging: seekProgress=$seekProgress, firstEventOffsetX=$firstEventOffsetX, size=$size"
+                    }
                     velocityTracker.addPosition(change.uptimeMillis, change.position)
                     if (seekProgress == 0f) {
                         seekProgress = currentSeekProgress.coerceIn(-1f, 1f)
                     } else if (seekProgress > 0f && currentSeekProgress > 0f) {
                         seekProgress = currentSeekProgress.coerceIn(0f, 1f)
-                    } else if (seekProgress < 0f && currentSeekProgress < 0f){
+                    } else if (seekProgress < 0f && currentSeekProgress < 0f) {
                         seekProgress = currentSeekProgress.coerceIn(-1f, 0f)
                     }
                     val handler = ensureCurrentSeekHandler()
-                    handler.seekTo(abs(seekProgress), if ((seekProgress <= 0) xor isPush) {
-                        BackEventCompat.EDGE_RIGHT
-                    } else {
-                        BackEventCompat.EDGE_LEFT
-                    })
+                    handler.seekTo(
+                        abs(seekProgress), if ((seekProgress <= 0) xor isPush) {
+                            BackEventCompat.EDGE_RIGHT
+                        } else {
+                            BackEventCompat.EDGE_LEFT
+                        }
+                    )
                 }
             )
         }
@@ -692,11 +736,27 @@ class DrawerGestureState(private val naviController: SimpleNavHostController) {
 
 
 }
+
 @Composable
-private fun Modifier.drawerGesture(naviController: SimpleNavHostController, width: Int): Modifier {
-    val drawerGestureState = remember(naviController) { DrawerGestureState(naviController) }
+private fun Modifier.drawerGesture(naviController: SimpleNavHostController): Modifier {
     if (naviController.currentBackStackEntry == WebView) {
         return this
     }
-    return this.pointerInput(Unit, drawerGestureState.handler(min(with(LocalDensity.current) { 360.dp.roundToPx() }, width), LocalViewConfiguration.current.minimumFlingVelocity))
+    val windowInsets = WindowInsets.systemGestures
+    val ltr = LocalLayoutDirection.current
+    val density = LocalDensity.current
+    val paddings = remember {
+        derivedStateOf {
+            Rect(
+                left = windowInsets.getLeft(density, ltr).toFloat(),
+                top = windowInsets.getTop(density).toFloat(),
+                right = windowInsets.getRight(density, ltr).toFloat(),
+                bottom = windowInsets.getBottom(density).toFloat(),
+            )
+        }
+    }
+    val drawerGestureState = remember(naviController) {
+        DrawerGestureState(naviController, paddings)
+    }
+    return this.pointerInput(Unit, drawerGestureState.handler())
 }
