@@ -22,7 +22,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class CommonWebViewWrapper(commonWebView: CommonWebView, var isEnable: Boolean = true) : FrameLayout(commonWebView.context) {
+class CommonWebViewWrapper(val commonWebView: CommonWebView, var isEnable: Boolean = true) : FrameLayout(commonWebView.context) {
     init {
         addView(commonWebView, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
     }
@@ -72,5 +72,11 @@ actual fun CommonWebView(modifier: Modifier, file: MultiplatformFile?, enabled: 
             initForSnapShot(width?.toInt()?: ViewGroup.LayoutParams.MATCH_PARENT, height?.toInt()?: ViewGroup.LayoutParams.MATCH_PARENT, enable = enabled)
         }
         wrapper
-    }, modifier = modifier)
+    }, modifier = modifier, update = {
+        val view: CommonWebViewWrapper = it
+        view.layoutParams = view.layoutParams
+        view.commonWebView.apply {
+            initForSnapShot(width?.toInt()?: ViewGroup.LayoutParams.MATCH_PARENT, height?.toInt()?: ViewGroup.LayoutParams.MATCH_PARENT, enable = enabled)
+        }
+    })
 }
