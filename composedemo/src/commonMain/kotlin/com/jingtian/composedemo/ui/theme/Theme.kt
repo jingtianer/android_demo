@@ -106,7 +106,7 @@ private val liteAppPalette = AppPalette(
 //    cardBg = colorA8A8A8_7f,
     cardBg = Color.Transparent,
 //    galleryCardBg = colorA8A8A8_7f,
-    galleryCardBg = Color(0x1A3C3636),
+    galleryCardBg = Color(0x10464646),
     strokeColor = Color(0x3fffffff),
     bottomSheetBackgroundColor = Color(red = 255, green = 251, blue = 254),
     labelTextColor = color686868,
