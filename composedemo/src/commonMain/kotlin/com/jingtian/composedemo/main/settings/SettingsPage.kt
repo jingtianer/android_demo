@@ -307,17 +307,17 @@ fun AppScale() {
     val deviceRealDensity = LocalDeviceRealDensity.current
     val appScaleFactor by UserStorage.appScaleFactor
     val appScaleSliderState = rememberSliderState(
-        value = appScaleFactor,
+        value = UserStorage.appScaleToSlider(appScaleFactor),
         onValueChangeFinished = {
             currentAppDensity = UserStorage.scaledDensity(deviceRealDensity)
         },
-        valueRange = UserStorage.MIN_APP_SCALE_FACTOR..UserStorage.MAX_APP_SCALE_FACTOR
+        valueRange = 0f..1f
     )
     LaunchedEffect(appScaleFactor) {
-        appScaleSliderState.value = appScaleFactor
+        appScaleSliderState.value = UserStorage.appScaleToSlider(appScaleFactor)
     }
     LaunchedEffect(appScaleSliderState.value) {
-        UserStorage.updateScale(appScaleSliderState.value)
+        UserStorage.updateScale(UserStorage.transformSliderToAppScale(appScaleSliderState.value))
     }
     SliderWrapper(state = appScaleSliderState, modifier = Modifier.fillMaxWidth())
 }

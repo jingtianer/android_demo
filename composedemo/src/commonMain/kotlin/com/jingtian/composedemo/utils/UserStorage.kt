@@ -192,6 +192,7 @@ object UserStorage {
             backgroundConfig = BackgroundConfig.defaultLiteBackgroundColor
         }
         _appScaleFactor = 1f
+        galleryScaleFactor = 1f
     }
 
     private val scaleFactorConfig = SharedPreferenceUtils.StateFullStorageJson(
@@ -216,6 +217,28 @@ object UserStorage {
 
     const val MIN_APP_SCALE_FACTOR = 0.5f
     const val MAX_APP_SCALE_FACTOR = 4f
+
+    fun transformSliderToAppScale(slider: Float): Float {
+        return if (slider > 0.5) {
+            (slider - 0.5f) / 0.5f * (MAX_APP_SCALE_FACTOR - 1f) + 1f
+        } else {
+            slider / 0.5f * (1f - MIN_APP_SCALE_FACTOR) + MIN_APP_SCALE_FACTOR
+        }
+    }
+
+//    y = 6x -2 (x > 0.5, y > 1)
+//    y = x + 0.5 (x < 0.5, 0 < y < 1)
+
+//    x = (y-1)/6 + 0.5
+//    x = y - 0.5
+
+    fun appScaleToSlider(appScale: Float): Float {
+        return if (appScale > 1f) {
+            (appScale - 1f) / (MAX_APP_SCALE_FACTOR - 1f) * 0.5f + 0.5f
+        } else {
+            (appScale - 0.5f) / (1f - MIN_APP_SCALE_FACTOR) * 0.5f
+        }
+    }
 
     fun updateScale(scale: Float) {
         _appScaleFactor = scale.coerceIn(MIN_APP_SCALE_FACTOR, MAX_APP_SCALE_FACTOR)
