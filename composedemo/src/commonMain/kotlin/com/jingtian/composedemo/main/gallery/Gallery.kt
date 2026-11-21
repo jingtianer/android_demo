@@ -327,14 +327,14 @@ fun GalleryStateHolder.Gallery() {
         viewModel.importFiles(album.value, uri)
     }
 
-    val filterChanged by viewModel.filterCheckChanged.observeAsState()
+//    val filterChanged by viewModel.filterCheckChanged.observeAsState()
     LaunchedEffect(
-        filterChanged,
+//        filterChanged,
         gallerySearchWord,
         gallerySearchEnabled,
         filterConfig.value.labelOr.value
     ) {
-        updateFilterList()
+//        updateFilterList()
         withFrameMillis {
         }
         if (gallerySearchEnabled) {

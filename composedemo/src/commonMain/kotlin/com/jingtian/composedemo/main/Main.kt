@@ -123,6 +123,7 @@ import com.jingtian.composedemo.viewmodels.authViewModel
 import com.jingtian.composedemo.web.CommonWebView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.cancellation.CancellationException
@@ -587,11 +588,11 @@ private fun MainState.Main(
 
                             composable(Feed) {
                                 galleryStateHolder?.let {
-                                    val totalLabelList = it.totalLabelList
+                                    val totalLabelList = it.totalLabelListState
                                     val album = it.album
-                                    val itemList = it.itemList
-                                    // 不要在feed里改filter
-                                    Feed(albumItemList = itemList, album = album.value, totalLabelList = totalLabelList, filter = { with(it) { filter() } })
+                                    val itemList = it.filteredItemListState
+                                    flow<Unit> {}
+                                    Feed(albumItemList = itemList, album = album.value, totalLabelList = totalLabelList)
                                 }
                             }
                         }

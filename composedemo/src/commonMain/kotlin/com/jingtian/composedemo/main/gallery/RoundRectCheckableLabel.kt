@@ -69,7 +69,7 @@ fun RoundRectCheckableLabel(item: String, isChecked: Boolean, checkedList: Snaps
                 } else {
                     checkedList[item] = true
                 }
-                viewModel.filterCheckChanged.value = (viewModel.filterCheckChanged.value ?: 0) + 1
+//                viewModel.filterCheckChanged.value = (viewModel.filterCheckChanged.value ?: 0) + 1
             }) {
         AppThemeText(
             text = item,

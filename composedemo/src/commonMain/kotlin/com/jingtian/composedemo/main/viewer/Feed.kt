@@ -10,9 +10,11 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -27,6 +29,7 @@ import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
 import com.jingtian.composedemo.dao.model.relation.AlbumRelation
 import com.jingtian.composedemo.main.dialog.EditDialog
 import com.jingtian.composedemo.multiplatform.MultiplatformFile
+import com.jingtian.composedemo.multiplatform.logD
 import com.jingtian.composedemo.ui.theme.DarkWrapper
 import com.jingtian.composedemo.ui.theme.appBackground
 import com.jingtian.composedemo.ui.theme.clipDeviceRoundCorner
@@ -36,28 +39,29 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class FeedState(val albumList: List<AlbumItemRelation>, val album: Album, val totalLabelList: List<String>, val filter: AlbumItemRelation.() -> Boolean) {
+class FeedState(val albumList: State<List<AlbumItemRelation>>, val album: Album, val totalLabelList: State<List<String>>) {
     // todo: fix albumList顺序变，会导致VerticalPager顺序变
     val shuffleIndex by derivedStateOf {
-        IntArray(albumList.size) { it }.filter { albumList[it].filter() && (albumList[it].fileInfo.fileType == FileType.VIDEO || albumList[it].fileInfo.fileType == FileType.IMAGE) }.shuffled()
+        IntArray(albumList.value.size) { it }.filter { albumList.value[it].fileInfo.fileType == FileType.VIDEO || albumList.value[it].fileInfo.fileType == FileType.IMAGE }.shuffled()
     }
+    var currentShownId by mutableLongStateOf(-1)
     val pagerState = PagerState(0) {
         shuffleIndex.size
     }
 }
 
 @Composable
-fun Feed(albumItemList: List<AlbumItemRelation>, album: Album, totalLabelList: List<String>, filter: AlbumItemRelation.() -> Boolean) {
-    val feedState = remember(albumItemList, album, totalLabelList, filter) { FeedState(albumItemList, album, totalLabelList, filter) }
+fun Feed(albumItemList: State<List<AlbumItemRelation>>, album: Album, totalLabelList: State<List<String>>) {
+    val feedState = remember(albumItemList, album, totalLabelList) { FeedState(albumItemList, album, totalLabelList) }
     val scope = rememberCoroutineScope()
     with(feedState) {
         VerticalPager(
             state = pagerState,
-            modifier = Modifier.fillMaxSize().clipDeviceRoundCorner().appBackground(),
+            modifier = Modifier.fillMaxSize().clipDeviceRoundCorner().background(Color.Black),
             beyondViewportPageCount = 10,
-            key = { index-> albumList[shuffleIndex[index]].albumItem.itemId ?: -1 }
+            key = { index-> albumList.value[shuffleIndex[index]].albumItem.itemId ?: -1 }
         ) { index->
-            val item = albumList[shuffleIndex[index]]
+            val item = albumList.value[shuffleIndex[index]]
             when(item.fileInfo.fileType) {
                 FileType.IMAGE -> {
                     ImageFeed(item, index) {
@@ -97,7 +101,7 @@ fun FeedState.ImageFeed(albumItemRelation: AlbumItemRelation, index: Int, onPlay
     val imagePlayerState = rememberImagePlayerState()
     var isEditing by remember { mutableStateOf(false) }
     val isSelected = index == pagerState.currentPage
-    LaunchedEffect(isSelected, imagePlayerState.maskVisible, isEditing, imagePlayerState.isLoading) {
+    LaunchedEffect(isSelected, imagePlayerState.maskVisible, isEditing, imagePlayerState.isLoading, index) {
         if (!imagePlayerState.maskVisible && isSelected && !isEditing && !imagePlayerState.isLoading) {
             delay(10000L)
             onPlayFinish()
@@ -108,7 +112,7 @@ fun FeedState.ImageFeed(albumItemRelation: AlbumItemRelation, index: Int, onPlay
     }
 
     if (isEditing) {
-        EditDialog(albumItemRelation, album, listOf(album), totalLabelList) {
+        EditDialog(albumItemRelation, album, listOf(album), totalLabelList.value) {
             isEditing = false
         }
     }
@@ -137,7 +141,7 @@ fun FeedState.VideoFeed(albumItemRelation: AlbumItemRelation, index: Int, onPlay
     }
 
     if (isEditing) {
-        EditDialog(albumItemRelation, album, listOf(album), totalLabelList) {
+        EditDialog(albumItemRelation, album, listOf(album), totalLabelList.value) {
             isEditing = false
         }
     }

@@ -272,7 +272,7 @@ fun FilterPanel(
                                 filterConfig.value.labelChecked
                             ) {
                                 filterConfig.value.labelOr.value = it == 0
-                                viewModel.filterCheckChanged.notifyChange()
+//                                viewModel.filterCheckChanged.notifyChange()
                             }
                         }
                     }
@@ -388,7 +388,7 @@ fun FilterPanel(
                                 itemRankCheckStateList.reverseList(itemRankList)
                                 labelCheckStateList?.reverseList(finalLabelList)
                             }
-                            viewModel.filterCheckChanged.notifyChange()
+//                            viewModel.filterCheckChanged.notifyChange()
                         }
                     },
                     modifier = Modifier
@@ -406,7 +406,7 @@ fun FilterPanel(
                                 itemRankCheckStateList.clear()
                                 labelCheckStateList?.clear()
                             }
-                            viewModel.filterCheckChanged.notifyChange()
+//                            viewModel.filterCheckChanged.notifyChange()
                         }
                     },
                     modifier = Modifier

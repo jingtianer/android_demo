@@ -2,6 +2,7 @@ package com.jingtian.composedemo.main.gallery
 
 import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
 import androidx.compose.runtime.State
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
@@ -40,10 +41,10 @@ expect fun getPlatformExtra(): IPlatformExtra
 
 class GalleryStateHolder(val album: IndexedValue<Album>, val currentSelectedAlbum: State<Album>, val albumList: List<Album>, val viewModel: AlbumViewModel, val galleryDpConstants: GalleryDpConstants, val navController : SimpleNavHostController) {
     var addImageDialogState by mutableStateOf(false)
-    val itemList = mutableStateListOf<AlbumItemRelation>()
-    val filteredItemList = mutableStateListOf<AlbumItemRelation>()
+    var itemList by mutableStateOf(emptyList<AlbumItemRelation>())
     var showLabelFilter by mutableStateOf(false)
-    val totalLabelList = mutableStateListOf<String>()
+    var totalLabelListState = mutableStateOf(emptyList<String>())
+    var totalLabelList by totalLabelListState
     val totalFileTypeList = FileType.entries.map { it.typeName }
     val totalItemRankList = ItemRank.entries.map { it.name }
     val labelFilterCheckedInfo = mutableStateMapOf<String, Boolean>()
@@ -125,27 +126,21 @@ class GalleryStateHolder(val album: IndexedValue<Album>, val currentSelectedAlbu
         return labelCheck && fileTypeCheck && itemRankCheck
     }
 
-    suspend fun updateFilterList() {
-        withContext(Dispatchers.Default) {
-            val filteredList = mutableListOf<AlbumItemRelation>()
-            for (item in itemList) {
-                if (item.filter()) {
-                    filteredList.add(item)
-                }
-            }
-            val sortedList = if (gallerySearchEnabled && gallerySearchWord.isNotBlank()) {
-                filteredList.sortedByDescending { item ->
+    private val _filteredItemList = mutableStateListOf<AlbumItemRelation>()
+
+    val filteredItemListState = derivedStateOf {
+        itemList.filter { it.filter() }.let {
+            if (gallerySearchEnabled && gallerySearchWord.isNotBlank()) {
+                it.sortedByDescending { item ->
                     calcSearchScore(gallerySearchWord, item.albumItem.itemName)
                 }
             } else {
-                filteredList
-            }
-            withContext(Dispatchers.Main) {
-                filteredItemList.clear()
-                filteredItemList.addAll(sortedList)
+                it
             }
         }
     }
+
+    val filteredItemList by filteredItemListState
 
 
     suspend fun updateScrollItem() {
@@ -188,14 +183,15 @@ class GalleryStateHolder(val album: IndexedValue<Album>, val currentSelectedAlbu
         withContext(Dispatchers.IO) {
             val albumItems = viewModel.getAllAlbumItem(album.value)
             val labelList = viewModel.getLabelList(album.value)
-            totalLabelList.clear()
-            albumViewMap.clear()
-            currentSelectedItem.clear()
-            itemList.safeReplace(albumItems)
-            totalLabelList.safeReplace(labelList)
-            viewModel.filterCheckChanged.notifyChange()
-            albumName = album.value.albumName
-            itemSelectStateChange++
+            withContext(Dispatchers.Main) {
+                albumViewMap.clear()
+                currentSelectedItem.clear()
+                itemList = albumItems
+                totalLabelList = labelList
+//            viewModel.filterCheckChanged.notifyChange()
+                albumName = album.value.albumName
+                itemSelectStateChange++
+            }
         }
     }
 
