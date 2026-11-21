@@ -248,7 +248,7 @@ fun PasswordGuardedMain(onPasswordChecked: () -> Unit = {}) {
         return
     }
     val authViewModel: AuthViewModel = authViewModel()
-    val isVisible by authViewModel.isVisible
+    var isVisible by authViewModel.isVisible
     val isLocked by authViewModel.isLocked
 
     fun doAuth() {
@@ -272,11 +272,13 @@ fun PasswordGuardedMain(onPasswordChecked: () -> Unit = {}) {
             }
 
             override fun onResume(owner: LifecycleOwner) {
+                isVisible = false
                 authViewModel.onResume(owner)
                 doAuth()
             }
 
             override fun onStart(owner: LifecycleOwner) {
+                isVisible = false
                 authViewModel.onStart(owner)
             }
         }

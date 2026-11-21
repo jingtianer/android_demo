@@ -45,11 +45,17 @@ abstract class AuthViewModel : SingletonViewModel(), DefaultLifecycleObserver {
     override fun onStart(owner: LifecycleOwner) {
         isAppEnterBackground = false
         onStartGeneration++
+        logD("AuthViewModel") {
+            "onStart: $onStartGeneration"
+        }
     }
 
     override fun onResume(owner: LifecycleOwner) {
         isAppEnterBackground = false
         onResumeGeneration++
+        logD("AuthViewModel") {
+            "onResume: $onResumeGeneration"
+        }
     }
 
     override fun onPause(owner: LifecycleOwner) {
@@ -61,6 +67,9 @@ abstract class AuthViewModel : SingletonViewModel(), DefaultLifecycleObserver {
                 isVisible.value = false
             }
         }
+        logD("AuthViewModel") {
+            "onPause: $onResumeGeneration"
+        }
     }
 
     override fun onStop(owner: LifecycleOwner) {
@@ -70,6 +79,9 @@ abstract class AuthViewModel : SingletonViewModel(), DefaultLifecycleObserver {
             if (!JumpOnPurposeMarkHolder.isJumpOnPurpose.value) {
                 cancelAllBioPrompt()
             }
+        }
+        logD("AuthViewModel") {
+            "onStop: $onStartGeneration"
         }
     }
 
