@@ -9,6 +9,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.unit.dp
 import com.jingtian.composedemo.dao.model.Album
 import com.jingtian.composedemo.dao.model.FileType
@@ -19,6 +20,7 @@ import com.jingtian.composedemo.main.remote.ImportRemoteDialogStateHolder
 import com.jingtian.composedemo.main.widget.SimpleNavHostController
 import com.jingtian.composedemo.multiplatform.SoftRef
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
+import com.jingtian.composedemo.viewmodels.notifyChange
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.coroutineScope
@@ -176,27 +178,24 @@ class GalleryStateHolder(val album: IndexedValue<Album>, val currentSelectedAlbu
         onAlbumDataChanged()
     }
 
+    private fun <T> SnapshotStateList<T>. safeReplace(list: List<T>) {
+        val oldSize = this.size
+        this.addAll(list)
+        this.removeRange(0, oldSize)
+    }
+
     suspend fun onAlbumDataChanged() {
         withContext(Dispatchers.IO) {
-            val value = viewModel.getAllAlbumItem(album.value)
-            itemList.clear()
-            itemList.addAll(value)
+            val albumItems = viewModel.getAllAlbumItem(album.value)
+            val labelList = viewModel.getLabelList(album.value)
+            totalLabelList.clear()
             albumViewMap.clear()
-        }
-        withContext(Dispatchers.IO) {
-            val value = viewModel.getLabelList(album.value)
-            withContext(Dispatchers.Main) {
-//                        Log.d("jingtian", "onAlbumDataChanged: ${value.joinToString { it }}")
-                albumName = album.value.albumName
-//                labelFilterCheckedInfo = checkList
-                totalLabelList.clear()
-                totalLabelList.addAll(value)
-            }
-            updateFilterList()
-            withContext(Dispatchers.Main) {
-                currentSelectedItem.clear()
-                itemSelectStateChange++
-            }
+            currentSelectedItem.clear()
+            itemList.safeReplace(albumItems)
+            totalLabelList.safeReplace(labelList)
+            viewModel.filterCheckChanged.notifyChange()
+            albumName = album.value.albumName
+            itemSelectStateChange++
         }
     }
 

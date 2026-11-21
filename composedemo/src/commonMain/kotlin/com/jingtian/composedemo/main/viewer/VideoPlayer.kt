@@ -36,7 +36,9 @@ import com.jingtian.composedemo.base.resources.DrawableIcon
 import com.jingtian.composedemo.base.resources.getPainter
 import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
 import com.jingtian.composedemo.main.widget.AppScrim
+import com.jingtian.composedemo.multiplatform.logD
 import com.jingtian.composedemo.ui.theme.DarkWrapper
+import com.jingtian.composedemo.viewmodels.albumViewModel
 import io.github.kdroidfilter.composemediaplayer.InitialPlayerState
 import io.github.kdroidfilter.composemediaplayer.VideoPlayerState
 import io.github.kdroidfilter.composemediaplayer.VideoPlayerSurface
@@ -121,9 +123,14 @@ fun VideoPlayer(
         LaunchedEffect(uri) {
             withContext(Dispatchers.Main) {
                 isLoading = true
-                val platformFile = withContext(Dispatchers.IO) {
-                    uri.fileInfo.getFileUri()?.platformFile()
-                } ?: return@withContext
+            }
+            val platformFile = withContext(Dispatchers.IO) {
+                uri.fileInfo.getFileUri()?.platformFile()
+            } ?: return@LaunchedEffect
+//            logD("jingtian") {
+//                "VideoPlayer: platformFile=$platformFile"
+//            }
+            withContext(Dispatchers.Main) {
                 playerState.openFile(
                     platformFile, initializeplayerState = if (initialPlaying) {
                         InitialPlayerState.PLAY

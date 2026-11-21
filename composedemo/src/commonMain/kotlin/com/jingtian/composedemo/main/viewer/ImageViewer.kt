@@ -28,7 +28,9 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
 import com.jingtian.composedemo.main.widget.AppScrim
+import com.jingtian.composedemo.multiplatform.logD
 import com.jingtian.composedemo.ui.theme.DarkWrapper
+import com.jingtian.composedemo.viewmodels.albumViewModel
 import com.jvziyaoyao.scale.image.sampling.rememberSamplingDecoder
 import com.jvziyaoyao.scale.image.sampling.samplingProcessorPair
 import com.jvziyaoyao.scale.image.viewer.ImageViewer
@@ -83,8 +85,16 @@ fun ImagePlayer(
         ToggleMask()
         LaunchedEffect(uri) {
             isLoading = true
+//            logD("jingtian") {
+//                "ImagePlayer: itemName=${uri.albumItem.itemName}"
+//            }
             bytes = withContext(Dispatchers.IO) {
-                uri.fileInfo.getFileUri()?.inputStream()?.buffered()?.readByteArray()
+                val fileUri = uri.fileInfo.getFileUri()
+//                val file = fileUri?.file()
+//                logD("jingtian") {
+//                    "ImagePlayer: file=${file}"
+//                }
+                fileUri?.inputStream()?.buffered()?.readByteArray()
             }
             withFrameMillis {  }
             isLoading = false

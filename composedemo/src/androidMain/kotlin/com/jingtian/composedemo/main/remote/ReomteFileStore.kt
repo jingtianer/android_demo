@@ -6,6 +6,7 @@ import android.widget.Toast
 import androidx.room.concurrent.AtomicBoolean
 import com.jcraft.jsch.SftpProgressMonitor
 import com.jingtian.composedemo.base.app
+import com.jingtian.composedemo.multiplatform.logD
 import com.jingtian.composedemo.utils.CoroutineUtils
 import com.jingtian.composedemo.utils.ensureDirExist
 import com.jingtian.composedemo.utils.ensureFile
@@ -59,6 +60,9 @@ class RemoteFileStore(serverType: ServerType) {
                         if (realFile.exists() && realFile.length() > 0 && !tmpFile.exists()) {
                             if (realFile.isFile) {
 //                                Log.d("jingtian", "end5: ${originUri.path}")
+//                                logD("jingtian") {
+//                                    "loadFile: uri=${originUri}, $realFile, 1 real file exists and valid"
+//                                }
                                 cancelable.resume(realFile)
                                 return@suspendCancellableCoroutine
                             }
@@ -81,6 +85,9 @@ class RemoteFileStore(serverType: ServerType) {
                             tmpFile.ensureIsFile { file->
                                 server.connect({ _, msg ->
 //                                    Log.d("jingtian", "读取文件 $path $msg")
+//                                    logD("jingtian") {
+//                                        "download: uri=${originUri}, 9 error $msg"
+//                                    }
                                 })?.use { channel ->
                                     cancelable.invokeOnCancellation {
                                         runCatching { channel.disconnect() }
@@ -100,6 +107,9 @@ class RemoteFileStore(serverType: ServerType) {
 
                                             override fun count(count: Long): Boolean {
                                                 if (cancelable.isCancelled) {
+//                                                    logD("jingtian") {
+//                                                        "download: uri=${originUri}, 3 download cancel"
+//                                                    }
 //                                                    Log.d("jingtian", "canceled 0: ${originUri.path}")
                                                     return false
                                                 }
@@ -107,6 +117,9 @@ class RemoteFileStore(serverType: ServerType) {
                                             }
 
                                             override fun end() {
+//                                                logD("jingtian") {
+//                                                    "download: uri=${originUri}, 2 download end"
+//                                                }
                                                 isSuccess[0] = true
                                             }
                                         })
@@ -119,18 +132,33 @@ class RemoteFileStore(serverType: ServerType) {
                             }.takeIf { isSuccess[0] }
                         }.fold(onSuccess = { file->
                             if (file == null) {
+//                                logD("jingtian") {
+//                                    "download: uri=${originUri}, 4 success realfile is null"
+//                                }
                                 cancelable.resume(tmpFile)
                                 return@suspendCancellableCoroutine
                             }
+//                            logD("jingtian") {
+//                                "download: uri=${originUri}, 5 success"
+//                            }
                             file.renameTo(realFile)
                         }, onFailure = {
+//                            logD("jingtian") {
+//                                "download: uri=${originUri}, 6 error =$it"
+//                            }
                             cancelable.resume(tmpFile)
                             return@suspendCancellableCoroutine
                         })
                     } catch (e : Exception) {
+//                        logD("jingtian") {
+//                            "download: uri=${originUri}, 7 error =$e"
+//                        }
                         cancelable.resume(tmpFile.ensureFileExist {  })
                         return@suspendCancellableCoroutine
                     }
+//                    logD("jingtian") {
+//                        "download: uri=${originUri}, 8 success"
+//                    }
                     cancelable.resume(realFile)
                     return@suspendCancellableCoroutine
                 }

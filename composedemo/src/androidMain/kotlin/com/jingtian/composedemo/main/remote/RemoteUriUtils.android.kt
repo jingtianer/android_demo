@@ -8,6 +8,7 @@ import com.jcraft.jsch.ChannelSftp.LsEntry
 import com.jingtian.composedemo.dao.model.FileType
 import com.jingtian.composedemo.multiplatform.MultiplatformFileImpl
 import com.jingtian.composedemo.utils.SerializationUtils.toInputStream
+import io.github.vinceglb.filekit.PlatformFile
 import kotlinx.io.Buffer
 import kotlinx.io.RawSource
 import kotlinx.io.files.Path
@@ -69,6 +70,10 @@ class RemoteSftpFileImpl(
             return getImageRatio(getContentFile().toUri())
         }
     override suspend fun file(): Path = Path(getContentFile().absolutePath)
+
+    override suspend fun platformFile(): PlatformFile {
+        return PlatformFile(file())
+    }
 
     override fun onDelete() {
         fileStore.delete(originUri)

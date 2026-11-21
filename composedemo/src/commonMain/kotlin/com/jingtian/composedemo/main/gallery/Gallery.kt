@@ -308,9 +308,9 @@ fun GalleryStateHolder.Gallery() {
     val bottomBarHeight = 76.dp
 
     LaunchedEffect(albumItemDataChange) {
-        logD("Gallery") {
-            "albumItemDataChange=$albumItemDataChange"
-        }
+//        logD("Gallery") {
+//            "albumItemDataChange=$albumItemDataChange"
+//        }
         onAlbumDataChanged()
     }
 
@@ -330,8 +330,6 @@ fun GalleryStateHolder.Gallery() {
     val filterChanged by viewModel.filterCheckChanged.observeAsState()
     LaunchedEffect(
         filterChanged,
-        itemList,
-        albumItemDataChange,
         gallerySearchWord,
         gallerySearchEnabled,
         filterConfig.value.labelOr.value

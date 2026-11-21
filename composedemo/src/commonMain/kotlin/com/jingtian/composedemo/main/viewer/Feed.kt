@@ -1,11 +1,16 @@
 package com.jingtian.composedemo.main.viewer
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -13,13 +18,16 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import com.jingtian.composedemo.dao.model.Album
 import com.jingtian.composedemo.dao.model.FileType
 import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
 import com.jingtian.composedemo.dao.model.relation.AlbumRelation
 import com.jingtian.composedemo.main.dialog.EditDialog
 import com.jingtian.composedemo.multiplatform.MultiplatformFile
+import com.jingtian.composedemo.ui.theme.DarkWrapper
 import com.jingtian.composedemo.ui.theme.appBackground
 import com.jingtian.composedemo.ui.theme.clipDeviceRoundCorner
 import kotlinx.coroutines.Dispatchers
@@ -30,7 +38,9 @@ import kotlinx.coroutines.withContext
 
 class FeedState(val albumList: List<AlbumItemRelation>, val album: Album, val totalLabelList: List<String>, val filter: AlbumItemRelation.() -> Boolean) {
     // todo: fix albumList顺序变，会导致VerticalPager顺序变
-    val shuffleIndex = IntArray(albumList.size) { it }.filter { albumList[it].filter() && (albumList[it].fileInfo.fileType == FileType.VIDEO || albumList[it].fileInfo.fileType == FileType.IMAGE) }.shuffled()
+    val shuffleIndex by derivedStateOf {
+        IntArray(albumList.size) { it }.filter { albumList[it].filter() && (albumList[it].fileInfo.fileType == FileType.VIDEO || albumList[it].fileInfo.fileType == FileType.IMAGE) }.shuffled()
+    }
     val pagerState = PagerState(0) {
         shuffleIndex.size
     }
@@ -64,7 +74,18 @@ fun Feed(albumItemList: List<AlbumItemRelation>, album: Album, totalLabelList: L
                     }
                 }
                 else -> {
-
+                    Box(modifier = Modifier.fillMaxSize().background(color = Color.Black), contentAlignment = Alignment.Center) {
+                        Column {
+                            DarkWrapper {
+                                Text("error unknown filetype=${item.fileInfo.fileType.name}")
+                                FileExtraInfoView(item)
+                            }
+                        }
+                    }
+                    LaunchedEffect(item, index) {
+                        delay(10000L)
+                        pagerState.animateScrollToPage((index + 1) % shuffleIndex.size)
+                    }
                 }
             }
         }
