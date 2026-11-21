@@ -588,11 +588,7 @@ private fun MainState.Main(
 
                             composable(Feed) {
                                 galleryStateHolder?.let {
-                                    val totalLabelList = it.totalLabelListState
-                                    val album = it.album
-                                    val itemList = it.filteredItemListState
-                                    flow<Unit> {}
-                                    Feed(albumItemList = itemList, album = album.value, totalLabelList = totalLabelList)
+                                    Feed(itemList = it.filteredItemListState, album = it.album.value, totalLabelList = it.totalLabelListState)
                                 }
                             }
                         }

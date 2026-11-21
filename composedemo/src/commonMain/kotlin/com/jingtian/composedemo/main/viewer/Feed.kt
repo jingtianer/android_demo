@@ -39,57 +39,51 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class FeedState(val albumList: State<List<AlbumItemRelation>>, val album: Album, val totalLabelList: State<List<String>>) {
-    // todo: fix albumList顺序变，会导致VerticalPager顺序变
-    val shuffleIndex by derivedStateOf {
-        IntArray(albumList.value.size) { it }.filter { albumList.value[it].fileInfo.fileType == FileType.VIDEO || albumList.value[it].fileInfo.fileType == FileType.IMAGE }.shuffled()
-    }
-    var currentShownId by mutableLongStateOf(-1)
-    val pagerState = PagerState(0) {
-        shuffleIndex.size
-    }
+class FeedState(val pagerState: PagerState, val album: Album, val totalLabelList: State<List<String>>) {
 }
 
 @Composable
-fun Feed(albumItemList: State<List<AlbumItemRelation>>, album: Album, totalLabelList: State<List<String>>) {
-    val feedState = remember(albumItemList, album, totalLabelList) { FeedState(albumItemList, album, totalLabelList) }
+fun Feed(itemList: State<List<AlbumItemRelation>>, album: Album, totalLabelList: State<List<String>>) {
     val scope = rememberCoroutineScope()
-    with(feedState) {
-        VerticalPager(
-            state = pagerState,
-            modifier = Modifier.fillMaxSize().clipDeviceRoundCorner().background(Color.Black),
-            beyondViewportPageCount = 10,
-            key = { index-> albumList.value[shuffleIndex[index]].albumItem.itemId ?: -1 }
-        ) { index->
-            val item = albumList.value[shuffleIndex[index]]
-            when(item.fileInfo.fileType) {
-                FileType.IMAGE -> {
-                    ImageFeed(item, index) {
-                        scope.launch {
-                            pagerState.animateScrollToPage((index + 1) % shuffleIndex.size)
-                        }
-                    }
-                }
-                FileType.VIDEO -> {
-                    VideoFeed(item, index) {
-                        scope.launch {
-                            pagerState.animateScrollToPage((index + 1) % shuffleIndex.size)
-                        }
-                    }
-                }
-                else -> {
-                    Box(modifier = Modifier.fillMaxSize().background(color = Color.Black), contentAlignment = Alignment.Center) {
-                        Column {
-                            DarkWrapper {
-                                Text("error unknown filetype=${item.fileInfo.fileType.name}")
-                                FileExtraInfoView(item)
-                            }
-                        }
-                    }
-                    LaunchedEffect(item, index) {
-                        delay(10000L)
+    val shuffleIndex = remember(itemList.value.size) {
+        IntArray(itemList.value.size) { it }.filter { itemList.value[it].fileInfo.fileType == FileType.VIDEO || itemList.value[it].fileInfo.fileType == FileType.IMAGE }.shuffled()
+    }
+    val pagerState = rememberPagerState { shuffleIndex.size }
+    val feedState = remember(album, totalLabelList) { FeedState(pagerState, album, totalLabelList) }
+    VerticalPager(
+        state = pagerState,
+        modifier = Modifier.fillMaxSize().clipDeviceRoundCorner().background(Color.Black),
+        beyondViewportPageCount = 10,
+        key = { index-> itemList.value[shuffleIndex[index]].albumItem.itemId ?: -1 }
+    ) { index->
+        val item = itemList.value[shuffleIndex[index]]
+        when(item.fileInfo.fileType) {
+            FileType.IMAGE -> {
+                feedState.ImageFeed(item, index) {
+                    scope.launch {
                         pagerState.animateScrollToPage((index + 1) % shuffleIndex.size)
                     }
+                }
+            }
+            FileType.VIDEO -> {
+                feedState.VideoFeed(item, index) {
+                    scope.launch {
+                        pagerState.animateScrollToPage((index + 1) % shuffleIndex.size)
+                    }
+                }
+            }
+            else -> {
+                Box(modifier = Modifier.fillMaxSize().background(color = Color.Black), contentAlignment = Alignment.Center) {
+                    Column {
+                        DarkWrapper {
+                            Text("error unknown filetype=${item.fileInfo.fileType.name}")
+                            FileExtraInfoView(item)
+                        }
+                    }
+                }
+                LaunchedEffect(item, index) {
+                    delay(10000L)
+                    pagerState.animateScrollToPage((index + 1) % shuffleIndex.size)
                 }
             }
         }
