@@ -50,14 +50,14 @@ fun Feed(albumItemList: List<AlbumItemRelation>, album: Album, totalLabelList: L
             val item = albumList[shuffleIndex[index]]
             when(item.fileInfo.fileType) {
                 FileType.IMAGE -> {
-                    ImageFeed(item, index == pagerState.currentPage) {
+                    ImageFeed(item, index) {
                         scope.launch {
                             pagerState.animateScrollToPage((index + 1) % shuffleIndex.size)
                         }
                     }
                 }
                 FileType.VIDEO -> {
-                    VideoFeed(item, index == pagerState.currentPage) {
+                    VideoFeed(item, index) {
                         scope.launch {
                             pagerState.animateScrollToPage((index + 1) % shuffleIndex.size)
                         }
@@ -72,9 +72,10 @@ fun Feed(albumItemList: List<AlbumItemRelation>, album: Album, totalLabelList: L
 }
 
 @Composable
-fun FeedState.ImageFeed(albumItemRelation: AlbumItemRelation, isSelected: Boolean, onPlayFinish: () -> Unit) {
+fun FeedState.ImageFeed(albumItemRelation: AlbumItemRelation, index: Int, onPlayFinish: () -> Unit) {
     val imagePlayerState = rememberImagePlayerState()
     var isEditing by remember { mutableStateOf(false) }
+    val isSelected = index == pagerState.currentPage
     LaunchedEffect(isSelected, imagePlayerState.maskVisible, isEditing, imagePlayerState.isLoading) {
         if (!imagePlayerState.maskVisible && isSelected && !isEditing && !imagePlayerState.isLoading) {
             delay(10000L)
@@ -93,11 +94,12 @@ fun FeedState.ImageFeed(albumItemRelation: AlbumItemRelation, isSelected: Boolea
 }
 
 @Composable
-fun FeedState.VideoFeed(albumItemRelation: AlbumItemRelation, isSelected: Boolean, onPlayFinish: () -> Unit) {
+fun FeedState.VideoFeed(albumItemRelation: AlbumItemRelation, index: Int, onPlayFinish: () -> Unit) {
     val playerState = rememberUIVideoPlayerState(initialPlaying = false)
     var isEditing by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit, isSelected) {
-        if (isSelected) {
+    val isSelected = index == pagerState.currentPage
+    LaunchedEffect(Unit, isSelected, playerState.isLoading) {
+        if (isSelected && !playerState.isLoading) {
             playerState.playerState.play()
         } else {
             playerState.playerState.pause()
