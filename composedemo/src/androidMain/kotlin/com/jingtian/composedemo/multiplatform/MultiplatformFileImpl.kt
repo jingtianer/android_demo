@@ -316,6 +316,13 @@ open class MultiplatformFileImpl(private val uri: Uri) : MultiplatformFile {
         return io.github.vinceglb.filekit.PlatformFile(uri.toString())
     }
 
+    override suspend fun isSameFile(other: MultiplatformFile): Boolean {
+        if (other is MultiplatformFileImpl) {
+            return uri == other.uri
+        }
+        return super.isSameFile(other)
+    }
+
 //    override fun toString(): String {
 //        return "fileName=$fileName, isHidden=$isHidden, mediaType=$mediaType, extension=$extension, file=$file, uri=$uri"
 //    }

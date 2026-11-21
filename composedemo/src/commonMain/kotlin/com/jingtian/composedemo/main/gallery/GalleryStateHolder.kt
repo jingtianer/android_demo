@@ -38,7 +38,7 @@ expect fun getPlatformExtra(): IPlatformExtra
 
 class GalleryStateHolder(val album: IndexedValue<Album>, val currentSelectedAlbum: State<Album>, val albumList: List<Album>, val viewModel: AlbumViewModel, val galleryDpConstants: GalleryDpConstants, val navController : SimpleNavHostController) {
     var addImageDialogState by mutableStateOf(false)
-    var itemList by mutableStateOf(emptyList<AlbumItemRelation>())
+    val itemList = mutableStateListOf<AlbumItemRelation>()
     val filteredItemList = mutableStateListOf<AlbumItemRelation>()
     var showLabelFilter by mutableStateOf(false)
     val totalLabelList = mutableStateListOf<String>()
@@ -172,33 +172,25 @@ class GalleryStateHolder(val album: IndexedValue<Album>, val currentSelectedAlbu
     }
 
     suspend fun onAlbumDataChanged() {
-        coroutineScope {
-            launch {
-                withContext(Dispatchers.IO) {
-                    val value = viewModel.getAllAlbumItem(album.value)
-                    withContext(Dispatchers.Main) {
-                        itemList = value
-                        albumViewMap.clear()
-                    }
-                    updateFilterList()
-                }
-            }
-            launch {
-                withContext(Dispatchers.IO) {
-                    val value = viewModel.getLabelList(album.value)
-                    withContext(Dispatchers.Main) {
+        withContext(Dispatchers.IO) {
+            val value = viewModel.getAllAlbumItem(album.value)
+            itemList.clear()
+            itemList.addAll(value)
+            albumViewMap.clear()
+        }
+        withContext(Dispatchers.IO) {
+            val value = viewModel.getLabelList(album.value)
+            withContext(Dispatchers.Main) {
 //                        Log.d("jingtian", "onAlbumDataChanged: ${value.joinToString { it }}")
-                        albumName = album.value.albumName
+                albumName = album.value.albumName
 //                labelFilterCheckedInfo = checkList
-                        totalLabelList.clear()
-                        totalLabelList.addAll(value)
-                    }
-                    updateFilterList()
-                    withContext(Dispatchers.Main) {
-                        currentSelectedItem.clear()
-                        itemSelectStateChange++
-                    }
-                }
+                totalLabelList.clear()
+                totalLabelList.addAll(value)
+            }
+            updateFilterList()
+            withContext(Dispatchers.Main) {
+                currentSelectedItem.clear()
+                itemSelectStateChange++
             }
         }
     }

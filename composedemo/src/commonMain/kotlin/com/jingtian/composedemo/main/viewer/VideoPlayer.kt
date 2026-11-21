@@ -83,7 +83,8 @@ fun rememberUIVideoPlayerState(initialPlaying: Boolean = true): UIVideoPlayerSta
 fun VideoPlayer(
     uiVideoPlayerState: UIVideoPlayerState = rememberUIVideoPlayerState(),
     modifier: Modifier = Modifier,
-    uri: AlbumItemRelation
+    uri: AlbumItemRelation,
+    onEditRequest: () -> Unit = {},
 ) {
     uiVideoPlayerState.apply {
         val sliderState = rememberSliderState(
@@ -176,7 +177,11 @@ fun VideoPlayer(
             )
 
             if (maskVisible) {
-                Box(modifier.fillMaxSize().graphicsLayer { alpha = showMaskAnim.value }) {
+                Box(modifier.fillMaxSize().graphicsLayer { alpha = showMaskAnim.value }.pointerInput(Unit) {
+                    detectTapGestures(onLongPress = {
+                        onEditRequest()
+                    })
+                }) {
                     AppScrim(alpha = 0.8f)
                     Icon(
                         painter = getPainter(DrawableIcon.DrawableVideoIcon),

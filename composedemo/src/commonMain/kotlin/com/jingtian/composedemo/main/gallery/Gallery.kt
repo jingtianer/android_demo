@@ -331,6 +331,7 @@ fun GalleryStateHolder.Gallery() {
     LaunchedEffect(
         filterChanged,
         itemList,
+        albumItemDataChange,
         gallerySearchWord,
         gallerySearchEnabled,
         filterConfig.value.labelOr.value

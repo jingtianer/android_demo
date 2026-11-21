@@ -3,6 +3,7 @@ package com.jingtian.composedemo.main.viewer
 import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
@@ -22,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
 import com.jingtian.composedemo.main.widget.AppScrim
@@ -72,7 +74,8 @@ fun rememberImagePlayerState(): ImagePlayerState {
 fun ImagePlayer(
     state: ImagePlayerState = rememberImagePlayerState(),
     modifier: Modifier,
-    uri: AlbumItemRelation
+    uri: AlbumItemRelation,
+    onEditRequest: () -> Unit = {},
 ) {
     with(state) {
         ToggleMask()
@@ -87,9 +90,11 @@ fun ImagePlayer(
             val state = rememberZoomableState(
                 contentSize = samplingDecoder.intrinsicSize
             )
-            Box(modifier = modifier.background(Color.Black).clickable(interactionSource = null, indication = null) {
-                showMask = !showMask
-            }) {
+            Box(
+                modifier = modifier.background(Color.Black)
+                    .clickable(interactionSource = null, indication = null) {
+                        showMask = !showMask
+                    }) {
                 ImageViewer(
                     modifier = Modifier.fillMaxSize(),
                     model = samplingDecoder,
@@ -108,7 +113,13 @@ fun ImagePlayer(
                 )
 
                 if (maskVisible) {
-                    Box(Modifier.fillMaxSize().graphicsLayer { alpha = showMaskAnim.value }) {
+                    Box(Modifier.fillMaxSize().graphicsLayer { alpha = showMaskAnim.value }
+                        .pointerInput(Unit) {
+                            detectTapGestures(onLongPress = {
+                                onEditRequest()
+                            })
+                        }
+                    ) {
                         AppScrim(alpha = 0.8f)
 
                         Column(

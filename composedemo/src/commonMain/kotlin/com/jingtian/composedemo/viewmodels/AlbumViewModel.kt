@@ -429,7 +429,7 @@ object AlbumViewModel : SingletonViewModel() {
         val oldUri = albumItemRelation.fileInfo.getFileUri()
 
         CoroutineUtils.runIOTask({
-            val (nextId, _) = if (uri != oldUri) {
+            val (nextId, _) = if (oldUri == null || !uri.isSameFile(oldUri)) {
                 val storage = FileStorageUtils.getStorage(mediaType)
                 if (oldUri != null) {
                     albumItemRelation.fileInfo.getFileUri()?.onDelete()

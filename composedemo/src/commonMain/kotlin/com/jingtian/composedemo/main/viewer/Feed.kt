@@ -18,6 +18,7 @@ import com.jingtian.composedemo.dao.model.Album
 import com.jingtian.composedemo.dao.model.FileType
 import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
 import com.jingtian.composedemo.dao.model.relation.AlbumRelation
+import com.jingtian.composedemo.main.dialog.EditDialog
 import com.jingtian.composedemo.multiplatform.MultiplatformFile
 import com.jingtian.composedemo.ui.theme.appBackground
 import com.jingtian.composedemo.ui.theme.clipDeviceRoundCorner
@@ -27,40 +28,38 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class FeedState(albumList: List<AlbumItemRelation>) {
-    val shuffledAlbumList = albumList.filter { it.fileInfo.fileType == FileType.VIDEO || it.fileInfo.fileType == FileType.IMAGE }.shuffled()
+class FeedState(val albumList: List<AlbumItemRelation>, val album: Album, val totalLabelList: List<String>) {
+    // todo: fix albumList顺序变，会导致VerticalPager顺序变
+    val shuffleIndex = IntArray(albumList.size) { it }.filter { albumList[it].fileInfo.fileType == FileType.VIDEO || albumList[it].fileInfo.fileType == FileType.IMAGE }.shuffled()
     val pagerState = PagerState(0) {
-        shuffledAlbumList.size
+        shuffleIndex.size
     }
 }
 
 @Composable
-fun Feed(albumItemList: List<AlbumItemRelation>) {
-    val feedState = remember(albumItemList) { FeedState(albumItemList) }
+fun Feed(albumItemList: List<AlbumItemRelation>, album: Album, totalLabelList: List<String>) {
+    val feedState = remember(albumItemList, album, totalLabelList) { FeedState(albumItemList, album, totalLabelList) }
     val scope = rememberCoroutineScope()
     with(feedState) {
         VerticalPager(
             state = pagerState,
             modifier = Modifier.fillMaxSize().clipDeviceRoundCorner().appBackground(),
             beyondViewportPageCount = 10,
+            key = { index-> albumList[shuffleIndex[index]].albumItem.itemId ?: -1 }
         ) { index->
-            val item = shuffledAlbumList[index]
+            val item = albumList[shuffleIndex[index]]
             when(item.fileInfo.fileType) {
                 FileType.IMAGE -> {
                     ImageFeed(item, index == pagerState.currentPage) {
-                        if (index + 1 < shuffledAlbumList.size) {
-                            scope.launch {
-                                pagerState.scrollToPage(index + 1)
-                            }
+                        scope.launch {
+                            pagerState.animateScrollToPage((index + 1) % shuffleIndex.size)
                         }
                     }
                 }
                 FileType.VIDEO -> {
                     VideoFeed(item, index == pagerState.currentPage) {
-                        if (index + 1 < shuffledAlbumList.size) {
-                            scope.launch {
-                                pagerState.scrollToPage(index + 1)
-                            }
+                        scope.launch {
+                            pagerState.animateScrollToPage((index + 1) % shuffleIndex.size)
                         }
                     }
                 }
@@ -73,20 +72,30 @@ fun Feed(albumItemList: List<AlbumItemRelation>) {
 }
 
 @Composable
-fun ImageFeed(albumItemRelation: AlbumItemRelation, isSelected: Boolean, onPlayFinish: () -> Unit) {
+fun FeedState.ImageFeed(albumItemRelation: AlbumItemRelation, isSelected: Boolean, onPlayFinish: () -> Unit) {
     val imagePlayerState = rememberImagePlayerState()
-    LaunchedEffect(isSelected, imagePlayerState.maskVisible) {
-        if (!imagePlayerState.maskVisible && isSelected) {
+    var isEditing by remember { mutableStateOf(false) }
+    LaunchedEffect(isSelected, imagePlayerState.maskVisible, isEditing) {
+        if (!imagePlayerState.maskVisible && isSelected && !isEditing) {
             delay(10000L)
             onPlayFinish()
         }
     }
-    ImagePlayer(state = imagePlayerState, modifier = Modifier.fillMaxSize(), uri = albumItemRelation)
+    ImagePlayer(state = imagePlayerState, modifier = Modifier.fillMaxSize(), uri = albumItemRelation) {
+        isEditing = true
+    }
+
+    if (isEditing) {
+        EditDialog(albumItemRelation, album, listOf(album), totalLabelList) {
+            isEditing = false
+        }
+    }
 }
 
 @Composable
-fun VideoFeed(albumItemRelation: AlbumItemRelation, isSelected: Boolean, onPlayFinish: () -> Unit) {
+fun FeedState.VideoFeed(albumItemRelation: AlbumItemRelation, isSelected: Boolean, onPlayFinish: () -> Unit) {
     val playerState = rememberUIVideoPlayerState(initialPlaying = false)
+    var isEditing by remember { mutableStateOf(false) }
     LaunchedEffect(Unit, isSelected) {
         if (isSelected) {
             playerState.playerState.play()
@@ -94,11 +103,19 @@ fun VideoFeed(albumItemRelation: AlbumItemRelation, isSelected: Boolean, onPlayF
             playerState.playerState.pause()
         }
     }
-    LaunchedEffect(playerState.playerState.sliderPos, isSelected, playerState.maskVisible) {
-        if (isSelected && playerState.playerState.isPlaying && !playerState.maskVisible && playerState.playerState.sliderPos >= 1000f) {
+    LaunchedEffect(playerState.playerState.sliderPos, isSelected, playerState.maskVisible, isEditing) {
+        if (isSelected && !isEditing && playerState.playerState.isPlaying && !playerState.maskVisible && playerState.playerState.sliderPos >= 1000f) {
             onPlayFinish()
             playerState.playerState.stop()
         }
     }
-    VideoPlayer(uiVideoPlayerState = playerState, modifier = Modifier.fillMaxSize(), uri = albumItemRelation)
+    VideoPlayer(uiVideoPlayerState = playerState, modifier = Modifier.fillMaxSize(), uri = albumItemRelation) {
+        isEditing = true
+    }
+
+    if (isEditing) {
+        EditDialog(albumItemRelation, album, listOf(album), totalLabelList) {
+            isEditing = false
+        }
+    }
 }

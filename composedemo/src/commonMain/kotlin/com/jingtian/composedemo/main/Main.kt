@@ -586,7 +586,12 @@ private fun MainState.Main(
                             }
 
                             composable(Feed) {
-                                Feed(albumItemList = galleryStateHolder?.itemList ?: listOf())
+                                galleryStateHolder?.let {
+                                    val totalLabelList = it.totalLabelList
+                                    val album = it.album
+                                    val itemList = it.itemList
+                                    Feed(albumItemList = itemList, album = album.value, totalLabelList = totalLabelList)
+                                }
                             }
                         }
                     }

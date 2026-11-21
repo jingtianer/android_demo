@@ -41,6 +41,10 @@ interface MultiplatformFile {
     fun onDelete() {}
 
     fun onStoreFinish() {}
+
+    suspend fun isSameFile(other: MultiplatformFile): Boolean {
+        return this.file() == other.file()
+    }
 }
 
 /**
