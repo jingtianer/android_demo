@@ -126,6 +126,7 @@ import com.jingtian.composedemo.main.route.Drawer
 import com.jingtian.composedemo.main.widget.SimpleNavHostController
 import com.jingtian.composedemo.multiplatform.LowMemorySideEffect
 import com.jingtian.composedemo.multiplatform.SoftRef
+import com.jingtian.composedemo.multiplatform.logD
 import com.jingtian.composedemo.ui.theme.clipDeviceRoundCorner
 import com.jingtian.composedemo.ui.theme.goldenRatio
 import com.jingtian.composedemo.utils.UserStorage
@@ -307,6 +308,9 @@ fun GalleryStateHolder.Gallery() {
     val bottomBarHeight = 76.dp
 
     LaunchedEffect(albumItemDataChange) {
+        logD("Gallery") {
+            "albumItemDataChange=$albumItemDataChange"
+        }
         onAlbumDataChanged()
     }
 

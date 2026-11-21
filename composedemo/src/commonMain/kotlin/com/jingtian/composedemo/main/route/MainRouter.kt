@@ -23,6 +23,8 @@ object WebView : MainRouter()
 object ImageViewer : MainRouter()
 @Serializable
 object VideoPlayer : MainRouter()
+@Serializable
+object Feed : MainRouter()
 
 interface IRouterController {
     suspend fun toGallery() = Unit

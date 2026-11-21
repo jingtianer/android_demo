@@ -469,7 +469,7 @@ private fun SimpleNavHostController.SimpleNavHostControllerImpl.SimpleNavHost(
                 targetContentZIndex = backStack.indexOf(targetState) / backStack.size.toFloat()
             )
         }) { state ->
-        if (extraRenderEntry != null) {
+        if (extraRenderEntry != null && extraRenderEntry != state) {
             navMap[extraRenderEntry]?.let {
                 it.content.invoke(it)
             }

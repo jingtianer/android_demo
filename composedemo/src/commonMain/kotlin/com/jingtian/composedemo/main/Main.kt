@@ -84,6 +84,7 @@ import com.jingtian.composedemo.main.gallery.GalleryStateHolder
 import com.jingtian.composedemo.main.gallery.predictiveBackVisual
 import com.jingtian.composedemo.main.viewer.ImagePlayer
 import com.jingtian.composedemo.main.route.Drawer
+import com.jingtian.composedemo.main.route.Feed
 import com.jingtian.composedemo.main.route.Gallery
 import com.jingtian.composedemo.main.route.ImageViewer
 import com.jingtian.composedemo.main.route.LocalRouterController
@@ -92,6 +93,7 @@ import com.jingtian.composedemo.main.route.Settings
 import com.jingtian.composedemo.main.route.VideoPlayer
 import com.jingtian.composedemo.main.route.WebView
 import com.jingtian.composedemo.main.settings.SettingsPage
+import com.jingtian.composedemo.main.viewer.Feed
 import com.jingtian.composedemo.main.viewer.VideoPlayer
 import com.jingtian.composedemo.main.widget.BackEventCompat
 import com.jingtian.composedemo.main.widget.EnterTransitionCreator
@@ -526,6 +528,14 @@ private fun MainState.Main(
                     GlobalSnapBar()
                 }
             ) { _ ->
+
+                Gallery(
+                    galleryStateHolderMap,
+                    currentSelectedAlbum,
+                    menuItemsEntity,
+                    naviController
+                )
+
                 SimpleNavHost(
                     modifier = Modifier,
                     simpleNavHostController = naviController,
@@ -536,12 +546,6 @@ private fun MainState.Main(
                     mapBuilder = remember(menuItemsEntity) {
                         {
                             composable(Gallery) {
-                                Gallery(
-                                    galleryStateHolderMap,
-                                    currentSelectedAlbum,
-                                    menuItemsEntity,
-                                    naviController
-                                )
                             }
 
                             composable(Settings) {
@@ -579,6 +583,10 @@ private fun MainState.Main(
                                         uri = currentVideoPlayer
                                     )
                                 }
+                            }
+
+                            composable(Feed) {
+                                Feed(albumItemList = galleryStateHolder?.itemList ?: listOf())
                             }
                         }
                     }
@@ -670,9 +678,16 @@ class DrawerGestureState(
     private fun ensureCurrentSeekHandler(): ISimpleNavSeekHandler {
         seekHandler?.let { return it }
         isPush = naviController.currentBackStackEntry == Gallery
-        return naviController.seekHandler(
-            if (isPush) Drawer else naviController.secondLastBackStackEntry ?: Gallery
-        ).also {
+        val target = if (isPush) {
+            if (seekProgress <= 0) {
+                Feed
+            } else {
+                Drawer
+            }
+        } else {
+            naviController.secondLastBackStackEntry ?: Gallery
+        }
+        return naviController.seekHandler(target).also {
             seekHandler = it
         }
     }
@@ -688,10 +703,20 @@ class DrawerGestureState(
                     velocityTracker.resetTracking()
                 },
                 onDragEnd = {
-                    if (abs(seekProgress) >= 0.3 || abs(velocityTracker.calculateVelocity().x) >= viewConfiguration.minimumFlingVelocity) {
-                        ensureCurrentSeekHandler().finish()
+                    val revoke = if (abs(seekProgress) >= 0.3) {
+                        false
                     } else {
+                        val velocity = velocityTracker.calculateVelocity().x
+                        if (abs(velocity) >= viewConfiguration.minimumFlingVelocity && !((velocity >= 0) xor (seekProgress >= 0f))) {
+                            false
+                        } else {
+                            true
+                        }
+                    }
+                    if (revoke) {
                         ensureCurrentSeekHandler().revoke()
+                    } else {
+                        ensureCurrentSeekHandler().finish()
                     }
 //                    logD("seekHandler") {
 //                        "seekProgress=$seekProgress, calculateVelocity=${velocityTracker.calculateVelocity()}, flingVelocity=$flingVelocity"
@@ -721,18 +746,15 @@ class DrawerGestureState(
                             return@detectDragGestures
                         }
                         isDragInSafeArea = true
-                        ensureCurrentSeekHandler().init()
                     }
                     if (!isDragInSafeArea) {
                         return@detectDragGestures
                     }
                     val currentSeekProgress = (seekProgress + dragAmount.x / size.width.toFloat())
-                    logD("seekHandler") {
-                        "dragging: seekProgress=$seekProgress, firstEventOffsetX=$firstEventOffsetX, size=$size"
-                    }
                     velocityTracker.addPosition(change.uptimeMillis, change.position)
                     if (seekProgress == 0f) {
                         seekProgress = currentSeekProgress.coerceIn(-1f, 1f)
+                        ensureCurrentSeekHandler().init()
                     } else if (seekProgress > 0f && currentSeekProgress > 0f) {
                         seekProgress = currentSeekProgress.coerceIn(0f, 1f)
                     } else if (seekProgress < 0f && currentSeekProgress < 0f) {

@@ -40,6 +40,7 @@ import com.jingtian.composedemo.base.resources.DrawableIcon
 import com.jingtian.composedemo.base.resources.getPainter
 import com.jingtian.composedemo.main.widget.AppScrim
 import com.jingtian.composedemo.multiplatform.MultiplatformFile
+import io.github.kdroidfilter.composemediaplayer.InitialPlayerState
 import io.github.kdroidfilter.composemediaplayer.VideoPlayerState
 import io.github.kdroidfilter.composemediaplayer.VideoPlayerSurface
 import kotlinx.coroutines.Dispatchers
@@ -48,7 +49,7 @@ import io.github.kdroidfilter.composemediaplayer.rememberVideoPlayerState
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.delay
 
-class UIVideoPlayerState(internal val playerState: VideoPlayerState) {
+class UIVideoPlayerState(val initialPlaying: Boolean, internal val playerState: VideoPlayerState) {
     init {
         playerState.loop = true
     }
@@ -75,9 +76,9 @@ class UIVideoPlayerState(internal val playerState: VideoPlayerState) {
 }
 
 @Composable
-fun rememberUIVideoPlayerState(): UIVideoPlayerState {
+fun rememberUIVideoPlayerState(initialPlaying: Boolean = true): UIVideoPlayerState {
     val videoPlayerState = rememberVideoPlayerState()
-    return remember { UIVideoPlayerState(videoPlayerState) }
+    return remember { UIVideoPlayerState(initialPlaying, videoPlayerState) }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -120,12 +121,19 @@ fun VideoPlayer(
         }
         LaunchedEffect(uri) {
             withContext(Dispatchers.Main) {
+                if (initialPlaying) {
+
+                }
                 playerState.openFile(withContext(Dispatchers.IO) {
                     uri.platformFile()
+                }, initializeplayerState = if (initialPlaying) {
+                    InitialPlayerState.PLAY
+                } else {
+                    InitialPlayerState.PAUSE
                 })
+                withFrameMillis { }
+                isLoading = false
             }
-            withFrameMillis { }
-            isLoading = false
         }
         LaunchedEffect(showMask, thumbnailPressed) {
             if (showMask) {

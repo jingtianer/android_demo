@@ -13,7 +13,10 @@ import com.jvziyaoyao.scale.image.viewer.ImageViewer
 import com.jvziyaoyao.scale.image.viewer.ModelProcessor
 import com.jvziyaoyao.scale.zoomable.zoomable.ZoomableGestureScope
 import com.jvziyaoyao.scale.zoomable.zoomable.rememberZoomableState
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.io.buffered
 import kotlinx.io.readByteArray
 
@@ -21,7 +24,9 @@ import kotlinx.io.readByteArray
 fun ImagePlayer(modifier: Modifier, uri: MultiplatformFile) {
     val bytes = remember { mutableStateOf<ByteArray?>(null) }
     LaunchedEffect(uri) {
-        bytes.value = uri.inputStream()?.buffered()?.readByteArray()
+        bytes.value = withContext(Dispatchers.IO) {
+            uri.inputStream()?.buffered()?.readByteArray()
+        }
     }
     val (samplingDecoder) = rememberSamplingDecoder(bytes.value)
     val scope = rememberCoroutineScope()
