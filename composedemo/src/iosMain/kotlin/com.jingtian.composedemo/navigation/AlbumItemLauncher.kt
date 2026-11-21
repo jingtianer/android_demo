@@ -45,23 +45,6 @@ class AlbumItemLauncher(val scope: CoroutineScope, val mainNavController: IRoute
     }
 
     override suspend fun launch(fileName: String, fileInfo: FileInfo) {
-        when(fileInfo.fileType) {
-            FileType.HTML -> {
-                mainNavController.toWebView(fileInfo to fileInfo.getFileUri())
-                return
-            }
-            FileType.IMAGE -> {
-                mainNavController.toImageViewer(fileInfo.getFileUri())
-                return
-            }
-            FileType.VIDEO -> {
-                mainNavController.toVideoPlayer(fileInfo.getFileUri())
-                return
-            }
-            else -> {
-
-            }
-        }
         scope.launch(Dispatchers.Main) {
             val timeoutCancel = atomic(false)
             scope.launch {
@@ -83,6 +66,23 @@ class AlbumItemLauncher(val scope: CoroutineScope, val mainNavController: IRoute
     override suspend  fun launch(albumItemRelation: AlbumItemRelation) {
         val fileInfo = albumItemRelation.fileInfo
         val name = albumItemRelation.albumItem.itemName
+        when(fileInfo.fileType) {
+            FileType.HTML -> {
+                mainNavController.toWebView(fileInfo to fileInfo.getFileUri())
+                return
+            }
+            FileType.IMAGE -> {
+                mainNavController.toImageViewer(albumItemRelation)
+                return
+            }
+            FileType.VIDEO -> {
+                mainNavController.toVideoPlayer(albumItemRelation)
+                return
+            }
+            else -> {
+
+            }
+        }
         launch(name, fileInfo)
     }
 }

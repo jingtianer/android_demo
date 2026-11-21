@@ -75,23 +75,6 @@ class AlbumItemLauncher(val mainNavController: IRouterController) : IAlbumItemLa
     }
 
     override suspend fun launch(fileName: String, fileInfo: FileInfo) {
-        when(fileInfo.fileType) {
-//            FileType.HTML -> {
-//                mainNavController.toWebView(fileInfo to fileInfo.getFileUri())
-//                return
-//            }
-            FileType.IMAGE -> {
-                mainNavController.toImageViewer(fileInfo.getFileUri())
-                return
-            }
-            FileType.VIDEO -> {
-                mainNavController.toVideoPlayer(fileInfo.getFileUri())
-                return
-            }
-            else-> {
-
-            }
-        }
         JumpOnPurposeMarkHolder.isJumpOnPurpose.value = true
         when(fileInfo.fileType) {
             FileType.HTML -> openUrl(fileName, fileInfo)
@@ -100,6 +83,23 @@ class AlbumItemLauncher(val mainNavController: IRouterController) : IAlbumItemLa
     }
 
     override suspend fun launch(albumItemRelation: AlbumItemRelation) {
+        when(albumItemRelation.fileInfo.fileType) {
+//            FileType.HTML -> {
+//                mainNavController.toWebView(fileInfo to fileInfo.getFileUri())
+//                return
+//            }
+            FileType.IMAGE -> {
+                mainNavController.toImageViewer(albumItemRelation)
+                return
+            }
+            FileType.VIDEO -> {
+                mainNavController.toVideoPlayer(albumItemRelation)
+                return
+            }
+            else-> {
+
+            }
+        }
         val fileInfo = albumItemRelation.fileInfo
         val name = albumItemRelation.albumItem.itemName
         launch(name, fileInfo)

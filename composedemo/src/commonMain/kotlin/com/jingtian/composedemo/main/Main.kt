@@ -73,6 +73,7 @@ import com.jingtian.composedemo.dao.DataBase
 import com.jingtian.composedemo.dao.model.Album
 import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.FileType
+import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
 import com.jingtian.composedemo.demonstration.DemonstrationMain
 import com.jingtian.composedemo.main.PredictiveBackVisualState.Companion.STATE_CANCEL
 import com.jingtian.composedemo.main.PredictiveBackVisualState.Companion.STATE_END
@@ -390,8 +391,8 @@ class MainState(
     }
 
     var currentWebViewFile by mutableStateOf<Pair<FileInfo?, MultiplatformFile?>>(null to null)
-    var currentImageViewer by mutableStateOf<MultiplatformFile?>(null)
-    var currentVideoPlayer by mutableStateOf<MultiplatformFile?>(null)
+    var currentImageViewer by mutableStateOf<AlbumItemRelation?>(null)
+    var currentVideoPlayer by mutableStateOf<AlbumItemRelation?>(null)
 
     fun updateSelectedValue(list: List<Album>): IndexedValue<Album>? {
         val currentSelectedAlbum = currentSelectedAlbum
@@ -566,9 +567,8 @@ private fun MainState.Main(
                                     ImagePlayer(
                                         modifier = Modifier
                                             .fillMaxSize()
-                                            .clipDeviceRoundCorner()
-                                            .appBackground(),
-                                        currentImageViewer
+                                            .clipDeviceRoundCorner(),
+                                        uri = currentImageViewer
                                     )
                                 }
                             }

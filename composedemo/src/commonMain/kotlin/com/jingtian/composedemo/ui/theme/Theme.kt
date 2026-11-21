@@ -1,6 +1,5 @@
 package com.jingtian.composedemo.ui.theme
 
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -19,6 +18,7 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.jingtian.composedemo.utils.AppTheme
 import com.jingtian.composedemo.utils.BackgroundConfig
 import com.jingtian.composedemo.utils.UserStorage
 import com.jingtian.composedemo.viewmodels.appThemeViewModel
@@ -147,6 +147,7 @@ val LocalSecondaryTextStyle = compositionLocalOf(structuralEqualityPolicy()) { T
 val LocalMiddleButtonConfig = compositionLocalOf(structuralEqualityPolicy()) { liteMiddleButtonConfig }
 val LocalAppColorScheme = compositionLocalOf(structuralEqualityPolicy()) { LightColorScheme }
 val LocalDeviceRealDensity = compositionLocalOf(structuralEqualityPolicy()) { Density(1f) }
+val LocalAppTheme = compositionLocalOf(structuralEqualityPolicy()) { AppTheme.AUTO }
 
 val goldenRatio = 2f / (sqrt(5f) + 1)
 
@@ -190,6 +191,17 @@ fun Modifier.dialogBackground() = appBackgroundV2(heightScale = goldenRatio)
 
 @Composable
 fun DemoAppTheme(
+    content: @Composable () -> Unit
+) {
+    val appThemeViewModel = appThemeViewModel()
+    val realTheme by appThemeViewModel.currentAppTheme
+    CompositionLocalProvider(LocalAppTheme provides realTheme) {
+        LocalDemoAppTheme(content)
+    }
+}
+
+@Composable
+fun LocalDemoAppTheme(
     content: @Composable () -> Unit
 ) {
     val appThemeViewModel = appThemeViewModel()
@@ -293,4 +305,11 @@ fun Color.toHsl(): FloatArray {
         } * 60f
     }
     return floatArrayOf(a, h, s, l)
+}
+
+@Composable
+fun DarkWrapper(content: @Composable () -> Unit) {
+    CompositionLocalProvider(LocalAppTheme provides AppTheme.Dark) {
+        LocalDemoAppTheme(content)
+    }
 }

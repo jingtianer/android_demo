@@ -10,6 +10,7 @@ import androidx.compose.runtime.remember
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.jingtian.composedemo.ui.theme.LocalAppTheme
 import com.jingtian.composedemo.utils.AppTheme
 import com.jingtian.composedemo.utils.CoroutineUtils
 import kotlinx.coroutines.Job
@@ -26,8 +27,9 @@ object AppThemeViewModel : SingletonViewModel() {
 
     @Composable
     fun rememberIsDark(): Boolean {
+        val theme = LocalAppTheme.current
         val isSystemDark = isSystemInDarkTheme()
-        return AppTheme.isDark(currentAppTheme.value, isSystemDark)
+        return AppTheme.isDark(theme, isSystemDark)
     }
 
     fun setCurrentTheme(appTheme: AppTheme) {

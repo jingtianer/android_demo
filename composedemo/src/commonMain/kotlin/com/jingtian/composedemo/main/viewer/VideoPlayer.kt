@@ -6,15 +6,12 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeGestures
 import androidx.compose.foundation.layout.systemGestures
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -31,15 +28,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import com.jingtian.composedemo.base.resources.DrawableIcon
 import com.jingtian.composedemo.base.resources.getPainter
+import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
 import com.jingtian.composedemo.main.widget.AppScrim
-import com.jingtian.composedemo.multiplatform.MultiplatformFile
+import com.jingtian.composedemo.ui.theme.DarkWrapper
 import io.github.kdroidfilter.composemediaplayer.InitialPlayerState
 import io.github.kdroidfilter.composemediaplayer.VideoPlayerState
 import io.github.kdroidfilter.composemediaplayer.VideoPlayerSurface
@@ -86,7 +83,7 @@ fun rememberUIVideoPlayerState(initialPlaying: Boolean = true): UIVideoPlayerSta
 fun VideoPlayer(
     uiVideoPlayerState: UIVideoPlayerState = rememberUIVideoPlayerState(),
     modifier: Modifier = Modifier,
-    uri: MultiplatformFile
+    uri: AlbumItemRelation
 ) {
     uiVideoPlayerState.apply {
         val sliderState = rememberSliderState(
@@ -121,11 +118,9 @@ fun VideoPlayer(
         }
         LaunchedEffect(uri) {
             withContext(Dispatchers.Main) {
-                if (initialPlaying) {
-
-                }
+                val platformFile = uri.fileInfo.getFileUri()?.platformFile() ?: return@withContext
                 playerState.openFile(withContext(Dispatchers.IO) {
-                    uri.platformFile()
+                    platformFile
                 }, initializeplayerState = if (initialPlaying) {
                     InitialPlayerState.PLAY
                 } else {
@@ -200,6 +195,9 @@ fun VideoPlayer(
                                 WindowInsets.systemGestures
                             ).padding(horizontal = 16.dp)
                     ) {
+                        DarkWrapper {
+                            FileExtraInfoView(albumItemRelation = uri)
+                        }
                         Text(
                             text = "${playerState.positionText} / ${playerState.durationText}",
                             modifier = Modifier.align(Alignment.CenterHorizontally),

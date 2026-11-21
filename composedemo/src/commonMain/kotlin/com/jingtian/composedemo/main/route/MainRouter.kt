@@ -3,6 +3,7 @@ package com.jingtian.composedemo.main.route
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.structuralEqualityPolicy
 import com.jingtian.composedemo.dao.model.FileInfo
+import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
 import com.jingtian.composedemo.main.MainState
 import com.jingtian.composedemo.main.widget.NavRouter
 import com.jingtian.composedemo.main.widget.SimpleNavHostController
@@ -35,9 +36,9 @@ interface IRouterController {
 
     suspend fun toWebView(file: Pair<FileInfo?, MultiplatformFile?>) = Unit
 
-    suspend fun toImageViewer(file: MultiplatformFile?) = Unit
+    suspend fun toImageViewer(file: AlbumItemRelation) = Unit
 
-    suspend fun toVideoPlayer(file: MultiplatformFile?) = Unit
+    suspend fun toVideoPlayer(file: AlbumItemRelation) = Unit
 }
 
 object EmptyRouterController: IRouterController {}
@@ -62,19 +63,13 @@ class MainRouterController(private val naviHost: SimpleNavHostController, val ma
         naviHost.navigateTo(WebView)
     }
 
-    override suspend fun toImageViewer(file: MultiplatformFile?) {
+    override suspend fun toImageViewer(file: AlbumItemRelation) {
         mainState.currentImageViewer = file
-        if (file == null) {
-            return
-        }
         naviHost.navigateTo(ImageViewer)
     }
 
-    override suspend fun toVideoPlayer(file: MultiplatformFile?) {
+    override suspend fun toVideoPlayer(file: AlbumItemRelation) {
         mainState.currentVideoPlayer = file
-        if (file == null) {
-            return
-        }
         naviHost.navigateTo(VideoPlayer)
     }
 }

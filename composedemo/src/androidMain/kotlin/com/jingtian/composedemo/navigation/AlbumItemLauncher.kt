@@ -37,21 +37,6 @@ class AlbumItemLauncher(
     val launcher: ManagedActivityResultLauncher<Intent, ActivityResult>
 ) : IAlbumItemLauncher{
     override suspend fun launch(fileName: String, fileInfo: FileInfo) {
-        when(fileInfo.fileType) {
-            FileType.HTML -> {
-                mainNavController.toWebView(fileInfo to fileInfo.getFileUri())
-                return
-            }
-            FileType.IMAGE -> {
-                mainNavController.toImageViewer(fileInfo.getFileUri())
-                return
-            }
-            FileType.VIDEO -> {
-                mainNavController.toVideoPlayer(fileInfo.getFileUri())
-                return
-            }
-            else -> {}
-        }
         JumpOnPurposeMarkHolder.isJumpOnPurpose.value = true
         scope.launch(Dispatchers.Main) {
             val timeoutJob = scope.launch(Dispatchers.Main) {
@@ -80,6 +65,21 @@ class AlbumItemLauncher(
     override suspend fun launch(albumItemRelation: AlbumItemRelation) {
         val fileName = albumItemRelation.albumItem.itemName
         val fileInfo = albumItemRelation.fileInfo
+        when(fileInfo.fileType) {
+            FileType.HTML -> {
+                mainNavController.toWebView(fileInfo to fileInfo.getFileUri())
+                return
+            }
+            FileType.IMAGE -> {
+                mainNavController.toImageViewer(albumItemRelation)
+                return
+            }
+            FileType.VIDEO -> {
+                mainNavController.toVideoPlayer(albumItemRelation)
+                return
+            }
+            else -> {}
+        }
         launch(fileName, fileInfo)
     }
 }
