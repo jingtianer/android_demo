@@ -105,24 +105,29 @@ class GalleryStateHolder(val album: IndexedValue<Album>, val currentSelectedAlbu
         gallerySearchWord = searchWord
     }
 
-    suspend fun updateFilterList() {
-        withContext(Dispatchers.Default) {
-            val labelFilterCheckedInfo = labelFilterCheckedInfo
-            val filteredList = mutableListOf<AlbumItemRelation>()
-            for (item in itemList) {
-                val labelCheck = labelFilterCheckedInfo.isNullOrEmpty() || item.labelInfos.map { it.label }.toSet().let {
-                    if (filterConfig.value.labelOr.value) {
-                        it.intersect(labelFilterCheckedInfo.keys).isNotEmpty()
-                    } else {
+    fun AlbumItemRelation.filter(): Boolean {
+        val item = this
+        val labelFilterCheckedInfo = labelFilterCheckedInfo
+        val labelCheck = labelFilterCheckedInfo.isNullOrEmpty() || item.labelInfos.map { it.label }.toSet().let {
+            if (filterConfig.value.labelOr.value) {
+                it.intersect(labelFilterCheckedInfo.keys).isNotEmpty()
+            } else {
 //                        logD("updateFilterList") {
 //                            "checked: ${labelFilterCheckedInfo.keys.toTypedArray().contentDeepToString()}, it = ${it.toTypedArray().contentDeepToString()} minus=${labelFilterCheckedInfo.keys.minus(it)}"
 //                        }
-                        labelFilterCheckedInfo.keys.minus(it).isEmpty()
-                    }
-                }
-                val fileTypeCheck = fileTypeCheckState.isEmpty() || fileTypeCheckState.get(item.fileInfo.fileType.typeName) == true
-                val itemRankCheck = itemRankTypeCheckState.isEmpty() || itemRankTypeCheckState.get(item.albumItem.rank.name) == true
-                if (labelCheck && fileTypeCheck && itemRankCheck) {
+                labelFilterCheckedInfo.keys.minus(it).isEmpty()
+            }
+        }
+        val fileTypeCheck = fileTypeCheckState.isEmpty() || fileTypeCheckState.get(item.fileInfo.fileType.typeName) == true
+        val itemRankCheck = itemRankTypeCheckState.isEmpty() || itemRankTypeCheckState.get(item.albumItem.rank.name) == true
+        return labelCheck && fileTypeCheck && itemRankCheck
+    }
+
+    suspend fun updateFilterList() {
+        withContext(Dispatchers.Default) {
+            val filteredList = mutableListOf<AlbumItemRelation>()
+            for (item in itemList) {
+                if (item.filter()) {
                     filteredList.add(item)
                 }
             }

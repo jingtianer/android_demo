@@ -19,6 +19,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -43,6 +44,7 @@ import kotlinx.io.buffered
 import kotlinx.io.readByteArray
 
 class ImagePlayerState {
+    var isLoading by mutableStateOf(true)
     var bytes by mutableStateOf<ByteArray?>(null)
     var showMask by mutableStateOf(false)
     var maskVisible by mutableStateOf(false)
@@ -80,9 +82,12 @@ fun ImagePlayer(
     with(state) {
         ToggleMask()
         LaunchedEffect(uri) {
+            isLoading = true
             bytes = withContext(Dispatchers.IO) {
                 uri.fileInfo.getFileUri()?.inputStream()?.buffered()?.readByteArray()
             }
+            withFrameMillis {  }
+            isLoading = false
         }
         val (samplingDecoder) = rememberSamplingDecoder(bytes)
         val scope = rememberCoroutineScope()
@@ -91,10 +96,7 @@ fun ImagePlayer(
                 contentSize = samplingDecoder.intrinsicSize
             )
             Box(
-                modifier = modifier.background(Color.Black)
-                    .clickable(interactionSource = null, indication = null) {
-                        showMask = !showMask
-                    }) {
+                modifier = modifier.background(Color.Black)) {
                 ImageViewer(
                     modifier = Modifier.fillMaxSize(),
                     model = samplingDecoder,
@@ -117,6 +119,8 @@ fun ImagePlayer(
                         .pointerInput(Unit) {
                             detectTapGestures(onLongPress = {
                                 onEditRequest()
+                            }, onTap = {
+                                showMask != showMask
                             })
                         }
                     ) {

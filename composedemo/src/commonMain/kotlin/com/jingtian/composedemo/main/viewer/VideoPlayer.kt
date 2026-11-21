@@ -120,11 +120,12 @@ fun VideoPlayer(
         }
         LaunchedEffect(uri) {
             withContext(Dispatchers.Main) {
-                val platformFile = uri.fileInfo.getFileUri()?.platformFile() ?: return@withContext
+                isLoading = true
+                val platformFile = withContext(Dispatchers.IO) {
+                    uri.fileInfo.getFileUri()?.platformFile()
+                } ?: return@withContext
                 playerState.openFile(
-                    withContext(Dispatchers.IO) {
-                        platformFile
-                    }, initializeplayerState = if (initialPlaying) {
+                    platformFile, initializeplayerState = if (initialPlaying) {
                         InitialPlayerState.PLAY
                     } else {
                         InitialPlayerState.PAUSE
@@ -185,7 +186,10 @@ fun VideoPlayer(
                     .pointerInput(Unit) {
                         detectTapGestures(onLongPress = {
                             onEditRequest()
-                        })
+                        },
+                            onTap = {
+                                toggleMask()
+                            })
                     }) {
                     AppScrim(alpha = 0.8f)
                     Icon(

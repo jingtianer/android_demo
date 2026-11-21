@@ -590,7 +590,8 @@ private fun MainState.Main(
                                     val totalLabelList = it.totalLabelList
                                     val album = it.album
                                     val itemList = it.itemList
-                                    Feed(albumItemList = itemList, album = album.value, totalLabelList = totalLabelList)
+                                    // 不要在feed里改filter
+                                    Feed(albumItemList = itemList, album = album.value, totalLabelList = totalLabelList, filter = { with(it) { filter() } })
                                 }
                             }
                         }

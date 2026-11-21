@@ -28,17 +28,17 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class FeedState(val albumList: List<AlbumItemRelation>, val album: Album, val totalLabelList: List<String>) {
+class FeedState(val albumList: List<AlbumItemRelation>, val album: Album, val totalLabelList: List<String>, val filter: AlbumItemRelation.() -> Boolean) {
     // todo: fix albumList顺序变，会导致VerticalPager顺序变
-    val shuffleIndex = IntArray(albumList.size) { it }.filter { albumList[it].fileInfo.fileType == FileType.VIDEO || albumList[it].fileInfo.fileType == FileType.IMAGE }.shuffled()
+    val shuffleIndex = IntArray(albumList.size) { it }.filter { albumList[it].filter() && (albumList[it].fileInfo.fileType == FileType.VIDEO || albumList[it].fileInfo.fileType == FileType.IMAGE) }.shuffled()
     val pagerState = PagerState(0) {
         shuffleIndex.size
     }
 }
 
 @Composable
-fun Feed(albumItemList: List<AlbumItemRelation>, album: Album, totalLabelList: List<String>) {
-    val feedState = remember(albumItemList, album, totalLabelList) { FeedState(albumItemList, album, totalLabelList) }
+fun Feed(albumItemList: List<AlbumItemRelation>, album: Album, totalLabelList: List<String>, filter: AlbumItemRelation.() -> Boolean) {
+    val feedState = remember(albumItemList, album, totalLabelList, filter) { FeedState(albumItemList, album, totalLabelList, filter) }
     val scope = rememberCoroutineScope()
     with(feedState) {
         VerticalPager(
@@ -75,8 +75,8 @@ fun Feed(albumItemList: List<AlbumItemRelation>, album: Album, totalLabelList: L
 fun FeedState.ImageFeed(albumItemRelation: AlbumItemRelation, isSelected: Boolean, onPlayFinish: () -> Unit) {
     val imagePlayerState = rememberImagePlayerState()
     var isEditing by remember { mutableStateOf(false) }
-    LaunchedEffect(isSelected, imagePlayerState.maskVisible, isEditing) {
-        if (!imagePlayerState.maskVisible && isSelected && !isEditing) {
+    LaunchedEffect(isSelected, imagePlayerState.maskVisible, isEditing, imagePlayerState.isLoading) {
+        if (!imagePlayerState.maskVisible && isSelected && !isEditing && !imagePlayerState.isLoading) {
             delay(10000L)
             onPlayFinish()
         }
