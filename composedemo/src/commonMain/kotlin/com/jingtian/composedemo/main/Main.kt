@@ -89,8 +89,10 @@ import com.jingtian.composedemo.main.route.ImageViewer
 import com.jingtian.composedemo.main.route.LocalRouterController
 import com.jingtian.composedemo.main.route.MainRouterController
 import com.jingtian.composedemo.main.route.Settings
+import com.jingtian.composedemo.main.route.VideoPlayer
 import com.jingtian.composedemo.main.route.WebView
 import com.jingtian.composedemo.main.settings.SettingsPage
+import com.jingtian.composedemo.main.viewer.VideoPlayer
 import com.jingtian.composedemo.main.widget.BackEventCompat
 import com.jingtian.composedemo.main.widget.EnterTransitionCreator
 import com.jingtian.composedemo.main.widget.ExitTransitionCreator
@@ -387,6 +389,7 @@ class MainState(
 
     var currentWebViewFile by mutableStateOf<Pair<FileInfo?, MultiplatformFile?>>(null to null)
     var currentImageViewer by mutableStateOf<MultiplatformFile?>(null)
+    var currentVideoPlayer by mutableStateOf<MultiplatformFile?>(null)
 
     fun updateSelectedValue(list: List<Album>): IndexedValue<Album>? {
         val currentSelectedAlbum = currentSelectedAlbum
@@ -562,6 +565,18 @@ private fun MainState.Main(
                                             .clipDeviceRoundCorner()
                                             .appBackground(),
                                         currentImageViewer
+                                    )
+                                }
+                            }
+
+                            composable(VideoPlayer) {
+                                val currentVideoPlayer = currentVideoPlayer
+                                if (currentVideoPlayer != null) {
+                                    VideoPlayer(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .clipDeviceRoundCorner(),
+                                        uri = currentVideoPlayer
                                     )
                                 }
                             }

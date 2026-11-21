@@ -54,6 +54,10 @@ class AlbumItemLauncher(val scope: CoroutineScope, val mainNavController: IRoute
                 mainNavController.toImageViewer(fileInfo.getFileUri())
                 return
             }
+            FileType.VIDEO -> {
+                mainNavController.toVideoPlayer(fileInfo.getFileUri())
+                return
+            }
             else -> {
 
             }

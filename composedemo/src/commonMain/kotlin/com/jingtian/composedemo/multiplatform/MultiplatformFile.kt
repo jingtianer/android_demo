@@ -2,6 +2,7 @@ package com.jingtian.composedemo.multiplatform
 
 import androidx.compose.ui.graphics.ImageBitmap
 import com.jingtian.composedemo.dao.model.FileType
+import io.github.vinceglb.filekit.PlatformFile
 import kotlinx.io.RawSource
 import kotlinx.io.Source
 import kotlinx.io.buffered
@@ -32,6 +33,10 @@ interface MultiplatformFile {
     suspend fun file(): Path?
 
     suspend fun path(): String
+
+    suspend fun platformFile(): PlatformFile {
+        return PlatformFile(file() ?: Path(path()))
+    }
 
     fun onDelete() {}
 

@@ -479,12 +479,21 @@ private fun SimpleNavHostController.SimpleNavHostControllerImpl.SimpleNavHost(
         } ?: return@AnimatedContent
         if (state != null && state == secondLastBackStackEntry && transitionState.targetState != transitionState.currentState) {
             val targetIsSelf = transitionState.targetState == state
-            Canvas(Modifier.fillMaxSize()) {
-                drawRect(
-                    scrimColor,
-                    alpha = if (targetIsSelf) 1 - transitionState.fraction else transitionState.fraction
-                )
-            }
+            AppScrim(modifier = Modifier.fillMaxSize(), alpha = if (targetIsSelf) 1 - transitionState.fraction else transitionState.fraction)
         }
+    }
+}
+
+@Composable
+fun AppScrim(
+    modifier: Modifier = Modifier.fillMaxSize(),
+    scrimColor: Color = DrawerDefaults.scrimColor,
+    alpha: Float = 0.4f,
+) {
+    Canvas(modifier) {
+        drawRect(
+            scrimColor,
+            alpha = alpha
+        )
     }
 }

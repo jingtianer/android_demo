@@ -31,6 +31,7 @@ import java.io.IOException
 import java.io.InputStream
 import java.nio.file.Files
 import java.nio.file.Paths
+import io.github.vinceglb.filekit.PlatformFile
 
 open class MultiplatformFileImpl(private val uri: Uri) : MultiplatformFile {
     companion object {
@@ -309,6 +310,10 @@ open class MultiplatformFileImpl(private val uri: Uri) : MultiplatformFile {
 
     override suspend fun path(): String {
         return path
+    }
+
+    override suspend fun platformFile(): io.github.vinceglb.filekit.PlatformFile {
+        return io.github.vinceglb.filekit.PlatformFile(uri.toString())
     }
 
 //    override fun toString(): String {

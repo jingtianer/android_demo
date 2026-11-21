@@ -18,7 +18,7 @@ import java.io.File
 import java.nio.file.Files
 import kotlin.io.path.exists
 
-class AlbumItemLauncher(val mainRouterController: IRouterController) : IAlbumItemLauncher {
+class AlbumItemLauncher(val mainNavController: IRouterController) : IAlbumItemLauncher {
     companion object {
         private val linkDir = File(globalWorkDir, "tmp/links")
         init {
@@ -82,6 +82,10 @@ class AlbumItemLauncher(val mainRouterController: IRouterController) : IAlbumIte
 //            }
             FileType.IMAGE -> {
                 mainNavController.toImageViewer(fileInfo.getFileUri())
+                return
+            }
+            FileType.VIDEO -> {
+                mainNavController.toVideoPlayer(fileInfo.getFileUri())
                 return
             }
             else-> {

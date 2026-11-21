@@ -46,6 +46,10 @@ class AlbumItemLauncher(
                 mainNavController.toImageViewer(fileInfo.getFileUri())
                 return
             }
+            FileType.VIDEO -> {
+                mainNavController.toVideoPlayer(fileInfo.getFileUri())
+                return
+            }
             else -> {}
         }
         JumpOnPurposeMarkHolder.isJumpOnPurpose.value = true

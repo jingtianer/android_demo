@@ -100,15 +100,15 @@ kotlin {
                 implementation(compose.components.resources)
 
                 // 协程核心
-                implementation(libs.kotlinx.coroutines.core.get().toString())
+                implementation(libs.kotlinx.coroutines.core)
 
                 // 数据库 - Room
-                implementation(libs.androidx.room.runtime.get().toString())
+                implementation(libs.androidx.room.runtime)
 
                 // 生命周期
-                implementation(libs.androidx.lifecycle.viewmodel.core.get().toString())
-                implementation(libs.androidx.lifecycle.viewmodel.compose.get().toString())
-                implementation(libs.androidx.lifecycle.runtime.compose.get().toString())
+                implementation(libs.androidx.lifecycle.viewmodel.core)
+                implementation(libs.androidx.lifecycle.viewmodel.compose)
+                implementation(libs.androidx.lifecycle.runtime.compose)
 
                 // 工具类
                 implementation(libs.kotlinx.serialization.json)
@@ -123,7 +123,7 @@ kotlin {
                 implementation("com.jvziyaoyao.scale:image-viewer:$version")
                 // 大型图片支持（可选）
                 implementation("com.jvziyaoyao.scale:sampling-decoder:$version")
-
+                implementation(libs.composemediaplayer.video)
                 // 尝试了 precompose 并不是compose预加载
 //                api("moe.tlaster:precompose:1.6.2")
 //
@@ -151,7 +151,7 @@ kotlin {
                 implementation(libs.androidx.core.ktx)
                 implementation(libs.androidx.appcompat)
                 implementation(compose.uiTooling)
-                implementation(libs.androidx.compose.ui.tooling.preview.get().toString())
+                implementation(libs.androidx.compose.ui.tooling.preview)
 
                 // Android 协程
                 implementation(libs.kotlinx.coroutines.android)
@@ -190,23 +190,23 @@ kotlin {
                 implementation(compose.desktop.currentOs)
 
                 // 注解
-                implementation(libs.annotations.get().toString())
+                implementation(libs.annotations)
 
                 // 工具类
-                implementation(libs.androidx.sqlite.bundled.get().toString())
+                implementation(libs.androidx.sqlite.bundled)
 
                 // 数据库 - Room (仅声明运行时，编译器通过 KSP 处理)
-                implementation(libs.androidx.room.runtime.get().toString())
-                implementation(libs.androidx.room.ktx.get().toString())
+                implementation(libs.androidx.room.runtime)
+                implementation(libs.androidx.room.ktx)
 
                 // Desktop 协程
-                implementation(libs.kotlinx.coroutines.swing.get().toString())
-                implementation(libs.kotlinx.coroutines.core.get().toString())
+                implementation(libs.kotlinx.coroutines.swing)
+                implementation(libs.kotlinx.coroutines.core)
 
                 // 多媒体处理
-                implementation(libs.javacv.get().toString())
-                implementation(libs.ffmpeg.platform.get().toString())
-                implementation(libs.jaudiotagger.get().toString())
+                implementation(libs.javacv)
+                implementation(libs.ffmpeg.platform)
+                implementation(libs.jaudiotagger)
 
                 implementation(libs.jsch)
                 implementation(libs.jzlib)
