@@ -93,12 +93,13 @@ fun VideoPlayer(
         )
         val sliderInteractionSource = remember { MutableInteractionSource() }
         LaunchedEffect(Unit) {
-            sliderInteractionSource.interactions.collect { action->
-                when(action) {
+            sliderInteractionSource.interactions.collect { action ->
+                when (action) {
                     is DragInteraction.Start -> {
                         thumbnailPressed = true
                         playerState.pause()
                     }
+
                     else -> {
                         thumbnailPressed = false
                         playerState.play()
@@ -120,13 +121,15 @@ fun VideoPlayer(
         LaunchedEffect(uri) {
             withContext(Dispatchers.Main) {
                 val platformFile = uri.fileInfo.getFileUri()?.platformFile() ?: return@withContext
-                playerState.openFile(withContext(Dispatchers.IO) {
-                    platformFile
-                }, initializeplayerState = if (initialPlaying) {
-                    InitialPlayerState.PLAY
-                } else {
-                    InitialPlayerState.PAUSE
-                })
+                playerState.openFile(
+                    withContext(Dispatchers.IO) {
+                        platformFile
+                    }, initializeplayerState = if (initialPlaying) {
+                        InitialPlayerState.PLAY
+                    } else {
+                        InitialPlayerState.PAUSE
+                    }
+                )
                 withFrameMillis { }
                 isLoading = false
             }
@@ -163,25 +166,27 @@ fun VideoPlayer(
                 playerState.playbackSpeed = 1f
             }
         }
-        Box(
-            modifier = modifier.background(color = Color.Black).pointerInput(Unit) {
-                detectTapGestures(onPress = {
-                    isPressed = true
-                }, onTap = {
-                    isPressed = false
-                })
-            }) {
+        Box(modifier = modifier.background(color = Color.Black)) {
             VideoPlayerSurface(
                 playerState = playerState,
                 modifier = Modifier.fillMaxSize(),
-            )
+            ) {
+                Box(modifier = Modifier.fillMaxSize().pointerInput(Unit) {
+                    detectTapGestures(onPress = {
+                        isPressed = true
+                    }, onTap = {
+                        isPressed = false
+                    })
+                })
+            }
 
             if (maskVisible) {
-                Box(modifier.fillMaxSize().graphicsLayer { alpha = showMaskAnim.value }.pointerInput(Unit) {
-                    detectTapGestures(onLongPress = {
-                        onEditRequest()
-                    })
-                }) {
+                Box(modifier.fillMaxSize().graphicsLayer { alpha = showMaskAnim.value }
+                    .pointerInput(Unit) {
+                        detectTapGestures(onLongPress = {
+                            onEditRequest()
+                        })
+                    }) {
                     AppScrim(alpha = 0.8f)
                     Icon(
                         painter = getPainter(DrawableIcon.DrawableVideoIcon),
