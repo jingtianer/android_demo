@@ -52,6 +52,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.PointerInputEventHandler
+import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.layout.onSizeChanged
@@ -103,6 +104,7 @@ import com.jingtian.composedemo.main.widget.ISimpleNavSeekHandler
 import com.jingtian.composedemo.main.widget.NavEntry
 import com.jingtian.composedemo.main.widget.SimpleNavHost
 import com.jingtian.composedemo.main.widget.SimpleNavHostController
+import com.jingtian.composedemo.main.widget.SimpleNavHostController.SimpleNavHostControllerImpl.EmptySimpleNavSeekHandler
 import com.jingtian.composedemo.main.widget.SizeTransitionCreator
 import com.jingtian.composedemo.main.widget.rememberSimpleNavHostController
 import com.jingtian.composedemo.multiplatform.LowMemorySideEffect
@@ -678,8 +680,11 @@ class DrawerGestureState(
     private var isDragInSafeArea: Boolean = false
     private val velocityTracker = VelocityTracker()
 
-    private fun ensureCurrentSeekHandler(): ISimpleNavSeekHandler {
+    private fun PointerInputScope.ensureCurrentSeekHandler(): ISimpleNavSeekHandler {
         seekHandler?.let { return it }
+        if (naviController.currentBackStackEntry == Feed && firstEventOffsetY > size.height * 0.5) {
+            return EmptySimpleNavSeekHandler(Feed)
+        }
         isPush = naviController.currentBackStackEntry == Gallery
         val target = if (isPush) {
             if (seekProgress <= 0) {

@@ -237,7 +237,7 @@ class SimpleNavHostController(private val impl: SimpleNavHostControllerImpl = Si
             return handler
         }
 
-        private class EmptySimpleNavSeekHandler(override val target: NavRouter) :
+        class EmptySimpleNavSeekHandler(override val target: NavRouter) :
             ISimpleNavSeekHandler {
             override fun init() = Unit
             override fun seekTo(progress: Float, swipeEdge: Int) = Unit
