@@ -96,6 +96,7 @@ import com.jingtian.composedemo.main.route.VideoPlayer
 import com.jingtian.composedemo.main.route.WebView
 import com.jingtian.composedemo.main.settings.SettingsPage
 import com.jingtian.composedemo.main.viewer.Feed
+import com.jingtian.composedemo.main.viewer.FlowFeed
 import com.jingtian.composedemo.main.viewer.VideoPlayer
 import com.jingtian.composedemo.main.widget.BackEventCompat
 import com.jingtian.composedemo.main.widget.EnterTransitionCreator
@@ -590,7 +591,7 @@ private fun MainState.Main(
 
                             composable(Feed) {
                                 galleryStateHolder?.let {
-                                    Feed(itemList = it.filteredItemListState, album = it.album.value, totalLabelList = it.totalLabelListState)
+                                    FlowFeed(itemList = it.filteredItemListState, album = it.album.value, totalLabelList = it.totalLabelListState)
                                 }
                             }
                         }

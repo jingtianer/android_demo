@@ -36,6 +36,7 @@ import com.jingtian.composedemo.base.resources.DrawableIcon
 import com.jingtian.composedemo.base.resources.getPainter
 import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
 import com.jingtian.composedemo.main.widget.AppScrim
+import com.jingtian.composedemo.multiplatform.MultiplatformFile
 import com.jingtian.composedemo.multiplatform.logD
 import com.jingtian.composedemo.ui.theme.DarkWrapper
 import com.jingtian.composedemo.viewmodels.albumViewModel
@@ -88,6 +89,27 @@ fun VideoPlayer(
     uri: AlbumItemRelation,
     onEditRequest: () -> Unit = {},
 ) {
+    var fileUri: MultiplatformFile? by remember { mutableStateOf(null) }
+    LaunchedEffect(uri) {
+        fileUri = uri.fileInfo.getFileUri()
+    }
+    val finalFileUri = fileUri?: return
+    VideoPlayer(uiVideoPlayerState, modifier, finalFileUri, onEditRequest) {
+        DarkWrapper {
+            FileExtraInfoView(albumItemRelation = uri)
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun VideoPlayer(
+    uiVideoPlayerState: UIVideoPlayerState = rememberUIVideoPlayerState(),
+    modifier: Modifier = Modifier,
+    uri: MultiplatformFile,
+    onEditRequest: () -> Unit = {},
+    maskContent: @Composable () -> Unit = {},
+) {
     uiVideoPlayerState.apply {
         val sliderState = rememberSliderState(
             value = playerState.sliderPos,
@@ -125,7 +147,7 @@ fun VideoPlayer(
                 isLoading = true
             }
             val platformFile = withContext(Dispatchers.IO) {
-                uri.fileInfo.getFileUri()?.platformFile()
+                uri.platformFile()
             } ?: return@LaunchedEffect
 //            logD("jingtian") {
 //                "VideoPlayer: platformFile=$platformFile"
@@ -216,9 +238,7 @@ fun VideoPlayer(
                                 WindowInsets.systemGestures
                             ).padding(horizontal = 16.dp)
                     ) {
-                        DarkWrapper {
-                            FileExtraInfoView(albumItemRelation = uri)
-                        }
+                        maskContent()
                         Text(
                             text = "${playerState.positionText} / ${playerState.durationText}",
                             modifier = Modifier.align(Alignment.CenterHorizontally),

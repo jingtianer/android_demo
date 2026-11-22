@@ -30,6 +30,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
 import com.jingtian.composedemo.main.widget.AppScrim
+import com.jingtian.composedemo.multiplatform.MultiplatformFile
 import com.jingtian.composedemo.multiplatform.logD
 import com.jingtian.composedemo.ui.theme.DarkWrapper
 import com.jingtian.composedemo.viewmodels.albumViewModel
@@ -83,6 +84,25 @@ fun ImagePlayer(
     uri: AlbumItemRelation,
     onEditRequest: () -> Unit = {},
 ) {
+    var fileUri: MultiplatformFile? by remember { mutableStateOf(null) }
+    LaunchedEffect(uri) {
+        fileUri = uri.fileInfo.getFileUri()
+    }
+    val finalFileUri = fileUri?: return
+    ImagePlayer(state, modifier, finalFileUri, onEditRequest) {
+        DarkWrapper {
+            FileExtraInfoView(albumItemRelation = uri)
+        }
+    }
+}
+@Composable
+fun ImagePlayer(
+    state: ImagePlayerState = rememberImagePlayerState(),
+    modifier: Modifier,
+    uri: MultiplatformFile,
+    onEditRequest: () -> Unit = {},
+    maskContent: @Composable () -> Unit = {},
+) {
     with(state) {
         ToggleMask()
         LaunchedEffect(uri) {
@@ -91,12 +111,12 @@ fun ImagePlayer(
 //                "ImagePlayer: itemName=${uri.albumItem.itemName}"
 //            }
             bytes = withContext(Dispatchers.IO) {
-                val fileUri = uri.fileInfo.getFileUri()
+                val fileUri = uri
 //                val file = fileUri?.file()
 //                logD("jingtian") {
 //                    "ImagePlayer: file=${file}"
 //                }
-                fileUri?.inputStream()?.buffered()?.readByteArray()
+                fileUri.inputStream()?.buffered()?.readByteArray()
             }
             withFrameMillis {  }
             isLoading = false
@@ -144,9 +164,7 @@ fun ImagePlayer(
                                     WindowInsets.systemGestures
                                 ).padding(horizontal = 16.dp)
                         ) {
-                            DarkWrapper {
-                                FileExtraInfoView(albumItemRelation = uri)
-                            }
+                            maskContent()
                         }
                     }
                 }
