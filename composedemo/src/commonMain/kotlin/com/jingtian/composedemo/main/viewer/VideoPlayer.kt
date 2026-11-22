@@ -3,7 +3,10 @@ package com.jingtian.composedemo.main.viewer
 import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
@@ -31,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.DefaultLifecycleObserver
@@ -51,6 +55,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import io.github.kdroidfilter.composemediaplayer.rememberVideoPlayerState
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.delay
 
 class UIVideoPlayerState(val initialPlaying: Boolean, internal val playerState: VideoPlayerState) {
@@ -222,11 +227,15 @@ fun VideoPlayer(
                 modifier = Modifier.fillMaxSize(),
             ) {
                 Box(modifier = Modifier.fillMaxSize().pointerInput(Unit) {
-                    detectTapGestures(onPress = {
+                    awaitEachGesture {
+                        awaitFirstDown()
                         isPressed = true
-                    }, onTap = {
-                        isPressed = false
-                    })
+                        try {
+                            waitForUpOrCancellation()
+                        } finally {
+                            isPressed = false
+                        }
+                    }
                 })
             }
 

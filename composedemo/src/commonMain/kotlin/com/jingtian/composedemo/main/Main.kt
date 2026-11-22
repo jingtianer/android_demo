@@ -682,7 +682,7 @@ class DrawerGestureState(
 
     private fun PointerInputScope.ensureCurrentSeekHandler(): ISimpleNavSeekHandler {
         seekHandler?.let { return it }
-        if (naviController.currentBackStackEntry == Feed && firstEventOffsetY > size.height * 0.5) {
+        if ((naviController.currentBackStackEntry == Feed || naviController.currentBackStackEntry == VideoPlayer) && firstEventOffsetY > size.height * 0.5) {
             return EmptySimpleNavSeekHandler(Feed)
         }
         isPush = naviController.currentBackStackEntry == Gallery
