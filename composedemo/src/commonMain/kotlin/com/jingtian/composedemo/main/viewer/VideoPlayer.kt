@@ -200,8 +200,8 @@ fun VideoPlayer(
                     }) {
                     AppScrim(alpha = 0.8f)
                     Icon(
-                        painter = getPainter(DrawableIcon.DrawableVideoIcon),
-                        modifier = Modifier.fillMaxSize(0.4f).align(
+                        painter = if (playerState.isPlaying) getPainter(DrawableIcon.DrawablePause) else getPainter(DrawableIcon.DrawablePlaying),
+                        modifier = Modifier.fillMaxSize(0.35f).align(
                             Alignment.Center
                         ).clickable(interactionSource = null, indication = null) {
                             togglePlay()

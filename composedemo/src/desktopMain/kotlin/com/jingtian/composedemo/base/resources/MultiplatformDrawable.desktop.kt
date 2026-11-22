@@ -8,6 +8,12 @@ import org.jetbrains.compose.resources.painterResource
 import demoapp.composedemo.generated.resources.*
 
 @Composable
+actual fun getPauseIcon(): Painter = painterResource(Res.drawable.pause)
+
+@Composable
+actual fun getPlayingIcon(): Painter = painterResource(Res.drawable.play)
+
+@Composable
 actual fun getScaleIcon(): Painter = painterResource(Res.drawable.scale)
 
 @Composable
