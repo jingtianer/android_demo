@@ -18,10 +18,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -48,8 +50,8 @@ import kotlinx.io.readByteArray
 class ImagePlayerState {
     var isLoading by mutableStateOf(true)
     var bytes by mutableStateOf<ByteArray?>(null)
-    var showMask by mutableStateOf(false)
-    var maskVisible by mutableStateOf(false)
+    var showMask by mutableStateOf(true)
+    var maskVisible by mutableStateOf(true)
     val showMaskAnim = Animatable(initialValue = 0f)
 
     @Composable
@@ -130,7 +132,7 @@ fun ImagePlayer(
                             detectTapGestures(onLongPress = {
                                 onEditRequest()
                             }, onTap = {
-                                showMask != showMask
+                                showMask = !showMask
                             })
                         }
                     ) {

@@ -101,6 +101,11 @@ fun FeedState.ImageFeed(albumItemRelation: AlbumItemRelation, index: Int, onPlay
             onPlayFinish()
         }
     }
+    LaunchedEffect(Unit, isSelected, imagePlayerState.isLoading) {
+        if (isSelected && !imagePlayerState.isLoading) {
+            imagePlayerState.showMask = true
+        }
+    }
     ImagePlayer(state = imagePlayerState, modifier = Modifier.fillMaxSize(), uri = albumItemRelation) {
         isEditing = true
     }
@@ -120,6 +125,7 @@ fun FeedState.VideoFeed(albumItemRelation: AlbumItemRelation, index: Int, onPlay
     LaunchedEffect(Unit, isSelected, playerState.isLoading) {
         if (isSelected && !playerState.isLoading) {
             playerState.playerState.play()
+            playerState.showMask = true
         } else {
             playerState.playerState.pause()
         }
