@@ -9,6 +9,7 @@ import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
@@ -23,6 +24,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.max
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.jingtian.composedemo.dao.model.Album
 import com.jingtian.composedemo.dao.model.FileType
 import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
@@ -321,9 +325,10 @@ fun FlowFeedState.ImageFeed(flowFile: FlowFile, index: Int, onPlayFinish: suspen
 fun FlowFeedState.VideoFeed(flowFile: FlowFile, index: Int, onPlayFinish: suspend () -> Unit) {
     val playerState = rememberUIVideoPlayerState(initialPlaying = false)
     var isEditing by remember { mutableStateOf(false) }
+    var isAlive by remember { mutableStateOf(true) }
     val isSelected = index == pagerState.currentPage
-    LaunchedEffect(Unit, isSelected, playerState.isLoading) {
-        if (isSelected && !playerState.isLoading) {
+    LaunchedEffect(Unit, isSelected, playerState.isLoading, isAlive) {
+        if (isSelected && !playerState.isLoading && isAlive) {
             playerState.playerState.play()
             playerState.showMask = true
         } else {
@@ -339,6 +344,22 @@ fun FlowFeedState.VideoFeed(flowFile: FlowFile, index: Int, onPlayFinish: suspen
         if (isSelected && !isEditing && playerState.playerState.isPlaying && !playerState.maskVisible && playerState.playerState.sliderPos >= 1000f) {
             onPlayFinish()
             playerState.playerState.stop()
+        }
+    }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(Unit) {
+        val observer = object : DefaultLifecycleObserver {
+            override fun onPause(owner: LifecycleOwner) {
+                isAlive = false
+            }
+
+            override fun onResume(owner: LifecycleOwner) {
+                isAlive = true
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
         }
     }
     VideoPlayer(
