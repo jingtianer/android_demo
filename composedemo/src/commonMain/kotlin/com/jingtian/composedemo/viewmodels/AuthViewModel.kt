@@ -132,10 +132,8 @@ abstract class AuthViewModel : SingletonViewModel(), DefaultLifecycleObserver {
         val timeCost = !(lastOnStopAuthTimeStamp.value != -1L && Clock.System.now().toEpochMilliseconds() - lastOnStopAuthTimeStamp.value <= MIN_ON_STOP_DO_AUTH_TIME_GAP)
         val shouldDoAuth = (isAppLockedSnapshot || timeCost) && !isJumpOnPurpose
         if (!shouldDoAuth) {
-            if (!isAppLockedSnapshot && !timeCost) {
-                isVisible.value = true
-                lockedState.value = false
-            }
+            isVisible.value = true
+            lockedState.value = false
             onAuthResult(AuthSkip)
             return
         }
