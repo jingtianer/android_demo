@@ -95,7 +95,6 @@ import com.jingtian.composedemo.main.route.Settings
 import com.jingtian.composedemo.main.route.VideoPlayer
 import com.jingtian.composedemo.main.route.WebView
 import com.jingtian.composedemo.main.settings.SettingsPage
-import com.jingtian.composedemo.main.viewer.Feed
 import com.jingtian.composedemo.main.viewer.FlowFeed
 import com.jingtian.composedemo.main.viewer.VideoPlayer
 import com.jingtian.composedemo.main.widget.BackEventCompat
