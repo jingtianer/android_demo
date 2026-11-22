@@ -18,6 +18,7 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.jingtian.composedemo.main.route.LocalRouterController
 import com.jingtian.composedemo.utils.AppTheme
 import com.jingtian.composedemo.utils.BackgroundConfig
 import com.jingtian.composedemo.utils.UserStorage
@@ -156,7 +157,14 @@ val goldenRatio = 2f / (sqrt(5f) + 1)
 expect fun rememberDeviceCornerRadii(): Shape
 
 @Composable
-fun Modifier.clipDeviceRoundCorner(): Modifier = this.clip(rememberDeviceCornerRadii())
+fun Modifier.clipDeviceRoundCorner(): Modifier {
+    val animating by LocalRouterController.current.isAnimating()
+    return if (animating) {
+        this.clip(rememberDeviceCornerRadii())
+    } else {
+        this
+    }
+}
 
 @Composable
 fun Modifier.appBackgroundV2(heightScale: Float = 1 - goldenRatio): Modifier {
@@ -183,7 +191,7 @@ fun Modifier.appBackgroundV2(heightScale: Float = 1 - goldenRatio): Modifier {
 }
 
 @Composable
-fun Modifier.appBackground() = this.clipDeviceRoundCorner().appBackgroundV2(heightScale = goldenRatio)
+fun Modifier.appBackground() = this.appBackgroundV2(heightScale = goldenRatio)
 @Composable
 fun Modifier.drawerBackground() = this.appBackgroundV2(heightScale = 1f)
 @Composable

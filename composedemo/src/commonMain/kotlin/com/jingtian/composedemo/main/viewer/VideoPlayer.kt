@@ -189,7 +189,7 @@ fun VideoPlayer(
             }
 
             if (maskVisible) {
-                Box(modifier.fillMaxSize().graphicsLayer { alpha = showMaskAnim.value }
+                Box(Modifier.fillMaxSize().graphicsLayer { alpha = showMaskAnim.value }
                     .pointerInput(Unit) {
                         detectTapGestures(onLongPress = {
                             onEditRequest()

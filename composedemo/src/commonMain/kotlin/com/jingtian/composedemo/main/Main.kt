@@ -640,7 +640,7 @@ private fun MainState.Drawer() {
 fun MainState.WebView(entry: NavEntry) {
     var snapShotTaker: suspend () -> Unit by remember { mutableStateOf({}) }
     CommonWebView(
-        modifier = Modifier.fillMaxSize().appBackground().windowInsetsPadding(
+        modifier = Modifier.fillMaxSize().clipDeviceRoundCorner().appBackground().windowInsetsPadding(
             WindowInsets.systemBars
         ), currentWebViewFile.second
     ) {

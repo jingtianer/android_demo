@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.DrawerDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -80,6 +82,7 @@ interface AbstractSimpleNavHostController {
     val willHandleBackEvents: Boolean
     var extraRenderEntry: NavRouter?
     var shouldHandleBack: Boolean
+    val isAnimating: State<Boolean>
     suspend fun navigateTo(router: NavRouter)
     suspend fun pop()
     fun seekHandler(router: NavRouter): ISimpleNavSeekHandler
@@ -142,6 +145,7 @@ class SimpleNavHostController(private val impl: SimpleNavHostControllerImpl = Si
         var finalSizeTransition by mutableStateOf<(AnimatedContentTransitionScope<NavRouter?>.() -> SizeTransform?)?>(
             null
         )
+        override val isAnimating: State<Boolean> = derivedStateOf { transitionState.fraction > 0 && transitionState.fraction < 1 }
 
         override var extraRenderEntry: NavRouter? by mutableStateOf(null)
 

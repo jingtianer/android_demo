@@ -173,6 +173,7 @@ fun Gallery(
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .clipDeviceRoundCorner()
                 .appBackground()
         )
         return
@@ -348,6 +349,7 @@ fun GalleryStateHolder.Gallery() {
     Box(
         Modifier
             .fillMaxSize()
+            .clipDeviceRoundCorner()
     ) {
 
         fun getScrollOffset(): Float {

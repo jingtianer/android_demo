@@ -1,6 +1,8 @@
 package com.jingtian.composedemo.main.route
 
+import androidx.compose.runtime.State
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.structuralEqualityPolicy
 import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
@@ -39,6 +41,8 @@ interface IRouterController {
     suspend fun toImageViewer(file: AlbumItemRelation) = Unit
 
     suspend fun toVideoPlayer(file: AlbumItemRelation) = Unit
+
+    fun isAnimating(): State<Boolean> = mutableStateOf(false)
 }
 
 object EmptyRouterController: IRouterController {}
@@ -71,5 +75,9 @@ class MainRouterController(private val naviHost: SimpleNavHostController, val ma
     override suspend fun toVideoPlayer(file: AlbumItemRelation) {
         mainState.currentVideoPlayer = file
         naviHost.navigateTo(VideoPlayer)
+    }
+
+    override fun isAnimating(): State<Boolean> {
+        return naviHost.isAnimating
     }
 }

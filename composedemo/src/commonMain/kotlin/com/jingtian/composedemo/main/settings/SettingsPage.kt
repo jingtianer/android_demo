@@ -87,6 +87,7 @@ import com.jingtian.composedemo.ui.theme.LocalAppPalette
 import com.jingtian.composedemo.ui.theme.LocalDeviceRealDensity
 import com.jingtian.composedemo.ui.theme.appBackground
 import com.jingtian.composedemo.ui.theme.appBackgroundSlide
+import com.jingtian.composedemo.ui.theme.clipDeviceRoundCorner
 import com.jingtian.composedemo.utils.BackgroundColor
 import com.jingtian.composedemo.utils.BackgroundConfig
 import com.jingtian.composedemo.utils.UserStorage
@@ -99,7 +100,7 @@ import kotlin.math.roundToInt
 fun SettingsPage(navController: SimpleNavHostController) {
     SettingsPageState.Install(navController)
     CompositionLocalProvider(LocalDensity provides currentAppDensity) {
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(modifier = Modifier.fillMaxSize().clipDeviceRoundCorner()) {
             Box(
                 modifier = Modifier.fillMaxSize().globalVisual()
                     .appBackground()

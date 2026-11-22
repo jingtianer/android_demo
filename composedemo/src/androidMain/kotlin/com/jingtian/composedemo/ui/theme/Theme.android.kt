@@ -2,9 +2,12 @@ package com.jingtian.composedemo.ui.theme
 
 import android.os.Build
 import android.view.RoundedCorner
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
@@ -13,19 +16,16 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 actual fun rememberDeviceCornerRadii(): Shape {
-    val view = LocalView.current
-    val density = LocalDensity.current.density
-
-    return remember(density) {
+    val view = LocalActivity.current?.window?.decorView ?: LocalView.current
+    return remember {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
             return@remember RoundedCornerShape(0.dp)
         }
         val insets = view.rootWindowInsets ?: return@remember RoundedCornerShape(0.dp)
-
-        fun getRadius(pos: Int): Dp {
+        fun getRadius(pos: Int): Float {
             val rc: RoundedCorner? = insets.getRoundedCorner(pos)
             val px = rc?.radius ?: 0
-            return (px / density).dp
+            return px.toFloat()
         }
 
         RoundedCornerShape(
