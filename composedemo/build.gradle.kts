@@ -118,12 +118,12 @@ kotlin {
 
                 implementation(libs.haze)
 
-                val version = "1.1.1-beta.3"
                 // 图片浏览库
-                implementation("com.jvziyaoyao.scale:image-viewer:$version")
+                implementation(libs.image.viewer)
                 // 大型图片支持（可选）
-                implementation("com.jvziyaoyao.scale:sampling-decoder:$version")
+                implementation(libs.sampling.decoder)
                 implementation(libs.composemediaplayer.video)
+                implementation(libs.ui.backhandler)
                 // 尝试了 precompose 并不是compose预加载
 //                api("moe.tlaster:precompose:1.6.2")
 //
@@ -165,7 +165,6 @@ kotlin {
 
                 implementation(libs.androidx.biometric)
                 implementation(libs.atomicfu)
-                implementation(libs.ui.backhandler)
             }
         }
 

@@ -113,9 +113,7 @@ open class MultiplatformFileImpl(val realFile: File, val realExtension: String) 
         }
     override suspend fun inputStream(): RawSource = FileInputStream(realFile).asSource()
     override suspend fun imageThumbnail(scaleFactor: Int): ImageBitmap? {
-        return inputStream().use {
-            uriToImageBitmap(it, scaleFactor)
-        }
+        return uriToImageBitmap(file(), scaleFactor)
     }
     override suspend fun videoThumbnail(): ImageBitmap? = extractVideoFirstFrame(realFile)
     override suspend fun audioThumbnail(): ImageBitmap? = extractAudioCover(realFile)

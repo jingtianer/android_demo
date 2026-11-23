@@ -79,6 +79,8 @@ class SftpServerImpl : SftpServer {
     ): super(serverName, serverId, userName, port, ip, password, passwordIv, path)
     @kotlinx.serialization.Transient
     private var session: Session? = null
+    @kotlinx.serialization.Transient
+    private val connectLock = Any()
     private fun getSession(logger: (String, String)->Unit): Session? {
         val session = session
         if (session != null && session.isConnected) {
@@ -89,20 +91,36 @@ class SftpServerImpl : SftpServer {
             }
         }
     }
+
     fun connect(logger: (String, String) -> Unit): ChannelSftp? {
-        val session = getSession(logger) ?: return null
-        return runCatching {
-            val channel: com.jcraft.jsch.Channel = session.openChannel("sftp")
-            channel.connect()
-            logger("jingtian", "session连接成功")
-            val sftpChannel = channel as ChannelSftp
-            sftpChannel
-        }.getOrElse {
-            session.disconnect()
-            logger("jingtian", "session连接失败 $it")
-            null
+        var session = synchronized(connectLock) {
+            getSession(logger)
+        } ?: return null
+        try {
+            return connect(session, logger)
+        } catch (e: Exception) {
+            logger("connect", "失败: $e")
         }
+        session = synchronized(connectLock) {
+            this.session = null
+            getSession(logger)
+        } ?: return null
+        try {
+            return connect(session, logger)
+        } catch (e: Exception) {
+            logger("connect", "失败: $e")
+        }
+        return null
     }
+
+    private fun connect(session: Session, logger: (String, String) -> Unit): ChannelSftp? {
+        val channel: com.jcraft.jsch.Channel = session.openChannel("sftp")
+        channel.connect()
+        logger("jingtian", "session连接成功")
+        val sftpChannel = channel as ChannelSftp
+        return sftpChannel
+    }
+
     private fun newSession(logger: (String, String)->Unit): Session? {
         val jsch: JSch = runCatching {
             JSch()
