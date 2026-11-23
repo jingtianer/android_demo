@@ -86,7 +86,7 @@ fun DrawerServerItem(
                 content()
             }
         ) {
-            Column(modifier = Modifier.fillMaxWidth().padding(start = 38.dp).wrapContentHeight()) {
+            Column(modifier = Modifier.fillMaxWidth().padding(start = 38.dp, end = 8.dp).wrapContentHeight()) {
                 Box(modifier = Modifier.fillMaxWidth().pointerInput(Unit) {
                     detectTapGestures(onLongPress = {
                         editHttpDialogState = true
