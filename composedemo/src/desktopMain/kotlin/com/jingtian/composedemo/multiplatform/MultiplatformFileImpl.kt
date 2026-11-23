@@ -122,4 +122,12 @@ open class MultiplatformFileImpl(val realFile: File, val realExtension: String) 
     override suspend fun file(): Path = Path(realFile.absolutePath)
     override suspend fun extension(): String = realFile.extension
     override suspend fun path(): String = realFile.path
+
+    override suspend fun isSameFile(other: MultiplatformFile): Boolean {
+        return if (other is MultiplatformFileImpl) {
+            this.realFile == other.realFile
+        } else {
+            super.isSameFile(other)
+        }
+    }
 }

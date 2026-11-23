@@ -3,6 +3,7 @@ package com.jingtian.composedemo.main.remote
 import androidx.compose.ui.graphics.ImageBitmap
 import cocoapods.NMSSHT7.NMSFTPFile
 import com.jingtian.composedemo.dao.model.FileType
+import com.jingtian.composedemo.multiplatform.MultiplatformFile
 import com.jingtian.composedemo.multiplatform.MultiplatformFileImpl
 import com.jingtian.composedemo.multiplatform.logD
 import com.jingtian.composedemo.multiplatform.logE
@@ -33,6 +34,14 @@ class Uri(
     val raw: String = "$scheme://$authority$path"
 
     fun getExtension(): String = lastPathSegment.substringAfterLast(".", missingDelimiterValue = "")
+
+    override fun equals(other: Any?): Boolean {
+        return if (other is Uri) {
+            raw == other.raw
+        } else {
+            false
+        }
+    }
 }
 
 class RemoteSftpFileImpl(
@@ -107,6 +116,14 @@ class RemoteSftpFileImpl(
 //    }
 
     override suspend fun file(): Path = getContentFile()
+
+    override suspend fun isSameFile(other: MultiplatformFile): Boolean {
+        return if (other is RemoteSftpFileImpl) {
+            originUri == other.originUri
+        } else {
+            false
+        }
+    }
 
     override fun onDelete() {
         fileStore.delete(originUri)
