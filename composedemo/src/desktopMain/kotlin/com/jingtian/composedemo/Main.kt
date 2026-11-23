@@ -24,6 +24,7 @@ import com.jingtian.composedemo.utils.AppTheme
 import com.jingtian.composedemo.utils.DesktopStorage
 import com.jingtian.composedemo.viewmodels.AppThemeViewModel
 import com.jingtian.composedemo.viewmodels.appThemeViewModel
+import startServer
 
 fun main(args: Array<String>) {
     LaunchTasks.onLaunch()
@@ -45,6 +46,10 @@ fun ApplicationScope.MainWindow() {
             screenHeightDp = windowState.size.height.value
             this
         }
+    }
+
+    LaunchedEffect(Unit) {
+        startServer()
     }
 
     Window(onCloseRequest = {

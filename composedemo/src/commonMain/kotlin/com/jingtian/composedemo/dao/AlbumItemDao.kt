@@ -39,6 +39,9 @@ interface AlbumItemDao {
     @Query("select * from $TABLE_NAME where albumId = :albumId order by score desc")
     suspend fun getAllAlbumItemWithExtra(albumId: Long): List<AlbumItemRelation>
 
+    @Transaction
+    @Query("select * from $TABLE_NAME where albumId = :albumId order by score desc limit :limit offset :offset")
+    suspend fun getAllAlbumItemWithExtraLimitN(albumId: Long, limit: Long, offset: Long): List<AlbumItemRelation>
 
     @Transaction
     @Query("select * from $TABLE_NAME where albumId = :albumId order by score desc")

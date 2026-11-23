@@ -1,5 +1,6 @@
 package com.jingtian.composedemo.utils.share
 
+import com.jingtian.composedemo.BuildKonfig
 import com.jingtian.composedemo.dao.DataBase
 import com.jingtian.composedemo.dao.model.AlbumItem
 import com.jingtian.composedemo.dao.model.LabelInfo
@@ -32,8 +33,10 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlin.random.Random
 
+typealias ShareObject = Map<String, Map<String, AlbumItemRelation>>
+
 object ShareUtils {
-    private val shareFileRootDir =  Path(Path(getFileCacheStorageRootDir()), "share")
+    private val shareFileRootDir = Path(Path(getFileCacheStorageRootDir()), "share")
     suspend fun shareDataBase(): MultiplatformFile {
         val file = withContext(Dispatchers.IO) {
             getShareFile()
@@ -41,7 +44,7 @@ object ShareUtils {
         return getMultiplatformFileFactory().shareFile(file)
     }
 
-    private val json = Json { ignoreUnknownKeys = true }
+    val json = Json { ignoreUnknownKeys = true }
 
     suspend fun getMetadata(): Path {
         val dataList = json.encodeToString(DataBase.dbImpl.getAlbumDao().getAllAlbumInfoWithExtra())
@@ -62,7 +65,12 @@ object ShareUtils {
     private suspend fun getShareFile(): Path {
         return withContext(Dispatchers.IO) {
             val file = newShareFile()
-            val dataList = json.encodeToString(DataBase.dbImpl.getAlbumDao().getAllAlbumInfoWithExtra())
+            val dataList =
+                json.encodeToString(
+                    DataBase.dbImpl.getAlbumDao().getAllAlbumInfoWithExtra().associate {
+                        it.albumItem.albumName to it.albumItemList.associateBy { it.importKey() }
+                    }
+                )
             SystemFileSystem.sink(file).buffered().use {
                 it.writeString(dataList)
                 it.flush()
@@ -72,20 +80,20 @@ object ShareUtils {
     }
 
     private fun AlbumItemRelation.importKey(): String {
-        return this.fileInfo.filePath
+        return if (BuildKonfig.isRemote) this.fileInfo.filePath else this.albumItem.itemName
     }
 
     suspend fun importSharedDb(albumViewModel: AlbumViewModel, dbJson: String) {
         withContext(Dispatchers.IO) {
             val importedAlbumList = dbJson.let { bytes ->
-                json.decodeFromString<List<AlbumRelation>>(bytes).associate { albumRelation ->
+                json.decodeFromString<ShareObject>(bytes).map { (albumName, albumRelationMap) ->
                     val albumMap = mutableMapOf<String, AlbumItemRelation>()
-                    for(albumItem in albumRelation.albumItemList) {
-                        val oldAlbumItem = albumMap[albumItem.importKey()]
+                    for ((key, albumItem) in albumRelationMap) {
+                        val oldAlbumItem = albumMap[key]
                         if (oldAlbumItem == null) {
-                            albumMap[albumItem.importKey()] = albumItem
+                            albumMap[key] = albumItem
                         } else {
-                            albumMap[albumItem.importKey()] = AlbumItemRelation(
+                            albumMap[key] = AlbumItemRelation(
                                 albumItem = oldAlbumItem.albumItem,
                                 labelInfos = mutableListOf<LabelInfo>().apply {
                                     addAll(oldAlbumItem.labelInfos)
@@ -95,14 +103,15 @@ object ShareUtils {
                             )
                         }
                     }
-                    albumRelation.albumItem.albumName to albumMap
-                }
-            } ?: return@withContext
+                    albumName to albumMap
+                }.toMap()
+            }
             val albumList = DataBase.dbImpl.getAlbumDao().getAllAlbumInfoWithExtra()
             for (album in albumList) {
                 val importedAlbumItemMap = importedAlbumList[album.albumItem.albumName] ?: continue
                 for (albumRelation in album.albumItemList) {
-                    val importedAlbumRelation = importedAlbumItemMap[albumRelation.importKey()] ?: continue
+                    val importedAlbumRelation =
+                        importedAlbumItemMap[albumRelation.importKey()] ?: continue
                     val importedAlbumItem = importedAlbumRelation.albumItem
                     val albumItem = albumRelation.albumItem
                     DataBase.dbImpl.getAlbumItemDao().updateAlbumItem(
@@ -117,12 +126,13 @@ object ShareUtils {
                             fileId = albumItem.fileId,
                         )
                     )
-                    DataBase.dbImpl.getLabelInfoDao().insertAllLabel(importedAlbumRelation.labelInfos.map {
-                        LabelInfo(
-                            albumItemId = albumItem.itemId ?: DataBase.INVALID_ID,
-                            label = it.label
-                        )
-                    })
+                    DataBase.dbImpl.getLabelInfoDao()
+                        .insertAllLabel(importedAlbumRelation.labelInfos.map {
+                            LabelInfo(
+                                albumItemId = albumItem.itemId ?: DataBase.INVALID_ID,
+                                label = it.label
+                            )
+                        })
                 }
             }
         }
