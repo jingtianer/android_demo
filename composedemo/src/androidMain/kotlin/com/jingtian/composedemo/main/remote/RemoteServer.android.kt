@@ -150,7 +150,7 @@ class SftpServerImpl : SftpServer {
                 }
 
                 override fun getPassword(): String {
-                    return this@SftpServerImpl.password
+                    return password
                 }
 
                 override fun promptPassword(message: String): Boolean {

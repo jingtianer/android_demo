@@ -31,6 +31,7 @@ fun main(args: Array<String>) {
     application {
         MainWindow()
     }
+    startServer()
 }
 @Composable
 fun ApplicationScope.MainWindow() {
@@ -46,10 +47,6 @@ fun ApplicationScope.MainWindow() {
             screenHeightDp = windowState.size.height.value
             this
         }
-    }
-
-    LaunchedEffect(Unit) {
-        startServer()
     }
 
     Window(onCloseRequest = {

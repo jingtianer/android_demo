@@ -23,15 +23,17 @@ import java.nio.charset.StandardCharsets
 // 根目录，对应 python --directory，自行修改
 private const val PORT = 8000
 fun startServer() {
-    val server = HttpServer.create(InetSocketAddress("::", PORT), 0)
-    server.createContext("/", RouteHandler().apply {
-        addHandler("/getFile", GetFileHandler())
-        addHandler("/getAlbumList", GetAlbumListHandler())
-        addHandler("/listAlbum", ListAlbumHandler())
-        addHandler("/updateItem", UpdateItemHandler())
-    })
-    server.executor = null
-    server.start()
+    Thread {
+        val server = HttpServer.create(InetSocketAddress("::", PORT), 0)
+        server.createContext("/", RouteHandler().apply {
+            addHandler("/getFile", GetFileHandler())
+            addHandler("/getAlbumList", GetAlbumListHandler())
+            addHandler("/listAlbum", ListAlbumHandler())
+            addHandler("/updateItem", UpdateItemHandler())
+        })
+        server.executor = null
+        server.start()
+    }.start()
 }
 
 private enum class HttpMethodType {
