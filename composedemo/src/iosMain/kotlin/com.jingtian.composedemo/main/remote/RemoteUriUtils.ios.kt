@@ -35,8 +35,14 @@ class Uri(
 
     fun getExtension(): String = lastPathSegment.substringAfterLast(".", missingDelimiterValue = "")
 
+    override fun hashCode(): Int {
+        return raw.hashCode()
+    }
+
     override fun equals(other: Any?): Boolean {
-        return if (other is Uri) {
+        return if (this === other) {
+            true
+        } else if (other is Uri) {
             raw == other.raw
         } else {
             false
