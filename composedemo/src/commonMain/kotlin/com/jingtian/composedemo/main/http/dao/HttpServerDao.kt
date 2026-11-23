@@ -7,6 +7,7 @@ import androidx.room.Index
 import androidx.room.Insert
 import androidx.room.PrimaryKey
 import androidx.room.Query
+import androidx.room.Update
 import com.jingtian.composedemo.dao.DataBase
 import kotlinx.serialization.Serializable
 
@@ -20,6 +21,9 @@ interface HttpServerDao {
 
     @Insert
     suspend fun addHttpServer(server: HttpServerEntity): Long
+
+    @Update
+    suspend fun updateHttpServer(server: HttpServerEntity)
 
     @Delete
     suspend fun removeHttpServer(server: HttpServerEntity)

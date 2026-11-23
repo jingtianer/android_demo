@@ -78,7 +78,7 @@ fun DrawerFunctionArea() {
     }
 
     if (dialogHttpState) {
-        AddHttpServerDialog {
+        AddHttpServerDialog(httpServerEntity = null) {
             dialogHttpState = false
         }
     }

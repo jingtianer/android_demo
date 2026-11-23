@@ -16,7 +16,7 @@ object SerializationUtils {
         }
     }
 
-    fun InputStream.readAsUri(): Uri {
+    fun InputStream.readAsUri(): Uri? {
         val parcel = Parcel.obtain()
         try {
             this.use { `in`->
@@ -25,6 +25,8 @@ object SerializationUtils {
             }
             parcel.setDataPosition(0)
             return Uri.CREATOR.createFromParcel(parcel)
+        } catch (e: Exception) {
+            return null
         } finally {
             parcel.recycle()
         }

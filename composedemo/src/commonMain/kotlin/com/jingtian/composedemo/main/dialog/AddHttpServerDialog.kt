@@ -34,23 +34,18 @@ import com.jingtian.composedemo.viewmodels.albumViewModel
 import kotlin.random.Random
 
 @Composable
-fun AddHttpServerDialog(onDismiss: () -> Unit) {
+fun AddHttpServerDialog(httpServerEntity: HttpServerEntity?, onDismiss: () -> Unit) {
     if (BuildKonfig.isDesktop) {
         return
     }
     val viewModel: AlbumViewModel = albumViewModel()
     var serverName by remember {
         mutableStateOf(
-            "新建 ${
-                Random.nextLong(
-                    from = 0L,
-                    until = Long.MAX_VALUE
-                )
-            }"
+            httpServerEntity?.hostName ?: "新建 ${Random.nextLong(from = 0L, until = Long.MAX_VALUE)}"
         )
     }
-    var host by remember { mutableStateOf("localhost") }
-    var port by remember { mutableStateOf("8000") }
+    var host by remember { mutableStateOf(httpServerEntity?.hostName ?: "localhost") }
+    var port by remember { mutableStateOf(httpServerEntity?.port ?: "8000") }
     val focusRequester = remember { FocusRequester() }
     AppThemeDialog(
         Modifier
@@ -65,11 +60,22 @@ fun AddHttpServerDialog(onDismiss: () -> Unit) {
             if (port.toIntOrNull() == null) {
                 viewModel.sendMessage("$port 不是合法的端口")
             } else {
-                viewModel.addHttpServer(HttpServerEntity(
-                    serverName = serverName,
-                    hostName = host,
-                    port = port
-                ))
+                if (httpServerEntity != null) {
+                    viewModel.editHttpServer(
+                        HttpServerEntity(
+                            serverId = httpServerEntity.serverId,
+                            serverName = serverName,
+                            hostName = host,
+                            port = port
+                        )
+                    )
+                } else {
+                    viewModel.addHttpServer(HttpServerEntity(
+                        serverName = serverName,
+                        hostName = host,
+                        port = port
+                    ))
+                }
             }
         }
     ) { _, actionButtons ->

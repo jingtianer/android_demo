@@ -123,6 +123,18 @@ object AlbumViewModel : SingletonViewModel() {
         }
     }
 
+    fun editHttpServer(httpServerEntity: HttpServerEntity) {
+        CoroutineUtils.runIOTask({
+            val dao = DataBase.dbImpl.getHttpServerDao()
+            dao.updateHttpServer(httpServerEntity)
+//            albumDao.getAllAlbum().collect { Log.d(TAG, "addAlbum: ${it.map { "${it.albumId}, ${it.albumName}, ${it.createTime}" }.joinToString { "," }}") }
+//            Log.d(TAG, "addAlbum: ${album.albumName}")
+        }) {
+            albumServerListChange.notifyChange()
+            sendMessage("编辑httpServer: ${httpServerEntity.serverName} 成功!")
+        }
+    }
+
     fun editAlbum(album: Album) {
         CoroutineUtils.runIOTask({
             albumDao.updateAlbum(album)

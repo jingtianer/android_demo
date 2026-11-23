@@ -3,6 +3,8 @@ package com.jingtian.composedemo.main.drawer
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -17,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.rememberSwipeToDismissBoxState
@@ -30,6 +33,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -43,6 +47,7 @@ import com.jingtian.composedemo.ui.theme.LocalAppPalette
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
 import kotlinx.coroutines.Job
 import com.jingtian.composedemo.base.resources.getPainter
+import com.jingtian.composedemo.main.dialog.AddHttpServerDialog
 import com.jingtian.composedemo.main.http.api.api
 import com.jingtian.composedemo.main.http.dao.HttpServerEntity
 import com.jingtian.composedemo.main.settings.CollapseDrawer
@@ -62,15 +67,11 @@ fun DrawerServerItem(
     var childAlbum by remember(item) { mutableStateOf(emptyList<Album>()) }
     val drawerState = rememberCollapseDrawerState(false)
     val viewModel = albumViewModel()
-
+    var editHttpDialogState by remember { mutableStateOf(false) }
     LaunchedEffect(item) {
         childAlbum = withContext(Dispatchers.IO) {
             api.getAlbumList()
         }
-    }
-
-    if (childAlbum.isEmpty()) {
-        return
     }
 
     DrawerItem(title = item.serverName, leadingDrawableIcon = DrawableIcon.DrawableHttp, onItemClick = {
@@ -86,6 +87,17 @@ fun DrawerServerItem(
             }
         ) {
             Column(modifier = Modifier.fillMaxWidth().padding(start = 38.dp).wrapContentHeight()) {
+                Box(modifier = Modifier.fillMaxWidth().pointerInput(Unit) {
+                    detectTapGestures(onLongPress = {
+                        editHttpDialogState = true
+                    })
+                }) {
+                    OutlinedTextField("Host: ${item.hostName}", { _ ->
+                    }, label = {
+                        AppThemeText("port: ${item.port}")
+                    }, enabled = false, modifier = Modifier.fillMaxWidth())
+                }
+
                 childAlbum.forEach { album: Album ->
                     AppThemeText(
                         text = album.albumName.trim(),
@@ -122,6 +134,12 @@ fun DrawerServerItem(
                 deleteConfirmDialogState = false
             },
             content = {})
+    }
+
+    if (editHttpDialogState) {
+        AddHttpServerDialog(httpServerEntity = item) {
+            editHttpDialogState = false
+        }
     }
 }
 

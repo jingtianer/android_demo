@@ -16,12 +16,11 @@ private object MultiplatformFileFactory : IMultiplatformFileFactory {
     override fun fromFile(file: Path): MultiplatformFile {
         if (BuildKonfig.isRemote) {
             val uri = File(file.toString()).inputStream().readAsUri()
-            if (uri.scheme?.startsWith("jingtian") == true) {
+            if (uri?.scheme?.startsWith("jingtian") == true) {
                 RemoteUriUtils.parse(uri)?.let {
                     return it
                 }
             }
-            return MultiplatformFileImpl(File(file.toString()).inputStream().readAsUri(), canDelete = true)
         }
         val realFile = Path(
             getFileStorageRootDir(),
