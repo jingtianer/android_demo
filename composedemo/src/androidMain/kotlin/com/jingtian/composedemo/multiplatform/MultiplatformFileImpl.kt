@@ -245,18 +245,8 @@ open class MultiplatformFileImpl(private val uri: Uri) : MultiplatformFile {
         return inputStream
     }
 
-    private val fileStoreInputStream: RawSource?
-        get() {
-            val isr = if (BuildKonfig.isRemote) {
-                uri.toInputStream()
-            } else {
-                app.contentResolver.openInputStream(uri)
-            } ?: return null
-            return isr.asSource()
-        }
-
     override suspend fun fileStoreInputStream(): RawSource? {
-        return fileStoreInputStream
+        return inputStream
     }
 
     private val videoThumbnail: ImageBitmap?

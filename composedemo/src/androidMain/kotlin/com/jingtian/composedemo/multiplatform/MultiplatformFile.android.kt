@@ -5,8 +5,12 @@ import androidx.core.net.toUri
 import com.jingtian.composedemo.BuildKonfig
 import com.jingtian.composedemo.main.remote.RemoteUriUtils
 import com.jingtian.composedemo.utils.SerializationUtils.readAsUri
+import com.jingtian.composedemo.utils.getFileStorageRootDir
 import kotlinx.io.files.Path
 import java.io.File
+import kotlinx.io.files.SystemFileSystem
+import kotlinx.io.buffered
+import kotlinx.io.readString
 
 private object MultiplatformFileFactory : IMultiplatformFileFactory {
     override fun fromFile(file: Path): MultiplatformFile {
@@ -19,7 +23,13 @@ private object MultiplatformFileFactory : IMultiplatformFileFactory {
             }
             return MultiplatformFileImpl(File(file.toString()).inputStream().readAsUri())
         }
-        return MultiplatformFileImpl(File(file.toString()).toUri())
+        val realFile = Path(
+            getFileStorageRootDir(),
+            SystemFileSystem.source(file).buffered().use {
+                it.readString()
+            }
+        )
+        return MultiplatformFileImpl(File(realFile.toString()).toUri())
     }
 
     override fun shareFile(file: Path): MultiplatformFile {

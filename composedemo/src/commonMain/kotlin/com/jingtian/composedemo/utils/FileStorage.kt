@@ -16,16 +16,12 @@ import com.jingtian.composedemo.utils.BitMapCachePool.scale
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
-import kotlinx.coroutines.InternalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.io.Buffer
 import kotlinx.io.RawSource
 import kotlinx.io.files.Path
-import kotlinx.io.files.SystemFileSystem
 
 expect fun getFileStorageRootDir(): Path
 expect fun getDBStorageRootDir(): Path
@@ -112,12 +108,7 @@ object FileStorageUtils {
         private suspend fun doStore(uri: MultiplatformFile, id: Long) {
             val storageFile = getStoreFile(id)
             ensureFile(storageFile)
-            if (BuildKonfig.isIOS) {
-                storeIos(uri, storageFile, id)
-            } else {
-                val bytes = uri.fileStoreInputStream()!!
-                innerStoreImage(id, bytes, storageFile, uri.extension())
-            }
+            storeByType(uri, storageFile, id)
             uri.onStoreFinish()
         }
 
@@ -145,8 +136,8 @@ object FileStorageUtils {
             return id to job
         }
 
-        private suspend fun storeIos(uri: MultiplatformFile, storageFile: Path, id: Long) {
-            if (BuildKonfig.isRemote && uri is RemoteSftpFile) {
+        private suspend fun storeByType(uri: MultiplatformFile, storageFile: Path, id: Long) {
+            if ((BuildKonfig.isRemote && uri is RemoteSftpFile) || BuildKonfig.isDesktop) {
                 uri.fileStoreInputStream()?.let {
                     innerStoreImage(id, it, storageFile, uri.extension())
                 }
