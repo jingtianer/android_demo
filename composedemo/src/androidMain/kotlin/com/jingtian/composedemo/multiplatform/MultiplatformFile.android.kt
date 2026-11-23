@@ -21,7 +21,7 @@ private object MultiplatformFileFactory : IMultiplatformFileFactory {
                     return it
                 }
             }
-            return MultiplatformFileImpl(File(file.toString()).inputStream().readAsUri())
+            return MultiplatformFileImpl(File(file.toString()).inputStream().readAsUri(), canDelete = true)
         }
         val realFile = Path(
             getFileStorageRootDir(),
@@ -29,11 +29,11 @@ private object MultiplatformFileFactory : IMultiplatformFileFactory {
                 it.readString()
             }
         )
-        return MultiplatformFileImpl(File(realFile.toString()).toUri())
+        return MultiplatformFileImpl(File(realFile.toString()).toUri(), canDelete = true)
     }
 
     override fun shareFile(file: Path): MultiplatformFile {
-        return MultiplatformFileImpl(Uri.fromFile(File(file.toString())))
+        return MultiplatformFileImpl(Uri.fromFile(File(file.toString())), canDelete = true)
     }
 }
 

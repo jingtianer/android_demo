@@ -33,7 +33,7 @@ import java.nio.file.Files
 import java.nio.file.Paths
 import io.github.vinceglb.filekit.PlatformFile
 
-open class MultiplatformFileImpl(private val uri: Uri) : MultiplatformFile {
+open class MultiplatformFileImpl(private val uri: Uri, val canDelete: Boolean = false) : MultiplatformFile {
     companion object {
         private fun getFileNameFromUri(uri: Uri): String? {
             runCatching {
@@ -311,6 +311,14 @@ open class MultiplatformFileImpl(private val uri: Uri) : MultiplatformFile {
             return uri == other.uri
         }
         return super.isSameFile(other)
+    }
+
+    override fun onDelete() {
+        if (canDelete) {
+            uri.safeToFile()?.let {
+                Files.delete(it)
+            }
+        }
     }
 
 //    override fun toString(): String {

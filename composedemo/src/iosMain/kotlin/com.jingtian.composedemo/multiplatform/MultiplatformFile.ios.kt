@@ -43,7 +43,7 @@ actual fun getMultiplatformFileFactory() : IMultiplatformFileFactory {
                     it.readString()
                 }
             )
-            return MultiplatformFileImpl(realFile, realFile.extension, relativePath = file.relativeTo(getFileStorageRootDir()))
+            return MultiplatformFileImpl(realFile, realFile.extension, relativePath = file.relativeTo(getFileStorageRootDir()), canDelete = true)
         }
         override fun fromFile(file: Path, extension: String?): MultiplatformFile {
             if (BuildKonfig.isRemote) {
@@ -61,11 +61,11 @@ actual fun getMultiplatformFileFactory() : IMultiplatformFileFactory {
                     it.readString()
                 }
             )
-            return MultiplatformFileImpl(realFile, extension ?: realFile.extension, relativePath = file.relativeTo(getFileStorageRootDir()))
+            return MultiplatformFileImpl(realFile, extension ?: realFile.extension, relativePath = file.relativeTo(getFileStorageRootDir()), canDelete = true)
         }
 
         override fun shareFile(file: Path): MultiplatformFileImpl {
-            return MultiplatformFileImpl(Path(file.toString()), file.extension)
+            return MultiplatformFileImpl(Path(file.toString()), file.extension, canDelete = true)
         }
     }
 }
