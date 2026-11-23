@@ -36,6 +36,7 @@ import com.jingtian.composedemo.dao.model.FileType
 import com.jingtian.composedemo.dao.model.ItemRank
 import com.jingtian.composedemo.dao.model.LabelInfo
 import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
+import com.jingtian.composedemo.main.http.dao.HttpServerEntity
 import com.jingtian.composedemo.main.remote.RemoteSftpFile
 import com.jingtian.composedemo.main.remote.ServerStorage
 import com.jingtian.composedemo.main.remote.ServerType
@@ -89,6 +90,7 @@ object AlbumViewModel : SingletonViewModel() {
     }
 
     val albumListChange = mutableLongStateOf(0L)
+    val albumServerListChange = mutableLongStateOf(0L)
     val albumNameChange = mutableLongStateOf(0L)
     val albumItemListChange = mutableLongStateOf(0L)
     val filterCheckChanged = mutableLongStateOf(0L)
@@ -106,6 +108,18 @@ object AlbumViewModel : SingletonViewModel() {
         }) {
             albumListChange.notifyChange()
             sendMessage("添加合集: ${album.albumName} 成功!")
+        }
+    }
+
+    fun addHttpServer(httpServerEntity: HttpServerEntity) {
+        CoroutineUtils.runIOTask({
+            val dao = DataBase.dbImpl.getHttpServerDao()
+            dao.addHttpServer(httpServerEntity)
+//            albumDao.getAllAlbum().collect { Log.d(TAG, "addAlbum: ${it.map { "${it.albumId}, ${it.albumName}, ${it.createTime}" }.joinToString { "," }}") }
+//            Log.d(TAG, "addAlbum: ${album.albumName}")
+        }) {
+            albumServerListChange.notifyChange()
+            sendMessage("添加httpServer: ${httpServerEntity.serverName} 成功!")
         }
     }
 
@@ -134,6 +148,16 @@ object AlbumViewModel : SingletonViewModel() {
                 currentBackgroundTask.value = null
                 currentMessageDelayJob = null
             }
+        }
+    }
+
+    fun deleteServer(httpServerEntity: HttpServerEntity) {
+        CoroutineUtils.runIOTask({
+            val dao = DataBase.dbImpl.getHttpServerDao()
+            dao.removeHttpServer(httpServerEntity)
+        }) {
+            albumServerListChange.notifyChange()
+            sendMessage("删除server: ${httpServerEntity.serverName} 成功!")
         }
     }
 

@@ -31,6 +31,9 @@ import com.jingtian.composedemo.dao.model.Album
 import com.jingtian.composedemo.dao.model.FileType
 import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
 import com.jingtian.composedemo.main.dialog.EditDialog
+import com.jingtian.composedemo.main.http.api.api
+import com.jingtian.composedemo.main.http.dao.HttpServerEntity
+import com.jingtian.composedemo.main.http.file.HttpMultiplatformFile
 import com.jingtian.composedemo.main.remote.SftpServer
 import com.jingtian.composedemo.multiplatform.MultiplatformFile
 import com.jingtian.composedemo.multiplatform.logD
@@ -38,6 +41,7 @@ import com.jingtian.composedemo.ui.theme.DarkWrapper
 import com.jingtian.composedemo.ui.theme.clipDeviceRoundCorner
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.InternalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -45,23 +49,34 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.internal.SynchronizedObject
 import kotlinx.coroutines.internal.synchronized
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlin.math.min
 import kotlin.random.Random
 
 private const val PARALLEL_DOWNLOAD_COUNT = 4
 
+abstract class FeedState {
+    @Composable
+    open fun Install() {}
+    abstract val fileList: List<FlowFile>
+    abstract val pagerState: PagerState
+    abstract val album: Album
+    abstract val totalLabelList: State<List<String>>
+}
+
 class FlowFeedState(
     private val itemList: State<List<AlbumItemRelation>>,
-    val album: Album,
-    val totalLabelList: State<List<String>>
-) {
+    override val album: Album,
+    override val totalLabelList: State<List<String>>
+): FeedState() {
     @OptIn(InternalCoroutinesApi::class)
     private val loadingLock = SynchronizedObject()
     private var candidateItemMap: MutableMap<Long?, AlbumItemRelation> by mutableStateOf(hashMapOf())
-    var fileList by mutableStateOf(mutableStateListOf<FlowFile>())
+    override var fileList by mutableStateOf(mutableStateListOf<FlowFile>())
     private var loadingItemCount = 0
-    val pagerState = PagerState(0) {
+    override val pagerState = PagerState(0) {
         fileList.size
     }
 
@@ -128,7 +143,7 @@ class FlowFeedState(
 
     @OptIn(InternalCoroutinesApi::class)
     @Composable
-    fun Install() {
+    override fun Install() {
         val scope = rememberCoroutineScope()
         LaunchedEffect(Unit, itemList.value) {
             withContext(Dispatchers.Default) {
@@ -208,15 +223,201 @@ class FlowFile(
     var isloading: Boolean by mutableStateOf(isloading)
 }
 
+class HttpFeedState(val httpServerEntity: HttpServerEntity, override val album: Album): FeedState() {
+    @OptIn(InternalCoroutinesApi::class)
+    private val loadingLock = SynchronizedObject()
+    private val loadPageLock = Mutex()
+    val itemList = mutableStateListOf<AlbumItemRelation>()
+    private var candidateItemMap: MutableMap<Long?, AlbumItemRelation> by mutableStateOf(hashMapOf())
+    override var fileList by mutableStateOf(mutableStateListOf<FlowFile>())
+    private var loadingItemCount = 0
+    override val pagerState = PagerState(0) {
+        fileList.size
+    }
+
+    val api = httpServerEntity.api()
+
+    var currentOffset = 0L
+
+    override val totalLabelList: State<List<String>> = mutableStateOf(emptyList())
+
+    private fun AlbumItemRelation.key() = this.albumItem.itemId.takeIf { it != -1L }
+    @OptIn(InternalCoroutinesApi::class)
+    private suspend fun loadMore(scope: CoroutineScope) {
+//        logD("jingtian") {
+//            "candidate: fileList=${fileList.size}, candidateItemMap=${candidateItemMap.keys.size}, pagerState=${pagerState.currentPage}, loadingItemCount=${loadingItemCount}"
+//        }
+        val loadingItems = synchronized(loadingLock) {
+            val itemMap = candidateItemMap
+            if (itemMap.keys.isEmpty() || loadingItemCount >= PARALLEL_DOWNLOAD_COUNT) {
+                return
+            }
+            val shuffledKeys = itemMap.keys.let {
+                it.shuffled().subList(0, min(it.size, kotlin.math.max(0, PARALLEL_DOWNLOAD_COUNT - loadingItemCount)))
+            }
+//            logD("jingtian") {
+//                "candidate: fileList=${fileList.size}, candidateItemMap=${candidateItemMap.keys.size}, pagerState=${pagerState.currentPage}, shuffledKeys=${shuffledKeys.toTypedArray().contentDeepToString()}, loadingItemCount=${loadingItemCount}"
+//            }
+            val loadingItems = buildList {
+                for (key in shuffledKeys) {
+                    itemMap[key]?.let {
+                        add(it)
+                    }
+                    itemMap.remove(key)
+                }
+            }
+            loadingItemCount += loadingItems.size
+            loadingItems
+        }
+        for (newItem in loadingItems) {
+            val newItemKey = newItem.key() ?: continue
+            val uri = HttpMultiplatformFile(httpServerEntity, newItem, api)
+            scope.launch {
+//                logD("jingtian") {
+//                    "candidate: fileList=${fileList.size}, candidateItemMap=${candidateItemMap.keys.size}, pagerState=${pagerState.currentPage}, download:${newItem.albumItem.itemName}, loadingItemCount=${loadingItemCount}"
+//                }
+
+                val file = withContext(Dispatchers.Main) {
+                    val file = FlowFile(
+                        fileType = newItem.fileInfo.fileType,
+                        key = newItemKey,
+                        multiplatformFile = uri,
+                        albumItemRelation = newItem,
+                        isloading = true,
+                    )
+                    fileList.add(file)
+                    file
+                }
+                uri.file()
+                withContext(Dispatchers.Main) {
+                    file.isloading = false
+                }
+//                logD("jingtian") {
+//                    "candidate: finish fileList=${fileList.size}, candidateItemMap=${candidateItemMap.keys.size}, pagerState=${pagerState.currentPage}, download:${newItem.albumItem.itemName}, loadingItemCount=${loadingItemCount}"
+//                }
+                synchronized(loadingLock) {
+                    loadingItemCount--
+                }
+            }
+        }
+        loadMoreList()
+
+    }
+
+    @OptIn(InternalCoroutinesApi::class)
+    private suspend fun loadMoreList() {
+        withContext(Dispatchers.IO) {
+            loadPageLock.withLock {
+                val albumId = album.albumId
+                if (albumId != null && albumId != -1L) {
+                    val loadMoreList = api.listAlbum(albumId, currentOffset)
+                    withContext(Dispatchers.Main) {
+                        currentOffset += loadMoreList.size
+                        itemList.addAll(loadMoreList)
+                    }
+                }
+            }
+        }
+    }
+
+    @OptIn(InternalCoroutinesApi::class)
+    @Composable
+    override fun Install() {
+        val scope = rememberCoroutineScope()
+        LaunchedEffect(Unit) {
+            loadMoreList()
+        }
+        LaunchedEffect(Unit, itemList.size) {
+            withContext(Dispatchers.Default) {
+                val currentPageId = fileList.getOrNull(pagerState.currentPage)?.albumItemRelation?.key()
+                var nextPageIndex = 0
+                val itemMap = itemList
+                    .filter { it.key() != -1L && (it.fileInfo.fileType == FileType.IMAGE || it.fileInfo.fileType == FileType.VIDEO) }
+                    .associateByTo(hashMapOf()) { item -> item.key() }
+//                logD("jingtian") {
+//                    "init: candidateItemMap=${itemMap.keys.size}"
+//                }
+                val nextList = mutableStateListOf<FlowFile>()
+                for (idx in fileList.indices) {
+                    val item = fileList[idx]
+                    val newItemKey = item.albumItemRelation.key() ?: continue
+                    val newItem = itemMap[newItemKey] ?: continue
+                    val multiplatformFile = HttpMultiplatformFile(httpServerEntity, newItem, api)
+                    val newFile = FlowFile(
+                        fileType = newItem.fileInfo.fileType,
+                        key = newItemKey,
+                        multiplatformFile = multiplatformFile,
+                        albumItemRelation = newItem,
+                        isloading = item.isloading
+                    )
+                    if (item.isloading) {
+                        scope.launch {
+                            synchronized(loadingLock) {
+                                loadingItemCount++
+                            }
+                            multiplatformFile.file()
+                            withContext(Dispatchers.Main) {
+                                newFile.isloading = false
+                            }
+                            synchronized(loadingLock) {
+                                loadingItemCount--
+                            }
+                        }
+                    }
+                    nextList.add(newFile)
+                    if (newItemKey == currentPageId) {
+                        nextPageIndex = nextList.size - 1
+                    }
+                    itemMap.remove(newItemKey)
+                }
+                withContext(Dispatchers.Main) {
+                    fileList = nextList
+                    candidateItemMap = itemMap
+//                    logD("jingtian") {
+//                        "init: fileList=${fileList.size}, candidateItemMap=${candidateItemMap.keys.size}"
+//                    }
+                    if (fileList.isNotEmpty()) {
+                        pagerState.scrollToPage(nextPageIndex)
+                    }
+                }
+            }
+        }
+        LaunchedEffect(candidateItemMap, fileList) {
+            scope.launch {
+                loadMore(scope)
+            }
+        }
+        LaunchedEffect(pagerState.currentPage) {
+            scope.launch {
+                loadMore(scope)
+            }
+        }
+    }
+}
+
+@Composable
+fun HttpFeed(
+    httpServerEntity: HttpServerEntity,
+    album: Album,
+) {
+    val httpFeedState = remember(httpServerEntity, album) { HttpFeedState(httpServerEntity, album) }
+    FlowFeed(httpFeedState, enableEdit = false)
+}
+
 @Composable
 fun FlowFeed(
     itemList: State<List<AlbumItemRelation>>,
     album: Album,
     totalLabelList: State<List<String>>
 ) {
-    val scope = rememberCoroutineScope()
-    val feedState =
-        remember(itemList, album, totalLabelList) { FlowFeedState(itemList, album, totalLabelList) }
+    val feedState = remember(itemList, album, totalLabelList) { FlowFeedState(itemList, album, totalLabelList) }
+    FlowFeed(feedState)
+}
+
+@Composable
+private fun FlowFeed(
+    feedState: FeedState, enableEdit: Boolean = true
+) {
 
     with(feedState) {
         Install()
@@ -226,6 +427,17 @@ fun FlowFeed(
             if (index + 1 < fileList.size) {
                 pagerState.animateScrollToPage(index + 1)
             }
+        }
+        if (fileList.isEmpty()) {
+            DarkWrapper {
+                Box(
+                    modifier = Modifier.fillMaxSize().clipDeviceRoundCorner().background(Color.Black),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("loading...")
+                }
+            }
+            return
         }
         VerticalPager(
             state = pagerState,
@@ -237,13 +449,13 @@ fun FlowFeed(
             if (!item.isloading) {
                 when (item.fileType) {
                     FileType.IMAGE -> {
-                        feedState.ImageFeed(item, index) {
+                        feedState.ImageFeed(item, index, enableEdit) {
                             scrollToNextPage(index)
                         }
                     }
 
                     FileType.VIDEO -> {
-                        feedState.VideoFeed(item, index) {
+                        feedState.VideoFeed(item, index, enableEdit) {
                             scrollToNextPage(index)
                         }
                     }
@@ -280,7 +492,7 @@ fun FlowFeed(
 }
 
 @Composable
-fun FlowFeedState.ImageFeed(flowFile: FlowFile, index: Int, onPlayFinish: suspend () -> Unit) {
+fun FeedState.ImageFeed(flowFile: FlowFile, index: Int, enableEdit: Boolean = true, onPlayFinish: suspend () -> Unit) {
     val imagePlayerState = rememberImagePlayerState()
     var isEditing by remember { mutableStateOf(false) }
     val isSelected = index == pagerState.currentPage
@@ -314,7 +526,7 @@ fun FlowFeedState.ImageFeed(flowFile: FlowFile, index: Int, onPlayFinish: suspen
             }
         })
 
-    if (isEditing) {
+    if (isEditing && enableEdit) {
         EditDialog(flowFile.albumItemRelation, album, listOf(album), totalLabelList.value) {
             isEditing = false
         }
@@ -322,7 +534,7 @@ fun FlowFeedState.ImageFeed(flowFile: FlowFile, index: Int, onPlayFinish: suspen
 }
 
 @Composable
-fun FlowFeedState.VideoFeed(flowFile: FlowFile, index: Int, onPlayFinish: suspend () -> Unit) {
+fun FeedState.VideoFeed(flowFile: FlowFile, index: Int, enableEdit: Boolean = true, onPlayFinish: suspend () -> Unit) {
     val playerState = rememberUIVideoPlayerState(initialPlaying = false)
     var isEditing by remember { mutableStateOf(false) }
     var isAlive by remember { mutableStateOf(true) }
@@ -375,7 +587,7 @@ fun FlowFeedState.VideoFeed(flowFile: FlowFile, index: Int, onPlayFinish: suspen
             }
         })
 
-    if (isEditing) {
+    if (isEditing && enableEdit) {
         EditDialog(flowFile.albumItemRelation, album, listOf(album), totalLabelList.value) {
             isEditing = false
         }

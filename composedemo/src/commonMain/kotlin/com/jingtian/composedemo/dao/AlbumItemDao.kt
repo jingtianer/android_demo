@@ -7,6 +7,7 @@ import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
 import com.jingtian.composedemo.dao.model.AlbumItem
+import com.jingtian.composedemo.dao.model.FileType
 import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
 
 @Dao
@@ -40,8 +41,17 @@ interface AlbumItemDao {
     suspend fun getAllAlbumItemWithExtra(albumId: Long): List<AlbumItemRelation>
 
     @Transaction
-    @Query("select * from $TABLE_NAME where albumId = :albumId order by score desc limit :limit offset :offset")
-    suspend fun getAllAlbumItemWithExtraLimitN(albumId: Long, limit: Long, offset: Long): List<AlbumItemRelation>
+    @Query(
+        """
+    SELECT ai.*, fi.*
+    FROM ${TABLE_NAME} ai
+    INNER JOIN ${FileInfoDao.TABLE_NAME} fi ON ai.fileId = fi.id
+    WHERE ai.albumId = :albumId AND fi.fileType IN (:fileType)
+    ORDER BY ai.score DESC
+    LIMIT :limit OFFSET :offset
+    """
+    )
+    suspend fun getAllAlbumItemWithExtraLimitN(albumId: Long, limit: Long, offset: Long, fileType: List<FileType>): List<AlbumItemRelation>
 
     @Transaction
     @Query("select * from $TABLE_NAME where albumId = :albumId order by score desc")

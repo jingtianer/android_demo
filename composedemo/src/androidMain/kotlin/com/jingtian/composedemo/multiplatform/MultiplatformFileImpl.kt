@@ -302,7 +302,7 @@ open class MultiplatformFileImpl(private val uri: Uri, val canDelete: Boolean = 
         return path
     }
 
-    override suspend fun platformFile(): io.github.vinceglb.filekit.PlatformFile {
+    override suspend fun platformFile(): io.github.vinceglb.filekit.PlatformFile? {
         return io.github.vinceglb.filekit.PlatformFile(uri.toString())
     }
 
@@ -316,7 +316,7 @@ open class MultiplatformFileImpl(private val uri: Uri, val canDelete: Boolean = 
     override fun onDelete() {
         if (canDelete) {
             uri.safeToFile()?.let {
-                Files.delete(it)
+                it.delete()
             }
         }
     }

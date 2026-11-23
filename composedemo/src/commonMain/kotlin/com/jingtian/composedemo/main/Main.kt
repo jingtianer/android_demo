@@ -84,10 +84,12 @@ import com.jingtian.composedemo.main.drawer.MainDrawer
 import com.jingtian.composedemo.main.gallery.Gallery
 import com.jingtian.composedemo.main.gallery.GalleryStateHolder
 import com.jingtian.composedemo.main.gallery.predictiveBackVisual
+import com.jingtian.composedemo.main.http.dao.HttpServerEntity
 import com.jingtian.composedemo.main.viewer.ImagePlayer
 import com.jingtian.composedemo.main.route.Drawer
 import com.jingtian.composedemo.main.route.Feed
 import com.jingtian.composedemo.main.route.Gallery
+import com.jingtian.composedemo.main.route.HttpFeed
 import com.jingtian.composedemo.main.route.ImageViewer
 import com.jingtian.composedemo.main.route.LocalRouterController
 import com.jingtian.composedemo.main.route.MainRouterController
@@ -96,6 +98,7 @@ import com.jingtian.composedemo.main.route.VideoPlayer
 import com.jingtian.composedemo.main.route.WebView
 import com.jingtian.composedemo.main.settings.SettingsPage
 import com.jingtian.composedemo.main.viewer.FlowFeed
+import com.jingtian.composedemo.main.viewer.HttpFeed
 import com.jingtian.composedemo.main.viewer.VideoPlayer
 import com.jingtian.composedemo.main.widget.BackEventCompat
 import com.jingtian.composedemo.main.widget.EnterTransitionCreator
@@ -313,10 +316,12 @@ class MainState(
     }
 
     var menuItemsEntity by mutableStateOf(emptyList<Album>())
+    var menuServersEntity by mutableStateOf(emptyList<HttpServerEntity>())
     var menuItemsEntityInitialized by mutableStateOf(false)
     val viewModel: AlbumViewModel = albumViewModel()
     var currentSelectedAlbum by mutableStateOf<IndexedValue<Album>?>(null)
     val albumListChange by viewModel.albumListChange
+    val albumServerListChange by viewModel.albumServerListChange
     val galleryStateHolderMap = mutableStateMapOf<Long, SoftRef<GalleryStateHolder>>()
 
     val navBackStackEntry get() = naviController.currentBackStackEntry
@@ -396,6 +401,7 @@ class MainState(
     var currentWebViewFile by mutableStateOf<Pair<FileInfo?, MultiplatformFile?>>(null to null)
     var currentImageViewer by mutableStateOf<AlbumItemRelation?>(null)
     var currentVideoPlayer by mutableStateOf<AlbumItemRelation?>(null)
+    var currentHttpFeed by mutableStateOf<Pair<HttpServerEntity, Album>?>(null)
 
     fun updateSelectedValue(list: List<Album>): IndexedValue<Album>? {
         val currentSelectedAlbum = currentSelectedAlbum
@@ -433,6 +439,15 @@ class MainState(
                     menuItemsEntity = value
                     currentSelectedAlbum = nextSelectedAlbum
                     menuItemsEntityInitialized = true
+                }
+            }
+        }
+
+        LaunchedEffect(albumServerListChange) {
+            withContext(Dispatchers.IO) {
+                val serverList = DataBase.dbImpl.getHttpServerDao().getAllHttpServer()
+                withContext(Dispatchers.Main) {
+                    menuServersEntity = serverList
                 }
             }
         }
@@ -593,6 +608,12 @@ private fun MainState.Main(
                                     FlowFeed(itemList = it.filteredItemListState, album = it.album.value, totalLabelList = it.totalLabelListState)
                                 }
                             }
+
+                            composable(HttpFeed) {
+                                currentHttpFeed?.let { (server, album) ->
+                                    HttpFeed(server, album)
+                                }
+                            }
                         }
                     }
                 )
@@ -627,12 +648,12 @@ private fun MainState.Drawer() {
                 )
             )
     ) {
-        MainDrawer(menuItemsEntity) { index, album ->
+        MainDrawer(menuItemsEntity, menuServersEntity, onAlbumSelected = { index, album ->
             currentSelectedAlbum = IndexedValue(index, album)
             scope.launch {
                 routerController.toGallery()
             }
-        }
+        })
     }
 }
 

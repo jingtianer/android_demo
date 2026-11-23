@@ -71,7 +71,7 @@ class RemoteSftpFileImpl(
         }
     override suspend fun file(): Path = Path(getContentFile().absolutePath)
 
-    override suspend fun platformFile(): PlatformFile {
+    override suspend fun platformFile(): PlatformFile? {
         return PlatformFile(file())
     }
 

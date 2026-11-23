@@ -50,7 +50,6 @@ import kotlinx.io.readByteArray
 
 class ImagePlayerState {
     var isLoading by mutableStateOf(true)
-    var bytes by mutableStateOf<ByteArray?>(null)
     var showMask by mutableStateOf(true)
     var maskVisible by mutableStateOf(true)
     val showMaskAnim = Animatable(initialValue = 0f)
@@ -95,6 +94,7 @@ fun ImagePlayer(
         }
     }
 }
+
 @Composable
 fun ImagePlayer(
     state: ImagePlayerState = rememberImagePlayerState(),
@@ -103,8 +103,9 @@ fun ImagePlayer(
     onEditRequest: () -> Unit = {},
     maskContent: @Composable () -> Unit = {},
 ) {
+    var bytes by remember {  mutableStateOf<ByteArray?>(null) }
+
     with(state) {
-        ToggleMask()
         LaunchedEffect(uri) {
             isLoading = true
 //            logD("jingtian") {
@@ -116,11 +117,30 @@ fun ImagePlayer(
 //                logD("jingtian") {
 //                    "ImagePlayer: file=${file}"
 //                }
-                fileUri.inputStream()?.buffered()?.readByteArray()
+                fileUri.inputStream()?.buffered()?.use {
+                    it.readByteArray()
+                }
             }
             withFrameMillis {  }
             isLoading = false
         }
+        bytes?.let { bytes ->
+            ImagePlayer(state, modifier, bytes, onEditRequest, maskContent)
+        }
+    }
+}
+
+@Composable
+fun ImagePlayer(
+    state: ImagePlayerState = rememberImagePlayerState(),
+    modifier: Modifier,
+    bytes: ByteArray,
+    onEditRequest: () -> Unit = {},
+    maskContent: @Composable () -> Unit = {},
+) {
+    with(state) {
+        ToggleMask()
+
         val (samplingDecoder) = rememberSamplingDecoder(bytes)
         val scope = rememberCoroutineScope()
         if (samplingDecoder != null) {

@@ -11,6 +11,8 @@ import com.jingtian.composedemo.dao.model.Album
 import com.jingtian.composedemo.dao.model.AlbumItem
 import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.LabelInfo
+import com.jingtian.composedemo.main.http.dao.HttpServerDao
+import com.jingtian.composedemo.main.http.dao.HttpServerEntity
 
 @Database(
     entities = [
@@ -18,6 +20,7 @@ import com.jingtian.composedemo.dao.model.LabelInfo
         AlbumItem::class,
         FileInfo::class,
         LabelInfo::class,
+        HttpServerEntity::class,
     ],
     version = 1
 )
@@ -39,6 +42,7 @@ abstract class DataBase: RoomDatabase() {
     abstract fun getAlbumItemDao(): AlbumItemDao
     abstract fun getFileInfoDao(): FileInfoDao
     abstract fun getLabelInfoDao(): LabelInfoDao
+    abstract fun getHttpServerDao(): HttpServerDao
 }
 
 @Suppress("NO_ACTUAL_FOR_EXPECT")

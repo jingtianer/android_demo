@@ -19,6 +19,7 @@ import com.jingtian.composedemo.base.resources.DrawableIcon
 import com.jingtian.composedemo.base.resources.getPainter
 import com.jingtian.composedemo.dao.DataBase
 import com.jingtian.composedemo.dao.model.Album
+import com.jingtian.composedemo.main.http.dao.HttpServerEntity
 import com.jingtian.composedemo.main.route.LocalRouterController
 import com.jingtian.composedemo.ui.theme.LocalAppPalette
 import com.jingtian.composedemo.ui.theme.clipDeviceRoundCorner
@@ -27,8 +28,11 @@ import kotlinx.coroutines.launch
 @Composable
 fun MainDrawer(
     albumData: List<Album>,
+    serverList: List<HttpServerEntity>,
     onAlbumSelected: (Int, Album) -> Unit,
 ) {
+    val navController = LocalRouterController.current
+    val scope = rememberCoroutineScope()
     Column(
         Modifier
             .fillMaxHeight()
@@ -63,6 +67,18 @@ fun MainDrawer(
                 val item = albumData[index]
                 DrawerMenuItem(item) {
                     onAlbumSelected(index, item)
+                }
+            }
+
+            items(
+                serverList.size,
+                key = { index-> serverList[index].serverId ?: DataBase.INVALID_ID }
+            ) { index->
+                val item = serverList[index]
+                DrawerServerItem(item) { album ->
+                    scope.launch {
+                        navController.toHttpServerFeed(item, album)
+                    }
                 }
             }
         }

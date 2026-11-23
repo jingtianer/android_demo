@@ -8,6 +8,13 @@ import com.jingtian.composedemo.R
 import com.jingtian.composedemo.viewmodels.appThemeViewModel
 import demoapp.composedemo.generated.resources.Res
 
+
+@Composable
+actual fun getGalleryIcon(): Painter = painterResource(R.drawable.gallery)
+
+@Composable
+actual fun getHttpIcon(): Painter = painterResource(R.drawable.http)
+
 @Composable
 actual fun getPauseIcon(): Painter = painterResource(R.drawable.pause)
 

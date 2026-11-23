@@ -19,6 +19,7 @@ import com.jingtian.composedemo.base.resources.*
 
 enum class GalleryFunctions(val functionName: String, val iconProvider: @Composable () -> Painter) {
     ADD("添加", { getPainter(DrawableIcon.DrawableAdd) }),
+    ADD_HTTP("添加http", { getPainter(DrawableIcon.DrawableCIFS) }),
     IMPORT("导入", { getPainter(DrawableIcon.DrawableImportIcon) }),
     RENAME("重命名", { getPainter(DrawableIcon.DrawableEditNormal) }),
     EDIT("编辑", { getPainter(DrawableIcon.DrawableEditNormal) }),

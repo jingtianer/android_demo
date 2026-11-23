@@ -126,6 +126,8 @@ kotlin {
 
                 implementation(libs.composemediaplayer.video)
                 implementation(libs.ui.backhandler)
+
+                implementation(libs.ktor.client.core)
                 // 尝试了 precompose 并不是compose预加载
 //                api("moe.tlaster:precompose:1.6.2")
 //
@@ -167,6 +169,8 @@ kotlin {
 
                 implementation(libs.androidx.biometric)
                 implementation(libs.atomicfu)
+
+                implementation(libs.ktor.client.engine.android)
             }
         }
 
@@ -175,6 +179,7 @@ kotlin {
             dependencies {
                 implementation(libs.kotlinx.coroutines.core)
                 implementation(libs.sqlite.bundled)
+                implementation(libs.ktor.client.engine.darwin)
 //              implementation(libs.androidx.room.runtime)
 //              implementation(libs.androidx.room.ktx)
             }
@@ -211,6 +216,7 @@ kotlin {
 
                 implementation(libs.jsch)
                 implementation(libs.jzlib)
+                implementation(libs.ktor.client.engine.desktop)
                 implementation(libs.atomicfu)
 
             }

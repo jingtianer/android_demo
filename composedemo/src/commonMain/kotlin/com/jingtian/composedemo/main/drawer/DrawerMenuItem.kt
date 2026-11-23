@@ -3,19 +3,25 @@ package com.jingtian.composedemo.main.drawer
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,7 +43,87 @@ import com.jingtian.composedemo.ui.theme.LocalAppPalette
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
 import kotlinx.coroutines.Job
 import com.jingtian.composedemo.base.resources.getPainter
+import com.jingtian.composedemo.main.http.api.api
+import com.jingtian.composedemo.main.http.dao.HttpServerEntity
+import com.jingtian.composedemo.main.settings.CollapseDrawer
+import com.jingtian.composedemo.main.settings.rememberCollapseDrawerState
 import com.jingtian.composedemo.viewmodels.albumViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
+import kotlinx.coroutines.withContext
+
+@Composable
+fun DrawerServerItem(
+    item: HttpServerEntity,
+    onItemClick: (album: Album) -> Unit,
+) {
+    var deleteConfirmDialogState by remember { mutableStateOf(false) }
+    val api = remember(item) { item.api() }
+    var childAlbum by remember(item) { mutableStateOf(emptyList<Album>()) }
+    val drawerState = rememberCollapseDrawerState(false)
+    val viewModel = albumViewModel()
+
+    LaunchedEffect(item) {
+        childAlbum = withContext(Dispatchers.IO) {
+            api.getAlbumList()
+        }
+    }
+
+    if (childAlbum.isEmpty()) {
+        return
+    }
+
+    DrawerItem(title = item.serverName, leadingDrawableIcon = DrawableIcon.DrawableHttp, onItemClick = {
+        drawerState.expand.value = !drawerState.expand.value
+    }, onDelete = {
+        deleteConfirmDialogState = true
+    }, swipeContent = { content->
+        CollapseDrawer(
+            modifier = Modifier.fillMaxWidth(),
+            collapseDrawerState = drawerState,
+            header = {
+                content()
+            }
+        ) {
+            Column(modifier = Modifier.fillMaxWidth().padding(start = 38.dp).wrapContentHeight()) {
+                childAlbum.forEach { album: Album ->
+                    AppThemeText(
+                        text = album.albumName.trim(),
+                        style = LocalTextStyle.current.copy(fontSize = 18.sp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(LocalAppPalette.current.drawerBg)
+                            .height(26.dp)
+                            .padding(horizontal = 8.dp)
+                            .clickable { onItemClick(album) },
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+        }
+    })
+
+    if (deleteConfirmDialogState) {
+        AppThemeConfirmDialog(
+            "确认删除server: ${item.serverName}",
+            properties = DialogProperties(
+                usePlatformDefaultWidth = false,
+                dismissOnClickOutside = false
+            ),
+            onNegative = {
+                deleteConfirmDialogState = false
+            },
+            onPositive = {
+                deleteConfirmDialogState = false
+                viewModel.deleteServer(item)
+            },
+            onDismissRequest = {
+                deleteConfirmDialogState = false
+            },
+            content = {})
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,6 +134,39 @@ fun DrawerMenuItem(
     var deleteConfirmDialogState by remember { mutableStateOf(false) }
     val albumName = item.albumName
     val viewModel: AlbumViewModel = albumViewModel()
+
+    DrawerItem(albumName, leadingDrawableIcon = DrawableIcon.DrawableGallery, onItemClick = onItemClick, onDelete = {
+        deleteConfirmDialogState = true
+    })
+    if (deleteConfirmDialogState) {
+        AppThemeConfirmDialog(
+            "确认删除合集: ${item.albumName}",
+            properties = DialogProperties(
+                usePlatformDefaultWidth = false,
+                dismissOnClickOutside = false
+            ),
+            onNegative = {
+                deleteConfirmDialogState = false
+            },
+            onPositive = {
+                deleteConfirmDialogState = false
+                viewModel.deleteAlbum(item)
+            },
+            onDismissRequest = {
+                deleteConfirmDialogState = false
+            },
+            content = {})
+    }
+}
+
+@Composable
+private fun DrawerItem(
+    title: String,
+    leadingDrawableIcon: DrawableIcon,
+    swipeContent: @Composable (@Composable () -> Unit) -> Unit = { it.invoke() },
+    onItemClick: () -> Unit = {},
+    onDelete: () -> Unit = {}
+) {
     val size = 36.dp
     val modifier = Modifier
         .fillMaxWidth()
@@ -61,7 +180,7 @@ fun DrawerMenuItem(
         val swipeToDismissBoxState = rememberSwipeToDismissBoxState(confirmValueChange = { value ->
             when (value) {
                 SwipeToDismissBoxValue.StartToEnd -> {
-                    deleteConfirmDialogState = true
+                    onDelete()
                     false
                 }
 
@@ -86,37 +205,25 @@ fun DrawerMenuItem(
                     )
                 }
             }) {
-            AppThemeText(
-                text = albumName.trim(),
-                style = LocalTextStyle.current.copy(fontSize = 20.sp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(LocalAppPalette.current.drawerBg)
-                    .wrapContentHeight()
-                    .padding(8.dp),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            swipeContent {
+                Row(
+                    modifier = Modifier.fillMaxWidth()
+                        .background(LocalAppPalette.current.drawerBg)
+                        .wrapContentHeight()
+                        .padding(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(getPainter(leadingDrawableIcon), contentDescription = "", modifier = Modifier.size(28.dp))
+                    Spacer(Modifier.width(10.dp))
+                    AppThemeText(
+                        text = title.trim(),
+                        style = LocalTextStyle.current.copy(fontSize = 20.sp),
+                        modifier = Modifier.fillMaxWidth().weight(1f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
         }
-    }
-
-    if (deleteConfirmDialogState) {
-        AppThemeConfirmDialog(
-            "确认删除合集: ${item.albumName}",
-            properties = DialogProperties(
-                usePlatformDefaultWidth = false,
-                dismissOnClickOutside = false
-            ),
-            onNegative = {
-                deleteConfirmDialogState = false
-            },
-            onPositive = {
-                deleteConfirmDialogState = false
-                viewModel.deleteAlbum(item)
-            },
-            onDismissRequest = {
-                deleteConfirmDialogState = false
-            },
-            content = {})
     }
 }

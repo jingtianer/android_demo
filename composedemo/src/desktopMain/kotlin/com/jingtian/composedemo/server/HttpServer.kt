@@ -1,5 +1,7 @@
 import com.jingtian.composedemo.dao.DataBase
+import com.jingtian.composedemo.dao.model.FileType
 import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
+import com.jingtian.composedemo.multiplatform.logD
 import com.jingtian.composedemo.utils.CoroutineUtils
 import com.jingtian.composedemo.utils.share.ShareUtils
 import com.jingtian.composedemo.viewmodels.albumViewModel
@@ -20,14 +22,12 @@ import java.nio.charset.StandardCharsets
 
 // 根目录，对应 python --directory，自行修改
 private const val PORT = 8000
-private const val METADATA_PATH = ".composeDemoMetadata"
-private const val METADATA_FILE = ".metadata.json"
 fun startServer() {
     val server = HttpServer.create(InetSocketAddress("::", PORT), 0)
     server.createContext("/", RouteHandler().apply {
         addHandler("/getFile", GetFileHandler())
         addHandler("/getAlbumList", GetAlbumListHandler())
-        addHandler("/listDir", ListAlbumHandler())
+        addHandler("/listAlbum", ListAlbumHandler())
         addHandler("/updateItem", UpdateItemHandler())
     })
     server.executor = null
@@ -54,10 +54,16 @@ private class ListAlbumHandler() : RequestHandler(HttpMethodType.GET) {
             return false
         }
 
-        val itemList = runBlocking {
-            DataBase.dbImpl.getAlbumItemDao().getAllAlbumItemWithExtraLimitN(albumId = albumId, limit = limit, offset = offset)
+        try {
+            val itemList = runBlocking {
+                DataBase.dbImpl.getAlbumItemDao().getAllAlbumItemWithExtraLimitN(albumId = albumId, limit = limit, offset = offset, fileType = listOf(FileType.VIDEO, FileType.IMAGE))
+            }
+            handleGetFileInfo(exchange, json.encodeToString(itemList))
+        } catch (e: Exception) {
+            logD("HttpServer") {
+                "ListAlbumHandler: ${e.message}, ${e.stackTrace.contentDeepToString()}"
+            }
         }
-        handleGetFileInfo(exchange, json.encodeToString(itemList))
 
         return true
     }
@@ -125,7 +131,13 @@ private class GetFileHandler() : RequestHandler(HttpMethodType.GET) {
             return false
         }
 
-        handleGetFile(exchange, targetFile)
+        try {
+            handleGetFile(exchange, targetFile)
+        } catch (e: Exception) {
+            logD("HttpServer") {
+                "GetFileHandler: path = ${relPath}, ${e.message}, ${e.stackTrace.contentDeepToString()}"
+            }
+        }
 
         return true
     }
@@ -225,6 +237,9 @@ private class RouteHandler : HttpHandler {
 
 private fun sendText(exchange: HttpExchange, code: Int, text: String) {
     val bytes = text.toByteArray(StandardCharsets.UTF_8)
+    logD("HttpServer") {
+        "code=$code, text=$text"
+    }
     exchange.responseHeaders["Content-Type"] = "text/plain;charset=utf-8"
     exchange.sendResponseHeaders(code, bytes.size.toLong())
     exchange.responseBody.write(bytes)

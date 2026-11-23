@@ -8,6 +8,12 @@ import org.jetbrains.compose.resources.painterResource
 import demoapp.composedemo.generated.resources.*
 
 @Composable
+actual fun getGalleryIcon(): Painter = painterResource(Res.drawable.gallery)
+
+@Composable
+actual fun getHttpIcon(): Painter = painterResource(Res.drawable.http)
+
+@Composable
 actual fun getPauseIcon(): Painter = painterResource(Res.drawable.pause)
 
 @Composable

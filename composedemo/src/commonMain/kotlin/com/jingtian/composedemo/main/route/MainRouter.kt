@@ -4,9 +4,11 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.structuralEqualityPolicy
+import com.jingtian.composedemo.dao.model.Album
 import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.relation.AlbumItemRelation
 import com.jingtian.composedemo.main.MainState
+import com.jingtian.composedemo.main.http.dao.HttpServerEntity
 import com.jingtian.composedemo.main.widget.NavRouter
 import com.jingtian.composedemo.main.widget.SimpleNavHostController
 import com.jingtian.composedemo.multiplatform.MultiplatformFile
@@ -28,6 +30,8 @@ object ImageViewer : MainRouter()
 object VideoPlayer : MainRouter()
 @Serializable
 object Feed : MainRouter()
+@Serializable
+object HttpFeed : MainRouter()
 
 interface IRouterController {
     suspend fun toGallery() = Unit
@@ -41,6 +45,8 @@ interface IRouterController {
     suspend fun toImageViewer(file: AlbumItemRelation) = Unit
 
     suspend fun toVideoPlayer(file: AlbumItemRelation) = Unit
+
+    suspend fun toHttpServerFeed(serverEntity: HttpServerEntity, album: Album) = Unit
 
     fun isAnimating(): State<Boolean> = mutableStateOf(false)
 }
@@ -75,6 +81,11 @@ class MainRouterController(private val naviHost: SimpleNavHostController, val ma
     override suspend fun toVideoPlayer(file: AlbumItemRelation) {
         mainState.currentVideoPlayer = file
         naviHost.navigateTo(VideoPlayer)
+    }
+
+    override suspend fun toHttpServerFeed(serverEntity: HttpServerEntity, album: Album) {
+        mainState.currentHttpFeed = serverEntity to album
+        naviHost.navigateTo(HttpFeed)
     }
 
     override fun isAnimating(): State<Boolean> {

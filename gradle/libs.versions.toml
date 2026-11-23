@@ -45,6 +45,7 @@ gradle-plugin = "8.6.1"
 asm-plugin = "1.0.0"
 kotlinx-serialization = "1.7.3"
 composemediaplayer = "0.8.2"
+ktor_version = "3.1.3"
 
 [libraries]
 androidx-biometric = { module = "androidx.biometric:biometric", version.ref = "biometric" }
@@ -115,6 +116,11 @@ asm-tree = { group = "org.ow2.asm", name = "asm-tree", version.ref = "asm" }
 gradle-tools = { group = "com.android.tools.build", name = "gradle", version.ref = "gradle-plugin" }
 ui-backhandler = { module = "org.jetbrains.compose.ui:ui-backhandler", version.ref = "compose-mpp" }
 composemediaplayer-video = { module = "io.github.kdroidfilter:composemediaplayer", version.ref="composemediaplayer"}
+ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref="ktor_version" }
+ktor-client-engine-darwin = { module = "io.ktor:ktor-client-darwin", version.ref="ktor_version"}
+ktor-client-engine-android = { module = "io.ktor:ktor-client-android-jvm", version.ref="ktor_version"}
+ktor-client-engine-desktop = { module = "io.ktor:ktor-client-apache5-jvm", version.ref="ktor_version"}
+
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }

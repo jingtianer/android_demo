@@ -22,6 +22,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.jingtian.composedemo.BuildKonfig
+import com.jingtian.composedemo.main.dialog.AddHttpServerDialog
 import com.jingtian.composedemo.main.gallery.GalleryFunctionView
 import com.jingtian.composedemo.main.gallery.GalleryFunctions
 import com.jingtian.composedemo.navigation.rememberDocumentPicker
@@ -37,6 +38,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun DrawerFunctionArea() {
     var dialogState by remember { mutableStateOf(false) }
+    var dialogHttpState by remember { mutableStateOf(false) }
     FlowRow(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
         DrawerFunctionView(
             onClick = {
@@ -61,11 +63,23 @@ fun DrawerFunctionArea() {
                 }
             }
         }
+
+        if (!BuildKonfig.isDesktop) {
+            DrawerFunctionView(GalleryFunctions.ADD_HTTP) {
+                dialogHttpState = true
+            }
+        }
     }
 
     if (dialogState) {
         AddOrEditAlbumDialog {
             dialogState = false
+        }
+    }
+
+    if (dialogHttpState) {
+        AddHttpServerDialog {
+            dialogHttpState = false
         }
     }
 }

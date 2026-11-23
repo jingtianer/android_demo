@@ -34,7 +34,7 @@ interface MultiplatformFile {
 
     suspend fun path(): String
 
-    suspend fun platformFile(): PlatformFile {
+    suspend fun platformFile(): PlatformFile? {
         return PlatformFile(file() ?: Path(path()))
     }
 
