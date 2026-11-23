@@ -47,7 +47,7 @@ val isDebugBuild = project.gradle.startParameter.taskNames.any { task ->
 
 // ======================== Kotlin 多平台配置 ========================
 kotlin {
-    jvmToolchain(17)
+    jvmToolchain(21)
 
     androidTarget()
 
@@ -84,7 +84,7 @@ kotlin {
 
     jvm("desktop") {
         compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_17)
+            jvmTarget.set(JvmTarget.JVM_21)
         }
     }
 
@@ -118,10 +118,12 @@ kotlin {
 
                 implementation(libs.haze)
 
+
                 // 图片浏览库
                 implementation(libs.image.viewer)
                 // 大型图片支持（可选）
                 implementation(libs.sampling.decoder)
+
                 implementation(libs.composemediaplayer.video)
                 implementation(libs.ui.backhandler)
                 // 尝试了 precompose 并不是compose预加载
@@ -289,8 +291,8 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
 
     buildFeatures {
