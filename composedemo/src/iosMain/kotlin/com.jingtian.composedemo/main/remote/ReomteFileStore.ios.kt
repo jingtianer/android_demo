@@ -1,6 +1,9 @@
 package com.jingtian.composedemo.main.remote
 
+import com.jingtian.composedemo.dao.DataBase
+import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.utils.CoroutineUtils
+import com.jingtian.composedemo.utils.copyTo
 import com.jingtian.composedemo.utils.createNewFile
 import com.jingtian.composedemo.utils.delete
 import com.jingtian.composedemo.utils.deleteRecursively
@@ -9,9 +12,11 @@ import com.jingtian.composedemo.utils.ensureFileAndParentExists
 import com.jingtian.composedemo.utils.ensureNotExist
 import com.jingtian.composedemo.utils.exists
 import com.jingtian.composedemo.utils.getFileCacheStorageRootDir
+import com.jingtian.composedemo.utils.getFileStorageRootDir
 import com.jingtian.composedemo.utils.isDirectory
 import com.jingtian.composedemo.utils.isFile
 import com.jingtian.composedemo.utils.mkdirs
+import com.jingtian.composedemo.utils.relativeTo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.sync.Mutex
@@ -24,11 +29,18 @@ import kotlinx.io.files.SystemFileSystem
 
 class RemoteFileStore(serverType: ServerType) {
     private val storageRoot = Path(getFileCacheStorageRootDir(), "remote/filestore/server_${serverType.type}")
+    private val migrationTargetPath = Path(getFileStorageRootDir(), "remote/filestore/server_${serverType.type}")
     private val locks = mutableMapOf<String, Semaphore>()
     private val locksMutex = Mutex()
 
     init {
         storageRoot.ensureDir()
+    }
+
+    fun migrate(originUri: Uri, server: SftpServer) {
+        val targetFile = Path(migrationTargetPath, Path(originUri.path).relativeTo(Path(server.path)).toString())
+        targetFile.ensureFileAndParentExists()
+        SystemFileSystem.source(get(originUri)).copyTo(targetFile)
     }
 
     suspend fun loadFile(originUri: Uri, server: SftpServer): Path {

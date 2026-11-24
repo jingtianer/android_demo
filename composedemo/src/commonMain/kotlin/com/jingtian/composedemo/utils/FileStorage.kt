@@ -2,6 +2,7 @@ package com.jingtian.composedemo.utils
 
 import androidx.compose.ui.graphics.ImageBitmap
 import com.jingtian.composedemo.BuildKonfig
+import com.jingtian.composedemo.dao.DataBase
 import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.FileType
 import com.jingtian.composedemo.main.remote.RemoteSftpFile
@@ -56,6 +57,12 @@ object FileStorageUtils {
             "file_id_${fileType.value}",
             0L
         )
+
+        fun migrate(uri: MultiplatformFile) {
+            if (uri is RemoteSftpFile) {
+                uri.migrate()
+            }
+        }
 
         private val rankImageStoreDir: String = RANK_IMAGE_STORE_DIR + fileType.value
 

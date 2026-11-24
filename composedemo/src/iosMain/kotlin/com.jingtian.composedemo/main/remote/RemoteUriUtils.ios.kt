@@ -80,6 +80,10 @@ class RemoteSftpFileImpl(
         return originUri.lastPathSegment ?: ""
     }
 
+    override fun migrate() {
+        fileStore.migrate(originUri, server)
+    }
+
     override suspend fun fileName(): String = getOrignFileName()
 
     override suspend fun isHidden(): Boolean {

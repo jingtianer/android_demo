@@ -11,8 +11,11 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.ComposeUIViewController
 import com.jingtian.composedemo.BuildKonfig
+import com.jingtian.composedemo.dao.DataBase
 import com.jingtian.composedemo.launch.LaunchTasks
 import com.jingtian.composedemo.ui.theme.DemoAppTheme
+import com.jingtian.composedemo.utils.CoroutineUtils
+import com.jingtian.composedemo.utils.FileStorageUtils
 import platform.CoreGraphics.CGFloat
 
 
@@ -36,4 +39,18 @@ fun MainViewController() = ComposeUIViewController {
     DemoAppTheme {
         PasswordGuardedMain()
     }
+}
+
+fun migrate() {
+    CoroutineUtils.runIOTask({
+        DataBase.dbImpl.getAlbumDao().getAllAlbum().forEach outerLoop@{ album->
+            val albumId = album.albumId
+            if (albumId == null || albumId.takeIf { it != -1L } == null) {
+                return@outerLoop
+            }
+            DataBase.dbImpl.getAlbumItemDao().getAllAlbumItemWithExtra(albumId).forEach innerLoop@{ item->
+                FileStorageUtils.getStorage(item.fileInfo.fileType).migrate(item.fileInfo.getFileUri() ?: return@innerLoop)
+            }
+        }
+    })
 }
