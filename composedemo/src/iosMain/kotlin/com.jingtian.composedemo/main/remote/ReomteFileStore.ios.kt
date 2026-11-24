@@ -2,6 +2,7 @@ package com.jingtian.composedemo.main.remote
 
 import com.jingtian.composedemo.dao.DataBase
 import com.jingtian.composedemo.dao.model.FileInfo
+import com.jingtian.composedemo.multiplatform.logD
 import com.jingtian.composedemo.utils.CoroutineUtils
 import com.jingtian.composedemo.utils.copyTo
 import com.jingtian.composedemo.utils.createNewFile
@@ -42,6 +43,9 @@ class RemoteFileStore(serverType: ServerType) {
         val targetFile = Path(migrationTargetPath, Path(originUri.path).relativeTo(Path(server.path)).toString())
         targetFile.ensureFileAndParentExists()
         albumViewModel().sendMessage("开始迁移 ${originUri.path} to ${targetFile}, relative=${Path(originUri.path).relativeTo(Path(server.path))}")
+        logD("migration") {
+            "开始迁移 ${originUri.path} to ${targetFile}, relative=${Path(originUri.path).relativeTo(Path(server.path))}"
+        }
         SystemFileSystem.source(get(originUri)).copyTo(targetFile)
     }
 
