@@ -32,6 +32,10 @@ class Uri(val lastPathSegment: String, val path: String, val authority: String, 
     fun getExtension(): String {
         return this.lastPathSegment.split(".").lastOrNull() ?: ""
     }
+
+    override fun toString(): String {
+        return raw
+    }
 }
 
 fun File.ensureFileExist(onAbsent: (File)->Unit):File {
@@ -75,13 +79,13 @@ class RemoteFileStore(serverType: ServerType) {
             val tmpFile = getTmp(originUri)
             val lock = locks.computeIfAbsent(originUri.toString()) { Semaphore(1) }
             return@withContext lock.withPermit {
-                if (server.isLocalHost()) {
-                    if (Files.isSymbolicLink(realFile.toPath())) {
-                        return@withPermit realFile
-                    }
-                    Files.createSymbolicLink(realFile.toPath(), File(originUri.path).toPath())
-                    return@withPermit realFile
-                }
+//                if (server.isLocalHost()) {
+//                    if (Files.isSymbolicLink(realFile.toPath())) {
+//                        return@withPermit realFile
+//                    }
+//                    Files.createSymbolicLink(realFile.toPath(), File(originUri.path).toPath())
+//                    return@withPermit realFile
+//                }
                 suspendCancellableCoroutine { cancelable->
 //                    logD("jingtian", "start: ${originUri.path}")
                     try {
