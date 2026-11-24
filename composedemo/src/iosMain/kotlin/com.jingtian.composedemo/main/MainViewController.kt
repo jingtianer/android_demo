@@ -2,6 +2,7 @@ package com.jingtian.composedemo.main
 
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -16,6 +17,8 @@ import com.jingtian.composedemo.launch.LaunchTasks
 import com.jingtian.composedemo.ui.theme.DemoAppTheme
 import com.jingtian.composedemo.utils.CoroutineUtils
 import com.jingtian.composedemo.utils.FileStorageUtils
+import com.jingtian.composedemo.viewmodels.albumViewModel
+import kotlinx.coroutines.delay
 import platform.CoreGraphics.CGFloat
 
 
@@ -35,9 +38,13 @@ fun MainViewController() = ComposeUIViewController {
         Main()
         return@ComposeUIViewController
     }
-    LaunchTasks.onLaunch()
     DemoAppTheme {
         PasswordGuardedMain()
+    }
+    LaunchedEffect(Unit) {
+        LaunchTasks.onLaunch()
+        delay(2000)
+        migrate()
     }
 }
 
@@ -48,6 +55,7 @@ fun migrate() {
             if (albumId == null || albumId.takeIf { it != -1L } == null) {
                 return@outerLoop
             }
+            albumViewModel().sendMessage("开始迁移")
             DataBase.dbImpl.getAlbumItemDao().getAllAlbumItemWithExtra(albumId).forEach innerLoop@{ item->
                 FileStorageUtils.getStorage(item.fileInfo.fileType).migrate(item.fileInfo.getFileUri() ?: return@innerLoop)
             }

@@ -17,6 +17,7 @@ import com.jingtian.composedemo.utils.isDirectory
 import com.jingtian.composedemo.utils.isFile
 import com.jingtian.composedemo.utils.mkdirs
 import com.jingtian.composedemo.utils.relativeTo
+import com.jingtian.composedemo.viewmodels.albumViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.sync.Mutex
@@ -40,6 +41,7 @@ class RemoteFileStore(serverType: ServerType) {
     fun migrate(originUri: Uri, server: SftpServer) {
         val targetFile = Path(migrationTargetPath, Path(originUri.path).relativeTo(Path(server.path)).toString())
         targetFile.ensureFileAndParentExists()
+        albumViewModel().sendMessage("开始迁移 ${originUri.path} to ${targetFile}, relative=${Path(originUri.path).relativeTo(Path(server.path))}")
         SystemFileSystem.source(get(originUri)).copyTo(targetFile)
     }
 
