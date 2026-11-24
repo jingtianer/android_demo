@@ -135,20 +135,11 @@ suspend fun systemFallbackIntent(context: Context, fileName: String, fileInfo: F
     val originFileUri = fileInfo.getFileUri()
     val originFile = originFileUri?.file()
     val mediaUri: Uri = if (originFile != null) {
-        val tmpLinkFile = FileLinkProvider.get(fileName, fileInfo)?.toFile()
-        if (tmpLinkFile != null) {
-            FileProvider.getUriForFile(
-                context,
-                "${context.packageName}.fileprovider",
-                tmpLinkFile
-            )
-        } else {
-            FileProvider.getUriForFile(
-                context,
-                "${context.packageName}.fileprovider",
-                File(originFile.toString())
-            )
-        }
+        FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            File(originFile.toString())
+        )
     } else {
         (originFileUri as MultiplatformFileImpl?)?.getUri()
     } ?: return null
