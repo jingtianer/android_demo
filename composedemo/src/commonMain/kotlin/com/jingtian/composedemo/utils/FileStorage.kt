@@ -2,6 +2,7 @@ package com.jingtian.composedemo.utils
 
 import androidx.compose.ui.graphics.ImageBitmap
 import com.jingtian.composedemo.BuildKonfig
+import com.jingtian.composedemo.dao.DataBase
 import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.FileType
 import com.jingtian.composedemo.main.remote.RemoteSftpFile

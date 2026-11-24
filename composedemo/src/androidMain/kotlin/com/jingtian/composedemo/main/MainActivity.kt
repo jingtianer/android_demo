@@ -18,7 +18,6 @@ import com.jingtian.composedemo.base.JumpOnPurposeMarkHolder
 import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.FileType.*
 import com.jingtian.composedemo.multiplatform.MultiplatformFileImpl
-import com.jingtian.composedemo.utils.FileLinkProvider
 import com.jingtian.composedemo.viewmodels.AndroidMigrateViewModel
 import com.jingtian.composedemo.viewmodels.AuthViewModel
 import com.jingtian.composedemo.viewmodels.authViewModel
@@ -135,20 +134,11 @@ suspend fun systemFallbackIntent(context: Context, fileName: String, fileInfo: F
     val originFileUri = fileInfo.getFileUri()
     val originFile = originFileUri?.file()
     val mediaUri: Uri = if (originFile != null) {
-        val tmpLinkFile = FileLinkProvider.get(fileName, fileInfo)?.toFile()
-        if (tmpLinkFile != null) {
-            FileProvider.getUriForFile(
-                context,
-                "${context.packageName}.fileprovider",
-                tmpLinkFile
-            )
-        } else {
-            FileProvider.getUriForFile(
-                context,
-                "${context.packageName}.fileprovider",
-                File(originFile.toString())
-            )
-        }
+        FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            File(originFile.toString())
+        )
     } else {
         (originFileUri as MultiplatformFileImpl?)?.getUri()
     } ?: return null

@@ -22,7 +22,7 @@ import com.jingtian.composedemo.main.http.dao.HttpServerEntity
         LabelInfo::class,
         HttpServerEntity::class,
     ],
-    version = 1
+    version = 2
 )
 @ConstructedBy(RoomConstructor::class)
 @TypeConverters(/* DateTypeConverter::class, */FileTypeConverter::class, ItemRankConverter::class)

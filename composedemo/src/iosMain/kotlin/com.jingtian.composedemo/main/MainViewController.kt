@@ -2,6 +2,7 @@ package com.jingtian.composedemo.main
 
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -11,8 +12,13 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.ComposeUIViewController
 import com.jingtian.composedemo.BuildKonfig
+import com.jingtian.composedemo.dao.DataBase
 import com.jingtian.composedemo.launch.LaunchTasks
 import com.jingtian.composedemo.ui.theme.DemoAppTheme
+import com.jingtian.composedemo.utils.CoroutineUtils
+import com.jingtian.composedemo.utils.FileStorageUtils
+import com.jingtian.composedemo.viewmodels.albumViewModel
+import kotlinx.coroutines.delay
 import platform.CoreGraphics.CGFloat
 
 
@@ -32,8 +38,10 @@ fun MainViewController() = ComposeUIViewController {
         Main()
         return@ComposeUIViewController
     }
-    LaunchTasks.onLaunch()
     DemoAppTheme {
         PasswordGuardedMain()
+    }
+    LaunchedEffect(Unit) {
+        LaunchTasks.onLaunch()
     }
 }
