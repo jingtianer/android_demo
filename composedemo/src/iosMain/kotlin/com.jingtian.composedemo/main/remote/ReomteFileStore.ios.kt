@@ -39,27 +39,6 @@ class RemoteFileStore(serverType: ServerType) {
         storageRoot.ensureDir()
     }
 
-    fun migrate(originUri: Uri, server: SftpServer) {
-        val cacheFile = get(originUri)
-        val tmpFile = get(originUri)
-        val targetFile = Path(migrationTargetPath, Path(originUri.path).relativeTo(Path(server.path)).toString())
-        SystemFileSystem.metadataOrNull(cacheFile)?.takeIf {
-            it.isRegularFile && it.size > 0 && !tmpFile.exists()
-        } ?: run {
-            albumViewModel().sendMessage("跳过 ${originUri.path} to ${targetFile}, relative=${Path(originUri.path).relativeTo(Path(server.path))}")
-            logD("migration") {
-                "跳过 ${originUri.path} to ${targetFile}, relative=${Path(originUri.path).relativeTo(Path(server.path))}"
-            }
-            return
-        }
-        targetFile.ensureFileAndParentExists()
-        albumViewModel().sendMessage("开始迁移 ${originUri.path} to ${targetFile}, relative=${Path(originUri.path).relativeTo(Path(server.path))}")
-        logD("migration") {
-            "开始迁移 ${originUri.path} to ${targetFile}, relative=${Path(originUri.path).relativeTo(Path(server.path))}"
-        }
-        SystemFileSystem.source(cacheFile).copyTo(targetFile)
-    }
-
     suspend fun loadFile(originUri: Uri, server: SftpServer): Path {
         val iosServer = server as? IosSftpServer ?: return get(originUri).apply { ensureFileAndParentExists() }
         return withContext(Dispatchers.IO) {

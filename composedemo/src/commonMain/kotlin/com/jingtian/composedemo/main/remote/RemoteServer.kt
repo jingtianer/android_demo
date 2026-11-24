@@ -35,7 +35,6 @@ enum class ServerType(val type: Int) {
 
 interface RemoteSftpFile: MultiplatformFile {
     fun getServerInstance(): SftpServer
-    fun migrate() {}
 }
 
 @kotlinx.serialization.Serializable

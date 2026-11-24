@@ -43,22 +43,5 @@ fun MainViewController() = ComposeUIViewController {
     }
     LaunchedEffect(Unit) {
         LaunchTasks.onLaunch()
-        delay(2000)
-        migrate()
     }
-}
-
-fun migrate() {
-    CoroutineUtils.runIOTask({
-        DataBase.dbImpl.getAlbumDao().getAllAlbum().forEach outerLoop@{ album->
-            val albumId = album.albumId
-            if (albumId == null || albumId.takeIf { it != -1L } == null) {
-                return@outerLoop
-            }
-            albumViewModel().sendMessage("开始迁移")
-            DataBase.dbImpl.getAlbumItemDao().getAllAlbumItemWithExtra(albumId).forEach innerLoop@{ item->
-                FileStorageUtils.getStorage(item.fileInfo.fileType).migrate(item.fileInfo.getFileUri() ?: return@innerLoop)
-            }
-        }
-    })
 }

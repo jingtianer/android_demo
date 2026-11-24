@@ -58,12 +58,6 @@ object FileStorageUtils {
             0L
         )
 
-        fun migrate(uri: MultiplatformFile) {
-            if (uri is RemoteSftpFile) {
-                uri.migrate()
-            }
-        }
-
         private val rankImageStoreDir: String = RANK_IMAGE_STORE_DIR + fileType.value
 
         private val uriCache = mutableMapOf<Long, WeakRef<MultiplatformFile>>()
