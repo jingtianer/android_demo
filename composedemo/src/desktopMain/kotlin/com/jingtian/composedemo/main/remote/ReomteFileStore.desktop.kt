@@ -4,6 +4,7 @@ import com.jcraft.jsch.SftpProgressMonitor
 import com.jingtian.composedemo.multiplatform.logD
 import com.jingtian.composedemo.multiplatform.logE
 import com.jingtian.composedemo.utils.CoroutineUtils
+import com.jingtian.composedemo.utils.concurrency.RefMutexMap
 import com.jingtian.composedemo.utils.getFileCacheStorageRootDir
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -70,15 +71,14 @@ class RemoteFileStore(serverType: ServerType) {
         storageRoot.ensureDirExist()
     }
 
-    private val locks = ConcurrentHashMap<String, Semaphore>()
+    private val locks = RefMutexMap<String>()
 
     suspend fun loadFile(originUri: Uri, server: SftpServer): File {
         val server = server as SftpServerImpl
         return withContext(Dispatchers.IO) {
             val realFile = get(originUri)
             val tmpFile = getTmp(originUri)
-            val lock = locks.computeIfAbsent(originUri.toString()) { Semaphore(1) }
-            return@withContext lock.withPermit {
+            return@withContext locks.withPermit(originUri.toString()) {
                 if (server.isLocalHost()) {
                     return@withPermit File(originUri.path)
                 }
@@ -170,13 +170,9 @@ class RemoteFileStore(serverType: ServerType) {
 
     fun delete(originUri: Uri) {
         CoroutineUtils.runIOTask({
-            val lock = locks.computeIfAbsent(originUri.toString()) { Semaphore(1) }
-            try {
-                lock.acquire()
+            locks.withPermit(originUri.toString()) {
                 get(originUri).delete()
                 getTmp(originUri).delete()
-            } finally {
-                lock.release()
             }
         })
     }

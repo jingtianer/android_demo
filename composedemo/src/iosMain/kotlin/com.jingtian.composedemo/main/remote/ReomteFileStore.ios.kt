@@ -4,6 +4,7 @@ import com.jingtian.composedemo.dao.DataBase
 import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.multiplatform.logD
 import com.jingtian.composedemo.utils.CoroutineUtils
+import com.jingtian.composedemo.utils.concurrency.RefMutexMap
 import com.jingtian.composedemo.utils.copyTo
 import com.jingtian.composedemo.utils.createNewFile
 import com.jingtian.composedemo.utils.delete
@@ -31,9 +32,7 @@ import kotlinx.io.files.SystemFileSystem
 
 class RemoteFileStore(serverType: ServerType) {
     private val storageRoot = Path(getFileCacheStorageRootDir(), "remote/filestore/server_${serverType.type}")
-    private val migrationTargetPath = Path(getFileStorageRootDir(), "remote/filestore/server_${serverType.type}")
-    private val locks = mutableMapOf<String, Semaphore>()
-    private val locksMutex = Mutex()
+    private val locks = RefMutexMap<String>()
 
     init {
         storageRoot.ensureDir()
@@ -44,8 +43,7 @@ class RemoteFileStore(serverType: ServerType) {
         return withContext(Dispatchers.IO) {
             val realFile = get(originUri)
             val tmpFile = getTmp(originUri)
-            val lock = lockFor(originUri.raw)
-            lock.withPermit {
+            locks.withPermit(originUri.raw) {
                 if (realFile.exists() && realFile.isFile && fileSize(realFile) > 0L && !tmpFile.exists()) {
                     return@withPermit realFile
                 }
@@ -63,8 +61,7 @@ class RemoteFileStore(serverType: ServerType) {
 
     fun delete(originUri: Uri) {
         CoroutineUtils.runIOTask({
-            val lock = lockFor(originUri.raw)
-            lock.withPermit {
+            locks.withPermit(originUri.raw) {
                 get(originUri).ensureNotExist()
                 getTmp(originUri).ensureNotExist()
             }
@@ -75,12 +72,6 @@ class RemoteFileStore(serverType: ServerType) {
         val fileName = originUri.lastPathSegment
         val path = originUri.path
         return Path(storageRoot, "${filePathHashCode(fileName, path)}_$fileName")
-    }
-
-    private suspend fun lockFor(key: String): Semaphore {
-        return locksMutex.withLock {
-            locks.getOrPut(key) { Semaphore(1) }
-        }
     }
 
     private fun getTmp(originUri: Uri): Path {
