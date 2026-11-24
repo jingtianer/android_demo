@@ -18,7 +18,6 @@ import com.jingtian.composedemo.base.JumpOnPurposeMarkHolder
 import com.jingtian.composedemo.dao.model.FileInfo
 import com.jingtian.composedemo.dao.model.FileType.*
 import com.jingtian.composedemo.multiplatform.MultiplatformFileImpl
-import com.jingtian.composedemo.utils.FileLinkProvider
 import com.jingtian.composedemo.viewmodels.AndroidMigrateViewModel
 import com.jingtian.composedemo.viewmodels.AuthViewModel
 import com.jingtian.composedemo.viewmodels.authViewModel
