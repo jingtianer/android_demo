@@ -20,25 +20,6 @@ import kotlin.io.path.exists
 
 class AlbumItemLauncher(val mainNavController: IRouterController) : IAlbumItemLauncher {
     companion object {
-        private val linkDir = File(globalWorkDir, "tmp/links")
-        init {
-            if (linkDir.exists()) {
-                if (linkDir.isFile) {
-                    linkDir.delete()
-                } else if (linkDir.isDirectory) {
-                    linkDir.deleteRecursively()
-                }
-            }
-            linkDir.mkdirs()
-        }
-
-//        fun FileInfo.tmpLinkFile(fileName: String, defaultExtension: String = ""): Path? {
-//            val originalFile = this.getFileUri()?.file ?: return null
-//            val linkedFile = Files.createLink(Path(linkDir.path, fileName + "_tmplink_${Random.nextLong(0, Long.MAX_VALUE)}.${extension ?: defaultExtension}"), Path(originalFile.parentFile.path, originalFile.name))
-//            linkedFile.toFile().deleteOnExit()
-//            return originalFile.toPath()
-//        }
-
         suspend fun FileInfo.browse(fileName: String) {
             runCatching {
                 Desktop.getDesktop().browse((this.getFileUri() as? MultiplatformFileImpl)?.realFile?.toURI() ?: return)

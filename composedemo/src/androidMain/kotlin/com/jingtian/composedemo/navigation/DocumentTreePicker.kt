@@ -2,6 +2,7 @@ package com.jingtian.composedemo.navigation
 
 import android.content.Intent
 import android.net.Uri
+import android.os.Environment
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -18,6 +19,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 
 
 class DocumentTreePicker(val launcher: ManagedActivityResultLauncher<Uri?, Uri?>, val scope: CoroutineScope) :
@@ -25,9 +27,7 @@ class DocumentTreePicker(val launcher: ManagedActivityResultLauncher<Uri?, Uri?>
     override fun launch(mimes: MultiplatformFile?) {
         JumpOnPurposeMarkHolder.isJumpOnPurpose.value = true
         scope.launch(Dispatchers.Main) {
-            launcher.launch(withContext(Dispatchers.IO) {
-                (mimes as? MultiplatformFileImpl)?.getUri()
-            })
+            launcher.launch(Uri.fromFile(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM)))
         }
     }
 }

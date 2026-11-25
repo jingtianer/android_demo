@@ -4,13 +4,16 @@ import androidx.compose.ui.graphics.ImageBitmap
 import com.jingtian.composedemo.BuildKonfig
 import com.jingtian.composedemo.dao.DataBase
 import com.jingtian.composedemo.dao.model.FileInfo
+import com.jingtian.composedemo.dao.model.FileStorageInfo
 import com.jingtian.composedemo.dao.model.FileType
+import com.jingtian.composedemo.main.http.file.HttpMultiplatformFile
 import com.jingtian.composedemo.main.remote.RemoteSftpFile
+import com.jingtian.composedemo.main.remote.ServerStorage
 import com.jingtian.composedemo.multiplatform.MultiplatformFile
 import com.jingtian.composedemo.multiplatform.WeakRef
-import com.jingtian.composedemo.multiplatform.getLongStorage
 import com.jingtian.composedemo.multiplatform.getMultiplatformFileFactory
 import com.jingtian.composedemo.multiplatform.newReentrantLock
+import com.jingtian.composedemo.multiplatform.readAllBytesOrNull
 import com.jingtian.composedemo.multiplatform.use
 import com.jingtian.composedemo.utils.BitMapCachePool.calculateScaleFactor
 import com.jingtian.composedemo.utils.BitMapCachePool.scale
@@ -21,7 +24,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.io.Buffer
-import kotlinx.io.RawSource
 import kotlinx.io.files.Path
 
 expect fun getFileStorageRootDir(): Path
@@ -30,33 +32,45 @@ expect fun getFileCacheStorageRootDir(): Path
 
 object FileStorageUtils {
     private const val RANK_IMAGE_STORE_ROOT_DIR = "fileStorage"
-    private const val RANK_IMAGE_STORE_DIR = "${RANK_IMAGE_STORE_ROOT_DIR}/file_"
+    private const val RANK_IMAGE_STORE_DIR = "${RANK_IMAGE_STORE_ROOT_DIR}/filetype_"
     private const val RANK_IMAGE_STORE_PREFIX = "file_"
-
-    private val storage = HashMap<FileType, FileStorage>()
 
     fun checkRootDir() {
         val storeDir = Path(getFileStorageRootDir(), RANK_IMAGE_STORE_ROOT_DIR)
         storeDir.ensureDir()
     }
 
-    private val lock = newReentrantLock()
+    private val imageStore by lazy {
+        FileStorage(FileType.IMAGE)
+    }
 
-    suspend fun getStorage(fileType: FileType): FileStorage {
-        return lock.use {
-            storage.getOrPut(fileType) {
-                FileStorage(fileType)
-            }
+    private val videoStore by lazy {
+        FileStorage(FileType.VIDEO)
+    }
+
+    private val audioStore by lazy {
+        FileStorage(FileType.AUDIO)
+    }
+
+    private val htmlStore by lazy {
+        FileStorage(FileType.HTML)
+    }
+
+    private val regularStore by lazy {
+        FileStorage(FileType.RegularFile)
+    }
+
+    fun getStorage(fileType: FileType): FileStorage {
+        return when(fileType) {
+            FileType.IMAGE -> imageStore
+            FileType.VIDEO -> videoStore
+            FileType.AUDIO -> audioStore
+            FileType.HTML -> htmlStore
+            FileType.RegularFile -> regularStore
         }
     }
 
     class FileStorage(val fileType: FileType) {
-
-        private var id by SharedPreferenceUtils.StorageLong(
-            getLongStorage("file-store_id"),
-            "file_id_${fileType.value}",
-            0L
-        )
 
         private val rankImageStoreDir: String = RANK_IMAGE_STORE_DIR + fileType.value
 
@@ -66,35 +80,43 @@ object FileStorageUtils {
         private val lock = newReentrantLock()
 
         private fun rankImagePrefix(id: Long): String {
-            return "${RANK_IMAGE_STORE_PREFIX}_${id}"
+            return "${RANK_IMAGE_STORE_PREFIX}${id}"
+        }
+
+        private val dao by lazy {
+            DataBase.dbImpl.getFileStorageDao()
         }
 
         suspend fun get(id: Long, fileInfo: FileInfo): MultiplatformFile? {
 //            println("FileStorage: fileType:${fileType.name}, id=$id, fileInfo=${fileInfo.extension}")
-            if (id == -1L) {
-                return null
-            }
-            storeJobs[id]?.get()?.join()
-            val cachedUri = uriCache[id]?.get()
-            if (cachedUri != null) {
-                return cachedUri
-            }
-            val storeDir = Path(getFileStorageRootDir(), rankImageStoreDir)
-            val storageFile = Path(storeDir, rankImagePrefix(id))
+            withContext(Dispatchers.IO) {
+                if (id == -1L) {
+                    return@withContext null
+                }
+                storeJobs[id]?.get()?.join()
+                val cachedUri = uriCache[id]?.get()
+                if (cachedUri != null) {
+                    return@withContext cachedUri
+                }
+                val content = dao.queryFileStorageInfo(id)?.content
 //            println("FileStorage: fileType:${fileType.name}, id=$id, storageFile=$storageFile")
-            return if (storageFile.exists()) {
+                return@withContext if (content != null) {
 //                println("FileStorage: exist fileType:${fileType.name}, id=$id, storageFile=$storageFile")
-                getMultiplatformFileFactory().fromFile(storageFile, fileInfo.extension)
-            } else {
+                    getMultiplatformFileFactory().fromFile(content, fileInfo.extension)
+                } else {
 //                println("FileStorage: not exist fileType:${fileType.name}, id=$id, storageFile=$storageFile")
-                null
+                    null
+                }
             }
         }
 
-        fun delete(id: Long) {
-            val storeDir = Path(getFileStorageRootDir(), rankImageStoreDir)
-            val storageFile = Path(storeDir, rankImagePrefix(id))
-            storageFile.ensureNotExist()
+        suspend fun delete(id: Long) {
+            withContext(Dispatchers.IO) {
+                val storeDir = Path(getFileStorageRootDir(), rankImageStoreDir)
+                val storageFile = Path(storeDir, rankImagePrefix(id))
+                dao.deleteFileStoreInfo(id)
+                storageFile.ensureNotExist()
+            }
         }
 
         suspend fun asyncStore(oldId: Long, uri: MultiplatformFile): Pair<Long, Job> {
@@ -107,23 +129,32 @@ object FileStorageUtils {
         }
 
         private suspend fun doStore(uri: MultiplatformFile, id: Long) {
-            val storageFile = getStoreFile(id)
-            ensureFile(storageFile)
-            storeByType(uri, storageFile, id)
+            storeByType(uri, id)
             uri.onStoreFinish()
+        }
+
+        private fun isRemoteFile(uri: MultiplatformFile): Boolean {
+            return BuildKonfig.isDesktop || uri is RemoteSftpFile || uri is HttpMultiplatformFile
         }
 
         private suspend fun allocateId(uri: MultiplatformFile, oldId: Long = -1): Long {
             return lock.use {
-                val id = if (oldId >= this@FileStorage.id || oldId < 0) {
-                    this@FileStorage.id++
-                } else {
+                val id = if (oldId != -1L) {
                     oldId
+                } else {
+                    dao.insertFileStoreInfo(FileStorageInfo(content = ByteArray(0)))
                 }
+                val rawContent = if (isRemoteFile(uri)) {
+                    uri.fileStoreInputStream().use { it.readAllBytesOrNull() }
+                } else {
+                    getStoreFile(id, uri.fileName()).toString().encodeToByteArray()
+                }
+                dao.updateFileStorageInfo(FileStorageInfo(
+                    id = id,
+                    content = rawContent
+                ))
                 uriCache.remove(oldId)
                 uriCache[id] = WeakRef(uri)
-                val storageFile = getStoreFile(id)
-                ensureFile(storageFile)
                 id
             }
         }
@@ -137,54 +168,25 @@ object FileStorageUtils {
             return id to job
         }
 
-        private suspend fun storeByType(uri: MultiplatformFile, storageFile: Path, id: Long) {
-            if ((BuildKonfig.isRemote && uri is RemoteSftpFile) || BuildKonfig.isDesktop) {
-                uri.fileStoreInputStream()?.let {
-                    innerStoreImage(id, it, storageFile, uri.extension())
-                }
-            } else {
-                val realFile = getIosRealFileStoreFile(id, uri.fileName() ?: "real_$id")
-                val bytes = realFile.relativeTo(getFileStorageRootDir()).toString().encodeToByteArray()
-                val buffer = Buffer()
-                buffer.write(bytes, 0, bytes.size)
-                innerStoreImage(id, buffer, storageFile, uri.extension())
-                uri.inputStream()?.use { `is`->
-                    `is`.copyTo(realFile)
-                }
+        private suspend fun storeByType(uri: MultiplatformFile, id: Long) {
+            if (isRemoteFile(uri)) {
+                return
+            }
+            val realFile = getStoreFile(id, uri.fileName())
+            val bytes = realFile.relativeTo(getFileStorageRootDir()).toString().encodeToByteArray()
+            val buffer = Buffer()
+            buffer.write(bytes, 0, bytes.size)
+            uri.inputStream()?.use { `is`->
+                `is`.copyTo(realFile)
             }
         }
 
-        private fun ensureFile(storageFile: Path) {
-            storageFile.ensureNewFileExists()
-        }
-
-        private suspend fun getStoreFile(id: Long): Path {
-            val storeDir = Path(getFileStorageRootDir(), rankImageStoreDir)
+        private suspend fun getStoreFile(id: Long, fileName: String?): Path {
+            val storeDir = Path(getFileStorageRootDir(), rankImageStoreDir, rankImagePrefix(id))
             lock.use {
                 storeDir.ensureDir()
             }
-            return Path(storeDir, rankImagePrefix(id))
-        }
-
-        private suspend fun getIosRealFileStoreFile(id: Long, fileName: String): Path {
-            val storeDir = Path(getFileStorageRootDir(), rankImageStoreDir)
-            lock.use {
-                storeDir.ensureDir()
-            }
-            return Path(storeDir, rankImagePrefix(id) + "_${fileName}")
-        }
-
-        private suspend fun innerStoreImage(
-            id: Long,
-            input: RawSource,
-            storageFile: Path,
-            extension: String,
-        ) {
-            input.copyTo(storageFile)
-            val uri = getMultiplatformFileFactory().fromFile(storageFile, extension)
-            lock.use {
-                uriCache[id] = WeakRef(uri)
-            }
+            return Path(storeDir, fileName ?: "real_$id")
         }
     }
 

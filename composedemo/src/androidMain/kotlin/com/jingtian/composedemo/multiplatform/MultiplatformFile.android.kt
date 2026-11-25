@@ -11,24 +11,19 @@ import java.io.File
 import kotlinx.io.files.SystemFileSystem
 import kotlinx.io.buffered
 import kotlinx.io.readString
+import java.io.ByteArrayInputStream
 
 private object MultiplatformFileFactory : IMultiplatformFileFactory {
-    override fun fromFile(file: Path): MultiplatformFile {
+    override fun fromFile(rawContent: ByteArray, extension: String?): MultiplatformFile? {
         if (BuildKonfig.isRemote) {
-            val uri = File(file.toString()).inputStream().readAsUri()
+            val uri = ByteArrayInputStream(rawContent).readAsUri() ?: return null
             if (uri?.scheme?.startsWith("jingtian") == true) {
                 RemoteUriUtils.parse(uri)?.let {
                     return it
                 }
             }
         }
-        val realFile = Path(
-            getFileStorageRootDir(),
-            SystemFileSystem.source(file).buffered().use {
-                it.readString()
-            }
-        )
-        return MultiplatformFileImpl(File(realFile.toString()).toUri(), canDelete = true)
+        return MultiplatformFileImpl(File(rawContent.toString(Charsets.UTF_8)).toUri(), canDelete = true)
     }
 
     override fun shareFile(file: Path): MultiplatformFile {

@@ -6,6 +6,9 @@ import com.jingtian.composedemo.dao.DataBase
 import com.jingtian.composedemo.dao.FileInfoDao
 import com.jingtian.composedemo.multiplatform.MultiplatformFile
 import com.jingtian.composedemo.utils.FileStorageUtils
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 
 @Entity(
@@ -23,7 +26,9 @@ class FileInfo(
     var extension: String? = null,
 ) {
     suspend fun getFileUri(): MultiplatformFile? {
-        return FileStorageUtils.getStorage(fileType).get(storageId, this)
+        return withContext(Dispatchers.IO) {
+            FileStorageUtils.getStorage(fileType).get(storageId, this@FileInfo)
+        }
     }
 }
 

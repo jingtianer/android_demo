@@ -6,6 +6,7 @@ import com.jingtian.composedemo.main.remote.Uri
 import com.jingtian.composedemo.utils.extension
 import com.jingtian.composedemo.utils.getFileStorageRootDir
 import com.jingtian.composedemo.utils.relativeTo
+import kotlinx.io.Buffer
 import kotlinx.io.buffered
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
@@ -13,10 +14,7 @@ import kotlinx.io.readString
 
 actual fun getMultiplatformFileFactory() : IMultiplatformFileFactory {
     val regex = Regex("^([a-zA-Z0-9]+)://([^/]+)(/.*)$")
-    fun readAsRemoteUri(file: Path): Uri? {
-        val url = SystemFileSystem.source(file).buffered().use {
-            it.readString()
-        }
+    fun readAsRemoteUri(url: String): Uri? {
 //        logD("readAsRemoteUri", "url: $url")
         val matchResult = regex.matchEntire(url) ?: return null
         val scheme = matchResult.groups[1]?.value ?: return null
@@ -27,28 +25,15 @@ actual fun getMultiplatformFileFactory() : IMultiplatformFileFactory {
     }
 
     return object : IMultiplatformFileFactory {
-        override fun fromFile(file: Path): MultiplatformFile {
-            if (BuildKonfig.isRemote) {
-//                logD("fromFile", "$file")
-                val uri = readAsRemoteUri(file)
-                if (uri?.scheme?.startsWith("jingtian") == true) {
-                    RemoteUriUtils.parse(uri)?.let {
-                        return it
-                    }
-                }
+        override fun fromFile(rawContent: ByteArray, extension: String?): MultiplatformFile? {
+            val buffer = Buffer()
+            buffer.write(rawContent)
+            val content = buffer.use {
+                it.readString()
             }
-            val realFile = Path(
-                getFileStorageRootDir(),
-                SystemFileSystem.source(file).buffered().use {
-                    it.readString()
-                }
-            )
-            return MultiplatformFileImpl(realFile, realFile.extension, relativePath = file.relativeTo(getFileStorageRootDir()), canDelete = true)
-        }
-        override fun fromFile(file: Path, extension: String?): MultiplatformFile {
             if (BuildKonfig.isRemote) {
 //                logD("fromFile", "$file, extension=$extension")
-                val uri = readAsRemoteUri(file)
+                val uri = readAsRemoteUri(content)
                 if (uri?.scheme?.startsWith("jingtian") == true) {
                     RemoteUriUtils.parse(uri)?.let {
                         return it
@@ -57,9 +42,7 @@ actual fun getMultiplatformFileFactory() : IMultiplatformFileFactory {
             }
             val realFile = Path(
                 getFileStorageRootDir(),
-                SystemFileSystem.source(file).buffered().use {
-                    it.readString()
-                }
+                content
             )
             return MultiplatformFileImpl(realFile, extension ?: realFile.extension, relativePath = file.relativeTo(getFileStorageRootDir()), canDelete = true)
         }

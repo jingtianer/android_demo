@@ -10,6 +10,7 @@ import com.jingtian.composedemo.dao.converter.ItemRankConverter
 import com.jingtian.composedemo.dao.model.Album
 import com.jingtian.composedemo.dao.model.AlbumItem
 import com.jingtian.composedemo.dao.model.FileInfo
+import com.jingtian.composedemo.dao.model.FileStorageInfo
 import com.jingtian.composedemo.dao.model.LabelInfo
 import com.jingtian.composedemo.main.http.dao.HttpServerDao
 import com.jingtian.composedemo.main.http.dao.HttpServerEntity
@@ -21,6 +22,7 @@ import com.jingtian.composedemo.main.http.dao.HttpServerEntity
         FileInfo::class,
         LabelInfo::class,
         HttpServerEntity::class,
+        FileStorageInfo::class,
     ],
     version = 2
 )
@@ -43,6 +45,7 @@ abstract class DataBase: RoomDatabase() {
     abstract fun getFileInfoDao(): FileInfoDao
     abstract fun getLabelInfoDao(): LabelInfoDao
     abstract fun getHttpServerDao(): HttpServerDao
+    abstract fun getFileStorageDao(): FileStorageDao
 }
 
 @Suppress("NO_ACTUAL_FOR_EXPECT")

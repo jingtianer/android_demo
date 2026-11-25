@@ -59,11 +59,7 @@ fun RawSource?.readAllBytesOrNull(): ByteArray? {
 }
 
 interface IMultiplatformFileFactory {
-    fun fromFile(file: Path): MultiplatformFile
-    fun fromFile(file: Path, extension: String?): MultiplatformFile {
-
-        return fromFile(file)
-    }
+    fun fromFile(contentRaw: ByteArray, extension: String?): MultiplatformFile?
 
     fun shareFile(file: Path): MultiplatformFile
 }

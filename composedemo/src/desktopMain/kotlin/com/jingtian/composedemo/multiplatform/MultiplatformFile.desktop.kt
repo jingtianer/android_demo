@@ -4,6 +4,7 @@ import com.jingtian.composedemo.BuildKonfig
 import com.jingtian.composedemo.main.remote.RemoteUriUtils
 import com.jingtian.composedemo.main.remote.Uri
 import com.jingtian.composedemo.utils.extension
+import io.ktor.utils.io.charsets.Charsets
 import kotlinx.io.buffered
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
@@ -13,8 +14,8 @@ import java.nio.charset.StandardCharsets
 
 actual fun getMultiplatformFileFactory() : IMultiplatformFileFactory {
     val regex = Regex("^([a-zA-Z0-9]+)://([^/]+)(/.*)$")
-    fun InputStream.readAsUri(): Uri? {
-        val url = this.readAllBytes().toString(Charsets.UTF_8)
+    fun String.readAsUri(): Uri? {
+        val url = this
         val matchResult = regex.matchEntire(url)
         return matchResult?.let {
             val scheme = it.groups[1]?.value ?: return@let null
@@ -24,34 +25,17 @@ actual fun getMultiplatformFileFactory() : IMultiplatformFileFactory {
         }
     }
     return object : IMultiplatformFileFactory {
-        override fun fromFile(file: Path): MultiplatformFile {
+        override fun fromFile(contentRaw: ByteArray, extension: String?): MultiplatformFile? {
+            val content = contentRaw.toString(Charsets.UTF_8)
             if (BuildKonfig.isRemote) {
-                val uri = File(file.toString()).inputStream().readAsUri()
+                val uri = content.readAsUri()
                 if (uri?.scheme?.startsWith("jingtian") == true) {
                     RemoteUriUtils.parse(uri)?.let {
                         return it
                     }
                 }
             }
-            val realFile = SystemFileSystem.source(file).buffered().use { fis->
-                val bytes = fis.readAllBytesOrNull()
-                File(bytes?.toString(StandardCharsets.UTF_8) ?: throw RuntimeException("file not found $file, bytes=$bytes"))
-            }
-            return MultiplatformFileImpl(realFile, realFile.extension)
-        }
-        override fun fromFile(file: Path, extension: String?): MultiplatformFile {
-            if (BuildKonfig.isRemote) {
-                val uri = File(file.toString()).inputStream().readAsUri()
-                if (uri?.scheme?.startsWith("jingtian") == true) {
-                    RemoteUriUtils.parse(uri)?.let {
-                        return it
-                    }
-                }
-            }
-            val realFile = SystemFileSystem.source(file).buffered().use { fis->
-                val bytes = fis.readAllBytesOrNull()
-                File(bytes?.toString(StandardCharsets.UTF_8) ?: throw RuntimeException("file not found $file, bytes=$bytes"))
-            }
+            val realFile = File(content)
             return MultiplatformFileImpl(realFile, extension ?: file.extension)
         }
 
