@@ -40,34 +40,14 @@ object FileStorageUtils {
         storeDir.ensureDir()
     }
 
-    private val imageStore by lazy {
-        FileStorage(FileType.IMAGE)
-    }
-
-    private val videoStore by lazy {
-        FileStorage(FileType.VIDEO)
-    }
-
-    private val audioStore by lazy {
-        FileStorage(FileType.AUDIO)
-    }
-
-    private val htmlStore by lazy {
-        FileStorage(FileType.HTML)
-    }
-
-    private val regularStore by lazy {
-        FileStorage(FileType.RegularFile)
-    }
+    private val storages = FileType.values().associateWith { FileStorage(it) }
 
     fun getStorage(fileType: FileType): FileStorage {
-        return when(fileType) {
-            FileType.IMAGE -> imageStore
-            FileType.VIDEO -> videoStore
-            FileType.AUDIO -> audioStore
-            FileType.HTML -> htmlStore
-            FileType.RegularFile -> regularStore
-        }
+        return storages[fileType] ?: FileStorage(fileType)
+    }
+
+    fun onLowMem() {
+        storages.values.forEach { it.onLowMem() }
     }
 
     class FileStorage(val fileType: FileType) {
@@ -75,7 +55,7 @@ object FileStorageUtils {
         private val rankImageStoreDir: String = RANK_IMAGE_STORE_DIR + fileType.value
 
         private val uriCache = mutableMapOf<Long, WeakRef<MultiplatformFile>>()
-        private val storeJobs = mutableMapOf<Long, WeakRef<Job>>()
+        private val storeJobs = mutableMapOf<Long, Job>()
 
         private val lock = newReentrantLock()
 
@@ -87,13 +67,17 @@ object FileStorageUtils {
             DataBase.dbImpl.getFileStorageDao()
         }
 
+        fun onLowMem() {
+            uriCache.clear()
+        }
+
         suspend fun get(id: Long, fileInfo: FileInfo): MultiplatformFile? {
 //            println("FileStorage: fileType:${fileType.name}, id=$id, fileInfo=${fileInfo.extension}")
             return withContext(Dispatchers.IO) {
                 if (id == -1L) {
                     return@withContext null
                 }
-                storeJobs[id]?.get()?.join()
+                storeJobs[id]?.join()
                 val cachedUri = uriCache[id]?.get()
                 if (cachedUri != null) {
                     return@withContext cachedUri
@@ -124,13 +108,14 @@ object FileStorageUtils {
             val job = CoroutineUtils.runIOTask({
                 doStore(uri, id)
             })
-            storeJobs[id] = WeakRef(job)
+            storeJobs[id] = job
             return id to job
         }
 
         private suspend fun doStore(uri: MultiplatformFile, id: Long) {
             storeByType(uri, id)
             uri.onStoreFinish()
+            storeJobs.remove(id)
         }
 
         private fun isRemoteFile(uri: MultiplatformFile): Boolean {
@@ -164,7 +149,7 @@ object FileStorageUtils {
             val job = CoroutineUtils.runIOTask({
                 doStore(uri, id)
             })
-            storeJobs[id] = WeakRef(job)
+            storeJobs[id] = job
             return id to job
         }
 

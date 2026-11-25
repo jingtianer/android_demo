@@ -119,6 +119,7 @@ import com.jingtian.composedemo.ui.theme.appBackground
 import com.jingtian.composedemo.ui.theme.clipDeviceRoundCorner
 import com.jingtian.composedemo.utils.BitMapCachePool
 import com.jingtian.composedemo.utils.CoroutineUtils
+import com.jingtian.composedemo.utils.FileStorageUtils
 import com.jingtian.composedemo.viewmodels.AlbumViewModel
 import com.jingtian.composedemo.viewmodels.AuthSuccess
 import com.jingtian.composedemo.viewmodels.AuthViewModel
@@ -455,6 +456,7 @@ class MainState(
         // 内存紧张信号
         LowMemorySideEffect(galleryStateHolderMap) {
             galleryStateHolderMap.clear()
+            FileStorageUtils.onLowMem()
         }
 
         // 导航栈变化 初始化完成
