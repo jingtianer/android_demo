@@ -89,7 +89,7 @@ object FileStorageUtils {
 
         suspend fun get(id: Long, fileInfo: FileInfo): MultiplatformFile? {
 //            println("FileStorage: fileType:${fileType.name}, id=$id, fileInfo=${fileInfo.extension}")
-            withContext(Dispatchers.IO) {
+            return withContext(Dispatchers.IO) {
                 if (id == -1L) {
                     return@withContext null
                 }
