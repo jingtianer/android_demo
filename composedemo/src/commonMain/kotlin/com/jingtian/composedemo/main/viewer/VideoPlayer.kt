@@ -54,12 +54,12 @@ import io.github.kdroidfilter.composemediaplayer.rememberVideoPlayerState
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.delay
 
-class UIVideoPlayerState(val initialPlaying: Boolean, internal val playerState: VideoPlayerState) {
+class UIVideoPlayerState(val initialPlaying: Boolean, initialShowMask: Boolean, internal val playerState: VideoPlayerState) {
     init {
         playerState.loop = true
     }
 
-    var showMask by mutableStateOf(false)
+    var showMask by mutableStateOf(!initialShowMask) // isPressed 副作用导致初始值相反
     var isLoading by mutableStateOf(true)
     var maskVisible by mutableStateOf(false)
     var showMaskAnim = Animatable(initialValue = 0f)
@@ -81,9 +81,9 @@ class UIVideoPlayerState(val initialPlaying: Boolean, internal val playerState: 
 }
 
 @Composable
-fun rememberUIVideoPlayerState(initialPlaying: Boolean = true): UIVideoPlayerState {
+fun rememberUIVideoPlayerState(initialPlaying: Boolean = true, initialShowMask: Boolean = true): UIVideoPlayerState {
     val videoPlayerState = rememberVideoPlayerState()
-    return remember { UIVideoPlayerState(initialPlaying, videoPlayerState) }
+    return remember { UIVideoPlayerState(initialPlaying, initialShowMask, videoPlayerState) }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

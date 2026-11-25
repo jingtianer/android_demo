@@ -48,10 +48,10 @@ import kotlinx.coroutines.withContext
 import kotlinx.io.buffered
 import kotlinx.io.readByteArray
 
-class ImagePlayerState {
+class ImagePlayerState(initialShowMask: Boolean = true) {
     var isLoading by mutableStateOf(true)
-    var showMask by mutableStateOf(true)
-    var maskVisible by mutableStateOf(true)
+    var showMask by mutableStateOf(initialShowMask)
+    var maskVisible by mutableStateOf(false)
     val showMaskAnim = Animatable(initialValue = 0f)
 
     @Composable
@@ -72,8 +72,8 @@ class ImagePlayerState {
 }
 
 @Composable
-fun rememberImagePlayerState(): ImagePlayerState {
-    return remember { ImagePlayerState() }
+fun rememberImagePlayerState(initialShowMask: Boolean = true): ImagePlayerState {
+    return remember { ImagePlayerState(initialShowMask) }
 }
 
 @Composable

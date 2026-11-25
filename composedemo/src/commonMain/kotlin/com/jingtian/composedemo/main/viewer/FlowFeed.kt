@@ -493,7 +493,7 @@ private fun FlowFeed(
 
 @Composable
 fun FeedState.ImageFeed(flowFile: FlowFile, index: Int, enableEdit: Boolean = true, onPlayFinish: suspend () -> Unit) {
-    val imagePlayerState = rememberImagePlayerState()
+    val imagePlayerState = rememberImagePlayerState(initialShowMask = false)
     var isEditing by remember { mutableStateOf(false) }
     val isSelected = index == pagerState.currentPage
     LaunchedEffect(
@@ -508,11 +508,11 @@ fun FeedState.ImageFeed(flowFile: FlowFile, index: Int, enableEdit: Boolean = tr
             onPlayFinish()
         }
     }
-    LaunchedEffect(Unit, isSelected, imagePlayerState.isLoading) {
-        if (isSelected && !imagePlayerState.isLoading) {
-            imagePlayerState.showMask = true
-        }
-    }
+//    LaunchedEffect(Unit, isSelected, imagePlayerState.isLoading) {
+//        if (isSelected && !imagePlayerState.isLoading) {
+//            imagePlayerState.showMask = true
+//        }
+//    }
     ImagePlayer(
         state = imagePlayerState,
         modifier = Modifier.fillMaxSize(),
@@ -535,14 +535,14 @@ fun FeedState.ImageFeed(flowFile: FlowFile, index: Int, enableEdit: Boolean = tr
 
 @Composable
 fun FeedState.VideoFeed(flowFile: FlowFile, index: Int, enableEdit: Boolean = true, onPlayFinish: suspend () -> Unit) {
-    val playerState = rememberUIVideoPlayerState(initialPlaying = false)
+    val playerState = rememberUIVideoPlayerState(initialPlaying = false, initialShowMask = false)
     var isEditing by remember { mutableStateOf(false) }
     var isAlive by remember { mutableStateOf(true) }
     val isSelected = index == pagerState.currentPage
     LaunchedEffect(Unit, isSelected, playerState.isLoading, isAlive) {
         if (isSelected && !playerState.isLoading && isAlive) {
             playerState.playerState.play()
-            playerState.showMask = true
+//            playerState.showMask = true
         } else {
             playerState.playerState.pause()
         }
