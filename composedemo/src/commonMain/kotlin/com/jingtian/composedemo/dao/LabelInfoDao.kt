@@ -18,7 +18,6 @@ interface LabelInfoDao {
     @Query("delete from $TABLE_NAME where albumItemId = :albumItemId")
     suspend fun deleteAllLabel(albumItemId: Long)
 
-
     @Query("delete from $TABLE_NAME where albumItemId in (:albumItemIdList)")
     suspend fun deleteAllLabelOfAlbumItemIdList(albumItemIdList: List<Long>)
 }

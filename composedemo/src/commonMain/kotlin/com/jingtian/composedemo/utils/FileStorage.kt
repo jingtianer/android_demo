@@ -98,8 +98,8 @@ object FileStorageUtils {
             withContext(Dispatchers.IO) {
                 val storeDir = Path(getFileStorageRootDir(), rankImageStoreDir)
                 val storageFile = Path(storeDir, rankImagePrefix(id))
-                dao.deleteFileStoreInfo(id)
                 storageFile.ensureNotExist()
+                dao.deleteFileStoreInfo(id)
             }
         }
 
@@ -132,7 +132,7 @@ object FileStorageUtils {
                 val rawContent = if (isRemoteFile(uri)) {
                     uri.fileStoreInputStream().use { it.readAllBytesOrNull() }
                 } else {
-                    getStoreFile(id, uri.fileName()).toString().encodeToByteArray()
+                    getRelativeStoreFile(id, uri.fileName()).toString().encodeToByteArray()
                 }
                 dao.updateFileStorageInfo(FileStorageInfo(
                     id = id,
@@ -158,12 +158,14 @@ object FileStorageUtils {
                 return
             }
             val realFile = getStoreFile(id, uri.fileName())
-            val bytes = realFile.relativeTo(getFileStorageRootDir()).toString().encodeToByteArray()
-            val buffer = Buffer()
-            buffer.write(bytes, 0, bytes.size)
             uri.inputStream()?.use { `is`->
                 `is`.copyTo(realFile)
             }
+        }
+
+        private suspend fun getRelativeStoreFile(id: Long, fileName: String?): Path {
+            val storeDir = Path(rankImageStoreDir, rankImagePrefix(id))
+            return Path(storeDir, fileName ?: "real_$id")
         }
 
         private suspend fun getStoreFile(id: Long, fileName: String?): Path {

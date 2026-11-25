@@ -44,7 +44,7 @@ actual fun getMultiplatformFileFactory() : IMultiplatformFileFactory {
                 getFileStorageRootDir(),
                 content
             )
-            return MultiplatformFileImpl(realFile, extension ?: realFile.extension, relativePath = file.relativeTo(getFileStorageRootDir()), canDelete = true)
+            return MultiplatformFileImpl(realFile, extension ?: realFile.extension, relativePath = realFile.relativeTo(getFileStorageRootDir()), canDelete = true)
         }
 
         override fun shareFile(file: Path): MultiplatformFileImpl {

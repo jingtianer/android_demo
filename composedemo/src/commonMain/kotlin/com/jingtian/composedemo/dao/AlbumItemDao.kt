@@ -23,6 +23,10 @@ interface AlbumItemDao {
     suspend fun deleteAllAlbumItem(albumItem: AlbumItem)
 
 
+    @Delete
+    suspend fun deleteAllAlbumItemInList(albumItem: List<AlbumItem>)
+
+
     @Insert
     suspend fun insertAlbumItem(albumItem: AlbumItem): Long
 

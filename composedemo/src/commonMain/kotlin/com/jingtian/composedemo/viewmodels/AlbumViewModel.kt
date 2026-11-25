@@ -26,6 +26,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import androidx.room.immediateTransaction
+import androidx.room.useWriterConnection
 import com.jingtian.composedemo.BuildKonfig
 import com.jingtian.composedemo.base.AppThemeText
 import com.jingtian.composedemo.dao.DataBase
@@ -154,9 +156,7 @@ object AlbumViewModel : SingletonViewModel() {
             currentMessageDelayJob?.cancel()
             currentMessageDelayJob = viewModelScope.launch(Dispatchers.Main) {
                 currentBackgroundTask.value = message
-                withContext(Dispatchers.IO) {
-                    delay(2000)
-                }
+                delay(2000)
                 currentBackgroundTask.value = null
                 currentMessageDelayJob = null
             }
@@ -200,17 +200,17 @@ object AlbumViewModel : SingletonViewModel() {
     fun deleteItems(albumList: Collection<AlbumItemRelation>) {
         CoroutineUtils.runIOTask({
             for (albumItemRelation in albumList) {
-                albumItemRelation.fileInfo.getFileUri()?.onDelete()
-                val album = albumItemRelation.albumItem
-                DataBase.dbImpl.getAlbumItemDao().deleteAllAlbumItem(album)
-                albumItemRelation.fileInfo.let {
-                    DataBase.dbImpl.getFileInfoDao().deleteFileInfo(it)
-                    FileStorageUtils.getStorage(it.fileType)?.delete(it.storageId)
-                }
-                album.itemId?.let {
-                    DataBase.dbImpl.getLabelInfoDao().deleteAllLabel(it)
+                val fileInfo = albumItemRelation.fileInfo
+                runCatching {
+                    fileInfo.getFileUri()?.onDelete()
+                    FileStorageUtils.getStorage(fileInfo.fileType).delete(fileInfo.storageId)
+                    sendMessage("正在删除文件: ${albumItemRelation.albumItem.itemName}")
                 }
             }
+            sendMessage("正在删除数据库记录")
+            DataBase.dbImpl.getFileInfoDao().deleteAllFileInfo(albumList.map { it.fileInfo })
+            DataBase.dbImpl.getAlbumItemDao().deleteAllAlbumItemInList(albumList.map { it.albumItem })
+            DataBase.dbImpl.getLabelInfoDao().deleteAllLabelOfAlbumItemIdList(albumList.mapNotNull { it.albumItem.itemId })
         }) {
             albumItemListChange.notifyChange()
             sendMessage("删除${albumList.size}个文件: 成功!")

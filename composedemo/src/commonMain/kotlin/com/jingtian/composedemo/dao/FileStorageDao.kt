@@ -17,14 +17,14 @@ interface FileStorageDao {
     }
 
     @Query("select * from $TABLE_NAME where id = :id")
-    fun queryFileStorageInfo(id: Long): FileStorageInfo?
+    suspend fun queryFileStorageInfo(id: Long): FileStorageInfo?
 
     @Update(onConflict = OnConflictStrategy.REPLACE)
-    fun updateFileStorageInfo(fileStorageInfo: FileStorageInfo)
+    suspend fun updateFileStorageInfo(fileStorageInfo: FileStorageInfo)
 
     @Insert
-    fun insertFileStoreInfo(fileStorageInfo: FileStorageInfo): Long
+    suspend fun insertFileStoreInfo(fileStorageInfo: FileStorageInfo): Long
 
     @Query("delete from $TABLE_NAME where id = :id")
-    fun deleteFileStoreInfo(id: Long)
+    suspend fun deleteFileStoreInfo(id: Long)
 }

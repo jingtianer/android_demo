@@ -18,6 +18,7 @@ import com.jingtian.composedemo.viewmodels.AuthParams
 import com.jingtian.composedemo.viewmodels.AuthSuccess
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import kotlinx.io.Buffer
@@ -120,6 +121,7 @@ abstract class SftpServer : RemoteServer {
     }
 
     suspend fun pushMetadata(viewModel: AlbumViewModel, onFinish: suspend (success: Boolean, errMsg: String?)->Unit = { _, _ -> }) {
+        delay(3000L)
         metadataSyncManager.enqueue(MetadataSyncManager.SyncType.PUSH, onFinish) {
             viewModel.sendMessage("正在导出本地数据")
             val localMetadata = ShareUtils.getMetadata()
