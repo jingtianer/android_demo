@@ -36,7 +36,7 @@ actual fun getMultiplatformFileFactory() : IMultiplatformFileFactory {
                 }
             }
             val realFile = File(content)
-            return MultiplatformFileImpl(realFile, extension ?: file.extension)
+            return MultiplatformFileImpl(realFile, extension ?: realFile.extension)
         }
 
         override fun shareFile(file: Path): MultiplatformFileImpl {

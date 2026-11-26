@@ -259,11 +259,7 @@ object BitMapCachePool {
         creator: suspend () -> ImageBitmap?,
     ): Pair<Int, ImageBitmap?> {
         val pool = getBitMapCachePool(fileInfo.fileType)
-        val bitmap = if (fileInfo.fileType == FileType.HTML) {
-            pool.put(fileInfo.storageId, 2, creator)
-        } else {
-            pool.put(fileInfo.storageId, SCALE_FACTOR_GET_HIGHEST_AND_PUT, creator)
-        }
+        val bitmap = pool.put(fileInfo.storageId, 2, creator)
         if (bitmap == null) {
             return 1 to creator()
         }

@@ -29,9 +29,11 @@ import startServer
 fun main(args: Array<String>) {
     LaunchTasks.onLaunch()
     application {
+        LaunchedEffect(Unit) {
+            startServer()
+        }
         MainWindow()
     }
-    startServer()
 }
 @Composable
 fun ApplicationScope.MainWindow() {

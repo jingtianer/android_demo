@@ -24,15 +24,19 @@ import java.nio.charset.StandardCharsets
 private const val PORT = 8000
 fun startServer() {
     Thread {
-        val server = HttpServer.create(InetSocketAddress("::", PORT), 0)
-        server.createContext("/", RouteHandler().apply {
-            addHandler("/getFile", GetFileHandler())
-            addHandler("/getAlbumList", GetAlbumListHandler())
-            addHandler("/listAlbum", ListAlbumHandler())
-            addHandler("/updateItem", UpdateItemHandler())
-        })
-        server.executor = null
-        server.start()
+        try {
+
+            val server = HttpServer.create(InetSocketAddress("::", PORT), 0)
+            server.createContext("/", RouteHandler().apply {
+                addHandler("/getFile", GetFileHandler())
+                addHandler("/getAlbumList", GetAlbumListHandler())
+                addHandler("/listAlbum", ListAlbumHandler())
+                addHandler("/updateItem", UpdateItemHandler())
+            })
+            server.executor = null
+            server.start()
+        } catch (e: Exception) {
+        }
     }.start()
 }
 
