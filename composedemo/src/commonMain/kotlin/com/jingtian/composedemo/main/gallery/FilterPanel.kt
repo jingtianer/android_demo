@@ -222,10 +222,10 @@ fun FilterPanel(
                 }
                 items(fileTypeList.size, key = { index -> fileTypeList[index] }) { index ->
                     RoundRectCheckableLabel(
-                        fileTypeList[index],
-                        fileTypeCheckStateList[fileTypeList[index]] ?: false,
-                        fileTypeCheckStateList,
-                        false,
+                        item = fileTypeList[index],
+                        isChecked = fileTypeCheckStateList[fileTypeList[index]] ?: false,
+                        checkedList = fileTypeCheckStateList,
+                        wrapContent = false,
                     )
                 }
                 item(span = { GridItemSpan(this.maxLineSpan) }) {
@@ -243,10 +243,10 @@ fun FilterPanel(
                 }
                 items(itemRankList.size, key = { index -> itemRankList[index] }) { index ->
                     RoundRectCheckableLabel(
-                        itemRankList[index],
-                        itemRankCheckStateList[itemRankList[index]] ?: false,
-                        itemRankCheckStateList,
-                        false,
+                        item = itemRankList[index],
+                        isChecked = itemRankCheckStateList[itemRankList[index]] ?: false,
+                        checkedList = itemRankCheckStateList,
+                        wrapContent = false,
                     )
                 }
                 if (labelCheckStateList != null && labelList.isNotEmpty()) {
@@ -300,10 +300,10 @@ fun FilterPanel(
                                 { index -> finalLabelList[index] }) { index ->
                                 val item = finalLabelList[index]
                                 RoundRectCheckableLabel(
-                                    item,
-                                    labelCheckStateList[item] ?: false,
-                                    labelCheckStateList,
-                                    true,
+                                    item = item,
+                                    isChecked = labelCheckStateList[item] ?: false,
+                                    checkedList = labelCheckStateList,
+                                    wrapContent = true,
                                 )
                             }
                         }

@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.jingtian.composedemo.BuildKonfig
 import com.jingtian.composedemo.base.AppThemeText
 import com.jingtian.composedemo.ui.theme.LocalAppPalette
 import com.jingtian.composedemo.ui.theme.LocalAppUIConstants
@@ -24,14 +25,13 @@ import com.jingtian.composedemo.viewmodels.albumViewModel
 import dev.chrisbanes.haze.HazeState
 
 @Composable
-fun RoundRectCheckableLabel(item: String, isChecked: Boolean, checkedList: SnapshotStateMap<String, Boolean>, wrapContent: Boolean, hazeState: HazeState? = null) {
+fun RoundRectCheckableLabel(item: String, isChecked: Boolean, checkedList: SnapshotStateMap<String, Boolean>, wrapContent: Boolean, hazeState: HazeState? = null, enableHazeState: Boolean = false) {
     val paddings = LocalAppUIConstants.current.filterLabelPaddings
     val paddingInnerHorizontal = paddings[0]
     val paddingInnerVertical = paddings[1]
     val paddingOuterHorizontal = paddings[2]
     val paddingOuterVertical = paddings[3]
-    val viewModel: AlbumViewModel = albumViewModel()
-    val modifier = if (hazeState != null) {
+    val modifier = if (enableHazeState) {
         Modifier
             .padding(horizontal = paddingOuterHorizontal, vertical = paddingOuterVertical)
             .wrapContentWidth()

@@ -271,29 +271,41 @@ fun Color.adaptiveTextColor() = when {
 }
 
 @Composable
-fun Modifier.ovalGlass(hazeState: HazeState, color: Color? = null): Modifier {
+fun Modifier.ovalGlass(hazeState: HazeState?, color: Color? = null): Modifier {
     return this.clip(RoundedCornerShape(100))
-        .hazeEffect(state = hazeState) {
-            progressive = HazeProgressive.verticalGradient(
-                startIntensity = 0.7f, endIntensity = 0.7f
+        .then(if (hazeState != null) {
+            Modifier.hazeEffect(state = hazeState) {
+                progressive = HazeProgressive.verticalGradient(
+                    startIntensity = 0.7f, endIntensity = 0.7f
+                )
+            }.background(
+                color = color ?: LocalAppPalette.current.dialogBg.copy(alpha = 0.4f),
             )
-        }
-        .background(
-            color = color ?: LocalAppPalette.current.dialogBg.copy(alpha = 0.4f),
-        )
+        } else {
+            Modifier.background(
+                color = (color ?: LocalAppPalette.current.dialogBg).copy(alpha = .8f),
+            )
+        })
+
 }
 
 @Composable
-fun Modifier.bottomOvalGlass(hazeState: HazeState, color: Color? = null): Modifier {
+fun Modifier.bottomOvalGlass(hazeState: HazeState?, color: Color? = null): Modifier {
     return this.clip(RoundedCornerShape(100))
-        .hazeEffect(state = hazeState) {
-            progressive = HazeProgressive.verticalGradient(
-                startIntensity = 0.7f, endIntensity = 0.7f
+        .then(if (hazeState != null) {
+            Modifier.hazeEffect(state = hazeState) {
+                progressive = HazeProgressive.verticalGradient(
+                    startIntensity = 0.7f, endIntensity = 0.7f
+                )
+            }.background(
+                color = color ?: LocalAppPalette.current.glassColor.copy(alpha = 0.4f),
             )
-        }
-        .background(
-            color = color ?: LocalAppPalette.current.glassColor.copy(alpha = 0.4f),
-        )
+        } else {
+            Modifier.background(
+                color = (color ?: LocalAppPalette.current.glassColor).copy(alpha = .8f),
+            )
+        })
+
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -345,7 +357,11 @@ fun GalleryStateHolder.Gallery() {
     }
     val currentDensity = LocalDensity.current
     val scaleState = remember(currentDensity) { DensityScalingState(currentDensity = currentDensity) }
-    val hazeState = rememberHazeState()
+    val hazeState = if (BuildKonfig.isDesktop) {
+        null
+    } else {
+        rememberHazeState()
+    }
     Box(
         Modifier
             .fillMaxSize()
@@ -364,7 +380,7 @@ fun GalleryStateHolder.Gallery() {
             horizontalArrangement = Arrangement.spacedBy(galleryItemPadding * 2 * scaleState.scaleFactor),
             modifier = Modifier
                 .fillMaxSize()
-                .hazeSource(state = hazeState, zIndex = 2f)
+                .then(if (hazeState != null) Modifier.hazeSource(state = hazeState, zIndex = 2f) else Modifier)
                 .appBackground()
                 .pointerInput(Unit) {
                     awaitEachGesture {
@@ -484,20 +500,30 @@ fun GalleryStateHolder.Gallery() {
 
         Box(
             modifier = Modifier.fillMaxWidth().align(Alignment.TopCenter).height(headerHeight.dp)
-                .hazeEffect(state = hazeState) {
-                    progressive = HazeProgressive.verticalGradient(
-                        startIntensity = 1f, endIntensity = 0f
-                    )
-                }
+                .then(
+                    if (hazeState != null) {
+                        Modifier.hazeEffect(state = hazeState) {
+                            progressive = HazeProgressive.verticalGradient(
+                                startIntensity = 1f, endIntensity = 0f
+                            )
+                        }
+                    } else {
+                        Modifier
+                    }
+                )
         )
         if (enterEditMode) {
             Box(
                 modifier = Modifier.fillMaxWidth().align(Alignment.BottomCenter)
-                    .height(bottomBarHeight).hazeEffect(state = hazeState) {
-                        progressive = HazeProgressive.verticalGradient(
-                            startIntensity = 0f, endIntensity = 1f
-                        )
-                    }
+                    .height(bottomBarHeight).then(if (hazeState != null) {
+                        Modifier.hazeEffect(state = hazeState) {
+                            progressive = HazeProgressive.verticalGradient(
+                                startIntensity = 0f, endIntensity = 1f
+                            )
+                        }
+                    } else {
+                        Modifier
+                    })
             )
         }
         val scrollBarColor = LocalAppPalette.current.labelTextColor.copy(alpha = 0.85f)
