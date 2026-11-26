@@ -28,7 +28,7 @@ class AlbumItemLauncher(val mainNavController: IRouterController) : IAlbumItemLa
     }
     private suspend fun openUrl(fileName: String, file: FileInfo) {
         runCatching {
-            var path = (file.getFileUri() as? MultiplatformFileImpl)?.realFile?.toPath() ?: return@runCatching
+            var path = (file.getFileUri() as? MultiplatformFileImpl)?.file()?.toString()?.let { File(it) }?.toPath() ?: return@runCatching
             var depth = 0
             while (path.exists() && Files.isSymbolicLink(path) && depth <= 6) {
                 path = Files.readSymbolicLink(path)
@@ -40,10 +40,10 @@ class AlbumItemLauncher(val mainNavController: IRouterController) : IAlbumItemLa
 
     private suspend fun openFile(fileName: String, file: FileInfo) {
         runCatching {
+            val f = (file.getFileUri() as? MultiplatformFileImpl)?.file()?.toString()?.let { File(it) } ?: return@runCatching
             if (file.fileType == FileType.RegularFile) {
-                Desktop.getDesktop().browseFileDirectory((file.getFileUri() as? MultiplatformFileImpl)?.realFile ?: return@runCatching)
+                Desktop.getDesktop().browseFileDirectory(f)
             } else {
-                val f = (file.getFileUri() as? MultiplatformFileImpl)?.realFile ?: return
                 var path = f.toPath()
                 var depth = 0
                 while (path.exists() && Files.isSymbolicLink(path) && depth <= 6) {
@@ -73,10 +73,10 @@ class AlbumItemLauncher(val mainNavController: IRouterController) : IAlbumItemLa
                 mainNavController.toImageViewer(albumItemRelation)
                 return
             }
-            FileType.VIDEO -> {
-                mainNavController.toVideoPlayer(albumItemRelation)
-                return
-            }
+//            FileType.VIDEO -> {
+//                mainNavController.toVideoPlayer(albumItemRelation)
+//                return
+//            }
             else-> {
 
             }
