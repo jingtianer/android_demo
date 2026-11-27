@@ -17,6 +17,8 @@ import com.jingtian.composedemo.multiplatform.readAllBytesOrNull
 import com.jingtian.composedemo.multiplatform.use
 import com.jingtian.composedemo.utils.BitMapCachePool.calculateScaleFactor
 import com.jingtian.composedemo.utils.BitMapCachePool.scale
+import com.jingtian.composedemo.utils.concurrency.ConcurrentHashMap
+import com.jingtian.composedemo.utils.concurrency.RefMutexMap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -54,10 +56,12 @@ object FileStorageUtils {
 
         private val rankImageStoreDir: String = RANK_IMAGE_STORE_DIR + fileType.value
 
-        private val uriCache = mutableMapOf<Long, WeakRef<MultiplatformFile>>()
-        private val storeJobs = mutableMapOf<Long, Job>()
+        private val uriCache = ConcurrentHashMap<Long, WeakRef<MultiplatformFile>>(9)
+        private val mutexMap = RefMutexMap<Long>()
 
-        private val lock = newReentrantLock()
+        init {
+            Path(getFileStorageRootDir(), rankImageStoreDir).ensureDir()
+        }
 
         private fun rankImagePrefix(id: Long): String {
             return "${RANK_IMAGE_STORE_PREFIX}${id}"
@@ -68,54 +72,46 @@ object FileStorageUtils {
         }
 
         fun onLowMem() {
-            uriCache.clear()
+            uriCache.dropOldMap()
         }
 
         suspend fun get(id: Long, fileInfo: FileInfo): MultiplatformFile? {
 //            println("FileStorage: fileType:${fileType.name}, id=$id, fileInfo=${fileInfo.extension}")
-            return withContext(Dispatchers.IO) {
-                if (id == -1L) {
-                    return@withContext null
-                }
-                storeJobs[id]?.join()
-                val cachedUri = uriCache[id]?.get()
-                if (cachedUri != null) {
-                    return@withContext cachedUri
-                }
-                val content = dao.queryFileStorageInfo(id)?.content
+            return mutexMap.withPermit(id) {
+                withContext(Dispatchers.IO) {
+                    if (id == -1L) {
+                        return@withContext null
+                    }
+                    val cachedUri = uriCache.get(id)?.get()
+
+                    if (cachedUri != null) {
+                        return@withContext cachedUri
+                    }
+                    val content = dao.queryFileStorageInfo(id)?.content
 //            println("FileStorage: fileType:${fileType.name}, id=$id, storageFile=$storageFile")
-                return@withContext if (content != null) {
+                    return@withContext if (content != null) {
 //                println("FileStorage: exist fileType:${fileType.name}, id=$id, storageFile=$storageFile")
-                    getMultiplatformFileFactory().fromFile(content, fileInfo.extension)
-                } else {
+                        getMultiplatformFileFactory().fromFile(content, fileInfo.extension)
+                    } else {
 //                println("FileStorage: not exist fileType:${fileType.name}, id=$id, storageFile=$storageFile")
-                    null
+                        null
+                    }?.also {
+                        uriCache.set(id, WeakRef(it))
+                    }
                 }
             }
         }
 
         suspend fun delete(id: Long) {
             withContext(Dispatchers.IO) {
-                val storeDir = Path(getFileStorageRootDir(), rankImageStoreDir)
-                val storageFile = Path(storeDir, rankImagePrefix(id))
-                storageFile.ensureNotExist()
-                dao.deleteFileStoreInfo(id)
+                mutexMap.withPermit(id) {
+                    uriCache.remove(id)
+                    val storeDir = Path(getFileStorageRootDir(), rankImageStoreDir)
+                    val storageFile = Path(storeDir, rankImagePrefix(id))
+                    storageFile.ensureNotExist()
+                    dao.deleteFileStoreInfo(id)
+                }
             }
-        }
-
-        suspend fun asyncStore(oldId: Long, uri: MultiplatformFile): Pair<Long, Job> {
-            val id = allocateId(uri, oldId)
-            val job = CoroutineUtils.runIOTask({
-                doStore(uri, id)
-            })
-            storeJobs[id] = job
-            return id to job
-        }
-
-        private suspend fun doStore(uri: MultiplatformFile, id: Long) {
-            storeByType(uri, id)
-            uri.onStoreFinish()
-            storeJobs.remove(id)
         }
 
         private fun isRemoteFile(uri: MultiplatformFile): Boolean {
@@ -123,33 +119,37 @@ object FileStorageUtils {
         }
 
         private suspend fun allocateId(uri: MultiplatformFile, oldId: Long = -1): Long {
-            return lock.use {
-                val id = if (oldId != -1L) {
-                    oldId
-                } else {
-                    dao.insertFileStoreInfo(FileStorageInfo(content = ByteArray(0)))
-                }
-                val rawContent = if (isRemoteFile(uri)) {
-                    uri.fileStoreInputStream().use { it.readAllBytesOrNull() }
-                } else {
-                    getRelativeStoreFile(id, uri.fileName()).toString().encodeToByteArray()
-                }
+            val id = if (oldId != -1L) {
+                oldId
+            } else {
+                dao.insertFileStoreInfo(FileStorageInfo(content = ByteArray(0)))
+            }
+            val rawContent = if (isRemoteFile(uri)) {
+                uri.fileStoreInputStream().use { it.readAllBytesOrNull() }
+            } else {
+                getRelativeStoreFile(id, uri.fileName()).toString().encodeToByteArray()
+            }
+            mutexMap.withPermit(oldId) {
+                uriCache.remove(oldId)
+            }
+            mutexMap.withPermit(id) {
                 dao.updateFileStorageInfo(FileStorageInfo(
                     id = id,
                     content = rawContent
                 ))
-                uriCache.remove(oldId)
-                uriCache[id] = WeakRef(uri)
-                id
+                uriCache.set(id, WeakRef(uri))
             }
+            return id
         }
 
-        suspend fun asyncStore(uri: MultiplatformFile): Pair<Long, Job> {
-            val id = allocateId(uri)
+        suspend fun asyncStore(uri: MultiplatformFile, oldId: Long = -1): Pair<Long, Job> {
+            val id = allocateId(uri, oldId)
             val job = CoroutineUtils.runIOTask({
-                doStore(uri, id)
+                mutexMap.withPermit(id) {
+                    storeByType(uri, id)
+                    uri.onStoreFinish()
+                }
             })
-            storeJobs[id] = job
             return id to job
         }
 
@@ -163,16 +163,14 @@ object FileStorageUtils {
             }
         }
 
-        private suspend fun getRelativeStoreFile(id: Long, fileName: String?): Path {
+        private fun getRelativeStoreFile(id: Long, fileName: String?): Path {
             val storeDir = Path(rankImageStoreDir, rankImagePrefix(id))
             return Path(storeDir, fileName ?: "real_$id")
         }
 
-        private suspend fun getStoreFile(id: Long, fileName: String?): Path {
+        private fun getStoreFile(id: Long, fileName: String?): Path {
             val storeDir = Path(getFileStorageRootDir(), rankImageStoreDir, rankImagePrefix(id))
-            lock.use {
-                storeDir.ensureDir()
-            }
+            storeDir.ensureDir()
             return Path(storeDir, fileName ?: "real_$id")
         }
     }

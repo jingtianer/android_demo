@@ -473,7 +473,7 @@ object AlbumViewModel : SingletonViewModel() {
                     BitMapCachePool.invalid(albumItemRelation.fileInfo.storageId, oldMediaType)
                     if (mediaType == oldMediaType) {
                         if (albumItemRelation.fileInfo.storageId != DataBase.INVALID_ID) {
-                            storage.asyncStore(albumItemRelation.fileInfo.storageId, uri)
+                            storage.asyncStore(oldId = albumItemRelation.fileInfo.storageId, uri = uri)
                         } else {
                             storage.asyncStore(uri)
                         }
